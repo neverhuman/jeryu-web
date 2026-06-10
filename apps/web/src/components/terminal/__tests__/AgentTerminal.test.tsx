@@ -1,21 +1,15 @@
 // AgentTerminal.test.tsx — component-level wiring test for the live terminal.
 //
-// Drives the REAL transport path: a stubbed `WebSocket` feeds `agent_run.{id}`
-// event frames into `JeRyuWsClient`, which routes them through the tap →
-// `realtimeStore` → `useAgentTty` → the rAF write loop → `term.write`. xterm
-// itself is mocked so we can assert the exact bytes handed to `write` and
-// invoke the captured `onData` handler. Covers:
-//   * merged bytes: two frames in one rAF batch coalesce into one write;
-//   * input: keystrokes become `input` controls with the right decoded bytes;
-//   * interrupt: Ctrl-C (button + ETX keystroke) become `interrupt` controls;
-//   * resync: a chunk_seq gap clears the screen and emits a `resync` control.
+// Drives the real SSE/REST transport boundary with test doubles: a stubbed
+// EventSource emits TTY events into the component and a stubbed fetch captures
+// control requests. xterm itself is mocked so we can assert the exact bytes
+// handed to `write` and invoke the captured `onData` handler.
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentTerminal } from '../AgentTerminal';
-import { textToBase64, base64ToBytes } from '../agentTtyDecode';
-import { useRealtimeStore } from '../../../stores/realtimeStore';
+import type { AgentStreamEvent } from '../agentTtyTransport';
 
 // ── xterm mocks ────────────────────────────────────────────────────────────
 vi.mock('@xterm/xterm', () => {
@@ -77,29 +71,28 @@ function resetLastTerm(): void {
   (Terminal as unknown as { last: MockTerminal | null }).last = null;
 }
 
-// ── scriptable WebSocket double ─────────────────────────────────────────────
-type Listener = (ev: unknown) => void;
-class FakeWebSocket {
-  static OPEN = 1;
-  static instances: FakeWebSocket[] = [];
-  readyState = FakeWebSocket.OPEN;
-  sent: string[] = [];
-  private listeners: Record<string, Listener[]> = {};
+// ── scriptable EventSource double ───────────────────────────────────────────
+class FakeEventSource {
+  static instances: FakeEventSource[] = [];
+  onopen: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  closed = false;
+
   constructor(public url: string) {
-    FakeWebSocket.instances.push(this);
+    FakeEventSource.instances.push(this);
   }
-  addEventListener(type: string, fn: Listener): void {
-    (this.listeners[type] ??= []).push(fn);
+
+  open(): void {
+    this.onopen?.(new Event('open'));
   }
-  removeEventListener(): void {}
-  send(data: string): void {
-    this.sent.push(data);
+
+  message(event: AgentStreamEvent): void {
+    this.onmessage?.({ data: JSON.stringify(event) } as MessageEvent);
   }
+
   close(): void {
-    this.readyState = 3;
-  }
-  emit(type: string, ev: unknown): void {
-    for (const fn of this.listeners[type] ?? []) fn(ev);
+    this.closed = true;
   }
 }
 
@@ -112,45 +105,29 @@ function runRaf(): void {
 }
 
 const RUN_ID = 'run-1';
-const SCOPE = `agent_run.${RUN_ID}`;
 
-function helloFrame(): string {
-  return JSON.stringify({
-    type: 'hello',
-    server_time: '2026-01-01T00:00:00Z',
-    current_seq: 0,
-    protocol: 'jeryu.ws.v1',
-  });
-}
-
-function eventFrame(opts: {
+function streamEvent(opts: {
   seq: number;
-  chunk_seq: number;
   text: string;
-  scope?: string;
-}): string {
-  return JSON.stringify({
-    type: 'event',
-    event: {
-      seq: opts.seq,
-      timestamp: '2026-01-01T00:00:00Z',
-      scope: opts.scope ?? SCOPE,
-      kind: 'agent.tty',
-      entity: SCOPE,
-      summary: 'tty',
-      payload: {
-        chunk_seq: opts.chunk_seq,
-        stream: 'pty',
-        bytes_b64: textToBase64(opts.text),
-      },
-    },
-  });
+  stream?: AgentStreamEvent['stream'];
+  exit_code?: number | null;
+}): AgentStreamEvent {
+  return {
+    seq: opts.seq,
+    stream: opts.stream ?? 'stdout',
+    text: opts.text,
+    bytes_b64: null,
+    exit_code: opts.exit_code ?? null,
+  };
 }
 
-function sentControls(socket: FakeWebSocket): Array<Record<string, unknown>> {
-  return socket.sent
-    .map((s): Record<string, unknown> => JSON.parse(s))
-    .filter((f) => f.type === 'agent_control');
+let fetchCalls: Array<{ url: string; body: Record<string, unknown> | null }> = [];
+
+function sentControls(): Array<Record<string, unknown>> {
+  return fetchCalls
+    .filter((call) => call.url === `/api/v1/agent-runs/${RUN_ID}/control`)
+    .map((call) => call.body)
+    .filter((body): body is Record<string, unknown> => body !== null);
 }
 
 function decode(bytes: Uint8Array): string {
@@ -158,25 +135,36 @@ function decode(bytes: Uint8Array): string {
 }
 
 async function mountAndStream(): Promise<{
-  socket: FakeWebSocket;
+  source: FakeEventSource;
   term: () => MockTerminal;
 }> {
   render(<AgentTerminal runId={RUN_ID} />);
-  useRealtimeStore.getState().connect();
-  const socket = FakeWebSocket.instances[0];
-  socket.emit('open', {});
-  socket.emit('message', { data: helloFrame() });
-  // Wait for the lazy xterm surface + the subscribe/tap effect to run.
+  await waitFor(() => expect(FakeEventSource.instances[0]).toBeDefined());
+  const source = FakeEventSource.instances[0];
+  source.open();
+  // Wait for the lazy xterm surface to finish importing and opening.
   await screen.findByTestId('agent-terminal-surface');
   await waitFor(() => expect(lastTermOrNull()).not.toBeNull());
-  return { socket, term: lastTerm };
+  fetchCalls = [];
+  return { source, term: lastTerm };
 }
 
 beforeEach(() => {
-  FakeWebSocket.instances = [];
+  FakeEventSource.instances = [];
+  fetchCalls = [];
   rafCallbacks = [];
   resetLastTerm();
-  vi.stubGlobal('WebSocket', FakeWebSocket as unknown as typeof WebSocket);
+  vi.stubGlobal('EventSource', FakeEventSource as unknown as typeof EventSource);
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    fetchCalls.push({
+      url: String(input),
+      body: init?.body ? JSON.parse(String(init.body)) : null,
+    });
+    return new Response(JSON.stringify({ accepted: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }));
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -192,19 +180,17 @@ beforeEach(() => {
   vi.stubGlobal('cancelAnimationFrame', (id: number) => {
     rafCallbacks[id - 1] = undefined;
   });
-  useRealtimeStore.setState({ status: 'idle', events: [] });
 });
 
 afterEach(() => {
-  useRealtimeStore.getState().disconnect();
   vi.unstubAllGlobals();
 });
 
 describe('AgentTerminal live wiring', () => {
   it('merges two TTY frames in one rAF batch into a single write', async () => {
-    const { socket, term } = await mountAndStream();
-    socket.emit('message', { data: eventFrame({ seq: 1, chunk_seq: 1, text: 'A' }) });
-    socket.emit('message', { data: eventFrame({ seq: 2, chunk_seq: 2, text: 'B' }) });
+    const { source, term } = await mountAndStream();
+    source.message(streamEvent({ seq: 1, text: 'A' }));
+    source.message(streamEvent({ seq: 2, text: 'B' }));
     runRaf();
     const t = term();
     expect(t.writes).toHaveLength(1);
@@ -212,63 +198,48 @@ describe('AgentTerminal live wiring', () => {
   });
 
   it('renders the scripted prompt bytes verbatim', async () => {
-    const { socket, term } = await mountAndStream();
-    socket.emit('message', {
-      data: eventFrame({ seq: 1, chunk_seq: 1, text: '$ cargo test\r\n' }),
-    });
+    const { source, term } = await mountAndStream();
+    source.message(streamEvent({ seq: 1, text: '$ cargo test\r\n' }));
     runRaf();
     expect(decode(term().writes[0])).toBe('$ cargo test\r\n');
   });
 
-  it('sends an input control with the decoded bytes when the operator types', async () => {
-    const { socket } = await mountAndStream();
-    socket.sent.length = 0;
+  it('strips terminal sequences xterm cannot render cleanly', async () => {
+    const { source, term } = await mountAndStream();
+    source.message(streamEvent({
+      seq: 1,
+      text: '\x1b[>4mkeep\x1b[?2026$p\n123 third_party/tcmalloc/noise\n',
+    }));
+    runRaf();
+    expect(decode(term().writes[0])).toBe('keep\n');
+  });
+
+  it('sends an input control when the operator types', async () => {
+    await mountAndStream();
     lastTerm().dataHandler?.('x');
-    const controls = sentControls(socket);
-    expect(controls).toHaveLength(1);
-    const control = controls[0].control as { kind: string; bytes_b64: string };
-    expect(controls[0].run_id).toBe(RUN_ID);
-    expect(control.kind).toBe('input');
-    expect(decode(base64ToBytes(control.bytes_b64))).toBe('x');
+    await waitFor(() => expect(sentControls()).toHaveLength(1));
+    expect(sentControls()[0]).toEqual({ kind: 'send_input', text: 'x' });
   });
 
   it('promotes a Ctrl-C keystroke (ETX) to an interrupt control', async () => {
-    const { socket } = await mountAndStream();
-    socket.sent.length = 0;
+    await mountAndStream();
     lastTerm().dataHandler?.('\x03');
-    const controls = sentControls(socket);
-    expect(controls).toHaveLength(1);
-    expect((controls[0].control as { kind: string }).kind).toBe('interrupt');
+    await waitFor(() => expect(sentControls()).toHaveLength(1));
+    expect(sentControls()[0]).toEqual({ kind: 'interrupt' });
   });
 
   it('sends an interrupt when the Ctrl-C toolbar button is clicked', async () => {
-    const { socket } = await mountAndStream();
-    socket.sent.length = 0;
+    await mountAndStream();
     fireEvent.click(screen.getByTestId('agent-terminal-interrupt'));
-    const controls = sentControls(socket);
-    expect(controls).toHaveLength(1);
-    expect((controls[0].control as { kind: string }).kind).toBe('interrupt');
+    await waitFor(() => expect(sentControls()).toHaveLength(1));
+    expect(sentControls()[0]).toEqual({ kind: 'interrupt' });
   });
 
-  it('clears the screen and resyncs on a chunk_seq gap', async () => {
-    const { socket, term } = await mountAndStream();
-    socket.emit('message', { data: eventFrame({ seq: 1, chunk_seq: 1, text: 'A' }) });
+  it('renders exit codes from the SSE stream', async () => {
+    const { source, term } = await mountAndStream();
+    source.message(streamEvent({ seq: 1, text: '', stream: 'event', exit_code: 0 }));
     runRaf();
-    socket.sent.length = 0;
-    // Gap: chunk_seq jumps 1 -> 3.
-    socket.emit('message', { data: eventFrame({ seq: 2, chunk_seq: 3, text: 'C' }) });
-    expect(term().clears).toBeGreaterThanOrEqual(1);
-    const controls = sentControls(socket);
-    expect(controls.some((c) => (c.control as { kind: string }).kind === 'resync')).toBe(
-      true
-    );
-  });
-
-  it('streams agent bytes WITHOUT touching the rolling event buffer', async () => {
-    const { socket } = await mountAndStream();
-    socket.emit('message', { data: eventFrame({ seq: 1, chunk_seq: 1, text: 'A' }) });
-    runRaf();
-    // The tap intercepts the frame before the zustand buffer — it stays empty.
-    expect(useRealtimeStore.getState().events).toHaveLength(0);
+    expect(decode(term().writes[0])).toContain('process exited with code 0');
+    expect(await screen.findByTestId('agent-terminal-exit')).toHaveTextContent('exit 0');
   });
 });

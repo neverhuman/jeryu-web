@@ -21,6 +21,15 @@ export interface AgentTerminalImplProps {
 
 const ETX = 0x03;
 
+// Strip terminal escape sequences unsupported by xterm.js that can corrupt
+// rendering. Specifically: Kitty keyboard protocol (CSI >Pm, CSI =Ps;Ps u,
+// CSI ?u) and DECRQM mode queries (CSI ?Pd $p).
+const UNSUPPORTED_SEQS = /\x1b\[(?:[>=][0-9;]*[mu]|\?[0-9]*\$p|\?u)/g;
+const TCMALLOC_NOISE = /^\d+ third_party\/tcmalloc\/.*\n?/gm;
+function sanitizeTty(text: string): string {
+  return text.replace(UNSUPPORTED_SEQS, '').replace(TCMALLOC_NOISE, '');
+}
+
 export function AgentTerminalImpl({
   runId,
   onBytes,
@@ -95,7 +104,7 @@ export function AgentTerminalImpl({
 
     if (evt.stream === 'stdout' || evt.stream === 'stderr') {
       if (evt.text) {
-        enqueueText(evt.text);
+        enqueueText(sanitizeTty(evt.text));
       } else if (evt.bytes_b64) {
         try {
           const binary = atob(evt.bytes_b64);
