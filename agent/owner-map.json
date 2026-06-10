@@ -1,0 +1,22 @@
+{
+  "owners": {
+    ".github/": "ops",
+    "AGENTS.md": "split",
+    "Cargo.lock": "workspace",
+    "Cargo.toml": "workspace",
+    "Justfile": "workspace",
+    "README.md": "docs",
+    "agent/": "agent",
+    "apps/web/**": "jeryu-web",
+    "contracts/AGENTS.md": "jeryu-web",
+    "contracts/generated/**": "jeryu-web",
+    "docs/": "docs",
+    "ops/": "ops",
+    "package.json": "jeryu-web",
+    "packages/ux-qa/**": "jeryu-web",
+    "scripts/": "ops",
+    "tsconfig.json": "jeryu-web",
+    "ux-qa/**": "jeryu-web"
+  },
+  "workspace": "jeryu-web"
+}

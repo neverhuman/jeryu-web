@@ -1,0 +1,55 @@
+{
+  "tests": {
+    ".github/": {
+      "command": "just fast && just check",
+      "lane": "ci",
+      "purpose": "verify hosted workflows stay thin and local-reproducible"
+    },
+    "AGENTS.md": {
+      "command": "just score",
+      "lane": "score",
+      "purpose": "verify split metadata and agent maps"
+    },
+    "Cargo.toml": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify workspace manifest shape"
+    },
+    "apps/web/**": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify jeryu-web owned source remains build-addressable"
+    },
+    "contracts/AGENTS.md": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify jeryu-web owned source remains build-addressable"
+    },
+    "contracts/generated/**": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify jeryu-web owned source remains build-addressable"
+    },
+    "package.json": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify jeryu-web owned source remains build-addressable"
+    },
+    "packages/ux-qa/**": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify jeryu-web owned source remains build-addressable"
+    },
+    "tsconfig.json": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify jeryu-web owned source remains build-addressable"
+    },
+    "ux-qa/**": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify jeryu-web owned source remains build-addressable"
+    }
+  },
+  "workspace": "jeryu-web"
+}
