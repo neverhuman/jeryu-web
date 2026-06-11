@@ -7,6 +7,17 @@
 
 import type { RepositorySummary } from '../../api/types';
 
+/**
+ * Human-facing family label. The backend naming convention suffixes every
+ * split family with `-split` (`jeryu-split`, `veox-split`, ...); that suffix
+ * is operational bookkeeping, not something operators want to read, so the UI
+ * strips it everywhere a family name is DISPLAYED. Raw values keep flowing
+ * through filters, URLs, and API queries untouched.
+ */
+export function formatFamilyName(family: string): string {
+  return family.endsWith('-split') ? family.slice(0, -'-split'.length) : family;
+}
+
 export interface FamilyRollup {
   /** Family label as returned by the backend. */
   name: string;

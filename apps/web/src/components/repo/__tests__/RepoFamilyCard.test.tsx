@@ -30,14 +30,15 @@ describe('RepoFamilyCard', () => {
         <RepoFamilyCard family={ROLLUP} />
       </MemoryRouter>
     );
-    expect(screen.getByText('veox-split')).toBeInTheDocument();
+    // Display strips the operational '-split' suffix; the href keeps the raw value.
+    expect(screen.getByText('veox')).toBeInTheDocument();
     expect(screen.getByText('3 repos')).toBeInTheDocument();
     expect(
       screen.getByRole('status', { name: /Health: degraded/ })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', {
-        name: 'Open family veox-split (3 repositories)',
+        name: 'Open family veox (3 repositories)',
       })
     ).toHaveAttribute('href', '/repos/family/veox-split');
     expect(

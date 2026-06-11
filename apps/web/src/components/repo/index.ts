@@ -5,7 +5,11 @@ export type { RepoTableProps } from './RepoTable';
 export { RepoRoleBadge } from './RepoRoleBadge';
 export { RepoFamilyCard, familyHref } from './RepoFamilyCard';
 export type { RepoFamilyCardProps } from './RepoFamilyCard';
-export { aggregateFamily, partitionByFamily } from './familyRollup';
+export {
+  aggregateFamily,
+  formatFamilyName,
+  partitionByFamily,
+} from './familyRollup';
 export type { FamilyRollup } from './familyRollup';
 export { relativeTime } from './relativeTime';
 export { RepoHealthPill } from './RepoHealthPill';

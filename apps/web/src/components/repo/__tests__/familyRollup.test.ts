@@ -2,7 +2,11 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { aggregateFamily, partitionByFamily } from '../familyRollup';
+import {
+  aggregateFamily,
+  formatFamilyName,
+  partitionByFamily,
+} from '../familyRollup';
 import type { RepositorySummary } from '../../../api/types';
 
 let nextId = 0;
@@ -168,5 +172,18 @@ describe('partitionByFamily', () => {
     const { families, singles } = partitionByFamily([]);
     expect(families).toEqual([]);
     expect(singles).toEqual([]);
+  });
+});
+
+describe('formatFamilyName', () => {
+  it("strips the operational '-split' suffix for display", () => {
+    expect(formatFamilyName('jeryu-split')).toBe('jeryu');
+    expect(formatFamilyName('veox-split')).toBe('veox');
+  });
+
+  it('leaves non-convention names untouched', () => {
+    expect(formatFamilyName('redline')).toBe('redline');
+    expect(formatFamilyName('splitter')).toBe('splitter');
+    expect(formatFamilyName('-split')).toBe('');
   });
 });

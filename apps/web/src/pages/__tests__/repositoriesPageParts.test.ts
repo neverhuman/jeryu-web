@@ -39,7 +39,7 @@ describe('groupByFamily', () => {
       repo('jeryu', 'public_portal'),
     ]);
 
-    expect(groups[0].title).toBe('jeryu-split');
+    expect(groups[0].title).toBe('jeryu');
     expect(groups[0].repos.map((item) => item.id.name)).toEqual([
       'jeryu',
       'jeryu-core',

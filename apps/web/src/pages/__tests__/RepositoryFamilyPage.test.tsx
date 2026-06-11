@@ -104,11 +104,11 @@ describe('RepositoryFamilyPage', () => {
       family: 'veox-split',
     });
     expect(
-      screen.getByRole('heading', { level: 1, name: 'veox-split' })
+      screen.getByRole('heading', { level: 1, name: 'veox' })
     ).toBeInTheDocument();
     // Rollup strip: member count, worst-of health, sums (the summed values
     // differ from every per-card value so the labels are unambiguous).
-    const strip = screen.getByLabelText('veox-split rollup');
+    const strip = screen.getByLabelText('veox rollup');
     expect(within(strip).getByText('2 repos')).toBeInTheDocument();
     expect(
       within(strip).getByRole('status', { name: /Health: failing/ })
@@ -118,7 +118,7 @@ describe('RepositoryFamilyPage', () => {
     expect(screen.getByLabelText('3 running jobs')).toBeInTheDocument();
     // Boxed panel with the member repo cards.
     const panel = screen.getByRole('region', {
-      name: 'veox-split repositories',
+      name: 'veox repositories',
     });
     expect(panel).toHaveClass('repo-family-panel');
     expect(screen.getByText('redline')).toBeInTheDocument();

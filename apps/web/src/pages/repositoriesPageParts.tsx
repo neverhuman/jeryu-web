@@ -14,6 +14,7 @@ import {
   RepoCard,
   RepoFamilyCard,
   RepoTable,
+  formatFamilyName,
   partitionByFamily,
 } from '../components/repo';
 import {
@@ -70,7 +71,10 @@ export function groupByFamily(
   }
   const out: Array<{ title: string; repos: RepositorySummary[] }> = [];
   for (const [family, list] of buckets) {
-    out.push({ title: family, repos: sortFamilyRepos(family, list) });
+    out.push({
+      title: formatFamilyName(family),
+      repos: sortFamilyRepos(family, list),
+    });
   }
   if (ungrouped.length > 0) {
     out.push({ title: 'Other', repos: ungrouped });

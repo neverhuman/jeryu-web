@@ -14,7 +14,11 @@ import { Link, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
 import { Breadcrumbs } from '../components/browser';
-import { RepoCard, aggregateFamily } from '../components/repo';
+import {
+  RepoCard,
+  aggregateFamily,
+  formatFamilyName,
+} from '../components/repo';
 import { RepoHealthPill } from '../components/repo/RepoHealthPill';
 import {
   EmptyState,
@@ -68,7 +72,7 @@ export function RepositoryFamilyPage(): JSX.Element {
     body = (
       <EmptyState
         title="No repositories in this family"
-        description={`No repositories carry the family label "${family}".`}
+        description={`No repositories carry the family label "${formatFamilyName(family)}".`}
         icon={Boxes}
         action={
           <Link to="/repos">
@@ -81,7 +85,7 @@ export function RepositoryFamilyPage(): JSX.Element {
     body = (
       <section
         className="repo-family-panel"
-        aria-label={`${family} repositories`}
+        aria-label={`${formatFamilyName(family)} repositories`}
       >
         <div className="page__cards">
           {repos.map((repo) => (
@@ -100,12 +104,12 @@ export function RepositoryFamilyPage(): JSX.Element {
 
       <header className="page__header">
         <div className="page__welcome">
-          <h1 className="page__title">{family}</h1>
+          <h1 className="page__title">{formatFamilyName(family)}</h1>
         </div>
         {!list.isPending && !list.error && repos.length > 0 ? (
           <div
             className="repo-family-strip"
-            aria-label={`${family} rollup`}
+            aria-label={`${formatFamilyName(family)} rollup`}
           >
             <span className="repo-family-strip__item">
               {rollup.memberCount} repo{rollup.memberCount === 1 ? '' : 's'}

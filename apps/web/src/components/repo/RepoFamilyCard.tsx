@@ -11,6 +11,8 @@ import { Link } from 'react-router-dom';
 
 import type { FamilyRollup } from './familyRollup';
 
+import { formatFamilyName } from './familyRollup';
+
 import { RepoHealthPill } from './RepoHealthPill';
 import { relativeTime } from './relativeTime';
 import './repo.css';
@@ -28,12 +30,12 @@ export function RepoFamilyCard({ family }: RepoFamilyCardProps): JSX.Element {
     <Link
       to={familyHref(family.name)}
       className="repo-card repo-family-card"
-      aria-label={`Open family ${family.name} (${family.memberCount} repositories)`}
+      aria-label={`Open family ${formatFamilyName(family.name)} (${family.memberCount} repositories)`}
     >
       <div className="repo-card__head">
         <h3 className="repo-card__title repo-family-card__title">
           <Boxes size={14} aria-hidden="true" />
-          {family.name}
+          {formatFamilyName(family.name)}
         </h3>
         <RepoHealthPill health={family.health} />
       </div>

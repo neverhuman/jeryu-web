@@ -25,6 +25,7 @@ import { RepoHealthPill } from './RepoHealthPill';
 import { RepoRoleBadge } from './RepoRoleBadge';
 import { repoHref } from './RepoCard';
 import { familyHref } from './RepoFamilyCard';
+import { formatFamilyName } from './familyRollup';
 
 import './repo.css';
 
@@ -63,9 +64,9 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
               to={familyHref(family)}
               className="repo-table__family-link"
               onClick={(e) => e.stopPropagation()}
-              aria-label={`Open family ${family}`}
+              aria-label={`Open family ${formatFamilyName(family)}`}
             >
-              {family}
+              {formatFamilyName(family)}
             </Link>
           );
         },
