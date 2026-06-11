@@ -22,6 +22,9 @@ export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-$JOBS}"
 # drift mid-lane (see ops/ci/ensure-jankurai.sh).
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 
+# Install web deps FIRST: the check lane already typechecks the workspace.
+if [ ! -d apps/web/node_modules ]; then npm ci --prefix apps/web; fi
+
 echo "[pr-ci] (jobs=$JOBS) standard lanes" >&2
 bash ops/ci/fast.sh
 JERYU_SPLIT_FULL_CHECK=1 bash ops/ci/check.sh
@@ -30,7 +33,6 @@ bash ops/ci/security.sh
 bash ops/ci/artifact_support.sh
 
 echo "[pr-ci] web unit tests + typecheck + build" >&2
-if [ ! -d apps/web/node_modules ]; then npm ci --prefix apps/web; fi
 npm --workspace @jeryu/web run typecheck
 npm --workspace @jeryu/web run test
 npm --workspace @jeryu/web run build
