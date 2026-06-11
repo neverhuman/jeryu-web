@@ -73,27 +73,27 @@ function formatTime(iso: string): string {
   }
 }
 
-function scopeToHref(scope: string): string | null {
+function scopeToHref(scope: string): string {
   // Phase-1 mapping: `repo:owner/name` -> `/repos/jeryu/owner/name`,
   // `pull:owner/name/number` -> the PR page. The provider segment is
   // host-neutral; the SPA renders it as `jeryu` because the forge is its
   // own host. v1.5 can route on the actual provider once the bus tags it.
   const colon = scope.indexOf(':');
-  if (colon === -1) return null;
+  if (colon === -1) return '';
   const kind = scope.slice(0, colon);
   const rest = scope.slice(colon + 1);
-  if (!rest) return null;
+  if (!rest) return '';
   if (kind === 'repo') {
     return `/repos/jeryu/${rest}`;
   }
   if (kind === 'pull') {
     const lastSlash = rest.lastIndexOf('/');
-    if (lastSlash === -1) return null;
+    if (lastSlash === -1) return '';
     const repo = rest.slice(0, lastSlash);
     const prNumber = rest.slice(lastSlash + 1);
     return `/repos/jeryu/${repo}/pulls/${prNumber}`;
   }
-  return null;
+  return '';
 }
 
 export interface NotificationListViewProps {

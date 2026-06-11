@@ -45,13 +45,15 @@ const NAV_ITEMS: NavItem[] = [
 
 /** Extract the repo base path from the current pathname, if any.
  *  Matches `/repos/:provider/:fullName` (where fullName may include slashes). */
-function extractRepoBase(pathname: string): { base: string; repoName: string } | null {
+function extractRepoBase(
+  pathname: string
+): { base: string; repoName: string } | undefined {
   // URL pattern: /repos/{provider}/{owner}/{name}[/{subPath}[/{...tail}]]
   // Always exactly 3 segments after /repos/, then optional sub-path.
   const match = pathname.match(
     /^\/repos\/([^/]+)\/([^/]+)\/([^/]+)(?:\/(code|pulls|agents|settings|blob|issues)(?:\/.*)?)?$/
   );
-  if (!match) return null;
+  if (!match) return;
   const [, provider, owner, name] = match;
   const base = `/repos/${provider}/${owner}/${name}`;
   const repoName = `${owner}/${name}`;

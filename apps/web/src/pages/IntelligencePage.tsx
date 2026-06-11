@@ -1,4 +1,4 @@
-// IntelligencePage.tsx - JMCP/control-plane operator surface.
+// IntelligencePage.tsx - intelligence snapshot dashboard.
 
 import { useMemo, useState, type ReactNode } from 'react';
 import {
@@ -43,7 +43,7 @@ export function IntelligencePage(): JSX.Element {
         <header className="page__header">
           <h1 className="page__title">Intelligence</h1>
         </header>
-        <p className="page__roadmap-note">Loading control-plane snapshot.</p>
+        <p className="page__roadmap-note">Loading intelligence snapshot.</p>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function IntelligencePage(): JSX.Element {
           <h1 className="page__title">Intelligence</h1>
         </header>
         <p className="page__roadmap-note">
-          {query.error?.message ?? 'Control-plane snapshot unavailable.'}
+          {query.error?.message ?? 'Intelligence snapshot unavailable.'}
         </p>
       </div>
     );
@@ -98,6 +98,9 @@ function IntelligenceSnapshot({
           <StatePill state={snapshot.localAuthority.state} label="local" />
           <span className="page__pill">{snapshot.schemaVersion}</span>
         </div>
+        <p className="page__roadmap-note intelligence__header-note">
+          Operational snapshot of priorities, graph state, and evidence.
+        </p>
         <div className="intelligence__status-strip">
           <MetricCard
             icon={<GitPullRequest size={18} aria-hidden="true" />}
@@ -146,7 +149,7 @@ function IntelligenceSnapshot({
       <section className="page__section" aria-labelledby="intelligence-priority">
         <div className="intelligence__section-head">
           <h2 className="page__section-title" id="intelligence-priority">
-            Priority Queue
+            Top priorities
           </h2>
           <span className="page__pill">{snapshot.priorities[0]?.rulesVersion ?? 'rules-v1'}</span>
         </div>
@@ -178,14 +181,14 @@ function IntelligenceSnapshot({
         />
         <ToolBuildDossiers
           clusters={toolClusters.data?.clusters ?? []}
-          fallback={snapshot.toolBuild.topClusters}
+          summaryClusters={snapshot.toolBuild.topClusters}
           unavailable={toolClusters.isError ? toolClusters.error.message : null}
         />
       </section>
 
       <section className="page__section" aria-labelledby="intelligence-health">
         <h2 className="page__section-title" id="intelligence-health">
-          Health Evidence
+          Evidence snapshot
         </h2>
         <div className="intelligence__evidence-grid">
           <EvidencePanel
@@ -317,7 +320,7 @@ function OperatorGraphConsole({
             onChange={(event) =>
               onFiltersChange({ ...filters, query: event.target.value })
             }
-            placeholder="node, repo, state"
+            aria-label="Search graph"
           />
         </label>
       </div>
@@ -392,7 +395,7 @@ function GraphSvg({
         {graph.edges.map((edge) => {
           const source = nodesById.get(edge.source);
           const target = nodesById.get(edge.target);
-          if (!source || !target) return null;
+          if (!source || !target) return;
           return (
             <line
               key={`${edge.source}-${edge.target}-${edge.kind}`}
@@ -555,11 +558,11 @@ function ClusterChips({ graph }: { graph: OperatorGraph }): JSX.Element {
 
 function ToolBuildDossiers({
   clusters,
-  fallback,
+  summaryClusters,
   unavailable,
 }: {
   clusters: ToolBuildCluster[];
-  fallback: ControlPlaneSnapshot['toolBuild']['topClusters'];
+  summaryClusters: ControlPlaneSnapshot['toolBuild']['topClusters'];
   unavailable: string | null;
 }): JSX.Element {
   const rows =
@@ -577,7 +580,7 @@ function ToolBuildDossiers({
               ? 'cargo test -p jeryu-codegraph --jobs 40 tool_build'
               : 'bash ops/ci/codegraph-tool-build.sh',
         }))
-      : fallback.map((cluster) => ({
+      : summaryClusters.map((cluster) => ({
           id: cluster.clusterId,
           repo: cluster.repoId,
           score: cluster.score,
@@ -590,12 +593,12 @@ function ToolBuildDossiers({
   return (
     <div className="intelligence__dossiers" data-testid="tool-build-dossiers">
       <div className="intelligence__section-head">
-        <h3>Tool-build dossiers</h3>
+        <h3>Tool-build clusters</h3>
         {unavailable ? <span className="page__pill">unavailable</span> : null}
       </div>
       {unavailable ? <p>{unavailable}</p> : null}
       {rows.length === 0 ? (
-        <p>No tool-build cluster dossiers available.</p>
+        <p>No tool-build clusters available.</p>
       ) : (
         <div className="intelligence__dossier-grid">
           {rows.slice(0, 6).map((row) => (

@@ -247,8 +247,8 @@ export function rankToolBuildOpportunities(
     insight: cluster.insight,
     suggestedProofLane: suggestedProofLane(cluster.language),
   }));
-  const fallback = snapshot.toolBuild.topClusters.map(summaryOpportunity);
-  return [...fromClusters, ...fallback]
+  const seedClusters = snapshot.toolBuild.topClusters.map(summaryOpportunity);
+  return [...fromClusters, ...seedClusters]
     .filter((item, index, all) => all.findIndex((x) => x.id === item.id) === index)
     .sort(
       (a, b) =>

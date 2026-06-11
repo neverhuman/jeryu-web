@@ -72,7 +72,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   }, [repoId, setRepo]);
 
   useEffect(() => {
-    if (!prNumber) return undefined;
+    if (!prNumber) return () => {};
     setPr(prNumber);
     return () => setPr(null);
   }, [prNumber, setPr]);
@@ -101,8 +101,8 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   }, [activeFilePath, diff.data]);
 
   const activeFile = useMemo(() => {
-    if (!diff.data || !activeFilePath) return null;
-    return diff.data.files.find((f) => f.path === activeFilePath) ?? null;
+    if (!diff.data || !activeFilePath) return;
+    return diff.data.files.find((f) => f.path === activeFilePath);
   }, [diff.data, activeFilePath]);
 
   const handleToggleViewed = useCallback((path: string, viewed: boolean) => {
@@ -139,7 +139,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   );
 
   // Aggregate the head-drift signal from either mutation.
-  const headDrift = useMemo<HeadDriftInfo | null>(() => {
+  const headDrift = useMemo<HeadDriftInfo | undefined>(() => {
     const approveErr = approve.error;
     const mergeErr = mergeMutation.error;
     if (approveErr instanceof ApiError) {
@@ -150,7 +150,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
       const info = extractDrift(mergeErr);
       if (info) return info;
     }
-    return null;
+    return;
   }, [approve.error, mergeMutation.error]);
 
   const handleRefresh = useCallback(() => {

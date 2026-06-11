@@ -18,7 +18,7 @@
 //     observes liveness even through proxies that strip control frames.
 //
 // Reconnect policy: exponential backoff capped at 30 s, with full jitter.
-// `lastSeq` is exposed so the store can persist it to sessionStorage and
+// `lastSeq` is exposed so the store can persist it through the storage adapter and
 // resume cleanly across page refresh.
 
 import type {
@@ -222,8 +222,9 @@ export class JeRyuWsClient {
     } catch {
       return;
     }
-    const frame = parseServerFrame(parsed);
-    if (!frame) return;
+    const parsedFrame = parseServerFrame(parsed);
+    if (parsedFrame.kind === 'drop') return;
+    const frame = parsedFrame.frame;
     switch (frame.type) {
       case 'hello': {
         // Reject frames from a runtime speaking a different protocol

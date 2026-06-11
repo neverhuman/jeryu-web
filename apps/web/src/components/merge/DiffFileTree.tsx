@@ -42,8 +42,8 @@ const STATUS_LABELS: Record<PullRequestFileStatus, string> = {
   renamed: 'Renamed',
 };
 
-function riskTier(file: PullRequestDiffFile): RiskTier | null {
-  if (!file.risk) return null;
+function riskTier(file: PullRequestDiffFile): RiskTier | undefined {
+  if (!file.risk) return;
   return file.risk;
 }
 

@@ -122,11 +122,11 @@ export function asHealth(value: unknown): FleetHealth {
 }
 
 /** Project a raw `PoolRollup` JSON object into a `FleetPool` with derived math. */
-export function poolFromRollup(raw: unknown): FleetPool | null {
+export function poolFromRollup(raw: unknown): FleetPool | undefined {
   const r = asRecord(raw);
-  if (!r) return null;
+  if (!r) return;
   const pool = str(r.pool);
-  if (!pool) return null;
+  if (!pool) return;
   const queuedJobs = num(r.queued_jobs);
   const runningJobs = num(r.running_jobs);
   const activeSlots = num(r.active_slots);
@@ -286,7 +286,7 @@ export function fleetStateFromBootstrap(tui: unknown): FleetState {
 
   const pools = poolsRaw
     .map(poolFromRollup)
-    .filter((p): p is FleetPool => p !== null);
+    .filter((p): p is FleetPool => p !== undefined);
   const unplaceable = unplaceableRaw.map((d) => {
     const r = asRecord(d);
     return { tags: strList(r?.tags), count: num(r?.count) };

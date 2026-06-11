@@ -1,15 +1,25 @@
 // AgentTerminal.test.tsx — component-level wiring test for the live terminal.
 //
-// Drives the real SSE/REST transport boundary with test doubles: a stubbed
-// EventSource emits TTY events into the component and a stubbed fetch captures
-// control requests. xterm itself is mocked so we can assert the exact bytes
-// handed to `write` and invoke the captured `onData` handler.
+// Drives the REAL transport path of the SSE + REST architecture: a stubbed
+// `EventSource` feeds `AgentStreamEvent` frames through `connectTtyStream`
+// → the rAF write loop → `term.write`, and operator input flows out via
+// POST /api/v1/agent-runs/{id}/control (captured by a `fetch` spy). xterm
+// itself is mocked so we can assert the exact bytes handed to `write` and
+// invoke the captured `onData` handler. Covers:
+//   * merged bytes: two frames in one rAF batch coalesce into one write;
+//   * verbatim rendering of scripted text and base64-encoded PTY bytes;
+//   * sanitizer: unsupported escape sequences and tcmalloc noise are stripped;
+//   * input: keystrokes become `send_input` controls with the typed text;
+//   * interrupt: Ctrl-C (button + ETX keystroke) become `interrupt` controls;
+//   * exit: an exit_code event surfaces the exit pill and the exit line;
+//   * isolation: SSE bytes never touch the realtime rolling event buffer.
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentTerminal } from '../AgentTerminal';
-import type { AgentStreamEvent } from '../agentTtyTransport';
+import { textToBase64 } from '../agentTtyDecode';
+import { useRealtimeStore } from '../../../stores/realtimeStore';
 
 // ── xterm mocks ────────────────────────────────────────────────────────────
 vi.mock('@xterm/xterm', () => {
@@ -74,23 +84,13 @@ function resetLastTerm(): void {
 // ── scriptable EventSource double ───────────────────────────────────────────
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
-  onopen: ((event: Event) => void) | null = null;
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  onerror: ((event: Event) => void) | null = null;
+  onopen: (() => void) | null = null;
+  onmessage: ((msg: { data: string }) => void) | null = null;
+  onerror: (() => void) | null = null;
   closed = false;
-
   constructor(public url: string) {
     FakeEventSource.instances.push(this);
   }
-
-  open(): void {
-    this.onopen?.(new Event('open'));
-  }
-
-  message(event: AgentStreamEvent): void {
-    this.onmessage?.({ data: JSON.stringify(event) } as MessageEvent);
-  }
-
   close(): void {
     this.closed = true;
   }
@@ -101,33 +101,54 @@ let rafCallbacks: Array<FrameRequestCallback | undefined> = [];
 function runRaf(): void {
   const cbs = rafCallbacks;
   rafCallbacks = [];
-  for (const cb of cbs) cb?.(0);
+  act(() => {
+    for (const cb of cbs) cb?.(0);
+  });
 }
 
 const RUN_ID = 'run-1';
+const CONTROL_PATH = `/api/v1/agent-runs/${RUN_ID}/control`;
 
-function streamEvent(opts: {
+interface SseEventOpts {
   seq: number;
-  text: string;
-  stream?: AgentStreamEvent['stream'];
-  exit_code?: number | null;
-}): AgentStreamEvent {
-  return {
-    seq: opts.seq,
-    stream: opts.stream ?? 'stdout',
-    text: opts.text,
-    bytes_b64: null,
-    exit_code: opts.exit_code ?? null,
-  };
+  stream?: 'stdout' | 'stderr' | 'event';
+  text?: string | null;
+  bytesB64?: string | null;
+  exitCode?: number | null;
 }
 
-let fetchCalls: Array<{ url: string; body: Record<string, unknown> | null }> = [];
+function sseFrame(opts: SseEventOpts): string {
+  return JSON.stringify({
+    seq: opts.seq,
+    stream: opts.stream ?? 'stdout',
+    text: opts.text ?? null,
+    bytes_b64: opts.bytesB64 ?? null,
+    exit_code: opts.exitCode ?? null,
+  });
+}
 
+function emit(source: FakeEventSource, frame: string): void {
+  act(() => {
+    source.onmessage?.({ data: frame });
+  });
+}
+
+let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+/** Control POSTs captured by the fetch spy, parsed. */
 function sentControls(): Array<Record<string, unknown>> {
-  return fetchCalls
-    .filter((call) => call.url === `/api/v1/agent-runs/${RUN_ID}/control`)
-    .map((call) => call.body)
-    .filter((body): body is Record<string, unknown> => body !== null);
+  const calls = fetchSpy.mock.calls as Array<[unknown, RequestInit | undefined]>;
+  return calls
+    .filter(
+      ([url, init]) =>
+        String(url).includes(CONTROL_PATH) &&
+        (init?.method ?? 'GET').toUpperCase() === 'POST'
+    )
+    .map(([, init]): Record<string, unknown> => JSON.parse(String(init?.body)));
+}
+
+function controlsOfKind(kind: string): Array<Record<string, unknown>> {
+  return sentControls().filter((c) => c.kind === kind);
 }
 
 function decode(bytes: Uint8Array): string {
@@ -139,32 +160,25 @@ async function mountAndStream(): Promise<{
   term: () => MockTerminal;
 }> {
   render(<AgentTerminal runId={RUN_ID} />);
-  await waitFor(() => expect(FakeEventSource.instances[0]).toBeDefined());
   const source = FakeEventSource.instances[0];
-  source.open();
-  // Wait for the lazy xterm surface to finish importing and opening.
+  expect(source.url).toContain(`/api/v1/agent-runs/${RUN_ID}/tty/stream`);
+  act(() => {
+    source.onopen?.();
+  });
+  // Wait for the lazy xterm surface + the dynamic import to finish.
   await screen.findByTestId('agent-terminal-surface');
   await waitFor(() => expect(lastTermOrNull()).not.toBeNull());
-  fetchCalls = [];
+  // The mount-time resize control may still be in flight; drain it so the
+  // per-test control assertions start from a clean slate.
+  fetchSpy.mockClear();
   return { source, term: lastTerm };
 }
 
 beforeEach(() => {
   FakeEventSource.instances = [];
-  fetchCalls = [];
   rafCallbacks = [];
   resetLastTerm();
   vi.stubGlobal('EventSource', FakeEventSource as unknown as typeof EventSource);
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    fetchCalls.push({
-      url: String(input),
-      body: init?.body ? JSON.parse(String(init.body)) : null,
-    });
-    return new Response(JSON.stringify({ accepted: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }));
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -180,66 +194,96 @@ beforeEach(() => {
   vi.stubGlobal('cancelAnimationFrame', (id: number) => {
     rafCallbacks[id - 1] = undefined;
   });
+  fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+    return new Response(JSON.stringify({ accepted: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  });
+  useRealtimeStore.setState({ status: 'idle', events: [] });
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('AgentTerminal live wiring', () => {
   it('merges two TTY frames in one rAF batch into a single write', async () => {
     const { source, term } = await mountAndStream();
-    source.message(streamEvent({ seq: 1, text: 'A' }));
-    source.message(streamEvent({ seq: 2, text: 'B' }));
+    emit(source, sseFrame({ seq: 1, text: 'A' }));
+    emit(source, sseFrame({ seq: 2, text: 'B' }));
     runRaf();
     const t = term();
     expect(t.writes).toHaveLength(1);
     expect(decode(t.writes[0])).toBe('AB');
   });
 
-  it('renders the scripted prompt bytes verbatim', async () => {
+  it('renders the scripted prompt text verbatim', async () => {
     const { source, term } = await mountAndStream();
-    source.message(streamEvent({ seq: 1, text: '$ cargo test\r\n' }));
+    emit(source, sseFrame({ seq: 1, text: '$ cargo test\r\n' }));
+    runRaf();
+    expect(decode(term().writes[0])).toBe('$ cargo test\r\n');
+  });
+
+  it('renders base64-encoded PTY bytes verbatim', async () => {
+    const { source, term } = await mountAndStream();
+    emit(
+      source,
+      sseFrame({ seq: 1, bytesB64: textToBase64('$ cargo test\r\n') })
+    );
     runRaf();
     expect(decode(term().writes[0])).toBe('$ cargo test\r\n');
   });
 
   it('strips terminal sequences xterm cannot render cleanly', async () => {
     const { source, term } = await mountAndStream();
-    source.message(streamEvent({
-      seq: 1,
-      text: '\x1b[>4mkeep\x1b[?2026$p\n123 third_party/tcmalloc/noise\n',
-    }));
+    emit(
+      source,
+      sseFrame({
+        seq: 1,
+        text: '\x1b[>4mkeep\x1b[?2026$p\n123 third_party/tcmalloc/noise\n',
+      })
+    );
     runRaf();
     expect(decode(term().writes[0])).toBe('keep\n');
   });
 
-  it('sends an input control when the operator types', async () => {
-    await mountAndStream();
-    lastTerm().dataHandler?.('x');
-    await waitFor(() => expect(sentControls()).toHaveLength(1));
-    expect(sentControls()[0]).toEqual({ kind: 'send_input', text: 'x' });
+  it('sends a send_input control with the typed text when the operator types', async () => {
+    const { term } = await mountAndStream();
+    term().dataHandler?.('x');
+    const inputs = controlsOfKind('send_input');
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0].text).toBe('x');
   });
 
   it('promotes a Ctrl-C keystroke (ETX) to an interrupt control', async () => {
-    await mountAndStream();
-    lastTerm().dataHandler?.('\x03');
-    await waitFor(() => expect(sentControls()).toHaveLength(1));
-    expect(sentControls()[0]).toEqual({ kind: 'interrupt' });
+    const { term } = await mountAndStream();
+    term().dataHandler?.('\x03');
+    expect(controlsOfKind('interrupt')).toHaveLength(1);
+    expect(controlsOfKind('send_input')).toHaveLength(0);
   });
 
   it('sends an interrupt when the Ctrl-C toolbar button is clicked', async () => {
     await mountAndStream();
     fireEvent.click(screen.getByTestId('agent-terminal-interrupt'));
-    await waitFor(() => expect(sentControls()).toHaveLength(1));
-    expect(sentControls()[0]).toEqual({ kind: 'interrupt' });
+    expect(controlsOfKind('interrupt')).toHaveLength(1);
   });
 
-  it('renders exit codes from the SSE stream', async () => {
+  it('surfaces the exit pill and writes the exit line on an exit_code event', async () => {
     const { source, term } = await mountAndStream();
-    source.message(streamEvent({ seq: 1, text: '', stream: 'event', exit_code: 0 }));
+    emit(source, sseFrame({ seq: 1, stream: 'event', exitCode: 0 }));
+    const pill = await screen.findByTestId('agent-terminal-exit');
+    expect(pill).toHaveTextContent('exit 0');
     runRaf();
     expect(decode(term().writes[0])).toContain('process exited with code 0');
-    expect(await screen.findByTestId('agent-terminal-exit')).toHaveTextContent('exit 0');
+  });
+
+  it('streams agent bytes WITHOUT touching the rolling event buffer', async () => {
+    const { source, term } = await mountAndStream();
+    emit(source, sseFrame({ seq: 1, text: 'quiet bytes' }));
+    runRaf();
+    expect(decode(term().writes[0])).toBe('quiet bytes');
+    expect(useRealtimeStore.getState().events).toHaveLength(0);
   });
 });

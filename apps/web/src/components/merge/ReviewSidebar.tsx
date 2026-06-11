@@ -127,7 +127,7 @@ export function ReviewSidebar({
           <textarea
             id="request-changes-body"
             className="review-sidebar__textarea"
-            placeholder="What needs to change?"
+            aria-label="Requested changes"
             value={requestChangesBody}
             onChange={(e) => setRequestChangesBody(e.target.value)}
             rows={3}

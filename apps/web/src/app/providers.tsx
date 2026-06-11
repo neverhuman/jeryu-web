@@ -81,7 +81,7 @@ function ThemeProvider({ children }: { children: ReactNode }): JSX.Element {
  * Realtime boot: connects the WS client on mount and bridges gap events to
  * React Query so a `snapshot_required` triggers a bootstrap refetch.
  */
-function RealtimeBoot(): null {
+function RealtimeBoot(): JSX.Element {
   const connect = useRealtimeStore((s) => s.connect);
   const disconnect = useRealtimeStore((s) => s.disconnect);
   const subscribeSnapshot = useRealtimeStore((s) => s.onSnapshotRequired);
@@ -113,7 +113,7 @@ function RealtimeBoot(): null {
     };
   }, [connect, disconnect, queryClient, subscribeSnapshot]);
 
-  return null;
+  return <></>;
 }
 
 export function AppProviders({

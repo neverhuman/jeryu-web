@@ -85,7 +85,7 @@ function renderNode(
     return node.textContent ?? '';
   }
   if (node.nodeType !== Node.ELEMENT_NODE) {
-    return null;
+    return;
   }
 
   const element = node as HTMLElement;

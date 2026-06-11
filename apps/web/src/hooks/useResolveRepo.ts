@@ -25,7 +25,7 @@ export interface UseResolveRepoResult {
   isPending: boolean;
   isError: boolean;
   error: Error | null;
-  data: ResolvedRepo | null;
+  data: ResolvedRepo | undefined;
 }
 
 function matches(
@@ -53,12 +53,12 @@ export function useResolveRepo(
   // client-side against that page.
   const list = useRepositories({ host: provider });
 
-  const data = useMemo<ResolvedRepo | null>(() => {
-    if (!list.data) return null;
+  const data = useMemo<ResolvedRepo | undefined>(() => {
+    if (!list.data) return;
     const summary = list.data.repositories.find((r) =>
       matches(r, provider, fullName)
     );
-    if (!summary) return null;
+    if (!summary) return;
     return { id: summary.id.id, summary };
   }, [list.data, provider, fullName]);
 

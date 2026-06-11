@@ -36,7 +36,7 @@ export function useAgentTty(
   const subscribeTty = useRealtimeStore((s) => s.subscribeTty);
 
   useEffect(() => {
-    if (!runId) return undefined;
+    if (!runId) return () => {};
     const unsubscribe = subscribeTty(runId, (event) => {
       const frame = parseTtyFrame(event.payload);
       if (frame) handlerRef.current(frame, event);

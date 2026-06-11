@@ -19,7 +19,7 @@ export function useRealtime(scopes: string[]): void {
   const stableKey = scopes.length === 0 ? '' : [...new Set(scopes)].sort().join('|');
 
   useEffect(() => {
-    if (!stableKey) return undefined;
+    if (!stableKey) return () => {};
     const stable = stableKey.split('|');
     const { subscribe, unsubscribe } = useRealtimeStore.getState();
     subscribe(stable);

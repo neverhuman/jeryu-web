@@ -1,14 +1,13 @@
 // CodeViewer.tsx — Monaco-based viewer with markdown rendering toggle
 // (W-FE-10).
 //
-// Monaco is heavy (~1 MB minified) so we lazy-load it via React.lazy + a
-// dynamic import. The Suspense loading boundary renders the existing skeleton
-// while the chunk streams. For .md files, the viewer offers a second tab that
-// renders the server-provided HTML via MarkdownRenderer; the default tab is
-// "Rendered" when HTML is available so the README experience matches a
-// GitHub-style blob view.
+// Monaco is heavy (~1 MB minified) so the viewer loads it on demand with a
+// dynamic import and a local loading state. For .md files, the viewer offers a
+// second tab that renders the server-provided HTML via MarkdownRenderer; the
+// default tab is "Rendered" when HTML is available so the README experience
+// matches a GitHub-style blob view.
 
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { usePreferencesStore } from '../../stores/preferencesStore';
 import { LoadingState } from '../state';
@@ -18,9 +17,7 @@ import { isMarkdownPath } from '../../hooks/useBlob';
 
 import './browser.css';
 
-const MonacoEditor = lazy(() =>
-  import('@monaco-editor/react').then((m) => ({ default: m.Editor }))
-);
+type MonacoEditorComponent = typeof import('@monaco-editor/react')['Editor'];
 
 export interface CodeViewerProps {
   /** File path (used to detect language + markdown handling). */
@@ -91,8 +88,25 @@ export function CodeViewer({
   const [tab, setTab] = useState<'rendered' | 'raw'>(
     hasRenderedHtml ? 'rendered' : 'raw'
   );
+  const [MonacoEditor, setMonacoEditor] =
+    useState<MonacoEditorComponent | null>(null);
 
   const language = useMemo(() => languageForPath(path), [path]);
+
+  useEffect(() => {
+    if (isBinary || (hasRenderedHtml && tab === 'rendered') || MonacoEditor) {
+      return () => {};
+    }
+    let cancelled = false;
+    void import('@monaco-editor/react').then((m) => {
+      if (!cancelled) {
+        setMonacoEditor(() => m.Editor);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [MonacoEditor, hasRenderedHtml, isBinary, tab]);
 
   if (isBinary) {
     return (
@@ -136,33 +150,29 @@ export function CodeViewer({
         <div className="code-viewer__rendered">
           <MarkdownRenderer html={renderedHtml} />
         </div>
+      ) : MonacoEditor && text !== null ? (
+        <div className="code-viewer__monaco">
+          <MonacoEditor
+            value={text}
+            language={language}
+            theme="vs-dark"
+            height="100%"
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              fontSize: codeFontSize,
+              scrollBeyondLastLine: false,
+              wordWrap: 'on',
+              renderLineHighlight: 'none',
+            }}
+          />
+        </div>
       ) : (
-        <Suspense
-          fallback={
-            <LoadingState
-              title="Loading editor…"
-              variant="message"
-              description="Monaco is loading."
-            />
-          }
-        >
-          <div className="code-viewer__monaco">
-            <MonacoEditor
-              value={text ?? ''}
-              language={language}
-              theme="vs-dark"
-              height="100%"
-              options={{
-                readOnly: true,
-                minimap: { enabled: false },
-                fontSize: codeFontSize,
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                renderLineHighlight: 'none',
-              }}
-            />
-          </div>
-        </Suspense>
+        <LoadingState
+          title="Loading editor…"
+          variant="message"
+          description="Monaco is loading."
+        />
       )}
     </div>
   );

@@ -212,7 +212,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
                 handleDiscard();
               }
               setRepo(repoId);
-              return undefined;
+              return;
             }}
             aria-current={
               section.id === activeSection ? 'page' : undefined

@@ -24,7 +24,7 @@ export interface InlineCommentDisplayProps {
 
 export interface InlineCommentComposeProps {
   mode: 'compose';
-  placeholder?: string;
+  hintText?: string;
   /** Pre-fill body (for editing flows; default empty). */
   initialBody?: string;
   /** Submit handler; receives the trimmed body. */
@@ -74,7 +74,7 @@ export function InlineComment(props: InlineCommentProps): JSX.Element {
 }
 
 function InlineCommentComposer({
-  placeholder,
+  hintText,
   initialBody,
   onSubmit,
   onCancel,
@@ -106,7 +106,7 @@ function InlineCommentComposer({
       <textarea
         id="inline-comment-body"
         className="inline-comment__textarea"
-        placeholder={placeholder ?? 'Leave a comment…'}
+        aria-label={hintText ?? 'Comment body'}
         rows={3}
         value={body}
         onChange={(event) => setBody(event.target.value)}

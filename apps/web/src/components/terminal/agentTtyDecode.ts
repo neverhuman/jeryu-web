@@ -92,7 +92,7 @@ export function parseTtyFrame(payload: unknown): AgentTtyFrame | null {
   if (typeof p.stream !== 'string' || !STREAMS.has(p.stream)) return null;
   if (typeof p.bytes_b64 !== 'string') return null;
   // Prove the bytes actually decode so downstream `term.write` never chokes.
-  if (tryDecodeBase64(p.bytes_b64) === null) return null;
+  if (!tryDecodeBase64(p.bytes_b64)) return null;
   return {
     chunk_seq: p.chunk_seq,
     stream: p.stream as AgentTtyFrame['stream'],

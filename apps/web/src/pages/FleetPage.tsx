@@ -568,8 +568,8 @@ function RunnerNodeCard({ node }: { node: RunnerNetworkNode }): JSX.Element {
 }
 
 /** Build the drill-down URL for a task that has both a repo and an agent run id. */
-function taskTerminalPath(task: RunnerNetworkNode['tasks'][number]): string | null {
-  if (!task.repo || !task.agentRunId) return null;
+function taskTerminalPath(task: RunnerNetworkNode['tasks'][number]): string | undefined {
+  if (!task.repo || !task.agentRunId) return;
   const provider = 'jeryu';
   const fullName = encodeURIComponent(task.repo);
   return `/repos/${encodeURIComponent(provider)}/${fullName}/agents/${encodeURIComponent(task.agentRunId)}`;

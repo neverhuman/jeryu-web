@@ -3,14 +3,19 @@
 // Holds the filter-chip control, the body renderer that wires the five
 // UX-QA states (loading / empty / error / permission / success), and the
 // pure helpers (`FilterState`, `DEFAULT_FILTER`, `groupByFamily`) the page
-// uses to derive its query and group the result set. Splitting these out
-// keeps the page module focused on state + routing orchestration.
+// uses to derive its query. Splitting these out keeps the page module
+// focused on state + routing orchestration.
 
 import { Search } from 'lucide-react';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
-import { RepoCard, RepoFamilyGroup, RepoTable } from '../components/repo';
+import {
+  RepoCard,
+  RepoFamilyCard,
+  RepoTable,
+  partitionByFamily,
+} from '../components/repo';
 import {
   EmptyState,
   ErrorState,
@@ -35,6 +40,18 @@ export const DEFAULT_FILTER: FilterState = {
   sort: 'recent_activity',
 };
 
+function sortFamilyRepos(
+  family: string,
+  repos: RepositorySummary[]
+): RepositorySummary[] {
+  if (family !== 'jeryu-split') return repos;
+  return [...repos].sort((a, b) => {
+    const aRank = a.repo_role === 'public_portal' ? 0 : 1;
+    const bRank = b.repo_role === 'public_portal' ? 0 : 1;
+    return aRank - bRank;
+  });
+}
+
 export function groupByFamily(
   repos: RepositorySummary[]
 ): Array<{ title: string; repos: RepositorySummary[] }> {
@@ -53,7 +70,7 @@ export function groupByFamily(
   }
   const out: Array<{ title: string; repos: RepositorySummary[] }> = [];
   for (const [family, list] of buckets) {
-    out.push({ title: family, repos: list });
+    out.push({ title: family, repos: sortFamilyRepos(family, list) });
   }
   if (ungrouped.length > 0) {
     out.push({ title: 'Other', repos: ungrouped });
@@ -109,6 +126,10 @@ interface RepositoriesBodyProps {
   error: Error | null;
   repos: RepositorySummary[];
   view: 'card' | 'table';
+  /** Active free-text search; non-empty disables family tiles. */
+  search: string;
+  /** Active `?family=` filter; set disables family tiles. */
+  familyFilter?: string;
   onClearFilters: () => void;
 }
 
@@ -117,6 +138,8 @@ export function RepositoriesBody({
   error,
   repos,
   view,
+  search,
+  familyFilter,
   onClearFilters,
 }: RepositoriesBodyProps): JSX.Element {
   if (loading) {
@@ -165,21 +188,32 @@ export function RepositoriesBody({
     return <RepoTable repos={repos} />;
   }
 
-  const groups = groupByFamily(repos);
+  // When searching or drilling into a specific family the user wants the
+  // matching repos themselves — render flat cards without family tiles.
+  // Within a family drill-down the split family surfaces its public
+  // portal first (see `sortFamilyRepos`).
+  const flat = search.trim() !== '' || Boolean(familyFilter);
+  if (flat) {
+    const ordered = familyFilter
+      ? sortFamilyRepos(familyFilter, repos)
+      : repos;
+    return (
+      <div className="page__cards">
+        {ordered.map((repo) => (
+          <RepoCard key={repo.id.id} repo={repo} />
+        ))}
+      </div>
+    );
+  }
+
+  const { families, singles } = partitionByFamily(repos);
   return (
-    <div className="page__section">
-      {groups.map((group) => (
-        <RepoFamilyGroup
-          key={group.title}
-          title={group.title}
-          count={group.repos.length}
-        >
-          <div className="page__cards">
-            {group.repos.map((repo) => (
-              <RepoCard key={repo.id.id} repo={repo} />
-            ))}
-          </div>
-        </RepoFamilyGroup>
+    <div className="page__cards">
+      {families.map((family) => (
+        <RepoFamilyCard key={family.name} family={family} />
+      ))}
+      {singles.map((repo) => (
+        <RepoCard key={repo.id.id} repo={repo} />
       ))}
     </div>
   );

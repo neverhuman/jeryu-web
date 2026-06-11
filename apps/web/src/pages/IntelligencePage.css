@@ -1,4 +1,4 @@
-/* IntelligencePage.css - JMCP/control-plane dashboard. */
+/* IntelligencePage.css - intelligence snapshot dashboard. */
 
 .intelligence {
   width: 100%;
@@ -6,6 +6,11 @@
 
 .intelligence__header {
   gap: var(--space-4);
+}
+
+.intelligence__header-note {
+  max-width: 72ch;
+  margin: 0;
 }
 
 .intelligence__title-line,
@@ -682,6 +687,12 @@
   }
 
   .intelligence__graph-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .intelligence__graph-controls,
+  .intelligence__graph-console,
+  .intelligence__graph-bottom {
     grid-template-columns: 1fr;
   }
 

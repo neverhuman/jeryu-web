@@ -66,7 +66,7 @@ export function FlatFileList({
       >
         {virtualizer.getVirtualItems().map((vRow) => {
           const node = nodes[vRow.index];
-          if (!node) return null;
+          if (!node) return;
           const isSelected = selectedPath === node.entry.path;
           const Icon = fileIcon(node.entry.name);
           return (

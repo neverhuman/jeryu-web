@@ -54,12 +54,14 @@ export function AgentTerminalImpl({
   const onExitRef = useRef(onExit);
   useEffect(() => { onExitRef.current = onExit; }, [onExit]);
 
-  const flush = useCallback((): void => {
+  // Named function expression so the retry path can re-schedule itself
+  // without closing over the outer `flush` binding before it is declared.
+  const flush = useCallback(function flushFrame(): void {
     rafRef.current = null;
     const term = termRef.current;
     if (!term) {
       if (pendingRef.current.length > 0) {
-        rafRef.current = requestAnimationFrame(flush);
+        rafRef.current = requestAnimationFrame(flushFrame);
       }
       return;
     }
@@ -123,7 +125,7 @@ export function AgentTerminalImpl({
   // ── xterm + SSE lifecycle ─────────────────────────────────────────────────
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return undefined;
+    if (!container) return () => {};
 
     let disposed = false;
     let dataSub: { dispose(): void } | null = null;

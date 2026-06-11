@@ -107,16 +107,19 @@
   gap: var(--space-3);
 }
 
+.repo-card__badges,
+.repo-table__repo-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .repo-card__title {
   margin: 0;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--color-fg-primary);
-}
-
-.repo-card__owner {
-  color: var(--color-fg-muted);
-  font-weight: var(--font-weight-regular);
 }
 
 .repo-card__description {
@@ -143,6 +146,31 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+.repo-role-badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.repo-role-badge--public_portal {
+  background-color: var(--color-accent-primary-bg);
+  color: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+}
+
+.repo-role-badge--split_member {
+  background-color: var(--color-accent-success-bg);
+  color: var(--color-accent-success);
+  border-color: var(--color-accent-success);
 }
 
 .repo-table {
@@ -206,31 +234,90 @@
   outline-offset: -2px;
 }
 
-.repo-family {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+/* Family tile ------------------------------------------------------------- */
+/* A family rolls several repos into one tile. The stacked-deck offset
+ * shadow + accent-tinted border distinguish it from plain repo cards. */
+
+.repo-family-card {
+  border-color: var(--color-accent-primary);
+  box-shadow:
+    var(--space-1) var(--space-1) 0 calc(-1 * var(--space-1) / 4) var(--color-bg-1),
+    var(--space-1) var(--space-1) 0 0 var(--color-border-strong);
 }
 
-.repo-family__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
+.repo-family-card:hover {
+  border-color: var(--color-accent-primary);
+  box-shadow:
+    var(--space-1) var(--space-1) 0 calc(-1 * var(--space-1) / 4) var(--color-bg-1),
+    var(--space-1) var(--space-1) 0 0 var(--color-accent-primary);
 }
 
-.repo-family__title {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-fg-muted);
+.repo-family-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.repo-family__count {
+.repo-family-card__title svg {
+  color: var(--color-accent-primary);
+  flex-shrink: 0;
+}
+
+.repo-family-card__count {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
   font-size: var(--font-size-xs);
-  color: var(--color-fg-muted);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-primary-bg);
+  color: var(--color-accent-primary);
+}
+
+/* Family drill-down page --------------------------------------------------- */
+
+.repo-family-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+.repo-family-strip__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.repo-family-panel {
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-1);
+}
+
+/* Family link-chip in the table view --------------------------------------- */
+
+.repo-table__family-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-primary-bg);
+  color: var(--color-accent-primary);
+  text-decoration: none;
+}
+
+.repo-table__family-link:hover {
+  background-color: var(--color-accent-primary);
+  color: var(--color-bg-1);
+  text-decoration: none;
 }
 
 .repo-health-pill {
@@ -482,4 +569,156 @@
 
 .left-nav__item--agents:not(.is-active) {
   color: var(--color-accent-primary);
+}
+
+/* Score + mirror badges ---------------------------------------------------- */
+/* Compact pills surfacing the newest jankurai audit and the offsite mirror
+   posture on cards and table rows. Variants reuse the accent token ramps. */
+
+.repo-score-badge,
+.repo-mirror-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.repo-score-badge--good {
+  background-color: var(--color-accent-success-bg);
+  color: var(--color-accent-success);
+}
+
+.repo-score-badge--warn {
+  background-color: var(--color-accent-warning-bg);
+  color: var(--color-accent-warning);
+}
+
+.repo-score-badge--neutral {
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-muted);
+}
+
+.repo-mirror-badge {
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.repo-mirror-badge--danger {
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
+.repo-card__pills {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.repo-card__meta-item--running {
+  color: var(--color-accent-info);
+  font-weight: var(--font-weight-semibold);
+}
+
+.repo-table__checks {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.repo-table__running {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-accent-info);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Danger zone --------------------------------------------------------------- */
+/* Destructive repository actions at the bottom of the overview page. The
+   section border + heading reuse the danger accent so the area reads as
+   consequential before any copy is parsed. */
+
+.repo-danger-zone {
+  margin-top: var(--space-6);
+  border: 1px solid var(--color-accent-danger);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--color-bg-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.repo-danger-zone__title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent-danger);
+}
+
+.repo-danger-zone__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.repo-danger-zone__row-title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+}
+
+.repo-danger-zone__row-detail {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.repo-danger-zone__row .action-button {
+  flex-shrink: 0;
+}
+
+/* Delete dialog ------------------------------------------------------------- */
+
+.delete-repo-dialog__error {
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+  border: 1px solid var(--color-accent-danger);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.delete-repo-dialog__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+.delete-repo-dialog__confirm-input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-0);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+}
+
+.delete-repo-dialog__confirm-input:focus-visible {
+  outline: 2px solid var(--color-accent-danger);
+  outline-offset: 1px;
 }

@@ -194,7 +194,7 @@ function FileFinder({
   const tree = useRepoTree(repoId, refName, '');
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) return () => {};
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -210,7 +210,7 @@ function FileFinder({
     [tree.data]
   );
 
-  if (!open) return null;
+  if (!open) return <></>;
 
   return (
     <div
@@ -223,7 +223,7 @@ function FileFinder({
       <Command className="file-finder__panel" label="Find files" loop>
         <Command.Input
           className="file-finder__input"
-          placeholder="Type to filter files…"
+          aria-label="Filter files"
           value={query}
           onValueChange={setQuery}
           autoFocus

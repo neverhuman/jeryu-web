@@ -94,7 +94,6 @@ export function AgentPolicyEditor({
             step={1}
             value={value.budget_daily_usd ?? ''}
             onChange={onBudget}
-            placeholder="(unlimited)"
           />
         </label>
       </fieldset>
@@ -110,7 +109,6 @@ export function AgentPolicyEditor({
             type="text"
             value={value.allowed_agents.join(', ')}
             onChange={onListField('allowed_agents')}
-            placeholder="claude-sonnet, codex"
           />
         </label>
         <label className="agent-policy__field">
@@ -119,7 +117,6 @@ export function AgentPolicyEditor({
             type="text"
             value={value.allowed_tools.join(', ')}
             onChange={onListField('allowed_tools')}
-            placeholder="rg, view, edit, run"
           />
         </label>
       </fieldset>

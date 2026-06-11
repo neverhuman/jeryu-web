@@ -69,10 +69,10 @@ export interface RunnerNetworkState {
   lastUpdated: string | null;
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
+function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null
     ? (value as Record<string, unknown>)
-    : null;
+    : undefined;
 }
 
 function str(value: unknown): string {
@@ -95,7 +95,7 @@ export function lastTtyLine(preview: RunnerTtyPreview | null | undefined): strin
     .flatMap((line) => line.split(/\r?\n/))
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
-  return lines.length === 0 ? null : lines[lines.length - 1];
+  return lines.length === 0 ? null : (lines[lines.length - 1] ?? null);
 }
 
 function availabilityFromState(state: string): RunnerAvailability {
@@ -208,7 +208,7 @@ export function runnerNetworkFromResponse(
   const nodes = nodeDetails
     .map((node) => {
       const record = asRecord(node);
-      if (!record) return null;
+      if (!record) return;
       const tasks = Array.isArray(record.activeTasks) ? record.activeTasks : [];
       return nodeFromRaw({
         runnerId: str(record.runnerId),
@@ -223,7 +223,7 @@ export function runnerNetworkFromResponse(
         activeTasks: tasks
           .map((task) => {
             const taskRecord = asRecord(task);
-            if (!taskRecord) return null;
+            if (!taskRecord) return;
             const ttyRecord = asRecord(taskRecord.ttyPreview);
             return {
               taskId: str(taskRecord.taskId),
@@ -249,10 +249,10 @@ export function runnerNetworkFromResponse(
               },
             } satisfies RunnerTaskSummary;
           })
-          .filter((task): task is RunnerTaskSummary => task !== null),
+          .filter((task): task is RunnerTaskSummary => task !== undefined),
       });
     })
-    .filter((node): node is RunnerNetworkNode => node !== null)
+    .filter((node): node is RunnerNetworkNode => node !== undefined)
     .sort((a, b) => a.runnerId.localeCompare(b.runnerId));
 
   const totals = totalsFromNodes(nodes);

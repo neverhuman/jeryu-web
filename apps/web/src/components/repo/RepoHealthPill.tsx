@@ -14,11 +14,13 @@ export interface RepoHealthPillProps {
   label?: string;
 }
 
-function variant(health: string): 'healthy' | 'degraded' | 'failing' | null {
+function variant(
+  health: string
+): 'healthy' | 'degraded' | 'failing' | undefined {
   if (health === 'healthy') return 'healthy';
   if (health === 'degraded') return 'degraded';
   if (health === 'failing') return 'failing';
-  return null;
+  return;
 }
 
 export function RepoHealthPill({

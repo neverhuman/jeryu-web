@@ -65,7 +65,7 @@ export function NotificationInbox({
 
   // Close on outside click / Escape so the popover behaves like a menu.
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) return () => {};
     const onDown = (event: MouseEvent): void => {
       if (!containerRef.current) return;
       if (!containerRef.current.contains(event.target as Node)) {

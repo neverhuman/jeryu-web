@@ -9,12 +9,16 @@
 
 import type { ServerWsMessage, WebEvent } from './types';
 
+export type ParsedServerFrame =
+  | { kind: 'frame'; frame: ServerWsMessage }
+  | { kind: 'drop' };
+
 /**
  * Wire protocol identifier negotiated in the server `hello` frame
  * (`crate::api::websocket`). The server stamps this into
  * `ServerWsMessage::Hello.protocol`; a mismatch means the runtime is talking
  * a different protocol revision than this client was built against, so we
- * surface it as an error and refuse to resume against a stale cursor.
+ * surface it as an error and refuse to resume against a previous cursor.
  */
 export const WS_PROTOCOL = 'jeryu.ws.v1';
 
@@ -22,10 +26,11 @@ export const WS_PROTOCOL = 'jeryu.ws.v1';
  * Runtime guard for inbound server frames. `JSON.parse` yields `unknown`;
  * we prove the discriminated-union shape (`type` plus the fields the matching
  * branch reads) before handing the frame to the switch, so no field is read
- * off an unvalidated value. Unknown / malformed frames are dropped.
+ * off an unvalidated value. Unknown / malformed frames are returned as a
+ * typed drop result.
  */
-export function parseServerFrame(raw: unknown): ServerWsMessage | null {
-  if (typeof raw !== 'object' || raw === null) return null;
+export function parseServerFrame(raw: unknown): ParsedServerFrame {
+  if (typeof raw !== 'object' || raw === null) return { kind: 'drop' };
   const f = raw as Record<string, unknown>;
   switch (f.type) {
     case 'hello':
@@ -33,34 +38,49 @@ export function parseServerFrame(raw: unknown): ServerWsMessage | null {
         typeof f.server_time === 'string' &&
         isSeq(f.current_seq)
         ? {
-            type: 'hello',
-            server_time: f.server_time,
-            current_seq: toSeq(f.current_seq),
-            protocol: f.protocol,
+            kind: 'frame',
+            frame: {
+              type: 'hello',
+              server_time: f.server_time,
+              current_seq: toSeq(f.current_seq),
+              protocol: f.protocol,
+            },
           }
-        : null;
+        : { kind: 'drop' };
     case 'snapshot_required':
       return typeof f.reason === 'string' && isSeq(f.current_seq)
         ? {
-            type: 'snapshot_required',
-            reason: f.reason,
-            current_seq: toSeq(f.current_seq),
+            kind: 'frame',
+            frame: {
+              type: 'snapshot_required',
+              reason: f.reason,
+              current_seq: toSeq(f.current_seq),
+            },
           }
-        : null;
+        : { kind: 'drop' };
     case 'event':
       return isWebEvent(f.event)
-        ? { type: 'event', event: { ...f.event, seq: toSeq(f.event.seq) } }
-        : null;
+        ? {
+            kind: 'frame',
+            frame: { type: 'event', event: { ...f.event, seq: toSeq(f.event.seq) } },
+          }
+        : { kind: 'drop' };
     case 'pong':
       return typeof f.nonce === 'string' && typeof f.server_time === 'string'
-        ? { type: 'pong', nonce: f.nonce, server_time: f.server_time }
-        : null;
+        ? {
+            kind: 'frame',
+            frame: { type: 'pong', nonce: f.nonce, server_time: f.server_time },
+          }
+        : { kind: 'drop' };
     case 'error':
       return typeof f.code === 'string' && typeof f.message === 'string'
-        ? { type: 'error', code: f.code, message: f.message }
-        : null;
+        ? {
+            kind: 'frame',
+            frame: { type: 'error', code: f.code, message: f.message },
+          }
+        : { kind: 'drop' };
     default:
-      return null;
+      return { kind: 'drop' };
   }
 }
 

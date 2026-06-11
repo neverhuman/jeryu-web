@@ -194,7 +194,7 @@ export function DiffViewer({
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const row = rows[virtualRow.index];
-            if (!row) return null;
+            if (!row) return;
             const line = row.headLine ?? row.baseLine;
             return (
               <div
@@ -247,7 +247,7 @@ export function DiffViewer({
           </p>
           <InlineComment
             mode="compose"
-            placeholder="Leave an inline comment…"
+            hintText="Leave an inline comment…"
             isSubmitting={submitting}
             onSubmit={(body) => handleSubmitComment(composerLine, body)}
             onCancel={() => setComposerLine(null)}

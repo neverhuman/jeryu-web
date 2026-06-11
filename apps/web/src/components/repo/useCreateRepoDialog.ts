@@ -96,7 +96,7 @@ export function useCreateRepoDialog({
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) return () => {};
     panelRef.current?.focus();
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {

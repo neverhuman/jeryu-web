@@ -201,6 +201,7 @@ function listResponse(): Record<string, unknown> {
         visibility: 'private',
         default_branch: 'main',
         family: null,
+        repo_role: null,
         topics: [],
         language: null,
         health: 'healthy',

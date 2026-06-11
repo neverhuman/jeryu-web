@@ -82,7 +82,6 @@ export function BranchProtectionEditor({
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                       updateRule(index, { pattern: e.target.value })
                     }
-                    placeholder="main, release/*"
                     disabled={disabled}
                   />
                 </label>
@@ -176,10 +175,9 @@ export function BranchProtectionEditor({
                         required_checks: e.target.value
                           .split(',')
                           .map((s) => s.trim())
-                          .filter(Boolean),
+                        .filter(Boolean),
                       })
                     }
-                    placeholder="ci/build, ci/test"
                     disabled={disabled}
                   />
                 </label>

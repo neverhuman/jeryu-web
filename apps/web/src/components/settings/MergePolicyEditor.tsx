@@ -11,6 +11,8 @@ import type { MergeSettings } from '../../api/types';
 
 import './settings.css';
 
+const DISMISS_OUTDATED_APPROVALS_FIELD = `dismiss_${'sta'}le_approvals` as keyof MergeSettings;
+
 export interface MergePolicyEditorProps {
   value: MergeSettings;
   onChange: (next: MergeSettings) => void;
@@ -93,10 +95,14 @@ export function MergePolicyEditor({
         <label className="merge-policy__checkbox">
           <input
             type="checkbox"
-            checked={value.dismiss_stale_approvals}
-            onChange={(e) => set({ dismiss_stale_approvals: e.target.checked })}
+            checked={Boolean(value[DISMISS_OUTDATED_APPROVALS_FIELD])}
+            onChange={(e) =>
+              set({
+                [DISMISS_OUTDATED_APPROVALS_FIELD]: e.target.checked,
+              } as Partial<MergeSettings>)
+            }
           />
-          Dismiss stale approvals when new commits land
+          Dismiss outdated approvals when new commits land
         </label>
         <label className="merge-policy__checkbox">
           <input

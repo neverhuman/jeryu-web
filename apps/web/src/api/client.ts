@@ -6,6 +6,8 @@
 //   - `apiPut<T>(url, body, opts)`  — PUT, JSON, optional `Idempotency-Key`.
 //   - `apiPatch<T>(url, body, opts)` — PATCH with the same headers.
 //   - `apiDelete(url, opts)`        — DELETE; returns void on 204.
+//   - `apiDeleteWithBody<T>(url, body, opts)` — HTTP removal request that
+//     carries a JSON confirmation payload and parses a typed JSON receipt.
 //
 // Responses with `application/json` content-type are parsed; non-JSON 4xx/5xx
 // fall through to `ApiError` with the raw status text.
@@ -118,10 +120,7 @@ async function parseError(response: Response): Promise<ApiError> {
   });
 }
 
-async function readJsonOrNull<T>(response: Response): Promise<T> {
-  if (response.status === 204) {
-    return undefined as T;
-  }
+async function readJson<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') ?? '';
   if (!contentType.includes('application/json')) {
     throw new ApiError(response.status, {
@@ -138,13 +137,46 @@ async function readJsonOrNull<T>(response: Response): Promise<T> {
   return body as T;
 }
 
+async function sendNoContent(
+  method: 'DELETE',
+  url: string,
+  opts: ApiRequestOptions | undefined
+): Promise<void> {
+  const init: RequestInit = {
+    method,
+    headers: buildHeaders(false, opts),
+    credentials: 'same-origin',
+  };
+  if (opts?.signal) init.signal = opts.signal;
+
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (cause) {
+    throw new ApiError(
+      0,
+      {
+        code: 'network_error',
+        message:
+          cause instanceof Error
+            ? cause.message
+            : 'Failed to reach the API.',
+      },
+      { cause }
+    );
+  }
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+}
+
 async function send<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   url: string,
   body: unknown,
   opts: ApiRequestOptions | undefined
 ): Promise<T> {
-  const hasBody = body !== undefined && method !== 'GET' && method !== 'DELETE';
+  const hasBody = body !== undefined && method !== 'GET';
   const init: RequestInit = {
     method,
     headers: buildHeaders(hasBody, opts),
@@ -172,7 +204,7 @@ async function send<T>(
   if (!response.ok) {
     throw await parseError(response);
   }
-  return readJsonOrNull<T>(response);
+  return readJson<T>(response);
 }
 
 export function apiGet<T>(
@@ -210,5 +242,18 @@ export function apiDelete(
   url: string,
   opts?: ApiRequestOptions
 ): Promise<void> {
-  return send<void>('DELETE', url, undefined, opts);
+  return sendNoContent('DELETE', url, opts);
+}
+
+/**
+ * Removal request that carries a JSON confirmation payload (the repos
+ * endpoint requires `{ confirm_full_name, delete_storage }`) and parses a
+ * typed JSON receipt.
+ */
+export function apiDeleteWithBody<T>(
+  url: string,
+  body: unknown,
+  opts?: ApiRequestOptions
+): Promise<T> {
+  return send<T>('DELETE', url, body, opts);
 }

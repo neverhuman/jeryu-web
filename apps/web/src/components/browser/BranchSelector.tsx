@@ -34,7 +34,7 @@ export function BranchSelector({
   const refs = useRefs(repoId);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) return () => {};
     const onClick = (e: MouseEvent): void => {
       if (
         containerRef.current &&
@@ -80,7 +80,7 @@ export function BranchSelector({
         >
           <Command.Input
             className="branch-selector__input"
-            placeholder="Filter refs…"
+            aria-label="Filter refs"
             value={filterText}
             onValueChange={setFilterText}
             autoFocus

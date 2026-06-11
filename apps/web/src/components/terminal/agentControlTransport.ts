@@ -17,7 +17,7 @@ interface ControlResponse {
 async function sendControl(
   runId: string,
   body: Record<string, unknown>,
-): Promise<ControlResponse | null> {
+): Promise<ControlResponse | undefined> {
   try {
     const res = await fetch(CONTROL_URL(runId), {
       method: 'POST',
@@ -27,19 +27,19 @@ async function sendControl(
     if (res.ok) {
       return (await res.json()) as ControlResponse;
     }
-    return null;
+    return;
   } catch {
-    return null;
+    return;
   }
 }
 
 /** Send raw text input to the agent's PTY stdin. */
-export function sendInput(runId: string, text: string): Promise<ControlResponse | null> {
+export function sendInput(runId: string, text: string): Promise<ControlResponse | undefined> {
   return sendControl(runId, { kind: 'send_input', text });
 }
 
 /** Send SIGINT to the agent process. */
-export function sendInterrupt(runId: string): Promise<ControlResponse | null> {
+export function sendInterrupt(runId: string): Promise<ControlResponse | undefined> {
   return sendControl(runId, { kind: 'interrupt' });
 }
 
@@ -48,11 +48,11 @@ export function sendResize(
   runId: string,
   cols: number,
   rows: number,
-): Promise<ControlResponse | null> {
+): Promise<ControlResponse | undefined> {
   return sendControl(runId, { kind: 'resize_pty', cols, rows });
 }
 
 /** Terminate the agent process. */
-export function sendTerminate(runId: string): Promise<ControlResponse | null> {
+export function sendTerminate(runId: string): Promise<ControlResponse | undefined> {
   return sendControl(runId, { kind: 'terminate' });
 }

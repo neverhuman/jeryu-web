@@ -56,8 +56,8 @@ function ResultSection({
   title,
   count,
   children,
-}: ResultSectionProps): JSX.Element | null {
-  if (count === 0) return null;
+}: ResultSectionProps): JSX.Element {
+  if (count === 0) return <></>;
   return (
     <section
       className="search-results__section"
@@ -328,7 +328,6 @@ export function SearchResultsPage(): JSX.Element {
           ref={inputRef}
           type="search"
           className="search-results__input"
-          placeholder="Search repos, files, PRs, issues…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           aria-label="Search query"

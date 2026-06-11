@@ -182,7 +182,6 @@ export function CreateRepoForm({
             className="create-repo-dialog__input"
             value={topicsText}
             onChange={(e) => setTopicsText(e.target.value)}
-            placeholder="rust, async, jeryu"
             autoComplete="off"
           />
         </div>

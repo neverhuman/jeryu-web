@@ -1,9 +1,12 @@
 // preferencesStore.ts — user UI preferences (W-FE-05 + W-CC-01).
 //
-// State persists to `localStorage` as `jeryu.preferences.v1`. The version
-// suffix lets us migrate the schema later without poisoning user data.
+// State persists through the audited browser storage adapter as
+// `jeryu.preferences.v1`. The version suffix lets us migrate the schema later
+// without poisoning user data.
 
 import { create } from 'zustand';
+
+import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 
 export type ThemePreference = 'system' | 'light' | 'dark' | 'high-contrast';
 export type DensityPreference = 'comfortable' | 'compact' | 'ultra-compact';
@@ -62,14 +65,9 @@ const DEFAULTS: Pick<
 };
 
 function loadInitial(): typeof DEFAULTS {
-  if (typeof window === 'undefined') return DEFAULTS;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = readBrowserText('durable', STORAGE_KEY);
     if (!raw) return DEFAULTS;
-    // localStorage is attacker-/corruption-prone, so the parsed value stays
-    // `unknown`: we read each field through `field()` and run it past a
-    // per-field validator before it can reach the store. Nothing is trusted
-    // on the strength of the cast alone.
     const parsed: unknown = JSON.parse(raw);
     const field = (key: keyof typeof DEFAULTS): unknown =>
       typeof parsed === 'object' && parsed !== null
@@ -100,12 +98,7 @@ function loadInitial(): typeof DEFAULTS {
 }
 
 function persist(state: typeof DEFAULTS): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // localStorage may be full or disabled (private mode). Silent.
-  }
+  writeBrowserText('durable', STORAGE_KEY, JSON.stringify(state));
 }
 
 function validateTheme(input: unknown): ThemePreference | null {
@@ -117,36 +110,36 @@ function validateTheme(input: unknown): ThemePreference | null {
     : null;
 }
 
-function validateDensity(input: unknown): DensityPreference | null {
+function validateDensity(input: unknown): DensityPreference | undefined {
   return input === 'comfortable' ||
     input === 'compact' ||
     input === 'ultra-compact'
     ? input
-    : null;
+    : undefined;
 }
 
-function validateDateFormat(input: unknown): DateFormat | null {
+function validateDateFormat(input: unknown): DateFormat | undefined {
   return input === 'relative' || input === 'iso' || input === 'long'
     ? input
-    : null;
+    : undefined;
 }
 
-function validateKeyboardMode(input: unknown): KeyboardMode | null {
-  return input === 'default' || input === 'vim' ? input : null;
+function validateKeyboardMode(input: unknown): KeyboardMode | undefined {
+  return input === 'default' || input === 'vim' ? input : undefined;
 }
 
-function validateReposView(input: unknown): ReposViewMode | null {
-  return input === 'card' || input === 'table' ? input : null;
+function validateReposView(input: unknown): ReposViewMode | undefined {
+  return input === 'card' || input === 'table' ? input : undefined;
 }
 
-function validateDiffMode(input: unknown): DiffMode | null {
-  return input === 'unified' || input === 'split' ? input : null;
+function validateDiffMode(input: unknown): DiffMode | undefined {
+  return input === 'unified' || input === 'split' ? input : undefined;
 }
 
-function validateIsoTimestamp(input: unknown): string | null {
-  if (typeof input !== 'string') return null;
+function validateIsoTimestamp(input: unknown): string | undefined {
+  if (typeof input !== 'string') return;
   const ms = Date.parse(input);
-  return Number.isFinite(ms) ? input : null;
+  return Number.isFinite(ms) ? input : undefined;
 }
 
 export const usePreferencesStore = create<PreferencesState>((set, get) => {

@@ -174,7 +174,7 @@ export function PullRoomPage(): JSX.Element {
               setFilters((current) => ({ ...current, search: event.target.value }))
             }
             type="search"
-            placeholder="title, repo, ref, sha"
+            aria-label="Search pull requests"
           />
         </label>
       </section>

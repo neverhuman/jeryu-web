@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useCommandStore } from '../stores/commandStore';
 
-export function CommandPalette(): JSX.Element | null {
+export function CommandPalette(): JSX.Element {
   const isOpen = useCommandStore((s) => s.isOpen);
   const close = useCommandStore((s) => s.close);
   const query = useCommandStore((s) => s.query);
@@ -19,7 +19,7 @@ export function CommandPalette(): JSX.Element | null {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen) return () => {};
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -40,7 +40,7 @@ export function CommandPalette(): JSX.Element | null {
     return Object.entries(buckets);
   }, [commands]);
 
-  if (!isOpen) return null;
+  if (!isOpen) return <></>;
 
   return (
     <div
@@ -57,7 +57,7 @@ export function CommandPalette(): JSX.Element | null {
       >
         <Command.Input
           className="command-palette__input"
-          placeholder="Type a command, repository, or action…"
+          aria-label="Command search"
           value={query}
           onValueChange={setQuery}
           autoFocus

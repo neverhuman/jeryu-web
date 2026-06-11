@@ -218,7 +218,7 @@ describe('ReviewSidebar', () => {
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Request changes/i }));
-    const textarea = screen.getByPlaceholderText(/What needs to change/i);
+    const textarea = screen.getByLabelText(/Requested changes/i);
     await user.type(textarea, '   please rename the variable   ');
 
     await user.click(screen.getByRole('button', { name: /^Submit$/ }));

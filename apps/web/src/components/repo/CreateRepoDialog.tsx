@@ -45,7 +45,7 @@ export function CreateRepoDialog({
   onCreated,
   defaultHost = 'jeryu',
   defaultOwner = '',
-}: CreateRepoDialogProps): JSX.Element | null {
+}: CreateRepoDialogProps): JSX.Element {
   const {
     step,
     setStep,
@@ -68,7 +68,7 @@ export function CreateRepoDialog({
     defaultOwner,
   });
 
-  if (!open) return null;
+  if (!open) return <></>;
 
   return (
     <div

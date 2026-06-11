@@ -25,7 +25,7 @@ export function KeyboardShortcutsOverlay(): JSX.Element {
   );
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) return () => {};
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         e.preventDefault();

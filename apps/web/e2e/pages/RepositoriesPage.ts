@@ -18,7 +18,7 @@ export class RepositoriesPage {
   constructor(page: Page) {
     this.page = page;
     this.heading = page.locator('h1', { hasText: /Repositories/i });
-    this.filterInput = page.locator('input[name="filter"], input[placeholder*="filter" i]');
+    this.filterInput = page.locator('#repos-search');
     this.sortSelector = page.locator('[data-sort]');
     this.createButton = page.locator('button', { hasText: /Create/i });
     // ErrorState component class from `components/state`.

@@ -28,7 +28,7 @@ export interface PullRequestCockpitProps {
   checks: ReturnType<typeof usePrChecks>;
   threads: ReturnType<typeof usePrThreads>;
   activeFilePath: string | null;
-  activeFile: PullRequestDiffFile | null;
+  activeFile: PullRequestDiffFile | undefined;
   viewedPaths: Set<string>;
   diffMode: string;
   isBusy: boolean;

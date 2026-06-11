@@ -223,9 +223,9 @@ async function mockControlPlane(page: Page): Promise<void> {
           ],
           clusters: [
             {
-              id: 'cluster:stale-mirror',
+              id: 'cluster:superseded-mirror',
               label: 'Mirror evidence',
-              kind: 'stale_mirror',
+              kind: 'superseded_mirror',
               state: 'missing',
               severity: 'medium',
               nodeIds: ['mirror:github'],

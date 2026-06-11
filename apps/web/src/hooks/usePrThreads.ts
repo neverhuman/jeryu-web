@@ -29,7 +29,7 @@ export function usePrThreads(
   const addInvalidator = useRealtimeStore((s) => s.addInvalidator);
 
   useEffect(() => {
-    if (!repoId || !prNumber) return undefined;
+    if (!repoId || !prNumber) return () => {};
     return addInvalidator((event) => {
       // Match `pull.thread.*` events scoped to this PR.
       if (!event.kind.startsWith('pull.thread.')) return;

@@ -2,8 +2,8 @@
 //
 // The store owns the singleton `JeRyuWsClient` plus the React-visible state:
 //   * `status` — connection lifecycle (`idle | connecting | open | closed | reconnecting`).
-//   * `lastSeq` — most recent event cursor; persisted to sessionStorage so a
-//     page refresh resumes cleanly (§35.1.13).
+//   * `lastSeq` — most recent event cursor; persisted through the audited
+//     browser storage adapter so a page refresh resumes cleanly (§35.1.13).
 //   * `events` — rolling buffer of the most recent N events for the live
 //     activity dock. Older events are dropped to keep memory bounded.
 //   * `subscriptions` — registered scope set; subscribing twice from
@@ -23,6 +23,11 @@ import {
   type RealtimeStatus,
 } from '../api/websocket';
 import type { AgentControl, SubscriptionSpec, WebEvent } from '../api/types';
+import {
+  readBrowserText,
+  removeBrowserText,
+  writeBrowserText,
+} from '../storage/browserStorage';
 
 const SEQ_STORAGE_KEY = 'jeryu.ws.lastSeq.v1';
 const EVENT_BUFFER_LIMIT = 200;
@@ -80,43 +85,25 @@ interface InternalState {
   ttyListeners: Map<string, Set<AgentTtyListener>>;
 }
 
-function readPersistedSeq(): bigint | null {
-  if (typeof window === 'undefined') return null;
+function readPersistedSeq(): bigint | undefined {
   try {
-    // SECURITY NOTE: this stores a WebSocket *resume cursor* (a monotonic
-    // event sequence number), NOT a credential, token, or any secret. Nothing
-    // sensitive is ever persisted here; the worst a tamperer can do is ask the
-    // server to resume from a different (still server-authorized) sequence.
-    // jankurai:allow websec.storage.token reason=non-secret WebSocket resume cursor (monotonic event sequence), validated as decimal before use; never a credential or token expires=2027-05-31
-    const raw = window.sessionStorage.getItem(SEQ_STORAGE_KEY);
-    // sessionStorage is a tamperable input source: validate that the value
-    // is a canonical non-negative integer before it becomes a resume cursor.
-    // `BigInt()` would otherwise accept hex/whitespace/`0x` forms or throw on
-    // junk, so we constrain it to the exact u64-decimal shape we wrote.
-    if (raw === null || !/^[0-9]+$/.test(raw)) return null;
+    const raw = readBrowserText('tab', SEQ_STORAGE_KEY);
+    if (raw === null || !/^[0-9]+$/.test(raw)) return;
     return BigInt(raw);
   } catch {
-    return null;
+    return;
   }
 }
 
-function persistSeq(seq: bigint | null): void {
-  if (typeof window === 'undefined') return;
+function persistSeq(seq: bigint | null | undefined): void {
   try {
-    // SECURITY NOTE: the persisted value is a non-secret resume cursor (event
-    // sequence number), never a token/credential. Only persist a validated
-    // non-negative cursor; a negative bigint here would mean a logic bug
-    // upstream, and we must never write a value `readPersistedSeq` would reject
-    // (or one the server cannot resume from). `seq.toString()` emits exactly
-    // the `^[0-9]+$` decimal shape that `readPersistedSeq` accepts.
-    if (seq === null || seq < BigInt(0)) {
-      window.sessionStorage.removeItem(SEQ_STORAGE_KEY);
+    if (seq == null || seq < BigInt(0)) {
+      removeBrowserText('tab', SEQ_STORAGE_KEY);
     } else {
-      // jankurai:allow websec.storage.token reason=persists only a validated non-secret resume cursor (event sequence), never a token or credential expires=2027-05-31
-      window.sessionStorage.setItem(SEQ_STORAGE_KEY, seq.toString());
+      writeBrowserText('tab', SEQ_STORAGE_KEY, seq.toString());
     }
   } catch {
-    // sessionStorage may be disabled in private mode.
+    // The adapter already handles disabled storage; this protects bigint logic.
   }
 }
 
@@ -186,7 +173,7 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => {
 
   return {
     status: 'idle',
-    lastSeq: readPersistedSeq(),
+    lastSeq: readPersistedSeq() ?? null,
     events: [],
     subscriptions: new Map(),
     lastError: null,

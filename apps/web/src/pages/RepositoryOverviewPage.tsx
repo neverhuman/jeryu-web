@@ -27,7 +27,9 @@ import {
   LoadingState,
   PermissionDeniedState,
 } from '../components/state';
+import { RepoDangerZone } from '../components/repo/RepoDangerZone';
 import { RepoHealthPill } from '../components/repo/RepoHealthPill';
+import { RepoRoleBadge } from '../components/repo/RepoRoleBadge';
 import { useRealtime } from '../hooks/useRealtime';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { useSelectionStore } from '../stores/selectionStore';
@@ -133,11 +135,9 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
 
       <header className="page__header">
         <div className="repo-overview__head">
-          <h1 className="repo-overview__title">
-            <span className="text-muted">{summary.id.owner}/</span>
-            {summary.id.name}
-          </h1>
+          <h1 className="repo-overview__title">{summary.id.name}</h1>
           <RepoHealthPill health={summary.health} />
+          <RepoRoleBadge role={summary.repo_role} />
           <span className="page__pill">{summary.visibility}</span>
           {summary.language ? (
             <span className="page__pill">{summary.language}</span>
@@ -218,6 +218,8 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
           </article>
         </aside>
       </section>
+
+      <RepoDangerZone repo={summary} />
     </div>
   );
 }
@@ -228,13 +230,13 @@ function ClonePopover({
 }: {
   httpUrl: string | null;
   sshUrl: string | null;
-}): JSX.Element | null {
+}): JSX.Element {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) return () => {};
     const onClick = (e: MouseEvent): void => {
       if (
         containerRef.current &&
@@ -254,7 +256,7 @@ function ClonePopover({
     };
   }, [open]);
 
-  if (!httpUrl && !sshUrl) return null;
+  if (!httpUrl && !sshUrl) return <></>;
 
   const copy = async (label: string, url: string): Promise<void> => {
     try {
