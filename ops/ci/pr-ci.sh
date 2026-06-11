@@ -30,7 +30,7 @@ bash ops/ci/security.sh
 bash ops/ci/artifact_support.sh
 
 echo "[pr-ci] web unit tests + typecheck + build" >&2
-if [ ! -d node_modules ]; then npm ci; fi
+if [ ! -d apps/web/node_modules ]; then npm ci --prefix apps/web; fi
 npm --workspace @jeryu/web run typecheck
 npm --workspace @jeryu/web run test
 npm --workspace @jeryu/web run build
