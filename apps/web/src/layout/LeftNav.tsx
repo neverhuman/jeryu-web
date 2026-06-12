@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
   ServerCog,
   ShieldCheck,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/pull-room', label: 'Pull Room', icon: GitMerge },
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
   { to: '/fleet', label: 'Fleet', icon: ServerCog },
+  { to: '/tool-fleet', label: 'Tool Fleet', icon: Wrench },
   { to: '/notifications', label: 'Notifications', icon: Bell },
   { to: '/audit', label: 'Audit', icon: ShieldCheck },
   { to: '/settings', label: 'Settings', icon: Cog },
