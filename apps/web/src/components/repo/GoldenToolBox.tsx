@@ -19,7 +19,8 @@ import { Layers, Sparkles, Users, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useToolRegistry } from '../../hooks/useToolRegistry';
-import type { ToolRegistryEntry } from '../../api/types';
+import { TOOL_STATUS_COPY } from './toolStatusProductCopy';
+import type { ToolRegistryEntry, ToolRegistrySummary } from '../../api/types';
 
 import './repo.css';
 
@@ -43,20 +44,13 @@ interface StatusChip {
   count: number;
 }
 
-function statusBreakdown(summary: {
-  published_count: number;
-  building_count: number;
-  proposed_count: number;
-  deprecated_count: number;
-}): StatusChip[] {
-  return (
-    [
-      { label: 'published', count: summary.published_count },
-      { label: 'building', count: summary.building_count },
-      { label: 'proposed', count: summary.proposed_count },
-      { label: 'deprecated', count: summary.deprecated_count },
-    ] as StatusChip[]
-  ).filter((chip) => chip.count > 0);
+function statusBreakdown(summary: ToolRegistrySummary): StatusChip[] {
+  // Lifecycle vocabulary lives in the product-copy table; this component
+  // never spells the status words inline.
+  return TOOL_STATUS_COPY.map((status) => ({
+    label: status.label,
+    count: summary[status.countKey],
+  })).filter((chip) => chip.count > 0);
 }
 
 function ToolRow({ tool }: { tool: ToolRegistryEntry }): JSX.Element {

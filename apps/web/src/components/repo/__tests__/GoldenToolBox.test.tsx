@@ -11,6 +11,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { RETIRED_STATUS_LABEL } from '../toolStatusProductCopy';
 import { GoldenToolBox } from '../GoldenToolBox';
 import type { ToolRegistrySummary } from '../../../api/types';
 
@@ -107,11 +108,13 @@ describe('GoldenToolBox', () => {
     expect(link).toHaveClass('repo-golden-box');
 
     expect(screen.getByText('Tool control plane')).toBeInTheDocument();
-    // Status breakdown drops zero-count states (no "deprecated").
+    // Status breakdown drops zero-count states (the retired lifecycle).
     expect(screen.getByText('2 published')).toBeInTheDocument();
     expect(screen.getByText('1 building')).toBeInTheDocument();
     expect(screen.getByText('1 proposed')).toBeInTheDocument();
-    expect(screen.queryByText(/deprecated/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(new RegExp(RETIRED_STATUS_LABEL))
+    ).not.toBeInTheDocument();
 
     expect(screen.getByText('7')).toBeInTheDocument(); // adopting repos
     expect(screen.getByText('5')).toBeInTheDocument(); // open tasks
