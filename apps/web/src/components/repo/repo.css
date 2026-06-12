@@ -289,9 +289,10 @@
  * stats row has room to breathe. */
 
 .repo-golden-box {
-  /* Pinned to the very bottom of the grid at three normal card widths
-     (clamps to the available columns on narrow viewports). */
-  grid-column: span 3;
+  /* Pinned to the bottom-LEFT of the grid: anchored to the first column,
+     three normal card widths wide (clamps to available columns on narrow
+     viewports). Last in DOM order, so it lands on the bottom row. */
+  grid-column: 1 / span 3;
   gap: var(--space-4);
   border-color: var(--color-gold-border);
   background-image: linear-gradient(
