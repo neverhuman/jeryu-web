@@ -289,7 +289,9 @@
  * stats row has room to breathe. */
 
 .repo-golden-box {
-  grid-column: 1 / -1;
+  /* Pinned to the very bottom of the grid at three normal card widths
+     (clamps to the available columns on narrow viewports). */
+  grid-column: span 3;
   gap: var(--space-4);
   border-color: var(--color-gold-border);
   background-image: linear-gradient(

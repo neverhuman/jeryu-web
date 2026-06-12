@@ -214,16 +214,17 @@ export function RepositoriesBody({
   const { families, singles } = partitionByFamily(repos);
   return (
     <div className="page__cards">
-      {/* Gold "tool control plane" box pinned to the top of the default
-          view. Self-degrades to null while loading / on error / when the
-          registry endpoint is absent, so it never disturbs the grid. */}
-      <GoldenToolBox />
       {families.map((family) => (
         <RepoFamilyCard key={family.name} family={family} />
       ))}
       {singles.map((repo) => (
         <RepoCard key={repo.id.id} repo={repo} />
       ))}
+      {/* Gold "tool control plane" box pinned to the VERY BOTTOM of the
+          default view at 3x card width. Self-degrades to null while loading /
+          on error / when the registry endpoint is absent, so it never
+          disturbs the grid. */}
+      <GoldenToolBox />
     </div>
   );
 }
