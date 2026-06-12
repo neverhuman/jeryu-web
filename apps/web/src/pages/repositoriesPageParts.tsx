@@ -11,6 +11,7 @@ import { Search } from 'lucide-react';
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
 import {
+  GoldenToolBox,
   RepoCard,
   RepoFamilyCard,
   RepoTable,
@@ -213,6 +214,10 @@ export function RepositoriesBody({
   const { families, singles } = partitionByFamily(repos);
   return (
     <div className="page__cards">
+      {/* Gold "tool control plane" box pinned to the top of the default
+          view. Self-degrades to null while loading / on error / when the
+          registry endpoint is absent, so it never disturbs the grid. */}
+      <GoldenToolBox />
       {families.map((family) => (
         <RepoFamilyCard key={family.name} family={family} />
       ))}

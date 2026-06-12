@@ -16,6 +16,8 @@ export type { RepositoryId } from '../../../../contracts/generated/RepositoryId'
 export type { RepositoryRole } from '../../../../contracts/generated/RepositoryRole';
 export type { RepositoryVisibility } from '../../../../contracts/generated/RepositoryVisibility';
 export type { RepositoryListResponse } from '../../../../contracts/generated/RepositoryListResponse';
+export type { ToolFleetResponse } from '../../../../contracts/generated/ToolFleetResponse';
+export type { ToolFleetEntry } from '../../../../contracts/generated/ToolFleetEntry';
 export type { RepositoryMirrorStatus } from '../../../../contracts/generated/RepositoryMirrorStatus';
 export type { DeleteRepositoryRequest } from '../../../../contracts/generated/DeleteRepositoryRequest';
 export type { DeleteRepositoryReceipt } from '../../../../contracts/generated/DeleteRepositoryReceipt';
@@ -520,3 +522,10 @@ export interface ToolBuildClustersResponse {
 
 // Live agent terminal types (defined in ./agentTerminal).
 export type { AgentTtyFrame, AgentControl, AgentControlClientMessage, RepoAgentSummary, RepoAgentRunsResponse, CreateSessionResponse } from './agentTerminal';
+
+// ── Reusable-tool registry summary. ──────────────────────────────────────
+// Wire shape of `GET /api/v1/tools/registry/summary`, powering the gold "tool
+// control plane" box at the top of the repositories grid. Owned by the Rust
+// read-model exporter (ts-rs), re-exported here like the other generated DTOs.
+export type { ToolRegistrySummary } from '../../../../contracts/generated/ToolRegistrySummary';
+export type { ToolRegistryEntry } from '../../../../contracts/generated/ToolRegistryEntry';

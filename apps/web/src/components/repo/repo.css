@@ -173,6 +173,13 @@
   border-color: var(--color-accent-success);
 }
 
+.repo-role-badge--tool_control_plane {
+  background-color: var(--color-gold-bg);
+  color: var(--color-gold);
+  border-color: var(--color-gold-border);
+  font-weight: var(--font-weight-semibold);
+}
+
 .repo-table {
   width: 100%;
   border-collapse: collapse;
@@ -272,6 +279,176 @@
   border-radius: var(--radius-full);
   background-color: var(--color-accent-primary-bg);
   color: var(--color-accent-primary);
+}
+
+/* Golden tool-control-plane box ------------------------------------------- */
+/* The reusable-tool registry, owned by the special `jeryu-tool` repo, pinned
+ * to the top of the default repositories grid. A gold gradient + border and a
+ * warm glow make it read as the family's "control plane" — visually distinct
+ * from the accent-blue `.repo-family-card`. Spans the full grid width so its
+ * stats row has room to breathe. */
+
+.repo-golden-box {
+  grid-column: 1 / -1;
+  gap: var(--space-4);
+  border-color: var(--color-gold-border);
+  background-image: linear-gradient(
+    135deg,
+    var(--color-gold-grad-from),
+    var(--color-gold-grad-to)
+  );
+  box-shadow: var(--shadow-gold);
+}
+
+.repo-golden-box:hover {
+  border-color: var(--color-gold-border);
+  box-shadow: var(--shadow-gold), var(--shadow-2);
+}
+
+.repo-golden-box__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.repo-golden-box__title svg {
+  color: var(--color-gold);
+  flex-shrink: 0;
+}
+
+.repo-golden-box__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+}
+
+.repo-golden-box__stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.repo-golden-box__stat-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-fg-primary);
+  line-height: var(--line-height-tight);
+}
+
+.repo-golden-box__stat-value svg {
+  color: var(--color-gold);
+  flex-shrink: 0;
+}
+
+.repo-golden-box__stat-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.repo-golden-box__stat-sub {
+  color: var(--color-gold);
+  font-weight: var(--font-weight-semibold);
+}
+
+.repo-golden-box__statuses {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.repo-golden-box__status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background-color: var(--color-gold-bg);
+  color: var(--color-gold);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.repo-golden-box__tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  list-style: none;
+  border-top: 1px solid var(--color-gold-border);
+}
+
+.repo-golden-box__tool {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.repo-golden-box__tool-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repo-golden-box__tool-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.repo-golden-box__tool-kind {
+  color: var(--color-fg-secondary);
+}
+
+.repo-golden-box__tool-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  font-weight: var(--font-weight-medium);
+  text-transform: capitalize;
+}
+
+.repo-golden-box__tool-status--published {
+  background-color: var(--color-accent-success-bg);
+  color: var(--color-accent-success);
+}
+
+.repo-golden-box__tool-status--building {
+  background-color: var(--color-accent-info-bg);
+  color: var(--color-accent-info);
+}
+
+.repo-golden-box__tool-status--proposed {
+  background-color: var(--color-gold-bg);
+  color: var(--color-gold);
+}
+
+.repo-golden-box__tool-status--deprecated {
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+}
+
+.repo-golden-box__tool-loc {
+  color: var(--color-gold);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
 }
 
 /* Family drill-down page --------------------------------------------------- */

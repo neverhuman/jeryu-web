@@ -123,6 +123,8 @@ export const endpoints = {
       ? `/api/v1/codegraph/tool-build/clusters?${suffix}`
       : '/api/v1/codegraph/tool-build/clusters';
   },
+  fleetToolAdoption: (): string => '/api/v1/fleet/tool-adoption',
+  toolRegistrySummary: (): string => '/api/v1/tools/registry/summary',
   agentRuns: (): string => '/api/v1/agent-runs',
   repoAgentRuns: (id: string): string => `/api/v1/repos/${encodeURIComponent(id)}/agent-runs`,
   repoSessions: (id: string): string =>

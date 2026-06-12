@@ -134,10 +134,19 @@
   --color-border-subtle: #d8dde4;
   --color-border-strong: #b3bac4;
 
+  /* Gold — reserved for the special "tool control plane" surface. */
+  --color-gold: #8a6d00;
+  --color-gold-strong: #6f5600;
+  --color-gold-bg: rgba(193, 154, 0, 0.1);
+  --color-gold-border: #c9a227;
+  --color-gold-grad-from: rgba(201, 162, 39, 0.16);
+  --color-gold-grad-to: rgba(201, 162, 39, 0.02);
+
   --shadow-1: 0 1px 2px rgba(11, 18, 32, 0.06);
   --shadow-2: 0 2px 6px rgba(11, 18, 32, 0.08), 0 1px 2px rgba(11, 18, 32, 0.04);
   --shadow-3:
     0 8px 24px rgba(11, 18, 32, 0.12), 0 2px 6px rgba(11, 18, 32, 0.06);
+  --shadow-gold: 0 2px 14px rgba(201, 162, 39, 0.22);
 
   color-scheme: light;
 }
@@ -177,9 +186,17 @@
     --color-border-subtle: #232a36;
     --color-border-strong: #3a4452;
 
+    --color-gold: #f5d76e;
+    --color-gold-strong: #ffe9a3;
+    --color-gold-bg: rgba(245, 215, 110, 0.14);
+    --color-gold-border: #d4af37;
+    --color-gold-grad-from: rgba(212, 175, 55, 0.22);
+    --color-gold-grad-to: rgba(212, 175, 55, 0.03);
+
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
     --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35);
     --shadow-3: 0 12px 28px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-gold: 0 2px 18px rgba(212, 175, 55, 0.3);
 
     color-scheme: dark;
   }
@@ -209,10 +226,18 @@
   --color-border-subtle: #d8dde4;
   --color-border-strong: #b3bac4;
 
+  --color-gold: #8a6d00;
+  --color-gold-strong: #6f5600;
+  --color-gold-bg: rgba(193, 154, 0, 0.1);
+  --color-gold-border: #c9a227;
+  --color-gold-grad-from: rgba(201, 162, 39, 0.16);
+  --color-gold-grad-to: rgba(201, 162, 39, 0.02);
+
   --shadow-1: 0 1px 2px rgba(11, 18, 32, 0.06);
   --shadow-2: 0 2px 6px rgba(11, 18, 32, 0.08), 0 1px 2px rgba(11, 18, 32, 0.04);
   --shadow-3:
     0 8px 24px rgba(11, 18, 32, 0.12), 0 2px 6px rgba(11, 18, 32, 0.06);
+  --shadow-gold: 0 2px 14px rgba(201, 162, 39, 0.22);
 
   color-scheme: light;
 }
@@ -241,9 +266,17 @@
   --color-border-subtle: #232a36;
   --color-border-strong: #3a4452;
 
+  --color-gold: #f5d76e;
+  --color-gold-strong: #ffe9a3;
+  --color-gold-bg: rgba(245, 215, 110, 0.14);
+  --color-gold-border: #d4af37;
+  --color-gold-grad-from: rgba(212, 175, 55, 0.22);
+  --color-gold-grad-to: rgba(212, 175, 55, 0.03);
+
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-3: 0 12px 28px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-gold: 0 2px 18px rgba(212, 175, 55, 0.3);
 
   color-scheme: dark;
 }
@@ -280,9 +313,17 @@
   --color-border-subtle: #6a6a6a;
   --color-border-strong: #ffffff;
 
+  --color-gold: #ffe17a;
+  --color-gold-strong: #fff0b3;
+  --color-gold-bg: rgba(255, 225, 122, 0.2);
+  --color-gold-border: #ffd24a;
+  --color-gold-grad-from: rgba(255, 210, 74, 0.28);
+  --color-gold-grad-to: rgba(255, 210, 74, 0.05);
+
   --shadow-1: 0 0 0 1px #ffffff;
   --shadow-2: 0 0 0 1px #ffffff, 0 4px 8px rgba(0, 0, 0, 0.8);
   --shadow-3: 0 0 0 2px #ffffff, 0 12px 24px rgba(0, 0, 0, 0.9);
+  --shadow-gold: 0 0 0 1px var(--color-gold-border), 0 4px 16px rgba(0, 0, 0, 0.8);
 
   color-scheme: dark;
 }

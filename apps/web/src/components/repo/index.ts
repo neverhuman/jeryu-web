@@ -5,6 +5,7 @@ export type { RepoTableProps } from './RepoTable';
 export { RepoRoleBadge } from './RepoRoleBadge';
 export { RepoFamilyCard, familyHref } from './RepoFamilyCard';
 export type { RepoFamilyCardProps } from './RepoFamilyCard';
+export { GoldenToolBox, TOOL_CONTROL_PLANE_HREF } from './GoldenToolBox';
 export {
   aggregateFamily,
   formatFamilyName,
