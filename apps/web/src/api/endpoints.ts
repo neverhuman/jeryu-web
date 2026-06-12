@@ -125,6 +125,23 @@ export const endpoints = {
   },
   fleetToolAdoption: (): string => '/api/v1/fleet/tool-adoption',
   toolRegistrySummary: (): string => '/api/v1/tools/registry/summary',
+  toolFinderScan: (): string => '/api/v1/tool-finder/scan',
+  toolFinderDashboard: (params?: {
+    limit?: number;
+    includeIgnored?: boolean;
+  }): string => {
+    const qs = new URLSearchParams();
+    if (params?.limit !== undefined) qs.set('limit', String(params.limit));
+    if (params?.includeIgnored) qs.set('include_ignored', 'true');
+    const suffix = qs.toString();
+    return suffix
+      ? `/api/v1/tool-finder/dashboard?${suffix}`
+      : '/api/v1/tool-finder/dashboard';
+  },
+  toolFinderPropose: (clusterId: string): string =>
+    `/api/v1/tool-finder/propose/${encodeURIComponent(clusterId)}`,
+  toolBuildClusterFeedback: (clusterId: string): string =>
+    `/api/v1/codegraph/tool-build/clusters/${encodeURIComponent(clusterId)}/feedback`,
   agentRuns: (): string => '/api/v1/agent-runs',
   repoAgentRuns: (id: string): string => `/api/v1/repos/${encodeURIComponent(id)}/agent-runs`,
   repoSessions: (id: string): string =>

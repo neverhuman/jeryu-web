@@ -23,8 +23,9 @@ import type { ToolRegistryEntry } from '../../api/types';
 
 import './repo.css';
 
-/** Drill-down target: the special tool control-plane repo. */
-export const TOOL_CONTROL_PLANE_HREF = '/repos/jeryu/jeryu/jeryu-tool';
+/** Drill-down target: the /tools control surface (registry rail + the
+ *  system-wide duplicate-code dashboard + live scan). */
+export const TOOL_CONTROL_PLANE_HREF = '/tools';
 
 const MAX_LISTED_TOOLS = 3;
 

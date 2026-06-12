@@ -529,3 +529,10 @@ export type { AgentTtyFrame, AgentControl, AgentControlClientMessage, RepoAgentS
 // read-model exporter (ts-rs), re-exported here like the other generated DTOs.
 export type { ToolRegistrySummary } from '../../../../contracts/generated/ToolRegistrySummary';
 export type { ToolRegistryEntry } from '../../../../contracts/generated/ToolRegistryEntry';
+export type { ToolFinderDashboard } from '../../../../contracts/generated/ToolFinderDashboard';
+export type { ToolFinderPatternFamily } from '../../../../contracts/generated/ToolFinderPatternFamily';
+export type { ToolFinderCluster } from '../../../../contracts/generated/ToolFinderCluster';
+export type { ToolFinderOccurrence } from '../../../../contracts/generated/ToolFinderOccurrence';
+export type { ToolFinderScanStatus } from '../../../../contracts/generated/ToolFinderScanStatus';
+export type { ToolFinderScanMeta } from '../../../../contracts/generated/ToolFinderScanMeta';
+export type { ToolFinderProposeReceipt } from '../../../../contracts/generated/ToolFinderProposeReceipt';

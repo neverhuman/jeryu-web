@@ -35,6 +35,15 @@ describe('router route table', () => {
     expect(catchAllIdx).toBeGreaterThan(-1);
     expect(familyIdx).toBeLessThan(catchAllIdx);
   });
+
+  it('registers the /tools surface above the not-found catch-all', () => {
+    const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
+    const toolsIdx = paths.indexOf('tools');
+    const notFoundIdx = paths.indexOf('*');
+    expect(toolsIdx).toBeGreaterThan(-1);
+    expect(notFoundIdx).toBeGreaterThan(-1);
+    expect(toolsIdx).toBeLessThan(notFoundIdx);
+  });
 });
 
 describe('router negative authorization (non-owner viewer)', () => {

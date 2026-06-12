@@ -32,6 +32,7 @@ import { RepositoryOverviewPage } from '../pages/RepositoryOverviewPage';
 import { RepositorySettingsPage } from '../pages/RepositorySettingsPage';
 import { SearchResultsPage } from '../pages/SearchResultsPage';
 import { ToolFleetPage } from '../pages/ToolFleetPage';
+import { ToolsPage } from '../pages/ToolsPage';
 import { RepoRouter } from '../pages/RepoRouter';
 
 export const router = createBrowserRouter([
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
       { path: 'intelligence', element: <IntelligencePage /> },
       { path: 'fleet', element: <FleetPage /> },
       { path: 'tool-fleet', element: <ToolFleetPage /> },
+      { path: 'tools', element: <ToolsPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'audit', element: <AuditPage /> },
       { path: 'search', element: <SearchResultsPage /> },
