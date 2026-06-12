@@ -22,6 +22,16 @@ export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-$JOBS}"
 # drift mid-lane (see ops/ci/ensure-jankurai.sh).
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 
+# jankurai pin: jeryu-tool/tool-manifest.toml is the family-wide source of truth.
+# When the control-plane repo is reachable (on-host family layout), fail fast if
+# this repo's pinned consumers drifted from it. In an isolated single-repo CI
+# checkout it is absent — skip rather than fail.
+JERYU_TOOL_RENDER="${JERYU_TOOL_RENDER:-$repo_root/../jeryu-tool/ops/render-tool-manifest.sh}"
+if [ -x "$JERYU_TOOL_RENDER" ]; then
+  echo "[pr-ci] jankurai pin drift check" >&2
+  bash "$JERYU_TOOL_RENDER" --check
+fi
+
 # Install web deps FIRST: the check lane already typechecks the workspace.
 if [ ! -d apps/web/node_modules ]; then npm ci --prefix apps/web; fi
 
