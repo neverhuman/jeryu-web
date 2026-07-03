@@ -18,15 +18,14 @@ if ! find "${HOME}/.cache/ms-playwright" -maxdepth 1 -type d -name 'chromium-*' 
   fi
 fi
 
-npm --workspace @jeryu/web run build
-JERYU_PLAYWRIGHT_E2E_MODE=ui-mocked npm --workspace @jeryu/web exec -- playwright test --project=chromium --grep @action: --grep-invert @bff --workers="${JERYU_PLAYWRIGHT_WORKERS:-4}"
+npm --workspace @jeryu/web run test:e2e:actions
 npm --workspace @jeryu/web run test:e2e:matrix
 
 cat > target/jankurai/e2e/receipt.json <<'JSON'
 {
   "schema_version": "jeryu.web.e2e/v1",
   "lane": "e2e",
-  "mode": "ui-mocked",
+  "mode": "ui-only",
   "project": "chromium",
   "action_matrix": "apps/web/e2e/action-matrix.json",
   "junit": "apps/web/playwright-report/junit.xml"

@@ -47,7 +47,7 @@ npm --workspace @jeryu/web run typecheck
 npm --workspace @jeryu/web run test
 npm --workspace @jeryu/web run test:contracts
 npm --workspace @jeryu/web run build
-bash ops/ci/e2e.sh
+npm --workspace @jeryu/web run test:e2e:ci
 npm --workspace @jeryu/web run build-storybook
 npm --workspace @jeryu/web run ux-qa
 echo "[pr-ci] jeryu-web OK" >&2

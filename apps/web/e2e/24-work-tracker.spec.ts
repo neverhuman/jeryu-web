@@ -144,14 +144,18 @@ test.describe('Work Tracker routes', () => {
     await page.goto('/work');
     await shell.assertShellLoaded();
 
+    const createRegion = page.getByRole('region', { name: 'Create work item' });
+    const titleInput = createRegion.getByLabel('Title');
+    const createButton = createRegion.getByRole('button', { name: 'Create' });
+
     const filters = page.locator('section[aria-label="Work filters"]');
     await filters.getByLabel('Status').selectOption('ready');
     await filters.getByLabel('Priority').selectOption('p1');
     await page.getByLabel('Search work').fill('cache');
     await expect(page.getByRole('link', { name: 'Fix cache key' })).toBeVisible();
 
-    await page.getByLabel('Title').fill('New tracked action');
-    await page.getByRole('button', { name: 'Create' }).click();
+    await titleInput.fill('New tracked action');
+    await createButton.click();
     await expect
       .poll(() => createBodies.length, { timeout: 10_000 })
       .toBeGreaterThanOrEqual(1);
@@ -162,8 +166,9 @@ test.describe('Work Tracker routes', () => {
       priority: 'p2',
     });
 
-    await page.getByLabel('Title').fill('Fail tracked action');
-    await page.getByRole('button', { name: 'Create' }).click();
+    await expect(titleInput).toHaveValue('');
+    await titleInput.fill('Fail tracked action');
+    await createButton.click();
     await expect(page.getByText('Work backend failed.')).toBeVisible({
       timeout: 10_000,
     });
