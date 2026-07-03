@@ -12,6 +12,7 @@ import {
   Bot,
   Code2,
   Cog,
+  ClipboardList,
   Brain,
   FolderGit2,
   GitMerge,
@@ -34,6 +35,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/repos', label: 'Repositories', icon: FolderGit2 },
+  { to: '/work', label: 'Work', icon: ClipboardList },
   // Reconciled: the route map (router.tsx) and command palette both use
   // `/pull-room` / "Pull Room"; the nav previously pointed at a dead
   // `/merge-room` path that fell through to NotFound.
@@ -55,7 +57,7 @@ function extractRepoBase(
   // URL pattern: /repos/{provider}/{owner}/{name}[/{subPath}[/{...tail}]]
   // Always exactly 3 segments after /repos/, then optional sub-path.
   const match = pathname.match(
-    /^\/repos\/([^/]+)\/([^/]+)\/([^/]+)(?:\/(code|pulls|agents|settings|blob|issues)(?:\/.*)?)?$/
+    /^\/repos\/([^/]+)\/([^/]+)\/([^/]+)(?:\/(code|pulls|agents|settings|blob|work|issues)(?:\/.*)?)?$/
   );
   if (!match) return;
   const [, provider, owner, name] = match;
@@ -97,6 +99,13 @@ export function LeftNav(): JSX.Element {
           >
             <Code2 aria-hidden="true" size={16} />
             Code
+          </Link>
+          <Link
+            to={`${repo.base}/work`}
+            className={`left-nav__item${isActivePath(pathname, `${repo.base}/work`) || isActivePath(pathname, `${repo.base}/issues`) ? ' is-active' : ''}`}
+          >
+            <ClipboardList aria-hidden="true" size={16} />
+            Work
           </Link>
           <Link
             to={`${repo.base}/pulls`}

@@ -55,7 +55,7 @@ async function seed(page: Page): Promise<void> {
 }
 
 test.describe('Agents page navigation and discoverability', () => {
-  test('repo card shows an "Agents" quick-action link on the Repositories page', async ({
+  test('repo card shows an "Agents" quick-action link on the Repositories page @action:agents.quick_action_visible', async ({
     page,
   }) => {
     await seed(page);
@@ -71,7 +71,7 @@ test.describe('Agents page navigation and discoverability', () => {
     await expect(agentsLink).toContainText('3');
   });
 
-  test('left-nav shows repo-context navigation with Agents link when inside a repo', async ({
+  test('left-nav shows repo-context navigation with Agents link when inside a repo @action:agents.left_nav_visible', async ({
     page,
   }) => {
     await seed(page);
@@ -86,7 +86,7 @@ test.describe('Agents page navigation and discoverability', () => {
     await expect(agentsNavLink).toContainText('Agents');
   });
 
-  test('left-nav Agents link navigates to the agents URL', async ({
+  test('left-nav Agents link navigates to the agents URL @action:agents.left_nav_navigate', async ({
     page,
   }) => {
     await seed(page);

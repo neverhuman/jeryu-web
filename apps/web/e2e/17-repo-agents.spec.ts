@@ -62,7 +62,7 @@ async function seed(page: Page): Promise<void> {
   await mockCompanionShell(page);
 }
 
-test('renders the active-agents list with branch / runner / status / tty-live', async ({
+test('renders the active-agents list with branch / runner / status / tty-live @action:agents.list', async ({
   page,
 }) => {
   await seed(page);
@@ -94,7 +94,7 @@ test('renders the active-agents list with branch / runner / status / tty-live', 
   await expect(page.getByTestId('agents-no-selection')).toBeVisible();
 });
 
-test('clicking a run row opens its live terminal', async ({ page }) => {
+test('clicking a run row opens its live terminal @action:agents.select_run', async ({ page }) => {
   await seed(page);
 
   const shell = new AppShellPage(page);
@@ -114,7 +114,7 @@ test('clicking a run row opens its live terminal', async ({ page }) => {
   await expect(page.getByTestId('agent-terminal-interrupt').first()).toBeVisible();
 });
 
-test('deep-links straight to a run terminal via the splat tail', async ({
+test('deep-links straight to a run terminal via the splat tail @action:agents.deep_link', async ({
   page,
 }) => {
   await seed(page);

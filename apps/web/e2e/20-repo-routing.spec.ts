@@ -47,7 +47,7 @@ async function seed(page: Page): Promise<void> {
 }
 
 test.describe('Repository sub-page routing', () => {
-  test('navigating to /repos/jeryu/jeryu/jankurai shows the repo overview', async ({
+  test('navigating to /repos/jeryu/jeryu/jankurai shows the repo overview @action:repo.overview', async ({
     page,
   }) => {
     await seed(page);
@@ -60,7 +60,7 @@ test.describe('Repository sub-page routing', () => {
     await expect(page.getByText(/Repository not found/i)).toHaveCount(0);
   });
 
-  test('navigating to /repos/jeryu/jeryu/jankurai/agents shows the agents page', async ({
+  test('navigating to /repos/jeryu/jeryu/jankurai/agents shows the agents page @action:repo.route_agents', async ({
     page,
   }) => {
     await seed(page);
@@ -73,7 +73,7 @@ test.describe('Repository sub-page routing', () => {
     await expect(page.getByText(/Repository not found/i)).toHaveCount(0);
   });
 
-  test('navigating to /repos/jeryu/jeryu/jankurai/agents/run-1 opens a specific agent run', async ({
+  test('navigating to /repos/jeryu/jeryu/jankurai/agents/run-1 opens a specific agent run @action:repo.route_agent_run', async ({
     page,
   }) => {
     await seed(page);
@@ -88,7 +88,7 @@ test.describe('Repository sub-page routing', () => {
     await expect(page.getByTestId('agent-terminal')).toHaveAttribute('data-run-id', 'run-1');
   });
 
-  test('navigating to /repos/jeryu/jeryu/jankurai/code shows the code browser', async ({
+  test('navigating to /repos/jeryu/jeryu/jankurai/code shows the code browser @action:repo.route_code', async ({
     page,
   }) => {
     await seed(page);
@@ -100,7 +100,7 @@ test.describe('Repository sub-page routing', () => {
     await expect(page.getByText(/Repository not found/i)).toHaveCount(0);
   });
 
-  test('navigating to /repos/jeryu/jeryu/jankurai/pulls shows pull requests', async ({
+  test('navigating to /repos/jeryu/jeryu/jankurai/pulls shows pull requests @action:repo.route_pulls', async ({
     page,
   }) => {
     await seed(page);
@@ -112,7 +112,7 @@ test.describe('Repository sub-page routing', () => {
     await expect(page.getByText(/Repository not found/i)).toHaveCount(0);
   });
 
-  test('navigating to /repos/jeryu/jeryu/jankurai/settings shows settings', async ({
+  test('navigating to /repos/jeryu/jeryu/jankurai/settings shows settings @action:repo.route_settings', async ({
     page,
   }) => {
     await seed(page);
@@ -124,7 +124,7 @@ test.describe('Repository sub-page routing', () => {
     await expect(page.getByText(/Repository not found/i)).toHaveCount(0);
   });
 
-  test('left-nav shows repo context (Code, Agents, Pulls, Settings) inside a repo', async ({
+  test('left-nav shows repo context (Code, Agents, Pulls, Settings) inside a repo @action:repo.context_nav', async ({
     page,
   }) => {
     await seed(page);
@@ -139,7 +139,7 @@ test.describe('Repository sub-page routing', () => {
     await expect(agentsLink).toHaveAttribute('href', `${REPO_PATH}/agents`);
   });
 
-  test('clicking Agents quick-action on repo card navigates to agents page', async ({
+  test('clicking Agents quick-action on repo card navigates to agents page @action:repo.agents_quick_nav', async ({
     page,
   }) => {
     await seed(page);

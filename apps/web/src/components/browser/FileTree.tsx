@@ -73,12 +73,14 @@ function Subtree({
   const query = useRepoTree(repoId, refName, path);
   if (query.isPending) {
     return (
-      <div className="file-tree__loading">Loading {path || '/'}…</div>
+      <div className="file-tree__loading" role="treeitem" aria-level={depth + 1}>
+        Loading {path || '/'}…
+      </div>
     );
   }
   if (query.isError) {
     return (
-      <div className="file-tree__error">
+      <div className="file-tree__error" role="treeitem" aria-level={depth + 1}>
         Could not load {path || '/'}.
       </div>
     );

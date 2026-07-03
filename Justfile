@@ -17,5 +17,8 @@ security:
 artifact-support:
   ./ops/ci/artifact_support.sh
 
+e2e:
+  ./ops/ci/e2e.sh
+
 profile:
   printf '%s\n' "node-frontend"

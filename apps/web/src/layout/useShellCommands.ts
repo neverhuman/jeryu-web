@@ -29,6 +29,14 @@ export function useShellCommands(): void {
         shortcut: 'g r',
       },
       {
+        id: 'nav.work',
+        title: 'Go to Work',
+        keywords: ['work', 'tracker', 'issues', 'tasks', 'bugs'],
+        icon: 'clipboard-list',
+        target: { kind: 'route', path: '/work' },
+        shortcut: 'g w',
+      },
+      {
         id: 'nav.pull-room',
         title: 'Go to Pull Room',
         keywords: ['pr', 'pull', 'merge', 'review'],

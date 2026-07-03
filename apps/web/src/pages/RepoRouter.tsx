@@ -2,7 +2,7 @@
 //
 // All repo URLs go through `repos/:provider/*`. This component parses the
 // splat to extract the owner/name (always the first two segments after
-// provider) and the sub-path (agents, code, pulls, settings, blob, issues).
+// provider) and the sub-path (agents, code, pulls, settings, blob, work).
 //
 // URL examples:
 //   /repos/jeryu/jeryu/jankurai          → overview (owner=jeryu, name=jankurai)
@@ -21,6 +21,7 @@ import { RepositoryPullRequestsPage } from './RepositoryPullRequestsPage';
 import { RepositorySettingsPage } from './RepositorySettingsPage';
 import { IssuesPage } from './IssuesPage';
 import { PullRequestPage } from './PullRequestPage';
+import { WorkPage } from './WorkPage';
 
 /** Parse the splat into { fullName, subPath, subTail }.
  *
@@ -53,7 +54,7 @@ export function parseRepoSplat(splat: string): {
 }
 
 const KNOWN_SUB_PATHS = new Set([
-  'agents', 'code', 'blob', 'pulls', 'issues', 'settings',
+  'agents', 'code', 'blob', 'pulls', 'work', 'issues', 'settings',
 ]);
 
 export function RepoRouter(): JSX.Element {
@@ -79,6 +80,8 @@ export function RepoRouter(): JSX.Element {
     }
     case 'issues':
       return <IssuesPage provider={provider} fullName={fullName} />;
+    case 'work':
+      return <WorkPage provider={provider} fullName={fullName} />;
     case 'settings':
       return <RepositorySettingsPage provider={provider} fullName={fullName} section={subTail || undefined} />;
     default:

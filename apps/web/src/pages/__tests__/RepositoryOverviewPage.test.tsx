@@ -25,7 +25,7 @@ describe('RepositoryOverviewPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders the public portal badge in the overview header', async () => {
+  it('routes split repositories into the family browser', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const parsed = new URL(String(input), 'http://localhost');
       if (parsed.pathname === '/api/v1/repos') {
@@ -61,7 +61,7 @@ describe('RepositoryOverviewPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Public portal')).toBeInTheDocument();
+    expect(await screen.findByText('Split family browser')).toBeInTheDocument();
   });
 });
 
@@ -76,6 +76,10 @@ function renderPage(): void {
           <Route
             path="/repos/:provider/:fullName/*"
             element={<RepositoryOverviewPage />}
+          />
+          <Route
+            path="/repos/family/:family"
+            element={<div>Split family browser</div>}
           />
         </Routes>
       </MemoryRouter>

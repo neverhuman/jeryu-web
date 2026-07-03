@@ -8,6 +8,11 @@
 //
 // Each result is persisted to `target/jankurai/ux-qa/<scope>.axe.json` so
 // the UX-QA dashboard can chart violation trends over time. The
+// `npm run ux-qa` receipt ties these scans to @jankurai/ux-qa visual review,
+// geometry runtime evidence, layout stability checks, and design token
+// discipline through Storybook, Playwright report, Lighthouse, and axe
+// artifacts.
+//
 // assertion is filtered to `serious` + `critical` impacts to keep the
 // suite green when best-practice rules (e.g. `landmark-one-main` on a
 // not-implemented envelope page) flag a transitional violation; the JSON
@@ -44,12 +49,12 @@ const TARGETS: AxeTarget[] = [
   { scope: 'repositories', path: '/repos', description: 'Repositories list' },
   {
     scope: 'repo-overview',
-    path: `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}`,
+    path: `/repos/${REPO.host}/${REPO.owner}/${REPO.name}`,
     description: 'Repository overview',
   },
   {
     scope: 'repo-settings',
-    path: `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/settings/general`,
+    path: `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/settings/general`,
     description: 'Repository settings',
   },
 ];
@@ -167,7 +172,7 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
       unresolved_threads: 2,
     });
 
-    await page.goto(`/repos/${repo.host}/${repo.owner}%2F${repo.name}/pulls/99`);
+    await page.goto(`/repos/${repo.host}/${repo.owner}/${repo.name}/pulls/99`);
     await expect(
       page.getByRole('heading', { name: /PR #99: A11y cockpit scan/i })
     ).toBeVisible({ timeout: 15_000 });
@@ -199,7 +204,7 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
     ]);
 
     await page.goto(
-      `/repos/${repo.host}/${repo.owner}%2F${repo.name}/agents/run-axe`
+      `/repos/${repo.host}/${repo.owner}/${repo.name}/agents/run-axe`
     );
     await expect(page.getByTestId('repo-agents-page')).toBeVisible({
       timeout: 15_000,

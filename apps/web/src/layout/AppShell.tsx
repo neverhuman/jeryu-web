@@ -25,11 +25,15 @@ import { useCommandStore } from '../stores/commandStore';
 import { useKeyboardShortcut } from '../hooks/useKeyboard';
 import { KeyboardShortcutsOverlay } from '../components/KeyboardShortcutsOverlay';
 import { useShellCommands } from './useShellCommands';
+import { LoadingState } from '../components/state';
+import { useAuth } from '../hooks/useAuth';
+import { AuthPage } from '../pages/AuthPage';
 
 import './AppShell.css';
 
 export function AppShell(): JSX.Element {
   const navigate = useNavigate();
+  const auth = useAuth();
   const openPalette = useCommandStore((s) => s.open);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -45,7 +49,7 @@ export function AppShell(): JSX.Element {
     () => {
       openPalette();
     },
-    { label: 'Open command palette', group: 'Navigation' }
+    { label: 'Open command palette', group: 'Navigation', enabled: !!auth.user }
   );
 
   useKeyboardShortcut(
@@ -53,34 +57,61 @@ export function AppShell(): JSX.Element {
     () => {
       navigate('/search');
     },
-    { label: 'Focus search', group: 'Navigation' }
+    { label: 'Focus search', group: 'Navigation', enabled: !!auth.user }
   );
 
   useKeyboardShortcut('mod+b', toggleSidebar, {
     label: 'Toggle sidebar',
     group: 'Navigation',
+    enabled: !!auth.user,
   });
 
   useKeyboardShortcut('g d', () => navigate('/'), {
     label: 'Go to Dashboard',
     group: 'Navigation',
+    enabled: !!auth.user,
   });
   useKeyboardShortcut('g r', () => navigate('/repos'), {
     label: 'Go to Repositories',
     group: 'Navigation',
+    enabled: !!auth.user,
+  });
+  useKeyboardShortcut('g w', () => navigate('/work'), {
+    label: 'Go to Work',
+    group: 'Navigation',
+    enabled: !!auth.user,
   });
   useKeyboardShortcut('g m', () => navigate('/pull-room'), {
     label: 'Go to Pull Room',
     group: 'Navigation',
+    enabled: !!auth.user,
   });
   useKeyboardShortcut('g s', () => navigate('/settings'), {
     label: 'Go to Settings',
     group: 'Navigation',
+    enabled: !!auth.user,
   });
   useKeyboardShortcut('Mod+/', () => navigate('/search'), {
     label: 'Go to Search',
     group: 'Navigation',
+    enabled: !!auth.user,
   });
+
+  if (auth.isPending) {
+    return (
+      <main className="auth-page">
+        <LoadingState title="Loading account…" variant="message" />
+      </main>
+    );
+  }
+
+  if (!auth.user) {
+    return <AuthPage />;
+  }
+
+  if (auth.user.mustChangePassword) {
+    return <AuthPage forcePasswordChange />;
+  }
 
   return (
     <div className={`app-shell${sidebarCollapsed ? ' app-shell--sidebar-collapsed' : ''}`}>

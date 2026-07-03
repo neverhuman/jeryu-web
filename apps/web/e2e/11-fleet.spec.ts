@@ -125,7 +125,7 @@ function runnerFabric(includeLocal: boolean): RunnerFabricResponse {
 }
 
 test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
-  test('renders node cards, active task preview, and local only when present', async ({
+  test('renders node cards, active task preview, and local only when present @action:fleet.render', async ({
     page,
   }) => {
     await blockFleetWebSocket(page);
@@ -169,7 +169,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     });
   });
 
-  test('does not invent a local node when the backend omits it', async ({
+  test('does not invent a local node when the backend omits it @action:fleet.no_local_absence', async ({
     page,
   }) => {
     await blockFleetWebSocket(page);
@@ -194,7 +194,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-node-local')).toHaveCount(0);
   });
 
-  test('clicking a task card with repo + agentRunId navigates to the agent terminal', async ({
+  test('clicking a task card with repo + agentRunId navigates to the agent terminal @action:fleet.task_navigation', async ({
     page,
   }) => {
     await blockFleetWebSocket(page);
@@ -226,7 +226,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await page.waitForURL(/\/repos\/jeryu\/jeryu%2Fveox\/agents\/ar-000001/);
   });
 
-  test('task card without repo remains non-interactive', async ({ page }) => {
+  test('task card without repo remains non-interactive @action:fleet.noninteractive_card', async ({ page }) => {
     await blockFleetWebSocket(page);
     await mockBootstrap(page);
     await mockFleetBootstrap(page, [

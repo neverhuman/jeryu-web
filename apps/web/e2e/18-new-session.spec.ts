@@ -43,7 +43,7 @@ async function seed(page: Page): Promise<void> {
   await mockCompanionShell(page);
 }
 
-test('New Session POSTs a session and opens the run terminal', async ({
+test('New Session POSTs a session and opens the run terminal @action:agents.new_session_success', async ({
   page,
 }) => {
   await seed(page);
@@ -78,7 +78,7 @@ test('New Session POSTs a session and opens the run terminal', async ({
   });
 });
 
-test('New Session surfaces an error when the create fails', async ({ page }) => {
+test('New Session surfaces an error when the create fails @action:agents.new_session_error', async ({ page }) => {
   await seed(page);
   await page.route(
     /\/api\/v1\/repos\/[^/]+\/sessions(\?.*)?$/,

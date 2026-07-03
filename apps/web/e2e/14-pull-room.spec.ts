@@ -79,7 +79,7 @@ async function mockPullRoom(page: Page): Promise<void> {
   });
 }
 
-test('Pull Room renders queue lanes, PR cards, tooling rail, and cockpit links', async ({
+test('Pull Room renders filters, queue lanes, PR cards, tooling rail, and cockpit links @action:pull_room.filters @action:pull_room.search @action:pull_room.cockpit_link', async ({
   page,
 }) => {
   await blockWebSocket(page);
@@ -91,6 +91,11 @@ test('Pull Room renders queue lanes, PR cards, tooling rail, and cockpit links',
   await shell.assertShellLoaded();
 
   await expect(page.getByTestId('pull-room-page')).toBeVisible();
+  await page.getByLabel('Search pull requests').fill('Fix');
+  await page
+    .locator('section[aria-label="Pull Room filters"]')
+    .getByLabel('Checks')
+    .selectOption('missing');
   await expect(page.getByTestId('pull-lane-missing_checks')).toBeVisible();
   await expect(page.getByTestId('pull-lane-failing_checks')).toBeVisible();
   await expect(page.getByText('Fix BFF PR list')).toBeVisible();

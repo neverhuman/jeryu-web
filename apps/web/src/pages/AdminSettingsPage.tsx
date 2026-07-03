@@ -1,13 +1,17 @@
 // AdminSettingsPage.tsx — admin preferences surface.
 //
-// Implements the theme + density preference toggles wired to
-// `preferencesStore`. The broader §4.7 settings studio (organization SSO,
-// tokens, integrations) is served by the backend admin tier and surfaces
-// here once those endpoints exist.
+// Implements theme and density preferences plus account access controls wired
+// through typed HTTP endpoints.
 
 import { Moon, Monitor, Sun, ToggleRight } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
+import { apiGet, apiSend } from '../api/client';
+import { endpoints } from '../api/endpoints';
 import { ActionButton } from '../components/action/ActionButton';
+import { ErrorState, LoadingState } from '../components/state';
+import { useAuth } from '../hooks/useAuth';
 import {
   usePreferencesStore,
   type DensityPreference,
@@ -21,14 +25,14 @@ export function AdminSettingsPage(): JSX.Element {
   const setTheme = usePreferencesStore((s) => s.setTheme);
   const density = usePreferencesStore((s) => s.density);
   const setDensity = usePreferencesStore((s) => s.setDensity);
+  const { user } = useAuth();
 
   return (
     <div className="page" data-testid="settings-page">
       <header className="page__header">
         <h1 className="page__title">Settings</h1>
         <p className="page__subtitle">
-          Admin preferences. The full settings studio (organization SSO,
-          tokens, integrations) lands with the backend admin tier.
+          Admin preferences and account access controls.
         </p>
         <div className="page__inline-actions">
           <span className="page__pill page__pill--warning">
@@ -93,7 +97,119 @@ export function AdminSettingsPage(): JSX.Element {
           ))}
         </div>
       </section>
+
+      {user?.role === 'admin' ? <AdminAccessPanel /> : null}
     </div>
+  );
+}
+
+interface AdminUser {
+  login: string;
+  role: 'admin' | 'user';
+  created_at: string;
+  updated_at: string;
+}
+
+interface ResetReceipt {
+  login: string;
+  password: string;
+}
+
+function AdminAccessPanel(): JSX.Element {
+  const [receipt, setReceipt] = useState<ResetReceipt | null>(null);
+  const [owner, setOwner] = useState('jeryu');
+  const [repo, setRepo] = useState('jeryu');
+  const [login, setLogin] = useState('');
+  const [access, setAccess] = useState<'read' | 'write' | 'admin'>('read');
+  const users = useQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: ({ signal }) => apiGet<AdminUser[]>(endpoints.adminUsers(), { signal }),
+  });
+  const reset = useMutation({
+    mutationFn: (target: string) =>
+      apiSend<ResetReceipt>(endpoints.adminResetPassword(target), {}),
+    onSuccess: setReceipt,
+  });
+  const grant = useMutation({
+    mutationFn: () =>
+      apiSend(endpoints.adminRepoGrant(owner, repo, login), { access }),
+  });
+
+  return (
+    <section className="page__section" aria-labelledby="admin-users">
+      <h2 className="page__section-title" id="admin-users">
+        Users and repository access
+      </h2>
+      {users.isPending ? (
+        <LoadingState title="Loading users..." variant="message" />
+      ) : users.error ? (
+        <ErrorState title="Could not load users" error={users.error} />
+      ) : (
+        <div className="page__card">
+          {(users.data ?? []).map((account) => (
+            <div className="page__inline-actions" key={account.login}>
+              <span className="page__pill">{account.role}</span>
+              <strong>{account.login}</strong>
+              <ActionButton
+                variant="default"
+                onClick={() => reset.mutate(account.login)}
+              >
+                Reset password
+              </ActionButton>
+            </div>
+          ))}
+          {receipt ? (
+            <p className="page__roadmap-note">
+              {receipt.login}: {receipt.password}
+            </p>
+          ) : null}
+        </div>
+      )}
+      <form
+        className="page__card"
+        onSubmit={(event) => {
+          event.preventDefault();
+          grant.mutate();
+        }}
+      >
+        <div className="admin-grant-grid">
+          <label>
+            Owner
+            <input value={owner} onChange={(event) => setOwner(event.currentTarget.value)} />
+          </label>
+          <label>
+            Repo
+            <input value={repo} onChange={(event) => setRepo(event.currentTarget.value)} />
+          </label>
+          <label>
+            User
+            <input value={login} onChange={(event) => setLogin(event.currentTarget.value)} />
+          </label>
+          <div className="admin-grant-access">
+            <span>Access</span>
+            <div className="page__inline-actions" role="radiogroup" aria-label="Access">
+              {(['read', 'write', 'admin'] as const).map((value) => (
+                <ActionButton
+                  key={value}
+                  type="button"
+                  variant={access === value ? 'primary' : 'default'}
+                  role="radio"
+                  aria-checked={access === value}
+                  onClick={() => setAccess(value)}
+                >
+                  {value}
+                </ActionButton>
+              ))}
+            </div>
+          </div>
+        </div>
+        <ActionButton type="submit" variant="primary" disabled={grant.isPending}>
+          Grant access
+        </ActionButton>
+        {grant.isSuccess ? <span className="page__pill page__pill--success">Granted</span> : null}
+        {grant.error ? <ErrorState title="Could not grant access" error={grant.error} /> : null}
+      </form>
+    </section>
   );
 }
 

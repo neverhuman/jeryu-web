@@ -15,7 +15,7 @@ async function blockWebSocket(page: Page): Promise<void> {
   );
 }
 
-test('repo pull list renders PR cards without the W-FE-11 placeholder', async ({
+test('repo pull list renders PR cards without the W-FE-11 placeholder @action:repo_pulls.list', async ({
   page,
 }) => {
   await blockWebSocket(page);
@@ -54,7 +54,7 @@ test('repo pull list renders PR cards without the W-FE-11 placeholder', async ({
   });
 });
 
-test('repo pull list empty state says No pull requests', async ({ page }) => {
+test('repo pull list empty state says No pull requests @action:repo_pulls.empty', async ({ page }) => {
   await blockWebSocket(page);
   await mockBootstrap(page);
   await mockRepoList(page, [

@@ -21,8 +21,7 @@
 //   - `Idempotency-Key` (§35.1.3) is set when the caller passes
 //     `opts.idempotencyKey`. Required for mutations the backend gates on it
 //     (create/merge/delete/archive/settings/secrets).
-//   - `X-CSRF-Token` is forwarded when `opts.csrfToken` is set. The header
-//     name matches `crate::web::csrf::CSRF_HEADER`.
+//   - `X-Jeryu-CSRF` is forwarded for unsafe cookie-auth API requests.
 //   - `Accept: application/json` and `Content-Type: application/json` are
 //     attached when a body is sent.
 
@@ -66,7 +65,14 @@ export interface ApiRequestOptions {
   headers?: Record<string, string>;
 }
 
+let globalCsrfToken: string | null = null;
+
+export function setCsrfToken(token: string | null | undefined): void {
+  globalCsrfToken = token ?? null;
+}
+
 function buildHeaders(
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   hasBody: boolean,
   opts: ApiRequestOptions | undefined
 ): HeadersInit {
@@ -80,7 +86,9 @@ function buildHeaders(
     headers['Idempotency-Key'] = opts.idempotencyKey;
   }
   if (opts?.csrfToken) {
-    headers['X-CSRF-Token'] = opts.csrfToken;
+    headers['X-Jeryu-CSRF'] = opts.csrfToken;
+  } else if (method !== 'GET' && globalCsrfToken) {
+    headers['X-Jeryu-CSRF'] = globalCsrfToken;
   }
   if (opts?.headers) {
     Object.assign(headers, opts.headers);
@@ -144,7 +152,7 @@ async function sendNoContent(
 ): Promise<void> {
   const init: RequestInit = {
     method,
-    headers: buildHeaders(false, opts),
+    headers: buildHeaders(method, false, opts),
     credentials: 'same-origin',
   };
   if (opts?.signal) init.signal = opts.signal;
@@ -179,7 +187,7 @@ async function send<T>(
   const hasBody = body !== undefined && method !== 'GET';
   const init: RequestInit = {
     method,
-    headers: buildHeaders(hasBody, opts),
+    headers: buildHeaders(method, hasBody, opts),
     credentials: 'same-origin',
   };
   if (opts?.signal) init.signal = opts.signal;

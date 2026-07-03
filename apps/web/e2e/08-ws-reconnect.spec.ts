@@ -25,7 +25,7 @@ import { mockBootstrap } from './fixtures/mocks';
 test.describe.configure({ retries: 1 });
 
 test.describe('WebSocket reconnect (W-T-16)', () => {
-  test('aborting WS does not crash the SPA', async ({ page }) => {
+  test('aborting WS does not crash the SPA @action:ws.reconnect', async ({ page }) => {
     await mockBootstrap(page);
 
     // Abort the WS upgrade. We register the route before any navigation
@@ -55,7 +55,7 @@ test.describe('WebSocket reconnect (W-T-16)', () => {
     await expect(shellOrError).toBeVisible();
   });
 
-  test('SPA boots without an open WS (graceful degrade)', async ({ page }) => {
+  test('SPA boots without an open WS (graceful degrade) @action:ws.offline_boot', async ({ page }) => {
     await mockBootstrap(page);
     // Permanently block the WS upgrade by aborting every request.
     await page.context().route('**/api/v1/ws', (route) =>

@@ -34,7 +34,7 @@ const REPOS = [
 ];
 
 test.describe('Repositories list (W-T-10)', () => {
-  test('BFF /api/v1/repos surface responds (200 / 404 / 502)', async ({
+  test('BFF /api/v1/repos surface responds (200 / 404 / 502) @bff', async ({
     request,
   }) => {
     // Phase 2/3: `/api/v1/repos` is wired but the local API has no forge backend,
@@ -58,7 +58,7 @@ test.describe('Repositories list (W-T-10)', () => {
     }
   });
 
-  test('SPA renders mocked list, navigates to a repo, opens Create dialog', async ({
+  test('SPA renders mocked list, filters/sorts/toggles view, navigates, opens Create dialog @action:repos.filter @action:repos.sort @action:repos.view_toggle @action:repos.open_repo @action:repos.create_dialog', async ({
     page,
   }) => {
     await mockBootstrap(page);
@@ -78,7 +78,22 @@ test.describe('Repositories list (W-T-10)', () => {
     await expect(cards).toHaveCount(REPOS.length, { timeout: 10_000 });
     await expect(cards.first()).toContainText('jeryu');
 
-    // 2. Click a repo card and assert the SPA transition COMMITS: the URL
+    // 2. Toolbar actions: search/filter/sort and table/card view toggles.
+    await page.getByLabel('Search repositories').fill('forge');
+    await expect(page.getByLabel('Search repositories')).toHaveValue('forge');
+    await page.getByLabel('Visibility: private').click();
+    await expect(page.getByLabel('Visibility: private')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await page.getByLabel('Sort repositories').selectOption('name');
+    await expect(page.getByLabel('Sort repositories')).toHaveValue('name');
+    await page.getByRole('radio', { name: 'Table view' }).click();
+    await expect(page.getByRole('grid', { name: 'Repositories' })).toBeVisible();
+    await page.getByRole('radio', { name: 'Card view' }).click();
+    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+
+    // 3. Click a repo card and assert the SPA transition COMMITS: the URL
     //    changes AND the overview outlet renders (regression net for the
     //    keyboard-registry re-render loop that kept interrupting router
     //    transitions, leaving the old route on screen after pushState).
@@ -94,7 +109,7 @@ test.describe('Repositories list (W-T-10)', () => {
       page.getByRole('heading', { level: 1, name: 'jeryu' })
     ).toBeVisible({ timeout: 10_000 });
 
-    // 3. Return to the list and open the Create repo dialog.
+    // 4. Return to the list and open the Create repo dialog.
     await page.goto('/repos');
     await expect(cards.first()).toBeVisible({ timeout: 10_000 });
 

@@ -2,9 +2,15 @@
 
 This split member publishes source changes through pinned tags; `jeryu-deploy` remains the binary release authority.
 
-Version source is `VERSION` plus the split tag recorded in
+Version source: `VERSION` plus the split tag recorded in
 `repos.manifest.toml` when present. Release notes are recorded in
 `CHANGELOG.md`.
+
+Release process doc: this file is the frontend release control surface. The
+release automation or command policy is to run the proof commands below from
+this repo, then let `jeryu-deploy` package and publish the binary/web artifact.
+Checksum/provenance/SBOM evidence policy: every promoted artifact must have
+checksum, provenance, SBOM, and cosign evidence recorded with the release.
 
 ## Release Gate
 
@@ -18,6 +24,6 @@ Before a release or split tag is promoted:
 
 ## Rollback
 
-Rollback uses the previous known-good split tag and its artifact evidence. Do
-not overwrite tags; publish a new repair tag or restore consumers to the last
-verified tag.
+Rollback guidance: restore consumers to the previous known-good split tag and
+its artifact evidence. Do not overwrite tags; publish a new repair tag or move
+the deployment pointer back to the last verified tag.

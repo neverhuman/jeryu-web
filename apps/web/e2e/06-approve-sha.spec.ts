@@ -43,7 +43,7 @@ function approveButton(page: import('@playwright/test').Page) {
 }
 
 test.describe('Approve at exact SHA (W-T-14)', () => {
-  test('clicking Approve on the cockpit succeeds and shows no recovery banner', async ({
+  test('clicking Approve on the cockpit succeeds and shows no recovery banner @action:pr.approve_success @action:pr.request_changes_visible', async ({
     page,
   }) => {
     await mockBootstrap(page);
@@ -152,6 +152,9 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     ).toBeVisible({ timeout: 15_000 });
     const approve = approveButton(page);
     await expect(approve).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Request changes' })
+    ).toBeDisabled();
 
     await approve.click();
 
@@ -164,7 +167,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     await expect(page.locator('.pr-cockpit__recovery')).toHaveCount(0);
   });
 
-  test('clicking Approve on a stale head surfaces the SHA-drift recovery banner', async ({
+  test('clicking Approve on a stale head surfaces the SHA-drift recovery banner @action:pr.approve_drift @action:pr.refresh_after_drift', async ({
     page,
   }) => {
     await mockBootstrap(page);
@@ -195,5 +198,60 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     await expect(banner.locator('code').first()).toHaveText(OLD_SHA.slice(0, 7));
     await expect(banner.locator('code').nth(1)).toHaveText(NEW_SHA.slice(0, 7));
     await expect(banner.getByRole('button', { name: /Refresh/i })).toBeVisible();
+    await banner.getByRole('button', { name: /Refresh/i }).click();
+    await expect(banner).toHaveCount(0);
+  });
+
+  test('merge controls send merge, squash, and rebase variants @action:pr.merge_success @action:pr.merge_variants', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockRepoList(page, [{ id: REPO, default_branch: 'main' }]);
+    const detail = await mockPullRequestDetail(page, {
+      repoId: REPO_ID,
+      number: PR_NUMBER,
+      title: 'Merge happy path',
+      head_sha: OLD_SHA,
+      passport: 'pass',
+      can_merge: true,
+      approvals: 1,
+      required_approvals: 1,
+    });
+    const mergeMethods: string[] = [];
+    await page.route(
+      /\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/merge$/,
+      async (route, request) => {
+        if (request.method() !== 'POST') {
+          await route.continue();
+          return;
+        }
+        const body = JSON.parse(request.postData() ?? '{}') as {
+          expected_head_sha?: string;
+          expected_passport_hash?: string | null;
+          merge_method?: string;
+        };
+        expect(body.expected_head_sha).toBe(OLD_SHA);
+        expect(body.expected_passport_hash).toBe('passport-hash-0001');
+        mergeMethods.push(body.merge_method ?? '');
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(detail),
+        });
+      }
+    );
+
+    await page.goto(PR_URL);
+    await expect(
+      page.getByRole('heading', { name: /PR #99: Merge happy path/i })
+    ).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole('button', { name: /^Merge$/ }).click();
+    await page.getByRole('button', { name: 'Squash' }).click();
+    await page.getByRole('button', { name: 'Rebase' }).click();
+
+    await expect
+      .poll(() => mergeMethods.join(','), { timeout: 10_000 })
+      .toBe('merge,squash,rebase');
   });
 });

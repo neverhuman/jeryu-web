@@ -9,12 +9,11 @@
 //
 // The repoRouteParser utility centralizes this parsing.
 
-import { createBrowserRouter } from 'react-router-dom';
+import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { AppShell } from '../layout/AppShell';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { AuditPage } from '../pages/AuditPage';
-import { DashboardPage } from '../pages/DashboardPage';
 import { FleetPage } from '../pages/FleetPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
 import { IssuesPage } from '../pages/IssuesPage';
@@ -34,13 +33,15 @@ import { SearchResultsPage } from '../pages/SearchResultsPage';
 import { ToolFleetPage } from '../pages/ToolFleetPage';
 import { ToolsPage } from '../pages/ToolsPage';
 import { RepoRouter } from '../pages/RepoRouter';
+import { WorkDetailPage } from '../pages/WorkDetailPage';
+import { WorkPage } from '../pages/WorkPage';
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <Navigate to="/repos/family/jeryu-split" replace /> },
       { path: 'repos', element: <RepositoriesPage /> },
       { path: 'repos/new', element: <RepositoriesPage mode="create" /> },
       // Family drill-down. Declared before the `repos/:provider/*` catch-all
@@ -52,6 +53,8 @@ export const router = createBrowserRouter([
         path: 'repos/:provider/*',
         element: <RepoRouter />,
       },
+      { path: 'work', element: <WorkPage /> },
+      { path: 'work/:key', element: <WorkDetailPage /> },
       { path: 'pull-room', element: <PullRoomPage /> },
       { path: 'intelligence', element: <IntelligencePage /> },
       { path: 'fleet', element: <FleetPage /> },

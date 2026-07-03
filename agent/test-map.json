@@ -76,9 +76,14 @@
       "purpose": "verify agent metadata parses and routes proof lanes"
     },
     "apps/web/": {
-      "command": "just check",
-      "lane": "check",
-      "purpose": "verify jeryu-web owned source remains build-addressable"
+      "command": "just check && just e2e && npm --workspace @jeryu/web run ux-qa",
+      "lane": "web-ui",
+      "purpose": "verify jeryu-web source, the Playwright action matrix, and rendered UX-QA coverage"
+    },
+    "apps/web/e2e/": {
+      "command": "just e2e",
+      "lane": "web-ui",
+      "purpose": "verify the Playwright action matrix, mocked Chromium browser workflows, and e2e artifacts"
     },
     "contracts/AGENTS.md": {
       "command": "just check",

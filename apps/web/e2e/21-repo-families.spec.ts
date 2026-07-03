@@ -7,10 +7,16 @@
 // The list mock honours `?family=` like the real backend, so the
 // drill-down page exercises the same filter path the SPA ships.
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 
 import { AppShellPage } from './pages/AppShellPage';
-import { mockBootstrap, mockRepoList } from './fixtures/mocks';
+import {
+  mockBootstrap,
+  mockReadme,
+  mockRefs,
+  mockRepoList,
+  mockTree,
+} from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -38,7 +44,7 @@ const REPOS = [
 ];
 
 test.describe('Repository families', () => {
-  test('list shows one family tile + plain cards, tile drills into the family page', async ({
+  test('list shows one family tile + plain cards, tile drills into the family page @action:repos.family_drilldown @action:repos.split_repo_switch @action:code.file_select @action:code.readme_preview', async ({
     page,
   }) => {
     // Regression net for the keyboard-registry re-render loop: it kept
@@ -50,6 +56,15 @@ test.describe('Repository families', () => {
 
     await mockBootstrap(page);
     await mockRepoList(page, REPOS);
+    await mockRefs(page);
+    await mockTree(page, [
+      { path: 'README.md', kind: 'file' },
+      { path: 'src/main.rs', kind: 'file' },
+    ]);
+    await mockReadme(page, {
+      html: '<h1>Family README</h1><p>README rendering proof.</p>',
+    });
+    await mockBlob(page);
 
     const shell = new AppShellPage(page);
     await page.goto('/repos');
@@ -58,7 +73,8 @@ test.describe('Repository families', () => {
     // 1. One family tile for the two veox-split repos.
     const tile = page.locator('a.repo-family-card');
     await expect(tile).toHaveCount(1, { timeout: 10_000 });
-    await expect(tile).toContainText('veox-split');
+    await expect(tile).toContainText('veox');
+    await expect(tile).toHaveAttribute('href', '/repos/family/veox-split');
     await expect(tile).toContainText('2 repos');
 
     // 2. The familyless repo renders as a plain card (no tile membership).
@@ -73,7 +89,7 @@ test.describe('Repository families', () => {
       timeout: 10_000,
     });
     await expect(
-      page.getByRole('heading', { level: 1, name: 'veox-split' })
+      page.getByRole('heading', { level: 1, name: 'veox' })
     ).toBeVisible({ timeout: 10_000 });
 
     // 4. History back re-renders the repos list (this crashed with React
@@ -94,17 +110,35 @@ test.describe('Repository families', () => {
     // Full-load the drill-down URL and assert the page contract.
     await page.goto('/repos/family/veox-split');
     await expect(
-      page.getByRole('heading', { level: 1, name: 'veox-split' })
+      page.getByRole('heading', { level: 1, name: 'veox' })
     ).toBeVisible({ timeout: 10_000 });
 
-    // 4. The boxed panel contains exactly the member repos (the mock
+    // 4. The split browser contains exactly the member repos (the mock
     //    honours `?family=` so non-members never reach the page).
-    const panel = page.locator('section.repo-family-panel');
-    await expect(panel).toBeVisible();
-    await expect(panel.locator('a.repo-card')).toHaveCount(2);
-    await expect(panel).toContainText('redline');
-    await expect(panel).toContainText('bluebird');
-    await expect(panel).not.toContainText('solo');
+    const browser = page.locator('section.split-browser');
+    await expect(browser).toBeVisible();
+    const repoButtons = browser.locator('.split-browser__repo');
+    await expect(repoButtons).toHaveCount(2);
+    await expect(repoButtons).toContainText(['bluebird', 'redline']);
+    await expect(browser).not.toContainText('solo');
+
+    // 5. The default preview renders the README, then repo switching keeps
+    //    the browser in the same split family.
+    await expect(browser.locator('.markdown-body')).toContainText(
+      'README rendering proof.'
+    );
+    await browser.getByRole('button', { name: /redline/i }).click();
+    await expect(
+      browser.locator('.split-browser__title').filter({ hasText: 'veox/redline' })
+    ).toBeVisible();
+
+    // 6. Tree selection requests the blob endpoint and renders the file
+    //    preview instead of leaking the previous README panel.
+    await browser.getByRole('treeitem', { name: /README\.md/ }).click();
+    await expect(browser.getByRole('tab', { name: 'Rendered' })).toBeVisible();
+    await expect(browser.locator('.markdown-body')).toContainText(
+      'Selected file proof.'
+    );
 
     await page.screenshot({
       path: 'playwright-report/repo-family-page.png',
@@ -112,7 +146,7 @@ test.describe('Repository families', () => {
     });
   });
 
-  test('family page renders permission denied for a non-owner viewer (403 forbidden)', async ({
+  test('family page renders permission denied for a non-owner viewer (403 forbidden) @action:repos.family_permission_denied', async ({
     page,
   }) => {
     await mockBootstrap(page);
@@ -136,10 +170,10 @@ test.describe('Repository families', () => {
     await expect(page.getByText(/missing: repo\.read/)).toBeVisible();
     // The non-owner viewer sees zero repository data.
     await expect(page.locator('a.repo-card')).toHaveCount(0);
-    await expect(page.locator('section.repo-family-panel')).toHaveCount(0);
+    await expect(page.locator('section.split-browser')).toHaveCount(0);
   });
 
-  test('searching collapses tiles into flat repo cards', async ({ page }) => {
+  test('searching collapses tiles into flat repo cards @action:repos.search', async ({ page }) => {
     await mockBootstrap(page);
     await mockRepoList(page, REPOS);
 
@@ -160,3 +194,46 @@ test.describe('Repository families', () => {
     ).toHaveCount(REPOS.length);
   });
 });
+
+async function mockBlob(page: Page): Promise<void> {
+  await page.route(
+    /\/api\/v1\/repos\/[^/]+\/blob(\?.*)?$/,
+    async (route: Route, request) => {
+      if (request.method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+      const url = new URL(request.url());
+      const path = url.searchParams.get('path') ?? 'README.md';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          repo: {
+            id: 'jeryu:veox/redline',
+            host: 'jeryu',
+            owner: 'veox',
+            name: 'redline',
+          },
+          path,
+          ref_name: url.searchParams.get('ref') ?? 'main',
+          sha: '0'.repeat(40),
+          size_bytes: 42,
+          mime: 'text/markdown',
+          encoding: 'utf8',
+          text: '# Selected file proof.',
+          base64: null,
+          rendered_markdown: {
+            html: '<h1>Selected file proof.</h1>',
+            toc: [],
+            links: [],
+            renderer_version: 'jeryu-md-renderer.v1',
+            sanitizer_version: 'jeryu-md-sanitizer.v1',
+            rendered_at: '2026-05-26T00:00:00Z',
+          },
+          is_binary: false,
+        }),
+      });
+    }
+  );
+}

@@ -1,10 +1,11 @@
 // RepositoryFamilyPage.test.tsx — render tests for the family drill-down.
 //
 // `useRepositories` is mocked so the test focuses on the page rendering:
-// success (rollup strip + boxed grid of member cards), the empty state,
-// the 403 permission-denied state (negative authorization proof), and the
-// error state with a retry action.
+// success (rollup strip + split browser rail), the empty state, the 403
+// permission-denied state (negative authorization proof), and the error state
+// with a retry action.
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,6 +19,29 @@ const useRepositoriesMock = vi.fn();
 vi.mock('../../hooks/useRepositories', () => ({
   useRepositories: (query: unknown) => useRepositoriesMock(query),
 }));
+
+vi.mock('../../hooks/useBlob', () => ({
+  useBlob: () => ({
+    isPending: false,
+    error: null,
+    data: null,
+  }),
+}));
+
+vi.mock('../../components/browser', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../components/browser')>();
+  return {
+    ...actual,
+    BranchSelector: ({ value }: { value: string }) => (
+      <div aria-label="Branch selector">{value}</div>
+    ),
+    FileTree: () => <div aria-label="Files">file tree</div>,
+    ReadmePanel: ({ repoId }: { repoId: string | null }) => (
+      <article>README for {repoId}</article>
+    ),
+    CodeViewer: () => <article>code preview</article>,
+  };
+});
 
 function repoSummary(
   name: string,
@@ -62,17 +86,22 @@ function listResult(repositories: RepositorySummary[]): unknown {
 }
 
 function renderPage(family = 'veox-split'): void {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <MemoryRouter
-      initialEntries={[`/repos/family/${encodeURIComponent(family)}`]}
-    >
-      <Routes>
-        <Route
-          path="/repos/family/:family"
-          element={<RepositoryFamilyPage />}
-        />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={client}>
+      <MemoryRouter
+        initialEntries={[`/repos/family/${encodeURIComponent(family)}`]}
+      >
+        <Routes>
+          <Route
+            path="/repos/family/:family"
+            element={<RepositoryFamilyPage />}
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -81,7 +110,7 @@ describe('RepositoryFamilyPage', () => {
     useRepositoriesMock.mockReset();
   });
 
-  it('renders the rollup strip and member cards inside the panel', () => {
+  it('renders the rollup strip and split browser rail', () => {
     useRepositoriesMock.mockReturnValue(
       listResult([
         repoSummary('redline', {
@@ -102,6 +131,7 @@ describe('RepositoryFamilyPage', () => {
 
     expect(useRepositoriesMock).toHaveBeenCalledWith({
       family: 'veox-split',
+      sort: 'name',
     });
     expect(
       screen.getByRole('heading', { level: 1, name: 'veox' })
@@ -116,13 +146,15 @@ describe('RepositoryFamilyPage', () => {
     expect(screen.getByLabelText('7 open pull requests')).toBeInTheDocument();
     expect(screen.getByLabelText('4 failing checks')).toBeInTheDocument();
     expect(screen.getByLabelText('3 running jobs')).toBeInTheDocument();
-    // Boxed panel with the member repo cards.
-    const panel = screen.getByRole('region', {
-      name: 'veox repositories',
+    const browser = screen.getByRole('region', {
+      name: 'Split repository browser',
     });
-    expect(panel).toHaveClass('repo-family-panel');
-    expect(screen.getByText('redline')).toBeInTheDocument();
-    expect(screen.getByText('bluebird')).toBeInTheDocument();
+    expect(browser).toHaveClass('split-browser');
+    expect(screen.getByRole('button', { name: /redline/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /bluebird/ })).toBeInTheDocument();
+    expect(screen.getByText('veox/bluebird')).toBeInTheDocument();
+    expect(within(browser).getByText('file tree')).toBeInTheDocument();
+    expect(screen.getByText('README for uuid-bluebird')).toBeInTheDocument();
   });
 
   it('renders the empty state with a back-to-repos action', () => {

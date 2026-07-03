@@ -13,7 +13,7 @@
 
 import { Check, Copy, ExternalLink, GitBranch, Link as LinkIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
@@ -119,6 +119,15 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
           }
         />
       </div>
+    );
+  }
+
+  if (summary.family) {
+    return (
+      <Navigate
+        to={`/repos/family/${encodeURIComponent(summary.family)}`}
+        replace
+      />
     );
   }
 

@@ -52,7 +52,7 @@ export function RepositoryFilePage(props: RepositoryFilePageProps = {}): JSX.Ele
   const params = useParams();
   const provider = props.provider ?? params.provider ?? 'unknown';
   const fullName = props.fullName ?? fullNameFromParams(params);
-  const splat = params['*'] ?? '';
+  const splat = props.blobPath ?? params['*'] ?? '';
   const { ref, path } = parseRefAndPath(splat);
 
   const resolved = useResolveRepo(provider, fullName);

@@ -49,7 +49,7 @@ const READMEHTML = [
 ].join('\n');
 
 test.describe('README rendering (W-T-11)', () => {
-  test('README endpoint hits BFF and the SPA sanitizes', async ({ page }) => {
+  test('README renders sanitized markdown @action:readme.rendered', async ({ page }) => {
     await mockBootstrap(page);
     await mockRepoList(page, [REPO]);
     await mockReadme(page, { html: READMEHTML });
@@ -92,7 +92,7 @@ test.describe('README rendering (W-T-11)', () => {
     expect(xssFired, 'inline <script> must not have executed').toBe(false);
   });
 
-  test('markdown render endpoint returns the RenderedMarkdown contract', async ({
+  test('markdown render endpoint returns the RenderedMarkdown contract @bff', async ({
     request,
   }) => {
     // The W-B-08 markdown service is exposed at `/api/v1/markdown/render`

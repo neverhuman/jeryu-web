@@ -1,4 +1,4 @@
-// 01-bootstrap.spec.ts — bootstrap + dashboard smoke (W-T-09).
+// 01-bootstrap.spec.ts — bootstrap + root-route smoke (W-T-09).
 //
 // Two-tier smoke:
 //   1. BFF cold-load: `GET /api/v1/bootstrap` returns a valid WebBootstrap
@@ -6,7 +6,7 @@
 //   2. SPA shell paint: navigate to `/`, expect the AppShell layout to
 //      mount, the viewer's login to surface in the GlobalHeader / UserMenu,
 //      the live indicator to leave "Idle" (transition through connecting /
-//      reconnecting / open), and the LiveActivityDock to render.
+//      reconnecting / open), and the shipped root destination to render.
 //
 // Phase 2/3 has landed: `useRealtime` no longer infinite-loops, the BFF
 // serves the SPA from `apps/web/dist`, and `JERYU_WEB_TRUST_LOCAL=1` lets
@@ -15,12 +15,18 @@
 import { expect, test } from '@playwright/test';
 
 import { AppShellPage } from './pages/AppShellPage';
-import { mockBootstrap } from './fixtures/mocks';
+import {
+  mockBootstrap,
+  mockReadme,
+  mockRefs,
+  mockRepoList,
+  mockTree,
+} from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
 test.describe('Bootstrap + Dashboard (W-T-09)', () => {
-  test('BFF bootstrap endpoint returns a valid envelope', async ({ request }) => {
+  test('BFF bootstrap endpoint returns a valid envelope @bff', async ({ request }) => {
     // Hit the BFF directly so this tier passes even when the SPA shell
     // is broken. This is the Phase 1 contract the SPA depends on.
     const res = await request.get('/api/v1/bootstrap');
@@ -33,12 +39,36 @@ test.describe('Bootstrap + Dashboard (W-T-09)', () => {
     expect(typeof body.feature_flags?.markdown_html).toBe('boolean');
   });
 
-  test('SPA cold-load renders shell + dashboard', async ({ page }) => {
+  test('SPA cold-load renders shell + dashboard @action:dashboard.cold_load', async ({ page }) => {
     // Pin the bootstrap viewer to a deterministic login so the assertion
     // does not depend on the BFF's local-dev viewer string.
     await mockBootstrap(page, {
       login: '@e2e',
       display_name: 'E2E Tester',
+    });
+    await mockRepoList(page, [
+      {
+        id: { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' },
+        description: 'Public portal.',
+        family: 'jeryu-split',
+        open_pull_requests: 1,
+        failing_checks: 0,
+      },
+      {
+        id: { host: 'jeryu', owner: 'neverhuman', name: 'jeryu-web' },
+        description: 'Web console.',
+        family: 'jeryu-split',
+        open_pull_requests: 2,
+        failing_checks: 1,
+      },
+    ]);
+    await mockRefs(page);
+    await mockTree(page, [
+      { path: 'README.md', kind: 'file' },
+      { path: 'apps/web', kind: 'directory' },
+    ]);
+    await mockReadme(page, {
+      html: '<h1>Jeryu split</h1><p>Root route proof.</p>',
     });
 
     const shell = new AppShellPage(page);
@@ -66,12 +96,19 @@ test.describe('Bootstrap + Dashboard (W-T-09)', () => {
       { timeout: 10_000 }
     );
 
-    // 4. LiveActivityDock renders inside the app shell.
+    // 4. The shipped root route redirects to the split-family landing page.
+    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split$/, {
+      timeout: 10_000,
+    });
     await expect(
-      page.locator('.activity-dock, [aria-label="Live activity"]').first()
-    ).toBeVisible({ timeout: 5_000 });
+      page.getByRole('heading', { level: 1, name: 'jeryu', exact: true })
+    ).toBeVisible();
+    await expect(page.locator('section.split-browser')).toBeVisible();
+    await expect(page.locator('.markdown-body')).toContainText(
+      'Root route proof.'
+    );
 
-    // 5. Main outlet renders the dashboard content.
+    // 5. Main outlet renders the root route content.
     await expect(page.locator('main#main-content')).toBeVisible();
 
     // Best-effort evidence only: keep the lane green even if Chromium fails

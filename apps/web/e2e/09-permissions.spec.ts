@@ -28,10 +28,10 @@ test.describe.configure({ retries: 1 });
 
 const REPO = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
 const REPO_ID = `${REPO.host}:${REPO.owner}/${REPO.name}`;
-const SETTINGS_URL = `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/settings/general`;
+const SETTINGS_URL = `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/settings/general`;
 
 test.describe('Permission-denied UI state (W-T-17)', () => {
-  test('restricted viewer navigating to settings sees the real PermissionDeniedState', async ({
+  test('restricted viewer navigating to settings sees the real PermissionDeniedState @action:settings.permission_denied', async ({
     page,
   }) => {
     await mockBootstrap(page, {
@@ -56,7 +56,7 @@ test.describe('Permission-denied UI state (W-T-17)', () => {
     await expect(denied).toContainText(/missing:\s*settings\.read/i);
   });
 
-  test('mutating PATCH is rejected server-side with permission_denied', async ({
+  test('mutating PATCH is rejected server-side with permission_denied @action:settings.apply_forbidden', async ({
     page,
   }) => {
     await mockBootstrap(page, {
@@ -132,7 +132,7 @@ test.describe('Permission-denied UI state (W-T-17)', () => {
     expect(body.error?.details?.missing).toBe('settings.write');
   });
 
-  test('non-owner creating an agent session is rejected server-side with permission_denied', async ({
+  test('non-owner creating an agent session is rejected server-side with permission_denied @action:agents.create_forbidden', async ({
     page,
   }) => {
     // Authorization / data-isolation negative proof for the per-repo session
@@ -171,7 +171,7 @@ test.describe('Permission-denied UI state (W-T-17)', () => {
       }
     );
 
-    await page.goto(`/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/agents`);
+    await page.goto(`/repos/${REPO.host}/${REPO.owner}/${REPO.name}/agents`);
     await expect(page.getByTestId('repo-agents-page')).toBeVisible({
       timeout: 15_000,
     });
@@ -205,7 +205,7 @@ test.describe('Permission-denied UI state (W-T-17)', () => {
     expect(body.error?.details?.missing).toBe('agents.write');
   });
 
-  test('bootstrap reflects restricted viewer global_permissions', async ({
+  test('bootstrap reflects restricted viewer global_permissions @action:auth.restricted_bootstrap', async ({
     page,
   }) => {
     await mockBootstrap(page, {

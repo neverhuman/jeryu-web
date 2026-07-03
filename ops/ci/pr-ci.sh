@@ -42,8 +42,12 @@ bash ops/ci/score.sh
 bash ops/ci/security.sh
 bash ops/ci/artifact_support.sh
 
-echo "[pr-ci] web unit tests + typecheck + build" >&2
+echo "[pr-ci] web required checks" >&2
 npm --workspace @jeryu/web run typecheck
 npm --workspace @jeryu/web run test
+npm --workspace @jeryu/web run test:contracts
 npm --workspace @jeryu/web run build
+bash ops/ci/e2e.sh
+npm --workspace @jeryu/web run build-storybook
+npm --workspace @jeryu/web run ux-qa
 echo "[pr-ci] jeryu-web OK" >&2

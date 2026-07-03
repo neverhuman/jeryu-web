@@ -23,6 +23,7 @@ import {
 } from 'react';
 
 import { BOOTSTRAP_QUERY_KEY } from '../hooks/useBootstrap';
+import { AuthProvider, useAuth } from '../hooks/useAuth';
 import { KeyboardProvider } from '../hooks/useKeyboard';
 import { usePreferencesStore } from '../stores/preferencesStore';
 import { useRealtimeStore } from '../stores/realtimeStore';
@@ -82,12 +83,17 @@ function ThemeProvider({ children }: { children: ReactNode }): JSX.Element {
  * React Query so a `snapshot_required` triggers a bootstrap refetch.
  */
 function RealtimeBoot(): JSX.Element {
+  const { user } = useAuth();
   const connect = useRealtimeStore((s) => s.connect);
   const disconnect = useRealtimeStore((s) => s.disconnect);
   const subscribeSnapshot = useRealtimeStore((s) => s.onSnapshotRequired);
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    if (!user) {
+      disconnect();
+      return () => {};
+    }
     connect();
     const offSnap = subscribeSnapshot(() => {
       queryClient.invalidateQueries({ queryKey: BOOTSTRAP_QUERY_KEY });
@@ -111,7 +117,7 @@ function RealtimeBoot(): JSX.Element {
       offInvalidate();
       disconnect();
     };
-  }, [connect, disconnect, queryClient, subscribeSnapshot]);
+  }, [connect, disconnect, queryClient, subscribeSnapshot, user]);
 
   return <></>;
 }
@@ -126,10 +132,12 @@ export function AppProviders({
   const inner = useMemo(
     () => (
       <ThemeProvider>
-        <KeyboardProvider>
-          <RealtimeBoot />
-          {children}
-        </KeyboardProvider>
+        <AuthProvider>
+          <KeyboardProvider>
+            <RealtimeBoot />
+            {children}
+          </KeyboardProvider>
+        </AuthProvider>
       </ThemeProvider>
     ),
     [children]

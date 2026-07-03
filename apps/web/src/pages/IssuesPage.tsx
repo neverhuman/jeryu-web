@@ -1,6 +1,6 @@
-// IssuesPage.tsx — issues route; feature content lands with W-FE-13/14.
+// IssuesPage.tsx — repo issue-compatible alias for Work Tracker.
 
-import { NotImplementedRoute } from './NotImplementedRoute';
+import { WorkPage } from './WorkPage';
 
 export interface IssuesPageProps {
   provider?: string;
@@ -8,11 +8,5 @@ export interface IssuesPageProps {
 }
 
 export function IssuesPage(props: IssuesPageProps = {}): JSX.Element {
-  return (
-    <NotImplementedRoute
-      title="Issues"
-      workPackage="W-FE-13/14"
-      description="Filters: state, label, assignee, milestone. Inline triage actions land alongside Action UX primitives."
-    />
-  );
+  return <WorkPage {...props} alias="issues" />;
 }

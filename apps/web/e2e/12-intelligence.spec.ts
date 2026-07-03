@@ -304,7 +304,7 @@ async function mockToolingEvidence(page: Page): Promise<void> {
 }
 
 test.describe('Intelligence control-plane page', () => {
-  test('renders priority, graph, and explicit absence evidence', async ({
+  test('renders priority, graph, search, selection, and absence evidence @action:intelligence.render @action:intelligence.graph_search @action:intelligence.graph_select', async ({
     page,
   }) => {
     await blockWebSocket(page);
@@ -322,8 +322,10 @@ test.describe('Intelligence control-plane page', () => {
     await expect(page.getByTestId('priority-pr-63-checks-missing')).toBeVisible();
     await expect(page.getByText('absence=evidence')).toBeVisible();
     await expect(page.getByTestId('operator-graph-console')).toBeVisible();
+    await page.getByLabel('Search graph').fill('ci');
     await expect(page.getByTestId('repo-graph-preview')).toBeVisible();
-    await expect(page.getByTestId('graph-node-repo:jeryu/demo')).toBeVisible();
+    await expect(page.getByTestId('graph-node-check:ci')).toBeVisible();
+    await page.getByTestId('graph-node-check:ci').click();
     await expect(
       page.getByTestId('repo-graph-preview').getByText('failed')
     ).toBeVisible();
@@ -332,7 +334,7 @@ test.describe('Intelligence control-plane page', () => {
     await expect(page.getByText('Mirror evidence').first()).toBeVisible();
   });
 
-  test('Intelligence nav link routes to the page', async ({ page }) => {
+  test('Intelligence nav link routes to the page @action:intelligence.nav', async ({ page }) => {
     await blockWebSocket(page);
     await mockBootstrap(page);
     await mockControlPlane(page);

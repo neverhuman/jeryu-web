@@ -16,7 +16,11 @@
 
 import { expect, test } from '@playwright/test';
 
-import { mockBootstrap, mockPullRequest, mockRepoLookup } from './fixtures/mocks';
+import {
+  mockBootstrap,
+  mockPullRequestDetail,
+  mockRepoLookup,
+} from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -25,20 +29,23 @@ const PR_NUMBER = '42';
 const PR_SHA = '1234567890abcdef1234567890abcdef12345678';
 
 test.describe('PR cockpit (W-T-13)', () => {
-  test('mocked PR detail renders the cockpit or its not-implemented envelope', async ({ page }) => {
+  test('mocked PR detail renders the cockpit @action:pr.detail', async ({ page }) => {
     await mockBootstrap(page);
     await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
-    await mockPullRequest(page, {
+    await mockPullRequestDetail(page, {
+      repoId: `${REPO.host}:${REPO.owner}/${REPO.name}`,
       number: PR_NUMBER,
       title: 'Add JeRyu Phase 3 backend',
       state: 'open',
       head_sha: PR_SHA,
       approvals: 0,
-      approvals_required: 1,
+      required_approvals: 1,
+      passport: 'pass',
+      can_merge: true,
     });
 
     await page.goto(
-      `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/pulls/${PR_NUMBER}`
+      `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}`
     );
 
     // The not-implemented envelope renders `Pull request #42` as its <h1>;
@@ -52,7 +59,7 @@ test.describe('PR cockpit (W-T-13)', () => {
     await expect(heading.or(errorState)).toBeVisible({ timeout: 15_000 });
   });
 
-  test('deep PR route returns 200 (SPA fallback)', async ({ request }) => {
+  test('deep PR route returns 200 (SPA fallback) @bff', async ({ request }) => {
     const res = await request.get(
       `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/pulls/${PR_NUMBER}`,
       { failOnStatusCode: false }

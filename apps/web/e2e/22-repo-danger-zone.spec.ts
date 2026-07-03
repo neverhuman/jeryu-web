@@ -69,7 +69,7 @@ async function openOverview(
 }
 
 test.describe('Repository danger zone (delete)', () => {
-  test('purge tier gates on the typed name and the receipt navigates to /repos', async ({
+  test('purge tier gates on the typed name and the receipt navigates to /repos @action:repo.delete_success', async ({
     page,
   }) => {
     const captured = await openOverview(page, { storageDeleted: true });
@@ -119,7 +119,7 @@ test.describe('Repository danger zone (delete)', () => {
     expect(req.idempotencyKey).toBeTruthy();
   });
 
-  test('422 confirm_mismatch from the backend stays in the dialog with the error', async ({
+  test('422 confirm_mismatch from the backend stays in the dialog with the error @action:repo.delete_confirm_mismatch', async ({
     page,
   }) => {
     const captured = await openOverview(page, {
@@ -153,7 +153,7 @@ test.describe('Repository danger zone (delete)', () => {
     await expect(page).toHaveURL(/\/repos\/jeryu\/veox\/redline/);
   });
 
-  test('negative authorization: 403 for a viewer without removal rights', async ({
+  test('negative authorization: 403 for a viewer without removal rights @action:repo.delete_forbidden', async ({
     page,
   }) => {
     await openOverview(page, {

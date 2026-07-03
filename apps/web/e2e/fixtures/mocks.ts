@@ -43,6 +43,21 @@ const bootstrapJson = JSON.parse(
   };
 };
 
+async function mockUnhandledApi(page: Page): Promise<void> {
+  await page.route('**/api/v1/**', async (route: Route, request) => {
+    await route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: {
+          code: 'unmocked_e2e_api',
+          message: `No Playwright mock handled ${request.method()} ${new URL(request.url()).pathname}.`,
+        },
+      }),
+    });
+  });
+}
+
 export interface ViewerOverride {
   /** Replace the bootstrap viewer.login. */
   login?: string;
@@ -50,6 +65,37 @@ export interface ViewerOverride {
   display_name?: string;
   /** Replace the entire viewer.global_permissions array. */
   global_permissions?: string[];
+  /**
+   * AuthProvider mock for the same viewer. Pass `null` when a spec owns
+   * `/api/v1/auth/me` itself, for example signed-out or forced-change tests.
+   */
+  auth?: {
+    role?: 'admin' | 'user';
+    mustChangePassword?: boolean;
+    csrfToken?: string | null;
+  } | null;
+}
+
+async function mockAuthMeForViewer(
+  page: Page,
+  viewer: ViewerOverride = {}
+): Promise<void> {
+  await page.route('**/api/v1/auth/me', async (route: Route, request) => {
+    if (request.method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        login: viewer.login ?? bootstrapJson.viewer.login,
+        role: viewer.auth?.role ?? 'user',
+        mustChangePassword: viewer.auth?.mustChangePassword ?? false,
+        csrfToken: viewer.auth?.csrfToken ?? 'e2e-csrf',
+      }),
+    });
+  });
 }
 
 /**
@@ -62,6 +108,10 @@ export async function mockBootstrap(
   page: Page,
   viewer: ViewerOverride = {}
 ): Promise<void> {
+  await mockUnhandledApi(page);
+  if (viewer.auth !== null) {
+    await mockAuthMeForViewer(page, viewer);
+  }
   await page.route('**/api/v1/bootstrap', async (route: Route) => {
     const body = JSON.parse(JSON.stringify(bootstrapJson));
     if (viewer.login !== undefined) body.viewer.login = viewer.login;
@@ -105,6 +155,8 @@ export async function mockFleetBootstrap(
   page: Page,
   pools: MockPoolRollup[]
 ): Promise<void> {
+  await mockUnhandledApi(page);
+  await mockAuthMeForViewer(page);
   await page.route('**/api/v1/bootstrap', async (route: Route) => {
     const body = JSON.parse(JSON.stringify(bootstrapJson)) as Record<
       string,
@@ -225,7 +277,7 @@ export async function mockRepoList(
   );
   await page.route('**/api/v1/repos**', async (route: Route, request) => {
     if (request.method() !== 'GET') {
-      await route.continue();
+      await route.fallback();
       return;
     }
     const url = new URL(request.url());
@@ -233,7 +285,7 @@ export async function mockRepoList(
     // like /api/v1/repos/{id}, /api/v1/repos/{id}/tree, etc.
     const segments = url.pathname.split('/').filter(Boolean);
     if (segments.length !== 3) {
-      await route.continue();
+      await route.fallback();
       return;
     }
     // Honour the `?family=` filter like the real backend so the family
@@ -271,15 +323,16 @@ export async function mockRepoLookup(
   repo: MockRepoSummary
 ): Promise<void> {
   const summary = normalizeRepo(repo);
+  await mockRepoList(page, [repo]);
   await page.route('**/api/v1/repos/*', async (route: Route, request) => {
     if (request.method() !== 'GET') {
-      await route.continue();
+      await route.fallback();
       return;
     }
     // Sub-paths like /repos/{id}/refs must not be swallowed here.
     const url = new URL(request.url());
     if (url.pathname.split('/').length > 4) {
-      await route.continue();
+      await route.fallback();
       return;
     }
     await route.fulfill({
@@ -310,10 +363,9 @@ export interface CapturedDeleteRequest {
  * `confirm_mismatch`, 403 `permission_denied`). GET and sub-resource traffic
  * falls through untouched.
  *
- * Registration order matters: Playwright runs route handlers LIFO and
- * `route.continue()` (used by `mockRepoList` for non-GET traffic) sends the
- * request straight to the network, skipping the remaining handlers. Register
- * this mock AFTER `mockRepoList` so the removal call is intercepted first.
+ * Registration order matters: Playwright runs route handlers LIFO. Register
+ * this mock after repo lookup/list mocks so the removal call is intercepted
+ * first; non-removal traffic falls back to the earlier handlers.
  */
 export async function mockDeleteRepo(
   page: Page,
@@ -338,14 +390,14 @@ export async function mockDeleteRepo(
   };
   await page.route('**/api/v1/repos/*', async (route: Route, request) => {
     if (request.method() !== 'DELETE') {
-      await route.continue();
+      await route.fallback();
       return;
     }
     const url = new URL(request.url());
     // Single path segment after /repos/ only (UUID or percent-encoded
     // owner/name) — never sub-resources.
     if (url.pathname.split('/').filter(Boolean).length !== 4) {
-      await route.continue();
+      await route.fallback();
       return;
     }
     let body: Record<string, unknown> = {};
@@ -475,7 +527,7 @@ export interface MockPullRequestDetail {
 export async function mockPullRequestDetail(
   page: Page,
   pr: MockPullRequestDetail
-): Promise<void> {
+): Promise<Record<string, unknown>> {
   const status = pr.passport ?? 'blocked';
   const canMerge = pr.can_merge ?? status === 'pass';
   const detail = {
@@ -552,6 +604,7 @@ export async function mockPullRequestDetail(
       });
     }
   );
+  return detail;
 }
 
 /**
@@ -674,14 +727,12 @@ export async function mockRefs(
         { name: 'main', kind: 'branch' as const, default: true },
         { name: 'develop', kind: 'branch' as const, default: false },
       ];
-  const body = {
-    items: items.map((r) => ({
-      name: r.name,
-      kind: r.kind ?? 'branch',
-      target: '0'.repeat(40),
-      is_default: r.default ?? false,
-    })),
-  };
+  const body = items.map((r) => ({
+    name: r.name,
+    kind: r.kind ?? 'branch',
+    sha: '0'.repeat(40),
+    protected: r.default ?? false,
+  }));
   await page.route(
     /\/api\/v1\/repos\/[^/]+\/refs(\?.*)?$/,
     async (route: Route, request) => {
@@ -703,21 +754,24 @@ export async function mockRefs(
  */
 export async function mockTree(
   page: Page,
-  entries: Array<{ path: string; kind: 'file' | 'dir' }> = []
+  entries: Array<{ path: string; kind: 'file' | 'dir' | 'directory' }> = []
 ): Promise<void> {
   const items = entries.length
     ? entries
     : [
         { path: 'README.md', kind: 'file' as const },
-        { path: 'src', kind: 'dir' as const },
+        { path: 'src', kind: 'directory' as const },
         { path: 'package.json', kind: 'file' as const },
       ];
   const body = items.map((entry) => ({
     path: entry.path,
     name: entry.path.split('/').pop() ?? entry.path,
-    kind: entry.kind,
-    size: entry.kind === 'file' ? 1024 : null,
+    kind: entry.kind === 'dir' ? 'directory' : entry.kind,
+    size_bytes: entry.kind === 'file' ? 1024 : null,
     sha: '0'.repeat(40),
+    last_commit_sha: null,
+    last_commit_message: null,
+    last_commit_at: null,
   }));
   await page.route(
     /\/api\/v1\/repos\/[^/]+\/tree(\?.*)?$/,
@@ -775,29 +829,167 @@ export async function mockReadme(
   );
 }
 
+export interface MockBlobOptions {
+  path?: string;
+  text?: string;
+  html?: string;
+  mime?: string;
+  sha?: string;
+}
+
+export async function mockBlob(
+  page: Page,
+  options: MockBlobOptions = {}
+): Promise<void> {
+  await page.route(
+    /\/api\/v1\/repos\/[^/]+\/blob(\?.*)?$/,
+    async (route: Route, request) => {
+      if (request.method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+      const url = new URL(request.url());
+      const path = url.searchParams.get('path') ?? options.path ?? 'README.md';
+      const text = options.text ?? '# Selected file proof.';
+      const html = options.html ?? '<h1>Selected file proof.</h1>';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          repo: {
+            id: 'jeryu:neverhuman/jeryu',
+            host: 'jeryu',
+            owner: 'neverhuman',
+            name: 'jeryu',
+          },
+          path,
+          ref_name: url.searchParams.get('ref') ?? 'main',
+          sha: options.sha ?? '0'.repeat(40),
+          size_bytes: text.length,
+          mime: options.mime ?? 'text/markdown',
+          encoding: 'utf8',
+          text,
+          base64: null,
+          rendered_markdown: {
+            html,
+            toc: [],
+            links: [],
+            renderer_version: 'jeryu-md-renderer.v1',
+            sanitizer_version: 'jeryu-md-sanitizer.v1',
+            rendered_at: '2026-05-26T00:00:00Z',
+          },
+          is_binary: false,
+        }),
+      });
+    }
+  );
+}
+
 /**
  * Mock `GET /api/v1/repos/{id}/settings` with a minimal RepositorySettings
  * envelope so the settings page can render values.
  */
-export async function mockSettings(page: Page, overrides: Record<string, unknown> = {}): Promise<void> {
+export async function mockSettings(
+  page: Page,
+  overrides: Record<string, unknown> = {}
+): Promise<Record<string, unknown>> {
   const settings = {
-    general: { description: 'mocked', homepage_url: null },
-    features: { issues: true, pull_requests: true, wiki: false, projects: false },
-    access: { default_role: 'reporter' },
+    repo: {
+      id: 'jeryu:neverhuman/jeryu',
+      host: 'jeryu',
+      owner: 'neverhuman',
+      name: 'jeryu',
+    },
+    general: {
+      name: 'jeryu',
+      description: 'mocked',
+      homepage: null,
+      visibility: 'internal',
+      default_branch: 'main',
+      topics: [],
+      archived: false,
+    },
+    features: {
+      issues: true,
+      pull_requests: true,
+      wiki: false,
+      discussions: false,
+      projects: false,
+      packages: false,
+      releases: true,
+      ci: true,
+      security_advisories: true,
+      pages: false,
+    },
+    access: {
+      collaborators_count: 2,
+      teams_count: 1,
+      deploy_keys_count: 1,
+      app_installations_count: 1,
+    },
     branch_protection: [],
-    merge: { strategy: 'merge_commit', squash: false },
-    security: { signed_commits_required: false, secrets_scanning: true },
-    notifications: { default_recipient: null },
-    retention: { artifact_days: 30 },
-    ci: { enabled: true, runner_pool: 'default' },
-    agents: { enabled: false },
+    merge: {
+      allow_merge_commit: true,
+      allow_squash_merge: true,
+      allow_rebase_merge: false,
+      allow_auto_merge: false,
+      delete_branch_on_merge: true,
+      require_linear_history: false,
+      required_approvals: 1,
+      dismiss_stale_approvals: true,
+      require_codeowners: false,
+      require_exact_sha_approval: true,
+      require_jeryu_merge_passport: true,
+    },
+    security: {
+      secret_scanning: true,
+      dependency_scanning: true,
+      license_policy_enabled: true,
+      agent_sandbox_required: true,
+    },
+    notifications: {
+      watch_default: 'participating',
+      notify_on_ci_failure: true,
+      notify_on_agent_completion: true,
+      notify_on_release: false,
+    },
+    retention: {
+      audit_days: 365,
+      evidence_days: 90,
+      workflow_run_days: 30,
+      log_days: 14,
+    },
+    ci: {
+      default_runner_pool: 'default',
+      concurrency_limit: 4,
+      artifact_retention_days: 30,
+      log_retention_days: 14,
+      cache_retention_days: 7,
+      vti_enabled: true,
+    },
+    agents: {
+      autonomous_coding_enabled: false,
+      max_concurrent_sessions: 2,
+      require_human_approval_for_writes: true,
+      allowed_agents: ['editbot'],
+      allowed_tools: ['jeryu.control_plane.status'],
+      evidence_required: true,
+      budget_daily_usd: null,
+    },
+    audit: {
+      version: null,
+      minimum_score: 85,
+      tool_modes: {},
+      enforce_commit: true,
+      enforce_merge: null,
+    },
     ...overrides,
   };
   await page.route(
     /\/api\/v1\/repos\/[^/]+\/settings(\?.*)?$/,
     async (route: Route, request) => {
       if (request.method() !== 'GET') {
-        await route.continue();
+        await route.fallback();
         return;
       }
       await route.fulfill({
@@ -807,6 +999,7 @@ export async function mockSettings(page: Page, overrides: Record<string, unknown
       });
     }
   );
+  return settings;
 }
 
 /**
@@ -859,14 +1052,28 @@ export async function mockSettingsPreview(
         return;
       }
       const body = JSON.parse(request.postData() ?? '{}') as Record<string, unknown>;
+      const diffs = Object.entries(body)
+        .filter(([, value]) => value !== null)
+        .map(([field, value]) => ({
+          field,
+          before: field === 'description' ? 'mocked' : null,
+          after: String(value),
+        }));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          patch: body,
+          repo: {
+            id: 'jeryu:neverhuman/jeryu',
+            host: 'jeryu',
+            owner: 'neverhuman',
+            name: 'jeryu',
+          },
+          current_hash: 'settings-hash-1',
+          diffs,
+          side_effects: ['Repository settings preview computed.'],
           warnings,
-          requires_confirmation: warnings.length > 0,
-          dry_run: true,
+          reversible: true,
         }),
       });
     }
