@@ -81,6 +81,13 @@ export function useToolFinderScan(): ToolFinderScanController {
   }, [feed]);
 
   const wsRunning = wsStatus?.running ?? false;
+  const startMutation = useMutation({
+    mutationFn: () =>
+      apiSend<ToolFinderScanStatus>(endpoints.toolFinderScan()),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tool-finder', 'scan'] });
+    },
+  });
   const snapshot = useQuery({
     queryKey: ['tool-finder', 'scan'],
     queryFn: ({ signal }) =>
@@ -90,8 +97,19 @@ export function useToolFinderScan(): ToolFinderScanController {
     retry: false,
   });
 
-  // WS payload wins when present (it is always at least as fresh as the GET).
-  const status = wsStatus ?? snapshot.data;
+  const startStatus = startMutation.data;
+  const shouldUseStartStatus =
+    startStatus?.running === true &&
+    (!snapshot.data || snapshot.data.scan_id < startStatus.scan_id);
+
+  const httpStatus = shouldUseStartStatus ? startStatus : snapshot.data;
+  const wsIsFresh =
+    wsStatus !== undefined &&
+    (httpStatus === undefined || wsStatus.scan_id >= httpStatus.scan_id);
+
+  // WS payload wins when it is at least as fresh as HTTP; otherwise keep the
+  // POST/GET start status visible until a newer WS event arrives.
+  const status = wsIsFresh ? wsStatus : httpStatus;
 
   // Completion/failure refreshes the dashboard, the scan snapshot, and the
   // registry summary (a completed scan can change candidate counts).
@@ -107,14 +125,6 @@ export function useToolFinderScan(): ToolFinderScanController {
       });
     }
   }, [latestKind, queryClient]);
-
-  const startMutation = useMutation({
-    mutationFn: () =>
-      apiSend<ToolFinderScanStatus>(endpoints.toolFinderScan()),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['tool-finder', 'scan'] });
-    },
-  });
 
   return {
     status,

@@ -223,18 +223,27 @@ async function mockTooling(page: Page): Promise<void> {
       }),
     });
   });
+  let scanStarted = false;
   await page.route('**/api/v1/tool-finder/scan', async (route, request) => {
+    if (request.method() === 'POST') {
+      scanStarted = true;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        phase: request.method() === 'POST' ? 'running' : 'idle',
-        running: request.method() === 'POST',
+        scan_id: scanStarted ? 1 : 0,
+        phase: scanStarted ? 'scan' : 'idle',
+        running: scanStarted,
         repos_total: 1,
-        repos_done: request.method() === 'POST' ? 0 : 1,
-        files_scanned: request.method() === 'POST' ? 1 : 3,
+        repos_done: scanStarted ? 0 : 1,
+        files_scanned: scanStarted ? 1 : 3,
+        files_skipped: 0,
         clusters_found: 1,
+        families_found: 1,
         current_repo: 'alice/jeryu',
+        started_at: scanStarted ? '2026-07-03T00:00:00Z' : null,
+        finished_at: null,
         error: null,
       }),
     });
