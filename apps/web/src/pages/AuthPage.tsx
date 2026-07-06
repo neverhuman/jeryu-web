@@ -1,5 +1,5 @@
 import { LogIn, UserPlus } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
@@ -12,17 +12,25 @@ type Mode = 'login' | 'signup';
 
 export function AuthPage({
   forcePasswordChange = false,
+  initialMode = 'login',
 }: {
   forcePasswordChange?: boolean;
+  initialMode?: Mode;
 }): JSX.Element {
   const auth = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>('login');
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const active = mode === 'login' ? auth.login : auth.signup;
   const error = forcePasswordChange ? auth.changePassword.error : active.error;
+
+  useEffect(() => {
+    if (!forcePasswordChange) {
+      setMode(initialMode);
+    }
+  }, [forcePasswordChange, initialMode]);
 
   const submit = async (event: FormEvent): Promise<void> => {
     event.preventDefault();

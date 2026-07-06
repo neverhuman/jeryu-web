@@ -42,6 +42,8 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { index: true, element: <Navigate to="/repos/family/jeryu-split" replace /> },
+      { path: 'login', element: <Navigate to="/repos/family/jeryu-split" replace /> },
+      { path: 'signup', element: <Navigate to="/repos/family/jeryu-split" replace /> },
       { path: 'repos', element: <RepositoriesPage /> },
       { path: 'repos/new', element: <RepositoriesPage mode="create" /> },
       // Family drill-down. Declared before the `repos/:provider/*` catch-all

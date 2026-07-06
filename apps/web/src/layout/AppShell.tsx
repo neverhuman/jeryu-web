@@ -13,9 +13,7 @@
 // outlive any route change.
 
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { CommandPalette } from './CommandPalette';
 import { GlobalHeader } from './GlobalHeader';
@@ -33,9 +31,12 @@ import './AppShell.css';
 
 export function AppShell(): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
   const auth = useAuth();
   const openPalette = useCommandStore((s) => s.open);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const authRouteMode = location.pathname === '/signup' ? 'signup' : 'login';
+  const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup';
 
   // Register navigation commands so the palette is non-empty on first render.
   useShellCommands();
@@ -106,7 +107,11 @@ export function AppShell(): JSX.Element {
   }
 
   if (!auth.user) {
-    return <AuthPage />;
+    return <AuthPage initialMode={authRouteMode} />;
+  }
+
+  if (isAuthRoute) {
+    return <Navigate to="/repos/family/jeryu-split" replace />;
   }
 
   if (auth.user.mustChangePassword) {

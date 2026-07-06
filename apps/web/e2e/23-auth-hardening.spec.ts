@@ -59,10 +59,14 @@ test.describe('Auth hardening browser proof', () => {
       });
     });
 
-    await page.goto('/repos/family/jeryu-split');
+    await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Jeryu' })).toBeVisible({
       timeout: 10_000,
     });
+    await expect(page.getByRole('tab', { name: 'Login' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
 
     await page.getByLabel('Username').fill('jordanh');
     await page.getByLabel('Password').fill(loginFormCredential);
@@ -104,8 +108,11 @@ test.describe('Auth hardening browser proof', () => {
       });
     });
 
-    await page.goto('/');
-    await page.getByRole('tab', { name: 'Sign up' }).click();
+    await page.goto('/signup');
+    await expect(page.getByRole('tab', { name: 'Sign up' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
     await page.getByLabel('Username').fill('jepsont');
     await page.getByLabel('Password').fill(signupFormCredential);
     await page.getByRole('button', { name: 'Create account' }).click();
@@ -116,6 +123,35 @@ test.describe('Auth hardening browser proof', () => {
     await expect(page.getByText('No repositories in this family')).toBeVisible();
     await expect(page.locator('section.split-browser')).toHaveCount(0);
     await expect(page.locator('.split-browser__repo')).toHaveCount(0);
+  });
+
+  test('authenticated visitors are redirected away from auth routes', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { login: 'jordanh', auth: null });
+    await mockAuthMe(page, {
+      login: 'jordanh',
+      role: 'user',
+      mustChangePassword: false,
+      csrfToken: 'csrf-jordanh',
+    });
+    await mockRepoList(page, splitRepos);
+
+    await page.goto('/login');
+    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split/, {
+      timeout: 10_000,
+    });
+    await expect(page.locator('section.split-browser')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await page.goto('/signup');
+    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split/, {
+      timeout: 10_000,
+    });
+    await expect(page.locator('section.split-browser')).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test('forced password change sends CSRF @action:auth.force_password_change', async ({

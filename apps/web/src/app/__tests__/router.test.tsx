@@ -56,6 +56,18 @@ describe('router route table', () => {
     expect(workIdx).toBeLessThan(notFoundIdx);
     expect(workDetailIdx).toBeLessThan(notFoundIdx);
   });
+
+  it('registers login and signup routes above the not-found catch-all', () => {
+    const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
+    const loginIdx = paths.indexOf('login');
+    const signupIdx = paths.indexOf('signup');
+    const notFoundIdx = paths.indexOf('*');
+    expect(loginIdx).toBeGreaterThan(-1);
+    expect(signupIdx).toBeGreaterThan(-1);
+    expect(notFoundIdx).toBeGreaterThan(-1);
+    expect(loginIdx).toBeLessThan(notFoundIdx);
+    expect(signupIdx).toBeLessThan(notFoundIdx);
+  });
 });
 
 describe('router negative authorization (non-owner viewer)', () => {
