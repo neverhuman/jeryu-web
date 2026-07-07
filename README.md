@@ -6,6 +6,12 @@ This repository was seeded from Jeryu source commit `cbecf7caa0e932c76a341b2521e
 `ops/split/materialize.py`. It is part of the seven-repo Jeryu split family and keeps source
 paths stable where practical so ownership remains auditable.
 
+## Docs
+
+Durable guidance lives in `docs/` and is routed from `AGENTS.md`:
+`architecture.md`, `boundaries.md`, `generated-zones.md`, `testing.md`,
+`release.md`, and `audit-rubric.md`.
+
 ## Owned Cargo Packages
 
 - none

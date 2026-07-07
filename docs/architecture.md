@@ -21,3 +21,11 @@ surfaces and consume sibling crates from pinned public Git tags.
 - `contracts/AGENTS.md`
 - `package.json`
 - `tsconfig.json`
+
+## Docs
+
+- `boundaries.md` — owned seams and the `agent/boundaries.toml` manifest.
+- `generated-zones.md` — the `contracts/generated/**` mirror rules.
+- `testing.md` — proof lanes and the `jeryu-web/required` check.
+- `release.md` — the release control surface and rollback guidance.
+- `audit-rubric.md` — how the jankurai audit scores this repo.
