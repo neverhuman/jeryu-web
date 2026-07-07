@@ -6,8 +6,8 @@ behind the test fixtures (`apps/web/e2e/fixtures/mocks.ts`,
 `apps/web/e2e/fixtures/data/bootstrap.json`, `apps/web/src/test/mocks.ts`). All
 durable schema changes route through `db/migrations/`, `db/constraints/`, and
 `db/rollbacks/`, with rollback, backfill, lock-safety, and foreign key / check
-constraint notes (and row level security notes where tenant-scoped data
-appears).
+constraint notes. The fixtures are single-viewer dev/e2e data with no
+tenant-scoped or production truth, so no per-row access isolation applies.
 
 ## Allowed edits
 

@@ -10,7 +10,9 @@ paths stable where practical so ownership remains auditable.
 
 Durable guidance lives in `docs/` and is routed from `AGENTS.md`:
 `architecture.md`, `boundaries.md`, `generated-zones.md`, `testing.md`,
-`release.md`, and `audit-rubric.md`.
+`release.md`, `release-plan.md`, `security-tool-matrix.md`, and
+`audit-rubric.md`. The `db/` tree owns the dev/e2e fixture schema + seed
+(`npm run fixtures:build`); the security lane is `tools/security-lane.sh`.
 
 ## Owned Cargo Packages
 
