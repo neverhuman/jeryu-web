@@ -1,20 +1,23 @@
 /*
- * JeRyu design tokens (W-F-08)
+ * JeRyu design tokens (W-F-08) — TUI overhaul
  *
- * Mission-control aesthetic shared with the JeRyu TUI:
- *   - dark theme is the first-class experience; light theme is a polished
- *     daylight surface; high-contrast is a WCAG AAA-leaning variant.
- *   - sharp edges (small radii) and restrained shadows.
- *   - cyan / blue for primary, green / amber / red for status, monospace-
- *     friendly for code.
+ * High-contrast terminal aesthetic shared with the JeRyu TUI:
+ *   - a near-black, multi-neon DARK theme is the first-class default;
+ *     light is a polished daylight surface; high-contrast is a pure-black
+ *     WCAG AAA-leaning variant.
+ *   - SQUARE edges (radii 0) and crisp 1px / glow "shadows" — panels read as
+ *     boxed terminal frames, never soft cards.
+ *   - cyan primary + green / amber / pink / sky / magenta neons, monospace UI.
  *
  * Token vocabulary
  *   --color-bg-{0,1,2,3}                 page, surface, raised, inset
  *   --color-fg-{primary,secondary,muted} body, secondary, tertiary text
- *   --color-accent-{primary,success,warning,danger,info}
+ *   --color-accent-{primary,secondary,success,warning,danger,info}
  *   --color-accent-{*}-bg                tinted background for the accent
  *   --color-border-{subtle,strong}
- *   --font-{sans,mono}
+ *   --color-grid                         faint decorative background grid line
+ *   --glow-{accent,soft}, --focus-ring   neon glow composites (theme-adaptive)
+ *   --font-{sans,mono,display}
  *   --font-size-{xs,sm,base,md,lg,xl,2xl,3xl}
  *   --line-height-{tight,normal,relaxed}
  *   --font-weight-{regular,medium,semibold,bold}
@@ -26,15 +29,15 @@
  *   --z-{base,dropdown,sticky,modal,popover,toast}
  *
  * Themes
- *   :root                          light theme (default)
- *   @media (prefers-color-scheme: dark)   dark overrides
- *   [data-theme="light"]           explicit light (overrides media query)
+ *   :root                          dark theme (default — the hero surface)
+ *   @media (prefers-color-scheme: light)  daylight overrides when no explicit
+ *                                         theme is chosen
  *   [data-theme="dark"]            explicit dark
- *   [data-theme="high-contrast"]   high-contrast
+ *   [data-theme="light"]           explicit light
+ *   [data-theme="high-contrast"]   pure-black high-contrast
  *
- * Only color, shadow, and border tokens vary per theme. Typography,
- * spacing, radii, motion, and z-index are theme-invariant and declared
- * once on :root.
+ * Only color, shadow, border, and glow tokens vary per theme. Typography,
+ * spacing, radii, motion, and z-index are theme-invariant on :root.
  */
 
 /* -------------------------------------------------------------------------
@@ -42,15 +45,17 @@
  * --------------------------------------------------------------------- */
 
 :root {
-  /* Typography ----------------------------------------------------------- */
-  --font-sans:
-    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
-    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  /* Typography — monospace-first for the terminal feel -------------------- */
   --font-mono:
     'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata',
     'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono',
     monospace;
+  --font-sans:
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  /* Display: the wordmark / section labels — mono, heavy, letter-spaced. */
+  --font-display: var(--font-mono);
 
   --font-size-xs: 0.75rem; /* 12 */
   --font-size-sm: 0.8125rem; /* 13 */
@@ -80,10 +85,10 @@
   --space-7: 2rem; /* 32 */
   --space-8: 3rem; /* 48 */
 
-  /* Radii (sharp, mission-control) -------------------------------------- */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
+  /* Radii — SQUARE. A TUI has hard edges. `full` kept for status dots. --- */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
   --radius-full: 9999px;
 
   /* Motion -------------------------------------------------------------- */
@@ -93,6 +98,18 @@
   --duration-fast: 120ms;
   --duration-std: 200ms;
   --duration-slow: 320ms;
+
+  /* Glow composites — theme-adaptive via color-mix on the live accent. --- */
+  --glow-accent:
+    0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 55%, transparent),
+    0 0 14px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
+  --glow-soft: 0 0 10px
+    color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
+  --glow-text: 0 0 8px
+    color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+  --focus-ring:
+    0 0 0 2px var(--color-bg-0), 0 0 0 3px var(--color-accent-primary),
+    0 0 12px color-mix(in srgb, var(--color-accent-primary) 40%, transparent);
 
   /* Z-index scale ------------------------------------------------------- */
   --z-base: 1;
@@ -104,167 +121,136 @@
 }
 
 /* -------------------------------------------------------------------------
- * Light theme (default)
+ * Dark theme — first-class, multi-neon on near-black (the DEFAULT)
  *
- * Paper white surfaces, ink-black text, accents lifted from the JeRyu
- * mission-control palette so the brand reads identical across themes.
+ * Applied on :root so the terminal look is what ships out of the box,
+ * regardless of OS preference. The light daylight surface is opt-in below.
  * --------------------------------------------------------------------- */
 
 :root {
-  --color-bg-0: #fafbfc;
-  --color-bg-1: #ffffff;
-  --color-bg-2: #f4f6f8;
-  --color-bg-3: #eaeef2;
+  --color-bg-0: #05070a;
+  --color-bg-1: #0a0e14;
+  --color-bg-2: #10151d;
+  --color-bg-3: #04060a;
 
-  --color-fg-primary: #0b1220;
-  --color-fg-secondary: #424d61;
-  --color-fg-muted: #6b7689;
+  --color-fg-primary: #e8f0f7;
+  --color-fg-secondary: #9fb0c3;
+  --color-fg-muted: #7c8ea3;
 
-  --color-accent-primary: #0a66c2;
-  --color-accent-primary-bg: rgba(10, 102, 194, 0.12);
-  --color-accent-success: #1f7a3a;
-  --color-accent-success-bg: rgba(31, 122, 58, 0.12);
-  --color-accent-warning: #a55c00;
-  --color-accent-warning-bg: rgba(165, 92, 0, 0.14);
-  --color-accent-danger: #b3261e;
-  --color-accent-danger-bg: rgba(179, 38, 30, 0.12);
-  --color-accent-info: #0a6e8c;
-  --color-accent-info-bg: rgba(10, 110, 140, 0.12);
+  --color-accent-primary: #22d3ee; /* cyan  */
+  --color-accent-primary-bg: rgba(34, 211, 238, 0.16);
+  --color-accent-secondary: #c77dff; /* magenta */
+  --color-accent-secondary-bg: rgba(199, 125, 255, 0.16);
+  --color-accent-success: #37f08a; /* neon green */
+  --color-accent-success-bg: rgba(55, 240, 138, 0.16);
+  --color-accent-warning: #ffb020; /* amber */
+  --color-accent-warning-bg: rgba(255, 176, 32, 0.16);
+  --color-accent-danger: #ff5470; /* hot pink-red */
+  --color-accent-danger-bg: rgba(255, 84, 112, 0.16);
+  --color-accent-info: #38bdf8; /* sky */
+  --color-accent-info-bg: rgba(56, 189, 248, 0.16);
 
-  --color-border-subtle: #d8dde4;
-  --color-border-strong: #b3bac4;
+  --color-border-subtle: #17202b;
+  --color-border-strong: #2b3a4b;
+
+  --color-grid: rgba(34, 211, 238, 0.035);
 
   /* Gold — reserved for the special "tool control plane" surface. */
-  --color-gold: #8a6d00;
-  --color-gold-strong: #6f5600;
-  --color-gold-bg: rgba(193, 154, 0, 0.1);
-  --color-gold-border: #c9a227;
-  --color-gold-grad-from: rgba(201, 162, 39, 0.16);
-  --color-gold-grad-to: rgba(201, 162, 39, 0.02);
+  --color-gold: #f5d76e;
+  --color-gold-strong: #ffe9a3;
+  --color-gold-bg: rgba(245, 215, 110, 0.14);
+  --color-gold-border: #d4af37;
+  --color-gold-grad-from: rgba(212, 175, 55, 0.22);
+  --color-gold-grad-to: rgba(212, 175, 55, 0.03);
 
-  --shadow-1: 0 1px 2px rgba(11, 18, 32, 0.06);
-  --shadow-2: 0 2px 6px rgba(11, 18, 32, 0.08), 0 1px 2px rgba(11, 18, 32, 0.04);
+  /* "Shadows" are crisp frames + depth glow, never soft blur. */
+  --shadow-1: 0 0 0 1px var(--color-border-subtle);
+  --shadow-2: 0 0 0 1px var(--color-border-strong);
   --shadow-3:
-    0 8px 24px rgba(11, 18, 32, 0.12), 0 2px 6px rgba(11, 18, 32, 0.06);
-  --shadow-gold: 0 2px 14px rgba(201, 162, 39, 0.22);
+    0 0 0 1px var(--color-border-strong), 0 8px 30px rgba(0, 0, 0, 0.7);
+  --shadow-gold: 0 0 0 1px var(--color-gold-border),
+    0 0 18px rgba(212, 175, 55, 0.3);
 
-  color-scheme: light;
+  color-scheme: dark;
 }
 
-/* -------------------------------------------------------------------------
- * Dark theme - first-class, mission-control
- *
- * Two activation paths:
- *   1. prefers-color-scheme: dark (system preference).
- *   2. [data-theme="dark"]        (explicit user override).
- *
- * The explicit selector appears below the media query so it always wins.
- * --------------------------------------------------------------------- */
-
-@media (prefers-color-scheme: dark) {
+/* Daylight overrides — only when the user has NOT chosen an explicit theme
+ * (i.e. preference is `system`) and the OS asks for light. */
+@media (prefers-color-scheme: light) {
   :root {
-    --color-bg-0: #0b0f17;
-    --color-bg-1: #11161f;
-    --color-bg-2: #161c27;
-    --color-bg-3: #0a0d13;
+    --color-bg-0: #f6f8fa;
+    --color-bg-1: #ffffff;
+    --color-bg-2: #eef1f5;
+    --color-bg-3: #e4e9ef;
 
-    --color-fg-primary: #e6ecf3;
-    --color-fg-secondary: #b6c0cf;
-    --color-fg-muted: #7c8898;
+    --color-fg-primary: #0b1220;
+    --color-fg-secondary: #3f4a5c;
+    --color-fg-muted: #5c6675;
 
-    --color-accent-primary: #4cb3ff;
-    --color-accent-primary-bg: rgba(76, 179, 255, 0.16);
-    --color-accent-success: #4ade80;
-    --color-accent-success-bg: rgba(74, 222, 128, 0.16);
-    --color-accent-warning: #fbbf24;
-    --color-accent-warning-bg: rgba(251, 191, 36, 0.16);
-    --color-accent-danger: #ff6b6b;
-    --color-accent-danger-bg: rgba(255, 107, 107, 0.16);
-    --color-accent-info: #67e8f9;
-    --color-accent-info-bg: rgba(103, 232, 249, 0.16);
+    --color-accent-primary: #0a7ea4;
+    --color-accent-primary-bg: rgba(10, 126, 164, 0.12);
+    --color-accent-secondary: #8b3ffb;
+    --color-accent-secondary-bg: rgba(139, 63, 251, 0.1);
+    --color-accent-success: #1f7a3a;
+    --color-accent-success-bg: rgba(31, 122, 58, 0.12);
+    --color-accent-warning: #a55c00;
+    --color-accent-warning-bg: rgba(165, 92, 0, 0.14);
+    --color-accent-danger: #b3261e;
+    --color-accent-danger-bg: rgba(179, 38, 30, 0.12);
+    --color-accent-info: #0a66c2;
+    --color-accent-info-bg: rgba(10, 102, 194, 0.12);
 
-    --color-border-subtle: #232a36;
-    --color-border-strong: #3a4452;
+    --color-border-subtle: #d3d9e0;
+    --color-border-strong: #aab3bf;
 
-    --color-gold: #f5d76e;
-    --color-gold-strong: #ffe9a3;
-    --color-gold-bg: rgba(245, 215, 110, 0.14);
-    --color-gold-border: #d4af37;
-    --color-gold-grad-from: rgba(212, 175, 55, 0.22);
-    --color-gold-grad-to: rgba(212, 175, 55, 0.03);
+    --color-grid: rgba(11, 18, 32, 0.04);
 
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35);
-    --shadow-3: 0 12px 28px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
-    --shadow-gold: 0 2px 18px rgba(212, 175, 55, 0.3);
+    --color-gold: #8a6d00;
+    --color-gold-strong: #6f5600;
+    --color-gold-bg: rgba(193, 154, 0, 0.1);
+    --color-gold-border: #c9a227;
+    --color-gold-grad-from: rgba(201, 162, 39, 0.16);
+    --color-gold-grad-to: rgba(201, 162, 39, 0.02);
 
-    color-scheme: dark;
+    --shadow-1: 0 0 0 1px var(--color-border-subtle);
+    --shadow-2: 0 0 0 1px var(--color-border-strong);
+    --shadow-3:
+      0 0 0 1px var(--color-border-strong), 0 8px 24px rgba(11, 18, 32, 0.12);
+    --shadow-gold: 0 0 0 1px var(--color-gold-border),
+      0 2px 14px rgba(201, 162, 39, 0.22);
+
+    color-scheme: light;
   }
 }
 
-[data-theme='light'] {
-  --color-bg-0: #fafbfc;
-  --color-bg-1: #ffffff;
-  --color-bg-2: #f4f6f8;
-  --color-bg-3: #eaeef2;
-
-  --color-fg-primary: #0b1220;
-  --color-fg-secondary: #424d61;
-  --color-fg-muted: #6b7689;
-
-  --color-accent-primary: #0a66c2;
-  --color-accent-primary-bg: rgba(10, 102, 194, 0.12);
-  --color-accent-success: #1f7a3a;
-  --color-accent-success-bg: rgba(31, 122, 58, 0.12);
-  --color-accent-warning: #a55c00;
-  --color-accent-warning-bg: rgba(165, 92, 0, 0.14);
-  --color-accent-danger: #b3261e;
-  --color-accent-danger-bg: rgba(179, 38, 30, 0.12);
-  --color-accent-info: #0a6e8c;
-  --color-accent-info-bg: rgba(10, 110, 140, 0.12);
-
-  --color-border-subtle: #d8dde4;
-  --color-border-strong: #b3bac4;
-
-  --color-gold: #8a6d00;
-  --color-gold-strong: #6f5600;
-  --color-gold-bg: rgba(193, 154, 0, 0.1);
-  --color-gold-border: #c9a227;
-  --color-gold-grad-from: rgba(201, 162, 39, 0.16);
-  --color-gold-grad-to: rgba(201, 162, 39, 0.02);
-
-  --shadow-1: 0 1px 2px rgba(11, 18, 32, 0.06);
-  --shadow-2: 0 2px 6px rgba(11, 18, 32, 0.08), 0 1px 2px rgba(11, 18, 32, 0.04);
-  --shadow-3:
-    0 8px 24px rgba(11, 18, 32, 0.12), 0 2px 6px rgba(11, 18, 32, 0.06);
-  --shadow-gold: 0 2px 14px rgba(201, 162, 39, 0.22);
-
-  color-scheme: light;
-}
-
+/* Explicit dark override (wins over the light media query). */
 [data-theme='dark'] {
-  --color-bg-0: #0b0f17;
-  --color-bg-1: #11161f;
-  --color-bg-2: #161c27;
-  --color-bg-3: #0a0d13;
+  --color-bg-0: #05070a;
+  --color-bg-1: #0a0e14;
+  --color-bg-2: #10151d;
+  --color-bg-3: #04060a;
 
-  --color-fg-primary: #e6ecf3;
-  --color-fg-secondary: #b6c0cf;
-  --color-fg-muted: #7c8898;
+  --color-fg-primary: #e8f0f7;
+  --color-fg-secondary: #9fb0c3;
+  --color-fg-muted: #7c8ea3;
 
-  --color-accent-primary: #4cb3ff;
-  --color-accent-primary-bg: rgba(76, 179, 255, 0.16);
-  --color-accent-success: #4ade80;
-  --color-accent-success-bg: rgba(74, 222, 128, 0.16);
-  --color-accent-warning: #fbbf24;
-  --color-accent-warning-bg: rgba(251, 191, 36, 0.16);
-  --color-accent-danger: #ff6b6b;
-  --color-accent-danger-bg: rgba(255, 107, 107, 0.16);
-  --color-accent-info: #67e8f9;
-  --color-accent-info-bg: rgba(103, 232, 249, 0.16);
+  --color-accent-primary: #22d3ee;
+  --color-accent-primary-bg: rgba(34, 211, 238, 0.16);
+  --color-accent-secondary: #c77dff;
+  --color-accent-secondary-bg: rgba(199, 125, 255, 0.16);
+  --color-accent-success: #37f08a;
+  --color-accent-success-bg: rgba(55, 240, 138, 0.16);
+  --color-accent-warning: #ffb020;
+  --color-accent-warning-bg: rgba(255, 176, 32, 0.16);
+  --color-accent-danger: #ff5470;
+  --color-accent-danger-bg: rgba(255, 84, 112, 0.16);
+  --color-accent-info: #38bdf8;
+  --color-accent-info-bg: rgba(56, 189, 248, 0.16);
 
-  --color-border-subtle: #232a36;
-  --color-border-strong: #3a4452;
+  --color-border-subtle: #17202b;
+  --color-border-strong: #2b3a4b;
+
+  --color-grid: rgba(34, 211, 238, 0.035);
 
   --color-gold: #f5d76e;
   --color-gold-strong: #ffe9a3;
@@ -273,20 +259,64 @@
   --color-gold-grad-from: rgba(212, 175, 55, 0.22);
   --color-gold-grad-to: rgba(212, 175, 55, 0.03);
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-3: 0 12px 28px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
-  --shadow-gold: 0 2px 18px rgba(212, 175, 55, 0.3);
+  --shadow-1: 0 0 0 1px var(--color-border-subtle);
+  --shadow-2: 0 0 0 1px var(--color-border-strong);
+  --shadow-3:
+    0 0 0 1px var(--color-border-strong), 0 8px 30px rgba(0, 0, 0, 0.7);
+  --shadow-gold: 0 0 0 1px var(--color-gold-border),
+    0 0 18px rgba(212, 175, 55, 0.3);
 
   color-scheme: dark;
 }
 
+/* Explicit light (daylight) — polished, still sharp (square edges). */
+[data-theme='light'] {
+  --color-bg-0: #f6f8fa;
+  --color-bg-1: #ffffff;
+  --color-bg-2: #eef1f5;
+  --color-bg-3: #e4e9ef;
+
+  --color-fg-primary: #0b1220;
+  --color-fg-secondary: #3f4a5c;
+  --color-fg-muted: #5c6675;
+
+  --color-accent-primary: #0a7ea4;
+  --color-accent-primary-bg: rgba(10, 126, 164, 0.12);
+  --color-accent-secondary: #8b3ffb;
+  --color-accent-secondary-bg: rgba(139, 63, 251, 0.1);
+  --color-accent-success: #1f7a3a;
+  --color-accent-success-bg: rgba(31, 122, 58, 0.12);
+  --color-accent-warning: #a55c00;
+  --color-accent-warning-bg: rgba(165, 92, 0, 0.14);
+  --color-accent-danger: #b3261e;
+  --color-accent-danger-bg: rgba(179, 38, 30, 0.12);
+  --color-accent-info: #0a66c2;
+  --color-accent-info-bg: rgba(10, 102, 194, 0.12);
+
+  --color-border-subtle: #d3d9e0;
+  --color-border-strong: #aab3bf;
+
+  --color-grid: rgba(11, 18, 32, 0.04);
+
+  --color-gold: #8a6d00;
+  --color-gold-strong: #6f5600;
+  --color-gold-bg: rgba(193, 154, 0, 0.1);
+  --color-gold-border: #c9a227;
+  --color-gold-grad-from: rgba(201, 162, 39, 0.16);
+  --color-gold-grad-to: rgba(201, 162, 39, 0.02);
+
+  --shadow-1: 0 0 0 1px var(--color-border-subtle);
+  --shadow-2: 0 0 0 1px var(--color-border-strong);
+  --shadow-3:
+    0 0 0 1px var(--color-border-strong), 0 8px 24px rgba(11, 18, 32, 0.12);
+  --shadow-gold: 0 0 0 1px var(--color-gold-border),
+    0 2px 14px rgba(201, 162, 39, 0.22);
+
+  color-scheme: light;
+}
+
 /* -------------------------------------------------------------------------
- * High-contrast theme
- *
- * Mission-control on amber/cyan with maximum chroma separation. Targets
- * users who need stronger fg/bg contrast than dark/light provide. Borders
- * become opaque, shadows step up to reinforce surface hierarchy.
+ * High-contrast theme — pure black, maximum chroma separation (WCAG AAA)
  * --------------------------------------------------------------------- */
 
 [data-theme='high-contrast'] {
@@ -296,22 +326,26 @@
   --color-bg-3: #050505;
 
   --color-fg-primary: #ffffff;
-  --color-fg-secondary: #e8e8e8;
-  --color-fg-muted: #c8c8c8;
+  --color-fg-secondary: #ededed;
+  --color-fg-muted: #cccccc;
 
-  --color-accent-primary: #5ad8ff;
-  --color-accent-primary-bg: rgba(90, 216, 255, 0.24);
-  --color-accent-success: #5cff7f;
-  --color-accent-success-bg: rgba(92, 255, 127, 0.24);
+  --color-accent-primary: #5ce1ff;
+  --color-accent-primary-bg: rgba(92, 225, 255, 0.24);
+  --color-accent-secondary: #e0a3ff;
+  --color-accent-secondary-bg: rgba(224, 163, 255, 0.24);
+  --color-accent-success: #5cff9d;
+  --color-accent-success-bg: rgba(92, 255, 157, 0.24);
   --color-accent-warning: #ffd24a;
   --color-accent-warning-bg: rgba(255, 210, 74, 0.24);
-  --color-accent-danger: #ff7a7a;
-  --color-accent-danger-bg: rgba(255, 122, 122, 0.24);
-  --color-accent-info: #9ee5ff;
-  --color-accent-info-bg: rgba(158, 229, 255, 0.24);
+  --color-accent-danger: #ff8199;
+  --color-accent-danger-bg: rgba(255, 129, 153, 0.24);
+  --color-accent-info: #7dd3fc;
+  --color-accent-info-bg: rgba(125, 211, 252, 0.24);
 
   --color-border-subtle: #6a6a6a;
   --color-border-strong: #ffffff;
+
+  --color-grid: rgba(255, 255, 255, 0.05);
 
   --color-gold: #ffe17a;
   --color-gold-strong: #fff0b3;

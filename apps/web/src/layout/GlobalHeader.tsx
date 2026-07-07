@@ -3,8 +3,9 @@
 // Owns: brand mark, command palette trigger, repo switcher, live status pill,
 // user menu. Each child is its own file so the shell layout stays scannable.
 
-import { Activity, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
+import { JeryuLogo } from '../components/brand/JeryuLogo';
 import { NotificationInbox } from '../components/NotificationInbox';
 import { useBootstrap } from '../hooks/useBootstrap';
 import { useRealtimeStore } from '../stores/realtimeStore';
@@ -23,10 +24,7 @@ export function GlobalHeader(): JSX.Element {
   return (
     <div className="global-header">
       <span className="global-header__brand">
-        <span className="global-header__brand-mark" aria-hidden="true">
-          <Activity size={16} />
-        </span>
-        JeRyu
+        <JeryuLogo variant="header" />
       </span>
       <RepoSwitcher />
       <span className="global-header__spacer" aria-hidden="true" />

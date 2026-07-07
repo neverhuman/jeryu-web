@@ -26,6 +26,7 @@ import { useShellCommands } from './useShellCommands';
 import { LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { AuthPage } from '../pages/AuthPage';
+import { BootScreen } from '../pages/boot/BootScreen';
 
 import './AppShell.css';
 
@@ -55,7 +56,10 @@ export function AppShell(): JSX.Element {
 
   useKeyboardShortcut(
     '/',
-    () => {
+    (event) => {
+      // Ignore Shift+/ ("?") so it opens the shortcuts overlay cleanly instead
+      // of also navigating to search.
+      if (event.shiftKey) return;
       navigate('/search');
     },
     { label: 'Focus search', group: 'Navigation', enabled: !!auth.user }
@@ -87,6 +91,31 @@ export function AppShell(): JSX.Element {
     group: 'Navigation',
     enabled: !!auth.user,
   });
+  useKeyboardShortcut('g f', () => navigate('/fleet'), {
+    label: 'Go to Fleet',
+    group: 'Navigation',
+    enabled: !!auth.user,
+  });
+  useKeyboardShortcut('g i', () => navigate('/intelligence'), {
+    label: 'Go to Intelligence',
+    group: 'Navigation',
+    enabled: !!auth.user,
+  });
+  useKeyboardShortcut('g t', () => navigate('/tools'), {
+    label: 'Go to Tools',
+    group: 'Navigation',
+    enabled: !!auth.user,
+  });
+  useKeyboardShortcut('g n', () => navigate('/notifications'), {
+    label: 'Go to Notifications',
+    group: 'Navigation',
+    enabled: !!auth.user,
+  });
+  useKeyboardShortcut('g a', () => navigate('/audit'), {
+    label: 'Go to Audit',
+    group: 'Navigation',
+    enabled: !!auth.user,
+  });
   useKeyboardShortcut('g s', () => navigate('/settings'), {
     label: 'Go to Settings',
     group: 'Navigation',
@@ -107,7 +136,7 @@ export function AppShell(): JSX.Element {
   }
 
   if (!auth.user) {
-    return <AuthPage initialMode={authRouteMode} />;
+    return <BootScreen initialMode={authRouteMode} />;
   }
 
   if (isAuthRoute) {

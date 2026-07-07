@@ -60,7 +60,7 @@ test.describe('Auth hardening browser proof', () => {
     });
 
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Jeryu' })).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'JeRyu' })).toBeVisible({
       timeout: 10_000,
     });
     await expect(page.getByRole('tab', { name: 'Login' })).toHaveAttribute(

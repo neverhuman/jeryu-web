@@ -156,10 +156,18 @@ export function AgentTerminalImpl({
           convertEol: false,
           cursorBlink: true,
           fontFamily:
-            'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+            '"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
           fontSize: 13,
           scrollback: 5000,
-          theme: { background: '#0b0f17' },
+          // Match the TUI tokens (near-black surface, cyan cursor). xterm needs
+          // concrete colors here, so these mirror --color-bg-0 / accent-primary.
+          theme: {
+            background: '#05070a',
+            foreground: '#e8f0f7',
+            cursor: '#22d3ee',
+            cursorAccent: '#05070a',
+            selectionBackground: 'rgba(34, 211, 238, 0.30)',
+          },
         });
         const fit = new FitAddon();
         term.loadAddon(fit);

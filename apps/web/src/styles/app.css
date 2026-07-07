@@ -99,7 +99,8 @@ html {
 
 body {
   min-height: 100vh;
-  font-family: var(--font-sans);
+  /* Monospace-first: the whole UI reads like a terminal. */
+  font-family: var(--font-mono);
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   font-weight: var(--font-weight-regular);
@@ -110,9 +111,32 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/*
+ * Decorative background: a faint terminal grid + corner vignette pinned
+ * behind all content. Static (no animation), pointer-transparent, and
+ * cheap to paint. Sits under #root via a negative z-index.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: radial-gradient(
+    ellipse at 50% 40%,
+    #000 0%,
+    transparent 85%
+  );
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 85%);
+}
+
 ::selection {
-  background-color: var(--color-accent-primary-bg);
-  color: var(--color-fg-primary);
+  background-color: var(--color-accent-primary);
+  color: var(--color-bg-0);
 }
 
 :focus {
@@ -120,9 +144,30 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-accent-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
   border-radius: var(--radius-sm);
+}
+
+/*
+ * Blinking block caret — TUI accent used by the boot screen prompt and any
+ * "type here" affordance. `.tui-caret` renders a solid block that blinks.
+ */
+.tui-caret::after {
+  content: '\2588'; /* full block */
+  color: var(--color-accent-primary);
+  animation: jeryu-caret-blink 1s steps(1) infinite;
+}
+
+@keyframes jeryu-caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
 }
 
 /* -------------------------------------------------------------------------
@@ -341,7 +386,7 @@ body {
   background-image: linear-gradient(
     90deg,
     var(--color-bg-2) 0%,
-    var(--color-bg-3) 50%,
+    color-mix(in srgb, var(--color-accent-primary) 10%, var(--color-bg-2)) 50%,
     var(--color-bg-2) 100%
   );
   background-size: 200% 100%;

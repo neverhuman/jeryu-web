@@ -45,11 +45,28 @@ export function useShellCommands(): void {
         shortcut: 'g m',
       },
       {
+        id: 'nav.fleet',
+        title: 'Go to Fleet',
+        keywords: ['fleet', 'runners', 'utilization', 'saturation', 'health'],
+        icon: 'server-cog',
+        target: { kind: 'route', path: '/fleet' },
+        shortcut: 'g f',
+      },
+      {
         id: 'nav.intelligence',
         title: 'Go to Intelligence',
         keywords: ['jmcp', 'control-plane', 'priority', 'graph'],
         icon: 'activity',
         target: { kind: 'route', path: '/intelligence' },
+        shortcut: 'g i',
+      },
+      {
+        id: 'nav.tools',
+        title: 'Go to Tools',
+        keywords: ['tools', 'duplicate', 'finder', 'loc', 'adoption'],
+        icon: 'layers',
+        target: { kind: 'route', path: '/tools' },
+        shortcut: 'g t',
       },
       {
         id: 'nav.notifications',
@@ -57,6 +74,7 @@ export function useShellCommands(): void {
         keywords: ['notify', 'alerts'],
         icon: 'bell',
         target: { kind: 'route', path: '/notifications' },
+        shortcut: 'g n',
       },
       {
         id: 'nav.search',
@@ -72,6 +90,7 @@ export function useShellCommands(): void {
         keywords: ['audit', 'compliance', 'logs'],
         icon: 'shield',
         target: { kind: 'route', path: '/audit' },
+        shortcut: 'g a',
       },
       {
         id: 'nav.settings',

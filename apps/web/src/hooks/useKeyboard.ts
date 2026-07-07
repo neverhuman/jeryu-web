@@ -151,7 +151,12 @@ function matchesAtom(atom: ParsedAtom, event: KeyboardEvent): boolean {
   return eventKey === atom.key;
 }
 
-function isTypingInTextField(target: EventTarget | null): boolean {
+/**
+ * True when focus is in a text-entry surface (input/textarea/select/
+ * contentEditable) — used to suppress single-key shortcuts while typing.
+ * Exported so other keyboard surfaces (e.g. the boot carousel) reuse one guard.
+ */
+export function isTypingInTextField(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;

@@ -6,7 +6,7 @@
 .agent-terminal {
   display: flex;
   flex-direction: column;
-  background: #0b0f17;
+  background: var(--color-bg-0);
   overflow: hidden;
   /* Fill the entire parent container */
   flex: 1 1 auto;

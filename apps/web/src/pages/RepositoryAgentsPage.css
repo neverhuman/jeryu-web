@@ -69,8 +69,8 @@
   padding: 0.4rem 0.7rem;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
-  background: var(--color-accent, #2d6cdf);
-  color: #fff;
+  background: var(--color-accent-primary);
+  color: var(--color-bg-0);
   font: inherit;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -87,7 +87,7 @@
 }
 
 .agents__new-session-error {
-  color: var(--color-danger, #c4314b);
+  color: var(--color-accent-danger);
   padding: 0.5rem 1rem;
   margin: 0;
 }

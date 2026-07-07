@@ -12,10 +12,10 @@
   flex-direction: column;
   gap: var(--space-5);
   padding: var(--space-6);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
   background: var(--color-bg-1);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-2), var(--glow-soft);
 }
 
 .auth-panel__brand {
@@ -25,21 +25,15 @@
 }
 
 .auth-panel__mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent-primary-bg);
-  color: var(--color-accent-primary);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-2xl);
 }
 
 .auth-panel__title {
+  font-family: var(--font-display);
   font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-shadow: var(--glow-text);
 }
 
 .auth-panel__tabs {

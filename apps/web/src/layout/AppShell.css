@@ -88,7 +88,7 @@
   z-index: 100;
   background: var(--color-bg-1);
   border-color: var(--color-border-subtle);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-2);
 }
 
 .app-shell--sidebar-collapsed .app-shell__sidebar-toggle-icon {
@@ -256,6 +256,7 @@
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
+  border-left: 2px solid transparent;
   color: var(--color-fg-secondary);
   font-size: var(--font-size-sm);
   text-decoration: none;
@@ -270,8 +271,10 @@
 
 .left-nav__item.is-active {
   background-color: var(--color-accent-primary-bg);
+  border-left-color: var(--color-accent-primary);
   color: var(--color-accent-primary);
   font-weight: var(--font-weight-semibold);
+  text-shadow: var(--glow-text);
 }
 
 .left-nav__group {
@@ -461,9 +464,9 @@
   width: min(640px, 90vw);
   max-height: 60vh;
   background-color: var(--color-bg-1);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-3);
+  box-shadow: var(--shadow-3), var(--glow-soft);
   overflow: hidden;
   display: flex;
   flex-direction: column;

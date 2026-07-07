@@ -41,7 +41,10 @@ export interface PreferencesState {
   reset: () => void;
 }
 
-const STORAGE_KEY = 'jeryu.preferences.v1';
+// v2: the TUI overhaul flips the default theme to the dark terminal surface.
+// Bumping the version resets stored prefs so returning users land on the new
+// default instead of a stale `system` (which could resolve to light).
+const STORAGE_KEY = 'jeryu.preferences.v2';
 
 const DEFAULTS: Pick<
   PreferencesState,
@@ -54,7 +57,7 @@ const DEFAULTS: Pick<
   | 'diffMode'
   | 'notificationsLastSeen'
 > = {
-  theme: 'system',
+  theme: 'dark',
   density: 'comfortable',
   codeFontSize: 13,
   dateFormat: 'relative',
