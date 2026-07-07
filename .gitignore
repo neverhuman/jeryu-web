@@ -1,6 +1,7 @@
 /target/
 /.worktrees/
 /.jankurai/
+/db/fixtures/
 /agent/repo-score.json
 /agent/repo-score.md
 /.cargo-home/

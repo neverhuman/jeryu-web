@@ -22,3 +22,8 @@ manual_edits = false
 path = "apps/web/storybook-static/"
 generator = "npm --workspace @jeryu/web run build-storybook"
 manual_edits = false
+
+[[zones]]
+path = "db/fixtures/"
+generator = "npm run fixtures:build"
+manual_edits = false
