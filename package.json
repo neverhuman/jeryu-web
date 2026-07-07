@@ -9,6 +9,9 @@
   "scripts": {
     "ux-qa": "npm --workspace @jeryu/web run ux-qa",
     "ux-qa:build": "npm --workspace @jankurai/ux-qa run build",
-    "ux-qa:test": "npm --workspace @jankurai/ux-qa run test"
+    "ux-qa:test": "npm --workspace @jankurai/ux-qa run test",
+    "security": "bash tools/security-lane.sh",
+    "security:audit": "npm audit --prefix apps/web --audit-level=high",
+    "security:sbom": "syft dir:. -o spdx-json=target/security/jeryu-web.spdx.json"
   }
 }

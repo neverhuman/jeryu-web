@@ -12,7 +12,7 @@ score:
   ./ops/ci/score.sh # jankurai audit repo-score
 
 security:
-  ./ops/ci/security.sh # gitleaks cargo audit npm audit syft
+  bash tools/security-lane.sh # gitleaks detect · npm audit --audit-level=high · cargo audit · zizmor · syft SBOM · dependency-review
 
 artifact-support:
   ./ops/ci/artifact_support.sh

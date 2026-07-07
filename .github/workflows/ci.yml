@@ -9,6 +9,9 @@ env:
   JANKURAI_REPO: "https://github.com/neverhuman/jankurai.git"
   JANKURAI_TAG: "v1.6.10-deadlang-precision"
   JANKURAI_REV: "68bd6114373cf407a930011b76669af306cb0cb1"
+  # Enable the network-dependent dependency-advisory scans (npm audit / cargo
+  # deny) in the security lane. The forge required-check runs them ungated too.
+  JERYU_SECURITY_NETWORK: "1"
 
 permissions:
   contents: read
