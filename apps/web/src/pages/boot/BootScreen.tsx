@@ -1,19 +1,14 @@
-// BootScreen.tsx — the signed-out experience: splash → carousel + login gate.
+// BootScreen.tsx — signed-out splash → story landing with optional auth panel.
 //
 // Rendered by AppShell in place of the app whenever there is no authenticated
-// user. Two phases:
-//   * 'splash' — a brief (~950ms) boot animation, skippable by any key/click,
-//     skipped entirely under prefers-reduced-motion.
-//   * 'gate'   — the split layout: a moving FeatureCarousel filling the stage
-//     with a docked LoginPanel. ENTER (when not already in a field) focuses
-//     the login so users can sign in by keyboard or by click.
+// user. `/` shows the story first; `/login` and `/signup` open the shared auth
+// form immediately over the same surface.
 
 import { useEffect, useRef, useState } from 'react';
 
+import { JeryuLogo } from '../../components/brand/JeryuLogo';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
-import { StatusBar } from '../../layout/StatusBar';
 import { BootSplash } from './BootSplash';
-import { FeatureCarousel } from './FeatureCarousel';
 import { LoginPanel } from './LoginPanel';
 
 import './boot.css';
@@ -23,14 +18,26 @@ const SPLASH_MS = 950;
 
 export function BootScreen({
   initialMode = 'login',
+  initialAuthOpen = false,
 }: {
   initialMode?: Mode;
+  initialAuthOpen?: boolean;
 }): JSX.Element {
   const prefersReduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<'splash' | 'gate'>(
-    prefersReduced ? 'gate' : 'splash'
+    prefersReduced || initialAuthOpen ? 'gate' : 'splash'
   );
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [authOpen, setAuthOpen] = useState(initialAuthOpen);
   const usernameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMode(initialMode);
+    setAuthOpen(initialAuthOpen);
+    if (initialAuthOpen) {
+      setPhase('gate');
+    }
+  }, [initialAuthOpen, initialMode]);
 
   // Advance past the splash on a timer, or immediately on any key / pointer.
   useEffect(() => {
@@ -46,24 +53,16 @@ export function BootScreen({
     };
   }, [phase]);
 
-  // "Press ENTER to log in": focus the username field — but ONLY from the
-  // ambient state (nothing interactive focused). We must not preventDefault or
-  // steal Enter when a button, tab, or input already has focus, or we'd break
-  // native form submission / button activation / tab switching for keyboard
-  // users. Hence a raw listener (useKeyboardShortcut preventDefaults on match
-  // before its handler runs, which would suppress those native actions).
   useEffect(() => {
-    if (phase !== 'gate') return;
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key !== 'Enter') return;
-      const el = document.activeElement;
-      if (el && el !== document.body && el !== document.documentElement) return;
-      event.preventDefault();
+    if (phase === 'gate' && authOpen) {
       usernameRef.current?.focus();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [phase]);
+    }
+  }, [authOpen, mode, phase]);
+
+  const openAuth = (nextMode: Mode): void => {
+    setMode(nextMode);
+    setAuthOpen(true);
+  };
 
   if (phase === 'splash') {
     return (
@@ -75,38 +74,57 @@ export function BootScreen({
   }
 
   return (
-    <main className="boot boot--gate">
-      <div className="boot__frame">
-        <div className="boot__topline" aria-hidden="true">
-          <span className="boot__topline-brand">┌─ JeRyu ── web forge</span>
-          <span className="boot__topline-fill" />
-          <span className="boot__topline-tag">authenticate ─┐</span>
-        </div>
-        <div className="boot__stage">
-          <section className="boot__showcase" aria-label="JeRyu product overview">
-            <div className="boot__pitch">
-              <p className="boot__pitch-lede">Code. Review. Run. Release.</p>
-              <p className="boot__pitch-copy">
-                Repos, PRs, agents, CI, tools, and production cutovers in one signed-in forge.
-              </p>
-            </div>
-            <FeatureCarousel />
-          </section>
-          <LoginPanel initialMode={initialMode} firstFieldRef={usernameRef} />
-        </div>
-        <div className="boot__footer">
-          <span className="boot__keymap" aria-hidden="true">
-            <kbd>ENTER</kbd> log in
-            <span className="boot__sep">·</span>
-            <kbd>←</kbd>
-            <kbd>→</kbd> browse
-            <span className="boot__sep">·</span>
-            <kbd>1</kbd>–<kbd>6</kbd> jump
+    <main className={`boot boot--gate${authOpen ? ' boot--auth-open' : ''}`}>
+      <div className="boot__story">
+        <header className="boot__nav">
+          <span className="boot__brand">
+            <JeryuLogo variant="mark" className="boot__brand-mark" decorative />
+            <span>JeRyu</span>
           </span>
-          <div className="boot__statusbar">
-            <StatusBar />
+          <nav className="boot__auth-controls" aria-label="Account access">
+            <button
+              type="button"
+              className="boot__auth-link"
+              aria-pressed={authOpen && mode === 'login'}
+              onClick={() => openAuth('login')}
+            >
+              Log in
+            </button>
+            <button
+              type="button"
+              className="boot__auth-link"
+              aria-pressed={authOpen && mode === 'signup'}
+              onClick={() => openAuth('signup')}
+            >
+              Sign up
+            </button>
+          </nav>
+        </header>
+
+        <section className="boot__hero" aria-label="JeRyu product story">
+          <div className="boot__hero-copy">
+            <p className="boot__eyebrow">Rust forge core · React cockpit</p>
+            <h1>Git for agents.</h1>
+            <p className="boot__lede">
+              Made by agents, for agents: a Rust forge core with a React cockpit
+              for repo families moving at machine speed.
+            </p>
+            <p className="boot__story-rail">
+              Issue -&gt; agent session -&gt; evidence -&gt; PR -&gt; gated merge -&gt; autonomous deploy
+            </p>
+            <div className="boot__gains" aria-label="JeRyu gains">
+              <p>Preserve agent work.</p>
+              <p>Remove release handoffs.</p>
+              <p>Operate billion-token/day repo families at 1000-PR/day pace.</p>
+            </div>
           </div>
-        </div>
+        </section>
+
+        {authOpen ? (
+          <aside className="boot__auth-panel">
+            <LoginPanel initialMode={mode} firstFieldRef={usernameRef} />
+          </aside>
+        ) : null}
       </div>
     </main>
   );

@@ -93,8 +93,11 @@ test('global chrome command palette, repo switcher, sidebar, notifications, not-
   await page.getByRole('button', { name: 'Back to dashboard' }).click();
   await expect(page).toHaveURL(/\/repos\/family\/jeryu-split$/);
 
-  await page.getByRole('button', { name: /Account menu for E2E Tester/i }).click();
-  await expect(page.getByRole('button', { name: 'Login' })).toBeVisible({
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page.getByRole('heading', { name: 'Git for agents.' })).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible({
     timeout: 10_000,
   });
 });

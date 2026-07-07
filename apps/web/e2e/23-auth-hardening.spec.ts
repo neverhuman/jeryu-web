@@ -59,15 +59,21 @@ test.describe('Auth hardening browser proof', () => {
       });
     });
 
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'JeRyu' })).toBeVisible({
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Git for agents.' })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.locator('.boot__frame')).toBeVisible();
-    await expect(page.getByText('Code. Review. Run. Release.')).toBeVisible();
     await expect(
-      page.getByText('Repos, PRs, agents, CI, tools, and production cutovers')
+      page.getByText(
+        'Made by agents, for agents: a Rust forge core with a React cockpit'
+      )
     ).toBeVisible();
+    await expect(
+      page.getByText(
+        'Issue -> agent session -> evidence -> PR -> gated merge -> autonomous deploy'
+      )
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Log in' }).click();
     await expect(page.getByRole('tab', { name: 'Login' })).toHaveAttribute(
       'aria-selected',
       'true'
@@ -75,6 +81,7 @@ test.describe('Auth hardening browser proof', () => {
 
     await page.getByLabel('Username').fill('jordanh');
     await page.getByLabel('Password').fill(loginFormCredential);
+    await page.getByLabel('Remember me').check();
     await page.getByRole('button', { name: 'Login' }).click();
 
     await expect(page).toHaveURL(/\/repos\/family\/jeryu-split/, {
@@ -87,7 +94,7 @@ test.describe('Auth hardening browser proof', () => {
     await expect(browser).toContainText('jeryu-web');
     await expect(browser).not.toContainText('jeryu-deploy');
     expect(loginBodies).toEqual([
-      { login: 'jordanh', password: loginFormCredential },
+      { login: 'jordanh', password: loginFormCredential, rememberMe: true },
     ]);
   });
 
@@ -114,17 +121,17 @@ test.describe('Auth hardening browser proof', () => {
     });
 
     await page.goto('/signup');
-    await expect(page.locator('.boot__frame')).toBeVisible({
+    await expect(page.locator('.boot__story')).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText('Code. Review. Run. Release.')).toBeVisible();
     await expect(
-      page.getByText('Repos, PRs, agents, CI, tools, and production cutovers')
+      page.getByRole('heading', { name: 'Git for agents.' })
     ).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Sign up' })).toHaveAttribute(
       'aria-selected',
       'true'
     );
+    await expect(page.getByLabel('Remember me')).toHaveCount(0);
     await page.getByLabel('Username').fill('jepsont');
     await page.getByLabel('Password').fill(signupFormCredential);
     await page.getByRole('button', { name: 'Create account' }).click();

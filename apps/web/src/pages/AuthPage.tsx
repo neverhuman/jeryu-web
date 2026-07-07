@@ -33,6 +33,7 @@ export function AuthForm({
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const active = mode === 'login' ? auth.login : auth.signup;
   const error = forcePasswordChange ? auth.changePassword.error : active.error;
 
@@ -54,7 +55,10 @@ export function AuthForm({
       }
       return;
     }
-    const user = await active.mutateAsync({ login, password });
+    const user =
+      mode === 'login'
+        ? await auth.login.mutateAsync({ login, password, rememberMe })
+        : await auth.signup.mutateAsync({ login, password });
     if (user && !user.mustChangePassword) {
       navigate('/repos/family/jeryu-split', { replace: true });
     }
@@ -79,7 +83,10 @@ export function AuthForm({
             role="tab"
             aria-selected={mode === 'signup'}
             className="auth-panel__tab"
-            onClick={() => setMode('signup')}
+            onClick={() => {
+              setMode('signup');
+              setRememberMe(false);
+            }}
           >
             <UserPlus size={14} aria-hidden="true" />
             Sign up
@@ -122,6 +129,16 @@ export function AuthForm({
               minLength={12}
               required
             />
+          </label>
+        ) : null}
+        {!forcePasswordChange && mode === 'login' ? (
+          <label className="auth-form__check">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.currentTarget.checked)}
+            />
+            <span>Remember me</span>
           </label>
         ) : null}
         {error ? (

@@ -1,9 +1,6 @@
-// UserMenu.tsx — top-right identity chip (W-FE-01).
-//
-// Renders an inline identity chip. The theme / sign-out / profile dropdown
-// is layered on by a later work package.
+// UserMenu.tsx — top-right identity status and logout control (W-FE-01).
 
-import { LogOut, User } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 import { useAuth } from '../hooks/useAuth';
 
@@ -16,16 +13,21 @@ export function UserMenu({ login, displayName }: UserMenuProps): JSX.Element {
   const label = displayName ?? login;
   const { logout } = useAuth();
   return (
-    <button
-      type="button"
-      className="global-header__user"
-      aria-label={`Account menu for ${label}`}
-      title="Logout"
-      onClick={() => logout.mutate()}
-    >
-      <User size={14} aria-hidden="true" />
-      <span className="global-header__user-name">{label}</span>
-      <LogOut size={14} aria-hidden="true" />
-    </button>
+    <div className="global-header__account">
+      <span className="global-header__user" aria-label={`Logged in as ${label}`}>
+        <span className="global-header__user-prefix">Logged in</span>
+        <span aria-hidden="true">·</span>
+        <span className="global-header__user-name">{label}</span>
+      </span>
+      <button
+        type="button"
+        className="global-header__logout"
+        aria-label="Log out"
+        title="Log out"
+        onClick={() => logout.mutate()}
+      >
+        <LogOut size={14} aria-hidden="true" />
+      </button>
+    </div>
   );
 }

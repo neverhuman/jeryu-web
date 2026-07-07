@@ -136,7 +136,7 @@ export function AppShell(): JSX.Element {
   }
 
   if (!auth.user) {
-    return <BootScreen initialMode={authRouteMode} />;
+    return <BootScreen initialMode={authRouteMode} initialAuthOpen={isAuthRoute} />;
   }
 
   if (isAuthRoute) {

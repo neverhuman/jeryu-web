@@ -24,6 +24,7 @@ export interface AuthUser {
 export interface AuthCredentials {
   login: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface PasswordChangeRequest {
