@@ -182,3 +182,34 @@ export function principalsFromInput(value: string): WorkPrincipal[] {
     return { kind, id, display_name: null };
   });
 }
+
+export interface EditState {
+  title: string;
+  body: string;
+  status: WorkStatus;
+  kind: WorkItemKind;
+  priority: WorkPriority;
+  labels: string;
+  assignees: string;
+}
+
+export function emptyEdit(): EditState {
+  return {
+    title: '',
+    body: '',
+    status: 'backlog',
+    kind: 'task',
+    priority: 'p2',
+    labels: '',
+    assignees: '',
+  };
+}
+
+export function formatDate(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
