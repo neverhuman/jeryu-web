@@ -83,7 +83,15 @@ export function BootScreen({
           <span className="boot__topline-tag">authenticate ─┐</span>
         </div>
         <div className="boot__stage">
-          <FeatureCarousel />
+          <section className="boot__showcase" aria-label="JeRyu product overview">
+            <div className="boot__pitch">
+              <p className="boot__pitch-lede">Code. Review. Run. Release.</p>
+              <p className="boot__pitch-copy">
+                Repos, PRs, agents, CI, tools, and production cutovers in one signed-in forge.
+              </p>
+            </div>
+            <FeatureCarousel />
+          </section>
           <LoginPanel initialMode={initialMode} firstFieldRef={usernameRef} />
         </div>
         <div className="boot__footer">

@@ -63,6 +63,11 @@ test.describe('Auth hardening browser proof', () => {
     await expect(page.getByRole('heading', { name: 'JeRyu' })).toBeVisible({
       timeout: 10_000,
     });
+    await expect(page.locator('.boot__frame')).toBeVisible();
+    await expect(page.getByText('Code. Review. Run. Release.')).toBeVisible();
+    await expect(
+      page.getByText('Repos, PRs, agents, CI, tools, and production cutovers')
+    ).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Login' })).toHaveAttribute(
       'aria-selected',
       'true'
@@ -109,6 +114,13 @@ test.describe('Auth hardening browser proof', () => {
     });
 
     await page.goto('/signup');
+    await expect(page.locator('.boot__frame')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByText('Code. Review. Run. Release.')).toBeVisible();
+    await expect(
+      page.getByText('Repos, PRs, agents, CI, tools, and production cutovers')
+    ).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Sign up' })).toHaveAttribute(
       'aria-selected',
       'true'
