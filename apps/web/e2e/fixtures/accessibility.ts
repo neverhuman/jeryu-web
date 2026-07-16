@@ -39,6 +39,24 @@ export interface AxeRunOptions {
   disableRules?: string[];
 }
 
+export interface RenderedEvidence {
+  screenshot: string;
+  geometry: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  design_tokens: {
+    color_bg_0: string;
+    space_4: string;
+  };
+}
+
+function safeScope(scope: string): string {
+  return scope.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+}
+
 /**
  * Run axe on the current page and return the raw analysis.
  *
@@ -66,10 +84,52 @@ export async function persistAxeResult(
   scope: string,
   result: Awaited<ReturnType<AxeBuilder['analyze']>>
 ): Promise<void> {
-  const safe = scope.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+  const safe = safeScope(scope);
   await fs.mkdir(ARTIFACTS_DIR, { recursive: true });
   const outFile = path.join(ARTIFACTS_DIR, `${safe}.axe.json`);
   await fs.writeFile(outFile, JSON.stringify(result, null, 2), 'utf8');
+}
+
+/**
+ * Capture fail-closed rendered evidence alongside each axe result. The JSON
+ * proves the main surface has non-zero geometry and reads canonical design
+ * tokens from the computed root style; the PNG gives reviewers the matching
+ * visual artifact.
+ */
+export async function persistRenderedEvidence(
+  page: Page,
+  scope: string
+): Promise<RenderedEvidence> {
+  const safe = safeScope(scope);
+  await fs.mkdir(ARTIFACTS_DIR, { recursive: true });
+  const screenshotFile = path.join(ARTIFACTS_DIR, `${safe}.screenshot.png`);
+  const renderedFile = path.join(ARTIFACTS_DIR, `${safe}.rendered.json`);
+
+  const rendered = await page.evaluate(() => {
+    const surface = document.querySelector('main#main-content') ?? document.body;
+    const rect = surface.getBoundingClientRect();
+    const rootStyle = getComputedStyle(document.documentElement);
+    return {
+      geometry: {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+      },
+      design_tokens: {
+        color_bg_0: rootStyle.getPropertyValue('--color-bg-0').trim(),
+        space_4: rootStyle.getPropertyValue('--space-4').trim(),
+      },
+    };
+  });
+
+  await page.screenshot({ path: screenshotFile, fullPage: true });
+  const evidence: RenderedEvidence = {
+    screenshot: screenshotFile,
+    ...rendered,
+  };
+  await fs.writeFile(renderedFile, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
+  return evidence;
 }
 
 /**

@@ -23,6 +23,7 @@ import { expect, test } from '@playwright/test';
 import {
   blockingViolations,
   persistAxeResult,
+  persistRenderedEvidence,
   runAxe,
 } from './fixtures/accessibility';
 import {
@@ -82,6 +83,11 @@ test.describe('Accessibility scans (W-T-18)', () => {
       });
 
       await persistAxeResult(target.scope, result);
+      const rendered = await persistRenderedEvidence(page, target.scope);
+      expect(rendered.geometry.width).toBeGreaterThan(0);
+      expect(rendered.geometry.height).toBeGreaterThan(0);
+      expect(rendered.design_tokens.color_bg_0).not.toBe('');
+      expect(rendered.design_tokens.space_4).not.toBe('');
 
       const blockers = blockingViolations(result);
       // Surface a readable summary: violation IDs + their node counts.
@@ -121,6 +127,11 @@ async function scanAndAssert(
 ): Promise<void> {
   const result = await runAxe(page, { disableRules: ['color-contrast'] });
   await persistAxeResult(scope, result);
+  const rendered = await persistRenderedEvidence(page, scope);
+  expect(rendered.geometry.width).toBeGreaterThan(0);
+  expect(rendered.geometry.height).toBeGreaterThan(0);
+  expect(rendered.design_tokens.color_bg_0).not.toBe('');
+  expect(rendered.design_tokens.space_4).not.toBe('');
   const blockers = blockingViolations(result);
   if (blockers.length > 0) {
     const summary = blockers

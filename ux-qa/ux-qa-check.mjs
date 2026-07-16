@@ -16,18 +16,20 @@
 //   3. Playwright report            web/playwright-report/index.html
 //   4. axe scan receipts            target/jankurai/ux-qa/*.axe.json with
 //                                     zero `critical`/`serious` violations
-//   5. Markdown XSS fixture          target/jankurai/ux-qa/markdown-xss.json
+//   5. Rendered surface evidence     paired screenshot + geometry/token JSON
+//                                     for every axe scan receipt
+//   6. Markdown XSS fixture          target/jankurai/ux-qa/markdown-xss.json
 //                                     (runs `cargo nextest run -p jeryu
 //                                     --test web_markdown_tests` to mint it
 //                                     when missing)
-//   6. WS replay test               Playwright report contains spec
+//   7. WS replay test               Playwright report contains spec
 //                                     `08-ws-reconnect`
-//   7. Bundle size budget           gzip(dist/assets/index-*.js) < 350 KB
-//   8. Lighthouse perf score        target/jankurai/ux-qa/lighthouse/*.report.json
+//   8. Bundle size budget           gzip(dist/assets/index-*.js) < 350 KB
+//   9. Lighthouse perf score        target/jankurai/ux-qa/lighthouse/*.report.json
 //                                     OR target/jankurai/ux-qa/lighthouse.json
 //                                     (soft-pass if no artifacts; fails only
 //                                     when score < 0.7 in collected runs)
-//   9. Receipt                      target/jankurai/ux-qa/web-forge.<ISO>.json
+//  10. Receipt                      target/jankurai/ux-qa/web-forge.<ISO>.json
 //
 // Output: a top-level `pass: bool` plus per-check `pass: bool` and
 // optional `details`. Exit code 0 when all checks for the selected mode pass,
@@ -203,6 +205,55 @@ function checkAxeScans() {
   return {
     pass: failures.length === 0,
     details: { files: fileSummaries, failures },
+  };
+}
+
+function checkRenderedEvidence() {
+  const axeFiles = readdirSync(uxArtifactDir).filter((f) =>
+    f.endsWith('.axe.json')
+  );
+  const failures = [];
+  const surfaces = [];
+  for (const axeFile of axeFiles) {
+    const scope = axeFile.slice(0, -'.axe.json'.length);
+    const screenshotFile = join(uxArtifactDir, `${scope}.screenshot.png`);
+    const renderedFile = join(uxArtifactDir, `${scope}.rendered.json`);
+    if (!existsSync(screenshotFile) || statSync(screenshotFile).size === 0) {
+      failures.push({ scope, reason: 'missing or empty screenshot' });
+      continue;
+    }
+    if (!existsSync(renderedFile)) {
+      failures.push({ scope, reason: 'missing rendered JSON' });
+      continue;
+    }
+    try {
+      const rendered = JSON.parse(readFileSync(renderedFile, 'utf8'));
+      const width = rendered?.geometry?.width;
+      const height = rendered?.geometry?.height;
+      const color = rendered?.design_tokens?.color_bg_0;
+      const spacing = rendered?.design_tokens?.space_4;
+      if (!(width > 0) || !(height > 0) || !color || !spacing) {
+        failures.push({ scope, reason: 'invalid geometry or design-token readback' });
+        continue;
+      }
+      surfaces.push({
+        scope,
+        screenshot_bytes: statSync(screenshotFile).size,
+        width,
+        height,
+        color_bg_0: color,
+        space_4: spacing,
+      });
+    } catch (err) {
+      failures.push({ scope, reason: 'unparseable rendered JSON', error: err.message });
+    }
+  }
+  if (axeFiles.length === 0) {
+    failures.push({ reason: 'no axe receipts to pair with rendered evidence' });
+  }
+  return {
+    pass: failures.length === 0,
+    details: { surfaces, failures },
   };
 }
 
@@ -440,6 +491,7 @@ const allChecks = [
   ['storybook_build', checkStorybookBuild],
   ['playwright_report', checkPlaywrightReport],
   ['axe_scans', checkAxeScans],
+  ['rendered_evidence', checkRenderedEvidence],
   ['markdown_xss', checkMarkdownXss],
   ['ws_replay', checkWsReplay],
   ['bundle_size', checkBundleSize],
