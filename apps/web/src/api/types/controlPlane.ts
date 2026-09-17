@@ -141,6 +141,18 @@ export interface RunnerNodeSummary {
   activeTaskCount: number;
   lastUpdated: string | null;
   activeTasks: RunnerTaskSummary[];
+  /** The last gate a PR gate runner finished; absent for other runner kinds. */
+  lastActivity?: RunnerLastActivity | null;
+}
+
+export interface RunnerLastActivity {
+  repo: string;
+  pr: number;
+  sha: string;
+  recipe: string;
+  conclusion: string;
+  seconds: number;
+  finishedAt: string;
 }
 
 export interface RunnerTaskSummary {

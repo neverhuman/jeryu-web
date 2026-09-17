@@ -84,7 +84,7 @@ export function FleetPage(): JSX.Element {
     <div className="page" data-testid="fleet-page">
       <header className="page__header">
         <div className="fleet__header-bar">
-          <h1 className="page__title">Fleet</h1>
+          <h1 className="page__title">Runner Fleet</h1>
           <HealthBadge health={state.health} />
           {outOfDate ? (
             <span

@@ -263,4 +263,77 @@ describe('FleetPage render', () => {
       /TTY preview unavailable/i
     );
   });
+
+  it('titles the page Runner Fleet and shows each gate runner\'s last gate', () => {
+    useRealtimeStore.setState({ events: [], status: 'open' });
+    renderFleet(
+      {
+        generated_at: new Date().toISOString(),
+        pool_activity: { repos: [], pools: [], unplaceable: [] },
+        system: {},
+      },
+      {
+        schemaVersion: 'jeryu.runner_fabric/v1',
+        local: {
+          state: 'fresh',
+          nodes: 1,
+          onlineRunners: 1,
+          offlineRunners: 0,
+          busyRunners: 1,
+          idleRunners: 0,
+          totalSlots: 1,
+          activeSlots: 1,
+          utilization: 1,
+          lastUpdated: '2026-09-17T03:05:00Z',
+          nodeDetails: [
+          {
+            runnerId: 'xbabe2/slot0',
+            source: 'pr-gate-runner',
+            state: 'active',
+            capacity: 1,
+            inFlight: 1,
+            labels: ['xbabe2', 'slot 0'],
+            classes: ['pr-gate'],
+            activeTaskCount: 1,
+            lastUpdated: '2026-09-17T03:05:00Z',
+            activeTasks: [
+              {
+                taskId: 'xbabe2/slot0@abc30d78',
+                jobId: 'veox/jain-web#13',
+                agentRunId: null,
+                workcellId: null,
+                repo: 'veox/jain-web',
+                label: 'veox/jain-web#13',
+                program: 'just required',
+                state: 'running',
+                startedAt: '2026-09-17T03:04:00Z',
+                updatedAt: '2026-09-17T03:05:00Z',
+                ttyPreview: { state: 'missing', lines: [] },
+              },
+            ],
+            lastActivity: {
+              repo: 'veox/jain-deploy',
+              pr: 31,
+              sha: '3926cbd7ddab0e48edc143d3b49607b3bf39bf20',
+              recipe: 'just required',
+              conclusion: 'success',
+              seconds: 46,
+              finishedAt: '2026-09-17T02:34:39Z',
+            },
+          },
+          ],
+        },
+        mirror: {
+          name: 'github_actions_runners',
+          state: 'missing',
+          reason: 'optional GitHub mirror runner adapter is not configured',
+          docsUrl: 'docs/agent-native-standard.md',
+        },
+      }
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'Runner Fleet' })).toBeInTheDocument();
+    expect(screen.getByText('veox/jain-deploy#31')).toBeInTheDocument();
+    expect(screen.getByText('success')).toBeInTheDocument();
+    expect(screen.getByText(/just required in 46s · 3926cbd/)).toBeInTheDocument();
+  });
 });

@@ -7,6 +7,7 @@
 
 import type {
   EvidenceState,
+  RunnerLastActivity,
   RunnerFabricResponse,
   RunnerNodeSummary,
   RunnerTaskSummary,
@@ -49,6 +50,8 @@ export interface RunnerNetworkNode {
   activeTaskCount: number;
   lastUpdated: string | null;
   tasks: RunnerNetworkTask[];
+  /** The last gate this runner finished, when it reports one. */
+  lastActivity?: RunnerLastActivity | null;
 }
 
 export interface RunnerNetworkTotals {
@@ -171,6 +174,7 @@ function nodeFromRaw(raw: RunnerNodeSummary): RunnerNetworkNode {
     activeTaskCount,
     lastUpdated,
     tasks,
+    lastActivity: raw.lastActivity ?? null,
   };
 }
 
@@ -199,6 +203,26 @@ function totalsFromNodes(nodes: RunnerNetworkNode[]): RunnerNetworkTotals {
   );
 }
 
+/** A gate runner's last finished gate, or null when absent or malformed. */
+function lastActivityFromRaw(value: unknown): RunnerLastActivity | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const repo = str(record.repo);
+  const sha = str(record.sha);
+  const conclusion = str(record.conclusion);
+  const finishedAt = str(record.finishedAt);
+  if (!repo || !sha || !conclusion || !finishedAt) return null;
+  return {
+    repo,
+    pr: num(record.pr),
+    sha,
+    recipe: str(record.recipe),
+    conclusion,
+    seconds: num(record.seconds),
+    finishedAt,
+  };
+}
+
 export function runnerNetworkFromResponse(
   response: RunnerFabricResponse | null | undefined
 ): RunnerNetworkState {
@@ -220,6 +244,7 @@ export function runnerNetworkFromResponse(
         classes: strList(record.classes),
         activeTaskCount: num(record.activeTaskCount),
         lastUpdated: typeof record.lastUpdated === 'string' ? record.lastUpdated : null,
+        lastActivity: lastActivityFromRaw(record.lastActivity),
         activeTasks: tasks
           .map((task) => {
             const taskRecord = asRecord(task);
