@@ -167,4 +167,64 @@ describe('runnerNetworkModel', () => {
     ).toBe('third line');
     expect(lastTtyLine({ state: 'missing', lines: [] })).toBeNull();
   });
+
+  it('carries a gate runner\'s last finished gate through to the node', () => {
+    const state = runnerNetworkFromResponse({
+      ...EMPTY_RUNNERS,
+      local: {
+        ...EMPTY_RUNNERS.local,
+        state: 'fresh',
+        nodes: 1,
+        onlineRunners: 1,
+        busyRunners: 1,
+        totalSlots: 1,
+        activeSlots: 1,
+        nodeDetails: [
+          {
+            runnerId: 'xbabe2/slot0',
+            source: 'pr-gate-runner',
+            state: 'active',
+            capacity: 1,
+            inFlight: 1,
+            labels: ['xbabe2', 'slot 0'],
+            classes: ['pr-gate'],
+            activeTaskCount: 1,
+            lastUpdated: '2026-09-17T03:05:00Z',
+            activeTasks: [
+              {
+                taskId: 'xbabe2/slot0@abc30d78',
+                jobId: 'veox/jain-web#13',
+                agentRunId: null,
+                workcellId: null,
+                repo: 'veox/jain-web',
+                label: 'veox/jain-web#13',
+                program: 'just required',
+                state: 'running',
+                startedAt: '2026-09-17T03:04:00Z',
+                updatedAt: '2026-09-17T03:05:00Z',
+                ttyPreview: { state: 'missing', lines: [] },
+              },
+            ],
+            lastActivity: {
+              repo: 'veox/jain-deploy',
+              pr: 31,
+              sha: '3926cbd7ddab0e48edc143d3b49607b3bf39bf20',
+              recipe: 'just required',
+              conclusion: 'success',
+              seconds: 46,
+              finishedAt: '2026-09-17T02:34:39Z',
+            },
+          },
+        ],
+      },
+    });
+    expect(state.nodes[0]?.activityState).toBe('active');
+    expect(state.nodes[0]?.lastActivity?.repo).toBe('veox/jain-deploy');
+    expect(state.nodes[0]?.lastActivity?.seconds).toBe(46);
+  });
+
+  it('leaves last activity empty for runners that do not report one', () => {
+    const state = runnerNetworkFromResponse(EMPTY_RUNNERS);
+    expect(state.nodes).toEqual([]);
+  });
 });

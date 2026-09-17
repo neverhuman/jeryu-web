@@ -55,7 +55,7 @@ export const FEATURES: readonly FeatureSlide[] = [
   {
     id: 'fleet',
     label: 'FLEET',
-    title: 'Fleet',
+    title: 'Runner Fleet',
     tagline: 'Live runner-fabric mission control — utilization & health.',
     accent: 'var(--color-accent-primary)',
     preview: `runners  ▮▮▮▮▮▮▯▯   74% saturated

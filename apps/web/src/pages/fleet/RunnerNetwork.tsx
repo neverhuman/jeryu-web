@@ -107,6 +107,28 @@ export function RunnerNodeCard({ node }: { node: RunnerNetworkNode }): JSX.Eleme
         </div>
       </dl>
 
+      {node.lastActivity ? (
+        <p className="fleet__node-last" data-testid={`fleet-node-last-${nodeId}`}>
+          <span>Last gate</span>{' '}
+          <strong>
+            {node.lastActivity.repo}#{node.lastActivity.pr}
+          </strong>{' '}
+          <span
+            className={`page__pill ${
+              node.lastActivity.conclusion === 'success'
+                ? 'page__pill--success'
+                : 'page__pill--danger'
+            }`}
+          >
+            {node.lastActivity.conclusion}
+          </span>{' '}
+          <span>
+            {node.lastActivity.recipe} in {node.lastActivity.seconds}s ·{' '}
+            {node.lastActivity.sha.slice(0, 7)} · {node.lastActivity.finishedAt}
+          </span>
+        </p>
+      ) : null}
+
       <div className="fleet__node-tags">
         {node.labels.length > 0 ? (
           node.labels.map((label) => (
