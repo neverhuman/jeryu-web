@@ -45,6 +45,18 @@ describe('router route table', () => {
     expect(toolsIdx).toBeLessThan(notFoundIdx);
   });
 
+  it('registers /runners and keeps /fleet as a redirect above the catch-all', () => {
+    const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
+    const runnersIdx = paths.indexOf('runners');
+    const fleetIdx = paths.indexOf('fleet');
+    const notFoundIdx = paths.indexOf('*');
+    expect(runnersIdx).toBeGreaterThan(-1);
+    expect(fleetIdx).toBeGreaterThan(-1);
+    expect(notFoundIdx).toBeGreaterThan(-1);
+    expect(runnersIdx).toBeLessThan(notFoundIdx);
+    expect(fleetIdx).toBeLessThan(notFoundIdx);
+  });
+
   it('registers Work routes above the not-found catch-all', () => {
     const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
     const workIdx = paths.indexOf('work');

@@ -161,7 +161,7 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
       },
     ]);
 
-    await page.goto('/fleet');
+    await page.goto('/runners');
     await expect(page.getByTestId('fleet-page')).toBeVisible({ timeout: 15_000 });
     await scanAndAssert(page, 'fleet');
   });

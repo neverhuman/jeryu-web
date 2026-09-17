@@ -264,7 +264,7 @@ describe('FleetPage render', () => {
     );
   });
 
-  it('titles the page Runner Fleet and shows each gate runner\'s last gate', () => {
+  it('titles the page Runners and shows each gate runner\'s last gate', () => {
     useRealtimeStore.setState({ events: [], status: 'open' });
     renderFleet(
       {
@@ -331,7 +331,7 @@ describe('FleetPage render', () => {
         },
       }
     );
-    expect(screen.getByRole('heading', { level: 1, name: 'Runner Fleet' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Runners' })).toBeInTheDocument();
     expect(screen.getByText('veox/jain-deploy#31')).toBeInTheDocument();
     expect(screen.getByText('success')).toBeInTheDocument();
     expect(screen.getByText(/just required in 46s · 3926cbd/)).toBeInTheDocument();

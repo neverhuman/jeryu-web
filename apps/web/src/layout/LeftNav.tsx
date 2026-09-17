@@ -41,7 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   // `/merge-room` path that fell through to NotFound.
   { to: '/pull-room', label: 'Pull Room', icon: GitMerge },
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
-  { to: '/fleet', label: 'Fleet', icon: ServerCog },
+  { to: '/runners', label: 'Runners', icon: ServerCog },
   { to: '/tool-fleet', label: 'Tool Fleet', icon: Wrench },
   { to: '/shared-code', label: 'Shared Code', icon: Layers },
   { to: '/notifications', label: 'Notifications', icon: Bell },

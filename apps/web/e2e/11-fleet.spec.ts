@@ -142,7 +142,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await mockControlPlaneRunners(page, runnerFabric(true));
 
     const shell = new AppShellPage(page);
-    await shell.goto('/fleet');
+    await shell.goto('/runners');
     await shell.assertShellLoaded();
 
     await expect(page.getByTestId('fleet-page')).toBeVisible({ timeout: 10_000 });
@@ -185,7 +185,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await mockControlPlaneRunners(page, runnerFabric(false));
 
     const shell = new AppShellPage(page);
-    await shell.goto('/fleet');
+    await shell.goto('/runners');
     await shell.assertShellLoaded();
 
     await expect(page.getByTestId('fleet-node-xbabe0')).toBeVisible();
@@ -210,7 +210,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await mockControlPlaneRunners(page, runnerFabric(true));
 
     const shell = new AppShellPage(page);
-    await shell.goto('/fleet');
+    await shell.goto('/runners');
     await shell.assertShellLoaded();
 
     const taskCard = page.getByTestId('fleet-task-ar-000001');
@@ -240,7 +240,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await mockControlPlaneRunners(page, runnerFabric(true));
 
     const shell = new AppShellPage(page);
-    await shell.goto('/fleet');
+    await shell.goto('/runners');
     await shell.assertShellLoaded();
 
     const localTask = page.getByTestId('fleet-task-ar-local-1');

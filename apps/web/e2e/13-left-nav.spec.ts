@@ -224,8 +224,8 @@ test.describe('Primary left navigation', () => {
         testId: 'intelligence-page',
       },
       {
-        label: 'Fleet',
-        path: '/fleet',
+        label: 'Runners',
+        path: '/runners',
         testId: 'fleet-page',
       },
       {

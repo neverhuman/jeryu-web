@@ -46,10 +46,10 @@ export function useShellCommands(): void {
       },
       {
         id: 'nav.fleet',
-        title: 'Go to Fleet',
+        title: 'Go to Runners',
         keywords: ['fleet', 'runners', 'utilization', 'saturation', 'health'],
         icon: 'server-cog',
-        target: { kind: 'route', path: '/fleet' },
+        target: { kind: 'route', path: '/runners' },
         shortcut: 'g f',
       },
       {
