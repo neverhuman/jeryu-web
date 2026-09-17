@@ -69,6 +69,7 @@ test.describe('Repository families', () => {
     const shell = new AppShellPage(page);
     await page.goto('/repos');
     await shell.assertShellLoaded();
+    await page.getByRole('radio', { name: 'Card view' }).click();
 
     // 1. One family tile for the two veox-split repos.
     const tile = page.locator('a.repo-family-card');
@@ -178,6 +179,7 @@ test.describe('Repository families', () => {
     await mockRepoList(page, REPOS);
 
     await page.goto('/repos');
+    await page.getByRole('radio', { name: 'Card view' }).click();
     await expect(page.locator('a.repo-family-card')).toHaveCount(1, {
       timeout: 10_000,
     });

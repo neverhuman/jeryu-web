@@ -63,6 +63,7 @@ test.describe('Agents page navigation and discoverability', () => {
     const shell = new AppShellPage(page);
     await shell.goto('/repos');
     await shell.assertShellLoaded();
+    await page.getByRole('radio', { name: 'Card view' }).click();
 
     // Find the agents link on the repo card.
     const agentsLink = page.getByTestId(`repo-agents-link-${REPO.owner}-${REPO.name}`);
