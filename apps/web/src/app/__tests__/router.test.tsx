@@ -36,9 +36,9 @@ describe('router route table', () => {
     expect(familyIdx).toBeLessThan(catchAllIdx);
   });
 
-  it('registers the /tools surface above the not-found catch-all', () => {
+  it('registers the /shared-code surface above the not-found catch-all', () => {
     const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
-    const toolsIdx = paths.indexOf('tools');
+    const toolsIdx = paths.indexOf('shared-code');
     const notFoundIdx = paths.indexOf('*');
     expect(toolsIdx).toBeGreaterThan(-1);
     expect(notFoundIdx).toBeGreaterThan(-1);

@@ -112,7 +112,7 @@ test('tools scan, expand, propose, ignore, tool fleet, and non-admin settings @a
   await mockTooling(page);
 
   page.once('dialog', (dialog) => dialog.accept('covered by existing helper'));
-  await page.goto('/tools');
+  await page.goto('/shared-code');
   await expect(page.getByTestId('tools-page')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('rail-tool-action-coverage')).toBeVisible();
   await page.getByTestId('run-scan-button').click();

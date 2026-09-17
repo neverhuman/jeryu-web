@@ -62,10 +62,10 @@ export function useShellCommands(): void {
       },
       {
         id: 'nav.tools',
-        title: 'Go to Tools',
-        keywords: ['tools', 'duplicate', 'finder', 'loc', 'adoption'],
+        title: 'Go to Shared Code',
+        keywords: ['shared', 'code', 'tools', 'duplicate', 'finder', 'loc', 'adoption'],
         icon: 'layers',
-        target: { kind: 'route', path: '/tools' },
+        target: { kind: 'route', path: '/shared-code' },
         shortcut: 'g t',
       },
       {

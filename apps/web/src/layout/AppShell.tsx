@@ -101,8 +101,8 @@ export function AppShell(): JSX.Element {
     group: 'Navigation',
     enabled: !!auth.user,
   });
-  useKeyboardShortcut('g t', () => navigate('/tools'), {
-    label: 'Go to Tools',
+  useKeyboardShortcut('g t', () => navigate('/shared-code'), {
+    label: 'Go to Shared Code',
     group: 'Navigation',
     enabled: !!auth.user,
   });

@@ -77,8 +77,8 @@ scm ✓   db ✓   cache ✓   vault ✓`,
   },
   {
     id: 'tools',
-    label: 'TOOLS',
-    title: 'Tools',
+    label: 'SHARED CODE',
+    title: 'Shared Code',
     tagline: 'Duplicate-code radar & tool-adoption fleet, ranked by LOC saved.',
     accent: 'var(--color-gold)',
     preview: `tool             repos    LOC saved

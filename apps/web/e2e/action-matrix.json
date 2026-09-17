@@ -48,7 +48,7 @@
     { "id": "notifications.page", "surface": "Notifications", "route": "/notifications", "action": "Render full notifications page", "variants": ["empty inbox"], "testTag": "@action:notifications.page", "owner": "e2e/13-left-nav.spec.ts" },
     { "id": "audit.render", "surface": "Audit", "route": "/audit", "action": "Render audit route", "variants": ["planned envelope"], "testTag": "@action:audit.render", "owner": "e2e/13-left-nav.spec.ts" },
     { "id": "settings.render", "surface": "Settings", "route": "/settings", "action": "Render settings route", "variants": ["preferences"], "testTag": "@action:settings.render", "owner": "e2e/13-left-nav.spec.ts" },
-    { "id": "tools.nav", "surface": "Tools", "route": "/tools", "action": "Navigate to tools route", "variants": ["left nav"], "testTag": "@action:tools.nav", "owner": "e2e/13-left-nav.spec.ts" },
+    { "id": "tools.nav", "surface": "Shared Code", "route": "/shared-code", "action": "Navigate to shared code route", "variants": ["left nav"], "testTag": "@action:tools.nav", "owner": "e2e/13-left-nav.spec.ts" },
     { "id": "tool_fleet.nav", "surface": "Tool Fleet", "route": "/tool-fleet", "action": "Navigate to tool fleet route", "variants": ["left nav"], "testTag": "@action:tool_fleet.nav", "owner": "e2e/13-left-nav.spec.ts" },
     { "id": "pull_room.filters", "surface": "Pull Room", "route": "/pull-room", "action": "Use Pull Room filters", "variants": ["checks"], "testTag": "@action:pull_room.filters", "owner": "e2e/14-pull-room.spec.ts" },
     { "id": "pull_room.search", "surface": "Pull Room", "route": "/pull-room", "action": "Search pull requests", "variants": ["query"], "testTag": "@action:pull_room.search", "owner": "e2e/14-pull-room.spec.ts" },
@@ -106,10 +106,10 @@
     { "id": "notifications.popover", "surface": "Notifications", "route": "/*", "action": "Open notification popover and view all", "variants": ["empty unread"], "testTag": "@action:notifications.popover", "owner": "e2e/25-action-matrix.spec.ts" },
     { "id": "chrome.not_found_recovery", "surface": "Chrome", "route": "/missing/action-matrix-route", "action": "Recover from not-found route", "variants": ["Back to dashboard"], "testTag": "@action:chrome.not_found_recovery", "owner": "e2e/25-action-matrix.spec.ts" },
     { "id": "auth.logout", "surface": "Auth", "route": "/*", "action": "Log out authenticated user", "variants": ["POST logout"], "testTag": "@action:auth.logout", "owner": "e2e/25-action-matrix.spec.ts" },
-    { "id": "tools.scan", "surface": "Tools", "route": "/tools", "action": "Start live tool scan", "variants": ["POST scan"], "testTag": "@action:tools.scan", "owner": "e2e/25-action-matrix.spec.ts" },
-    { "id": "tools.expand_cluster", "surface": "Tools", "route": "/tools", "action": "Expand tool cluster family", "variants": ["details"], "testTag": "@action:tools.expand_cluster", "owner": "e2e/25-action-matrix.spec.ts" },
-    { "id": "tools.propose", "surface": "Tools", "route": "/tools", "action": "Propose tool from cluster", "variants": ["receipt"], "testTag": "@action:tools.propose", "owner": "e2e/25-action-matrix.spec.ts" },
-    { "id": "tools.ignore", "surface": "Tools", "route": "/tools", "action": "Ignore tool cluster", "variants": ["prompt feedback"], "testTag": "@action:tools.ignore", "owner": "e2e/25-action-matrix.spec.ts" },
+    { "id": "tools.scan", "surface": "Shared Code", "route": "/shared-code", "action": "Start live tool scan", "variants": ["POST scan"], "testTag": "@action:tools.scan", "owner": "e2e/25-action-matrix.spec.ts" },
+    { "id": "tools.expand_cluster", "surface": "Shared Code", "route": "/shared-code", "action": "Expand tool cluster family", "variants": ["details"], "testTag": "@action:tools.expand_cluster", "owner": "e2e/25-action-matrix.spec.ts" },
+    { "id": "tools.propose", "surface": "Shared Code", "route": "/shared-code", "action": "Propose tool from cluster", "variants": ["receipt"], "testTag": "@action:tools.propose", "owner": "e2e/25-action-matrix.spec.ts" },
+    { "id": "tools.ignore", "surface": "Shared Code", "route": "/shared-code", "action": "Ignore tool cluster", "variants": ["prompt feedback"], "testTag": "@action:tools.ignore", "owner": "e2e/25-action-matrix.spec.ts" },
     { "id": "tool_fleet.render", "surface": "Tool Fleet", "route": "/tool-fleet", "action": "Render tool adoption matrix", "variants": ["adopted and missing"], "testTag": "@action:tool_fleet.render", "owner": "e2e/25-action-matrix.spec.ts" },
     { "id": "admin.denied", "surface": "Admin", "route": "/settings", "action": "Hide admin access controls for non-admin", "variants": ["user role"], "testTag": "@action:admin.denied", "owner": "e2e/25-action-matrix.spec.ts" }
   ]

@@ -234,8 +234,8 @@ test.describe('Primary left navigation', () => {
         testId: 'tool-fleet-page',
       },
       {
-        label: 'Tools',
-        path: '/tools',
+        label: 'Shared Code',
+        path: '/shared-code',
         testId: 'tools-page',
       },
       {

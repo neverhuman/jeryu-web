@@ -1,4 +1,4 @@
-// ToolsPage.test.tsx — render smoke for the /tools control surface.
+// ToolsPage.test.tsx — render smoke for the /shared-code control surface.
 //
 // Drives the page with mocked registry + dashboard + scan endpoints and
 // asserts: the left rail ranks tools by total LOC saved, family cards render
@@ -191,7 +191,7 @@ describe('ToolsPage', () => {
     });
     render(
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/tools']}>
+        <MemoryRouter initialEntries={['/shared-code']}>
           <ToolsPage />
         </MemoryRouter>
       </QueryClientProvider>

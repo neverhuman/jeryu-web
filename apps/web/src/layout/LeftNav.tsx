@@ -43,7 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
   { to: '/fleet', label: 'Fleet', icon: ServerCog },
   { to: '/tool-fleet', label: 'Tool Fleet', icon: Wrench },
-  { to: '/tools', label: 'Tools', icon: Layers },
+  { to: '/shared-code', label: 'Shared Code', icon: Layers },
   { to: '/notifications', label: 'Notifications', icon: Bell },
   { to: '/audit', label: 'Audit', icon: ShieldCheck },
   { to: '/settings', label: 'Settings', icon: Cog },

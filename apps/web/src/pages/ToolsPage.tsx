@@ -1,4 +1,4 @@
-// ToolsPage.tsx — the /tools control surface behind the golden jeryu-tool box.
+// ToolsPage.tsx — the /shared-code control surface behind the golden jeryu-tool box.
 //
 // Left rail: every registry tool ranked by LOC saved (realized + anticipated),
 // from the same summary endpoint the golden box reads. Main area: the
@@ -39,7 +39,7 @@ export function ToolsPage(): JSX.Element {
       <header className="page__header tools-header">
         <div className="tools-header__row">
           <h1 className="page__title">
-            <Layers size={20} aria-hidden="true" /> Tools
+            <Layers size={20} aria-hidden="true" /> Shared Code
           </h1>
           <div className="tools-header__scan">
             {dashboard.data ? (
