@@ -34,6 +34,7 @@ import { useRealtime } from '../hooks/useRealtime';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { useSelectionStore } from '../stores/selectionStore';
 
+import { pullRoomHref } from './pullRoomModel';
 import { ClonePopover } from './repositoryOverviewParts';
 
 import '../components/browser/browser.css';
@@ -130,6 +131,9 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
         segments={[
           { label: 'Repos', to: '/repos' },
           { label: provider, to: `/repos?host=${provider}` },
+          ...(summary.family
+            ? [{ label: summary.family, to: `/repos/family/${encodeURIComponent(summary.family)}` }]
+            : []),
           { label: summary.id.owner },
           { label: summary.id.name },
         ]}
@@ -178,7 +182,11 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
 
       <section className="repo-overview" aria-label="Repository overview">
         <div>
-          <ReadmePanel repoId={repoId} ref={activeRef || defaultBranch} />
+          <ReadmePanel
+            repoId={repoId}
+            ref={activeRef || defaultBranch}
+            linkBase={`/repos/${encodeURIComponent(provider)}/${fullName}/blob/${activeRef || defaultBranch}/`}
+          />
         </div>
         <aside className="repo-overview__sidebar" aria-label="Sidebar">
           <article className="repo-overview__sidebar-card">
@@ -196,8 +204,10 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
           <article className="repo-overview__sidebar-card">
             <h2 className="repo-overview__sidebar-title">Open pull requests</h2>
             <p className="text-muted">
-              {summary.open_pull_requests} open · {summary.failing_checks} failing
-              checks
+              <Link to={pullRoomHref(`${summary.id.owner}/${summary.id.name}`)}>
+                {summary.open_pull_requests} open
+              </Link>{' '}
+              · {summary.failing_checks} failing checks
             </p>
             <Link
               to={`/repos/${encodeURIComponent(provider)}/${fullName}/pulls`}

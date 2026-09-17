@@ -34,7 +34,7 @@
 }
 
 .split-browser__repo:hover,
-.split-browser__repo[aria-pressed='true'] {
+.split-browser__repo[aria-current='page'] {
   color: var(--color-fg-primary);
   background: var(--color-bg-2);
   border-color: var(--color-border-subtle);

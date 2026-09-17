@@ -2,7 +2,9 @@
 
 import { Boxes, FileText, GitMerge, Play, ShieldAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+
+import { repoHref } from '../components/repo/RepoCard';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import type { RepositorySummary, TreeEntry } from '../api/types';
@@ -146,17 +148,14 @@ function SplitFamilyBrowser({
 }: {
   repos: RepositorySummary[];
 }): JSX.Element {
-  const [selectedId, setSelectedId] = useState<string>(repos[0]?.id.id ?? '');
-  const selected = repos.find((repo) => repo.id.id === selectedId) ?? repos[0];
+  // The selected repo lives in `?repo=<name>` so every repo in the family has
+  // its own shareable URL; no parameter selects the first repo.
+  const [searchParams] = useSearchParams();
+  const selectedName = searchParams.get('repo');
+  const selected = repos.find((repo) => repo.id.name === selectedName) ?? repos[0];
   const [activeRef, setActiveRef] = useState(selected?.default_branch ?? '');
   const [selectedFile, setSelectedFile] = useState<TreeEntry | null>(null);
   const blob = useBlob(selected?.id.id ?? null, activeRef, selectedFile?.path ?? '');
-
-  useEffect(() => {
-    if (!repos.some((repo) => repo.id.id === selectedId)) {
-      setSelectedId(repos[0]?.id.id ?? '');
-    }
-  }, [repos, selectedId]);
 
   useEffect(() => {
     setActiveRef(selected?.default_branch ?? '');
@@ -171,23 +170,24 @@ function SplitFamilyBrowser({
     <section className="split-browser" aria-label="Split repository browser">
       <aside className="split-browser__rail" aria-label="Split repositories">
         {repos.map((repo) => (
-          <button
+          <Link
             key={repo.id.id}
-            type="button"
+            to={`?repo=${encodeURIComponent(repo.id.name)}`}
             className="split-browser__repo"
-            aria-pressed={repo.id.id === selected.id.id}
-            onClick={() => setSelectedId(repo.id.id)}
+            aria-current={repo.id.id === selected.id.id ? 'page' : undefined}
           >
             <span className="split-browser__repo-name">{repo.id.name}</span>
             <span className="split-browser__repo-owner">{repo.id.owner}</span>
-          </button>
+          </Link>
         ))}
       </aside>
 
       <div className="split-browser__main">
         <div className="split-browser__toolbar">
           <div className="split-browser__title">
-            <strong>{selected.id.owner}/{selected.id.name}</strong>
+            <Link to={repoHref(selected)}>
+              <strong>{selected.id.owner}/{selected.id.name}</strong>
+            </Link>
             {selected.description ? <span>{selected.description}</span> : null}
           </div>
           <BranchSelector
@@ -217,6 +217,7 @@ function SplitFamilyBrowser({
                 <ErrorState title="Could not load file" error={blob.error} />
               ) : blob.data ? (
                 <CodeViewer
+                  linkBase={`${repoHref(selected)}/blob/${activeRef || selected.default_branch}/${selectedFile.path.replace(/[^/]*$/, '')}`}
                   path={selectedFile.path}
                   text={blob.data.text}
                   renderedHtml={blob.data.rendered_markdown?.html ?? null}
@@ -228,6 +229,7 @@ function SplitFamilyBrowser({
               )
             ) : (
               <ReadmePanel
+                linkBase={`${repoHref(selected)}/blob/${activeRef || selected.default_branch}/`}
                 repoId={selected.id.id}
                 ref={activeRef || selected.default_branch}
               />

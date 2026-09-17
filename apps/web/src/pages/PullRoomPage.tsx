@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { EvidenceState } from '../api/types';
 import { useControlPlane } from '../hooks/useControlPlane';
@@ -29,9 +30,24 @@ export function PullRoomPage(): JSX.Element {
   const snapshot = useControlPlane();
   const toolClusters = useToolBuildClusters(8);
   const ecosystem = useEcosystem();
-  const [filters, setFilters] = useState<PullRoomFilters>(
-    DEFAULT_PULL_ROOM_FILTERS
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  // `?repo=owner/name` seeds the repo filter so other pages can link here
+  // pre-filtered; changing the filter keeps the URL in step.
+  const [filters, setFiltersState] = useState<PullRoomFilters>(() => ({
+    ...DEFAULT_PULL_ROOM_FILTERS,
+    repo: searchParams.get('repo') || DEFAULT_PULL_ROOM_FILTERS.repo,
+  }));
+  const setFilters = (update: (current: PullRoomFilters) => PullRoomFilters): void =>
+    setFiltersState((current) => {
+      const next = update(current);
+      if (next.repo !== current.repo) {
+        const params = new URLSearchParams(searchParams);
+        if (next.repo === 'all') params.delete('repo');
+        else params.set('repo', next.repo);
+        setSearchParams(params, { replace: true });
+      }
+      return next;
+    });
 
   const items = useMemo(
     () => snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],

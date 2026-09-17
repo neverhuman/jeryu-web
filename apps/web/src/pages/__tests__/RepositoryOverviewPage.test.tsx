@@ -25,7 +25,7 @@ describe('RepositoryOverviewPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('opens the repository itself, even when it belongs to a family', async () => {
+  it('keeps a family repo on its own page and renders the README source', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const parsed = new URL(String(input), 'http://localhost');
       if (parsed.pathname === '/api/v1/repos') {
@@ -49,6 +49,7 @@ describe('RepositoryOverviewPage', () => {
       if (parsed.pathname === '/api/v1/repos/repo-1/readme') {
         return jsonResponse({
           html: '<p>Portal</p>',
+          markdown: '# Portal\n\n| Path | Role |\n| --- | --- |\n| `a` | b |\n\nSee [docs](docs/testing.md).\n',
           toc: [],
           links: [],
           renderer_version: 'test',
@@ -64,7 +65,21 @@ describe('RepositoryOverviewPage', () => {
     // A repo in a family used to redirect to /repos/family/:family, which made every split
     // repository unreachable from the repos table. The family is reachable from its own pill.
     expect(await screen.findByTestId('repo-overview-page')).toBeInTheDocument();
-    expect(screen.queryByText('Split family browser')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Portal' })).toBeInTheDocument();
+    expect(screen.queryByText('Split family browser')).toBeNull();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'docs' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/neverhuman/jeryu/blob/main/docs/testing.md'
+    );
+    expect(screen.getByRole('link', { name: 'jeryu-split' })).toHaveAttribute(
+      'href',
+      '/repos/family/jeryu-split'
+    );
+    expect(screen.getByRole('link', { name: /open/ })).toHaveAttribute(
+      'href',
+      '/pull-room?repo=neverhuman%2Fjeryu'
+    );
   });
 });
 

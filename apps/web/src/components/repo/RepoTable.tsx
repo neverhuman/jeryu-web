@@ -23,6 +23,8 @@ import { JankuraiScoreBadge } from './JankuraiScoreBadge';
 import { MirrorStatusBadge } from './MirrorStatusBadge';
 import { RepoHealthPill } from './RepoHealthPill';
 import { RepoRoleBadge } from './RepoRoleBadge';
+import { pullRoomHref } from '../../pages/pullRoomModel';
+
 import { repoHref } from './RepoCard';
 import { familyHref } from './RepoFamilyCard';
 
@@ -109,6 +111,15 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
         id: 'open_prs',
         header: 'Open PRs',
         accessorFn: (row) => row.open_pull_requests,
+        cell: ({ row }) => (
+          <Link
+            to={pullRoomHref(`${row.original.id.owner}/${row.original.id.name}`)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`${row.original.open_pull_requests} open pull requests in Pull Room`}
+          >
+            {row.original.open_pull_requests}
+          </Link>
+        ),
       },
       {
         id: 'failing_checks',

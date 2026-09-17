@@ -128,7 +128,8 @@ test.describe('Repository families', () => {
     await expect(browser.locator('.markdown-body')).toContainText(
       'README rendering proof.'
     );
-    await browser.getByRole('button', { name: /redline/i }).click();
+    await browser.getByRole('link', { name: /^redline/i }).click();
+    await expect(page).toHaveURL(/\/repos\/family\/veox-split\?repo=redline$/);
     await expect(
       browser.locator('.split-browser__title').filter({ hasText: 'veox/redline' })
     ).toBeVisible();

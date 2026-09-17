@@ -278,3 +278,8 @@ function suggestedProofLane(language: string | null): string {
   }
   return 'bash ops/ci/codegraph-tool-build.sh';
 }
+
+/** Pull Room filtered to one repo (`owner/name`). */
+export function pullRoomHref(repo: string): string {
+  return `/pull-room?repo=${encodeURIComponent(repo)}`;
+}

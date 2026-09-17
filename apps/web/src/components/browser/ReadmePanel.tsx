@@ -17,13 +17,16 @@ import {
 } from '../state';
 
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { MarkdownSource } from './MarkdownSource';
 
 export interface ReadmePanelProps {
   repoId: string | null;
   ref?: string;
+  /** SPA path relative README links resolve against, ending in `/`. */
+  linkBase?: string;
 }
 
-export function ReadmePanel({ repoId, ref }: ReadmePanelProps): JSX.Element {
+export function ReadmePanel({ repoId, ref, linkBase }: ReadmePanelProps): JSX.Element {
   const query = useMarkdown(repoId, ref);
 
   if (query.isPending) {
@@ -70,5 +73,11 @@ export function ReadmePanel({ repoId, ref }: ReadmePanelProps): JSX.Element {
     );
   }
 
+  // The payload carries the Markdown source beside the server HTML; render the
+  // source when present (see MarkdownSource for why).
+  const source = (data as { markdown?: unknown }).markdown;
+  if (typeof source === 'string' && source.trim() !== '') {
+    return <MarkdownSource markdown={source} linkBase={linkBase} />;
+  }
   return <MarkdownRenderer html={data.html} />;
 }

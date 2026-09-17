@@ -85,14 +85,14 @@ function listResult(repositories: RepositorySummary[]): unknown {
   };
 }
 
-function renderPage(family = 'veox-split'): void {
+function renderPage(family = 'veox-split', search = ''): void {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter
-        initialEntries={[`/repos/family/${encodeURIComponent(family)}`]}
+        initialEntries={[`/repos/family/${encodeURIComponent(family)}${search}`]}
       >
         <Routes>
           <Route
@@ -108,6 +108,18 @@ function renderPage(family = 'veox-split'): void {
 describe('RepositoryFamilyPage', () => {
   beforeEach(() => {
     useRepositoriesMock.mockReset();
+  });
+
+  it('selects the repo named in ?repo= so each repo has its own URL', () => {
+    useRepositoriesMock.mockReturnValue(
+      listResult([repoSummary('redline'), repoSummary('bluebird')])
+    );
+
+    renderPage('veox-split', '?repo=redline');
+
+    expect(screen.getByText('veox/redline')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /redline/, current: 'page' })).toBeInTheDocument();
+    expect(screen.getByText('README for uuid-redline')).toBeInTheDocument();
   });
 
   it('renders the rollup strip and split browser rail', () => {
@@ -150,8 +162,12 @@ describe('RepositoryFamilyPage', () => {
       name: 'Split repository browser',
     });
     expect(browser).toHaveClass('split-browser');
-    expect(screen.getByRole('button', { name: /redline/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /bluebird/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /redline/ })).toHaveAttribute('href', '/repos/family/veox-split?repo=redline');
+    expect(screen.getByRole('link', { name: /bluebird/, current: 'page' })).toHaveAttribute(
+      'href',
+      '/repos/family/veox-split?repo=bluebird'
+    );
+    expect(screen.getByRole('link', { name: 'veox/bluebird' })).toHaveAttribute('href', '/repos/jeryu/veox/bluebird');
     expect(screen.getByText('veox/bluebird')).toBeInTheDocument();
     expect(within(browser).getByText('file tree')).toBeInTheDocument();
     expect(screen.getByText('README for uuid-bluebird')).toBeInTheDocument();

@@ -13,6 +13,7 @@ import { usePreferencesStore } from '../../stores/preferencesStore';
 import { LoadingState } from '../state';
 
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { MarkdownSource } from './MarkdownSource';
 import { isMarkdownPath } from '../../hooks/useBlob';
 
 import './browser.css';
@@ -26,6 +27,8 @@ export interface CodeViewerProps {
   text: string | null;
   /** Server-rendered sanitized markdown HTML; `null` if not markdown. */
   renderedHtml?: string | null;
+  /** SPA path relative Markdown links resolve against, ending in `/`. */
+  linkBase?: string;
   /** Best-effort MIME type from the blob response. */
   mime?: string;
   /** When true, the viewer renders a "Binary file" notice instead. */
@@ -81,9 +84,10 @@ export function CodeViewer({
   renderedHtml,
   mime,
   isBinary,
+  linkBase,
 }: CodeViewerProps): JSX.Element {
   const isMd = isMarkdownPath(path);
-  const hasRenderedHtml = isMd && typeof renderedHtml === 'string';
+  const hasRenderedHtml = isMd && (typeof text === 'string' || typeof renderedHtml === 'string');
   const codeFontSize = usePreferencesStore((s) => s.codeFontSize);
   const [tab, setTab] = useState<'rendered' | 'raw'>(
     hasRenderedHtml ? 'rendered' : 'raw'
@@ -146,9 +150,13 @@ export function CodeViewer({
           </div>
         </div>
       ) : null}
-      {tab === 'rendered' && typeof renderedHtml === 'string' ? (
+      {tab === 'rendered' && hasRenderedHtml ? (
         <div className="code-viewer__rendered">
-          <MarkdownRenderer html={renderedHtml} />
+          {typeof text === 'string' ? (
+            <MarkdownSource markdown={text} linkBase={linkBase} />
+          ) : (
+            <MarkdownRenderer html={renderedHtml ?? ''} />
+          )}
         </div>
       ) : MonacoEditor && text !== null ? (
         <div className="code-viewer__monaco">

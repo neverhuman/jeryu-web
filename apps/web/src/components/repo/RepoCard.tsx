@@ -13,6 +13,8 @@
 import { Bot, GitBranch, GitMerge, Play, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { pullRoomHref } from '../../pages/pullRoomModel';
+
 import type { RepositorySummary } from '../../api/types';
 
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
@@ -63,13 +65,15 @@ export function RepoCard({ repo }: RepoCardProps): JSX.Element {
         <span className="repo-card__meta-item" title="Visibility">
           {repo.visibility}
         </span>
-        <span
+        <a
+          href={pullRoomHref(`${repo.id.owner}/${repo.id.name}`)}
           className="repo-card__meta-item"
-          title="Open pull requests"
+          title="Open pull requests in Pull Room"
+          onClick={(e) => e.stopPropagation()}
           aria-label={`${repo.open_pull_requests} open pull requests`}
         >
           <GitMerge size={12} aria-hidden="true" /> {repo.open_pull_requests}
-        </span>
+        </a>
         <span
           className="repo-card__meta-item"
           title="Failing checks"
