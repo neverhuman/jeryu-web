@@ -147,8 +147,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
 
     await expect(page.getByTestId('fleet-page')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('fleet-network')).toBeVisible();
-    await expect(page.getByTestId('fleet-node-board')).toBeVisible();
-    await expect(page.getByTestId('fleet-node-box-xbabe0')).toBeVisible();
+    await expect(page.getByTestId('fleet-node-list')).toBeVisible();
     await expect(page.getByTestId('fleet-node-xbabe0')).toContainText(
       /xbabe0/
     );

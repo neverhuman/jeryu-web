@@ -4,4 +4,4 @@ export { PoolCard } from './PoolCard';
 export { ComponentCell } from './ComponentCell';
 export { BottleneckBanner } from './BottleneckBanner';
 export { HealthBadge, RealtimePill } from './StatusBadges';
-export { RunnerNetworkBoard, RunnerNodeCard } from './RunnerNetwork';
+export { RunnerNodeList } from './RunnerNetwork';

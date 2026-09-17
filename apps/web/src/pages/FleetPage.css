@@ -100,16 +100,38 @@
   gap: 2px;
 }
 
-/* Pool card grid. */
+/* Pool list: one full-width row per pool. */
+.fleet__pool-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .fleet__pool-card {
   background-color: var(--color-bg-1);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(120px, 1fr) minmax(0, 3fr);
+  align-items: center;
   gap: var(--space-3);
-  box-shadow: var(--shadow-1);
+}
+
+.fleet__pool-card .fleet__stat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  gap: var(--space-1) var(--space-4);
+}
+
+.fleet__pool-card .fleet__stat {
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.fleet__pool-card > .fleet__pool-tags:last-child {
+  grid-column: 1 / -1;
 }
 
 .fleet__pool-card.is-saturated {
@@ -189,119 +211,84 @@
   margin-bottom: var(--space-3);
 }
 
-.fleet__network-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--space-3);
-}
-
 .fleet__network-layout {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-.fleet__network-board {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--space-3);
-}
-
-.fleet__node-box {
-  aspect-ratio: 1;
-  min-height: 150px;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-subtle);
-  background-color: var(--color-bg-1);
-  box-shadow: var(--shadow-1);
-}
-
-.fleet__node-box.is-online {
-  border-color: var(--color-accent-success);
-}
-
-.fleet__node-box.is-draining {
-  border-color: var(--color-accent-warning);
-}
-
-.fleet__node-box.is-offline {
-  border-color: var(--color-accent-danger);
-}
-
-.fleet__node-box.is-active {
-  background:
-    linear-gradient(180deg, var(--color-accent-success-bg), var(--color-bg-1));
-}
-
-.fleet__node-box-top,
-.fleet__node-box-foot {
+/* Runner node list: header + one row per node, tasks beneath the row. */
+.fleet__node-list {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--space-2);
+}
+
+.fleet__node-row > * {
   min-width: 0;
 }
 
-.fleet__node-box-name,
-.fleet__node-box-count {
-  font-family: var(--font-mono);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-fg-primary);
-  overflow-wrap: anywhere;
+.fleet__node-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) 170px 120px 64px 44px minmax(0, 1.5fr) minmax(0, 1.5fr)
+    110px;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
 }
 
-.fleet__node-box-count,
-.fleet__node-box-foot {
+.fleet__node-row--header {
+  padding: 0 var(--space-3);
   font-size: var(--font-size-xs);
-}
-
-.fleet__node-box-foot {
   color: var(--color-fg-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
-.fleet__slot-grid {
-  align-self: stretch;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 5px;
-}
-
-.fleet__slot {
-  display: block;
-  min-height: 10px;
-  border-radius: 2px;
-  background-color: var(--color-bg-3);
-  border: 1px solid var(--color-border-subtle);
-}
-
-.fleet__slot.is-used {
-  background-color: var(--color-accent-primary);
-  border-color: var(--color-accent-primary);
-}
-
-.fleet__node-card {
+.fleet__node-item {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-radius: var(--radius-lg);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border-subtle);
-  background:
-    linear-gradient(180deg, var(--color-bg-1), var(--color-bg-0));
-  box-shadow: var(--shadow-1);
+  border-left-width: 3px;
+  background-color: var(--color-bg-1);
 }
 
-.fleet__node-head {
+.fleet__node-item.is-online {
+  border-left-color: var(--color-accent-success);
+}
+
+.fleet__node-item.is-draining {
+  border-left-color: var(--color-accent-warning);
+}
+
+.fleet__node-item.is-offline {
+  border-left-color: var(--color-accent-danger);
+}
+
+.fleet__node-slots {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fleet__node-slots .fleet__bar {
+  flex: 1;
+}
+
+.fleet__node-mono {
+  font-family: var(--font-mono);
+}
+
+.fleet__node-muted {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fleet__node-titleblock {
@@ -340,41 +327,11 @@
   color: var(--color-text-secondary, inherit);
 }
 
-.fleet__node-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2) var(--space-3);
-  font-size: var(--font-size-sm);
-}
-
-.fleet__node-stat {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.fleet__node-stat dt {
-  color: var(--color-fg-muted);
-}
-
-.fleet__node-stat dd {
-  margin: 0;
-  font-family: var(--font-mono);
-}
-
-.fleet__node-empty {
-  margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg-2);
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-sm);
-}
-
 .fleet__task-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  margin-left: var(--space-4);
 }
 
 .fleet__task-card {
@@ -519,4 +476,28 @@
 
 .fleet__task-card--interactive:hover .fleet__task-open {
   opacity: 1;
+}
+
+/* Narrow viewports: list rows stack their cells instead of scrolling. */
+@media (max-width: 900px) {
+  .fleet__node-row--header {
+    display: none;
+  }
+
+  .fleet__node-row,
+  .fleet__pool-card {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .fleet__node-row [data-label]::before {
+    content: attr(data-label) ': ';
+    color: var(--color-fg-muted);
+    font-family: var(--font-sans, inherit);
+  }
+
+
+  .fleet__task-list {
+    margin-left: 0;
+  }
 }

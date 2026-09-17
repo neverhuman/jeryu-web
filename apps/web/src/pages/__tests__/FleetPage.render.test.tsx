@@ -250,9 +250,9 @@ describe('FleetPage render', () => {
     );
 
     expect(screen.getByTestId('fleet-network')).toBeInTheDocument();
-    expect(screen.getByTestId('fleet-node-board')).toBeInTheDocument();
-    expect(screen.getByTestId('fleet-node-box-xbabe0')).toHaveTextContent(
-      'xbabe0'
+    expect(screen.getByTestId('fleet-node-list')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem', { name: /^Runner node / })).toHaveLength(
+      2
     );
     expect(screen.getByTestId('fleet-node-xbabe0')).toHaveTextContent('xbabe0');
     expect(screen.getByTestId('fleet-node-local')).toHaveTextContent('local');

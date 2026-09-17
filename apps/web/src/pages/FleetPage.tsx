@@ -12,7 +12,7 @@
 //
 // This module is a thin composition shell: the per-pool cards, the health
 // strip cells, the bottleneck banner, the header status badges, and the
-// runner-network drilldown all live in `./fleet/*` and are re-exported below.
+// runner-node list all live in `./fleet/*` and are re-exported below.
 
 import { useMemo } from 'react';
 
@@ -34,8 +34,7 @@ import {
   HealthBadge,
   PoolCard,
   RealtimePill,
-  RunnerNetworkBoard,
-  RunnerNodeCard,
+  RunnerNodeList,
 } from './fleet';
 
 import './page.css';
@@ -81,7 +80,7 @@ export function FleetPage(): JSX.Element {
       : null;
 
   return (
-    <div className="page" data-testid="fleet-page">
+    <div className="page page--wide" data-testid="fleet-page">
       <header className="page__header">
         <div className="fleet__header-bar">
           <h1 className="page__title">Runner Fleet</h1>
@@ -176,12 +175,7 @@ export function FleetPage(): JSX.Element {
           </p>
         ) : (
           <div className="fleet__network-layout" data-testid="fleet-network">
-            <RunnerNetworkBoard nodes={runnerNetwork.nodes} />
-            <div className="fleet__network-grid">
-              {runnerNetwork.nodes.map((node) => (
-                <RunnerNodeCard key={node.runnerId} node={node} />
-              ))}
-            </div>
+            <RunnerNodeList nodes={runnerNetwork.nodes} />
           </div>
         )}
       </section>
@@ -196,7 +190,7 @@ export function FleetPage(): JSX.Element {
             scheduler registers them.
           </p>
         ) : (
-          <div className="page__cards">
+          <div className="fleet__pool-list">
             {state.pools.map((pool) => (
               <PoolCard key={pool.pool} pool={pool} />
             ))}
