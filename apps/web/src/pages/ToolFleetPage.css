@@ -1,0 +1,127 @@
+.tool-fleet__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.tool-fleet__input {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-primary);
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.tool-fleet__input[type='search'] {
+  flex: 1 1 240px;
+}
+
+.tool-fleet__count {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.tool-fleet__scroll {
+  overflow-x: auto;
+}
+
+.tool-fleet__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.tool-fleet__table th,
+.tool-fleet__table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-subtle);
+  white-space: nowrap;
+}
+
+.tool-fleet__table tbody tr:hover {
+  background-color: var(--color-bg-2);
+}
+
+.tool-fleet__num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.tool-fleet__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.tool-fleet__tool {
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-medium);
+}
+
+.tool-fleet__bar {
+  display: inline-block;
+  width: 64px;
+  height: 6px;
+  margin-left: var(--space-2);
+  vertical-align: middle;
+  background-color: var(--color-bg-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.tool-fleet__bar > span {
+  display: block;
+  height: 100%;
+  background-color: var(--color-accent-success);
+}
+
+.tool-fleet__none {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.tool-fleet__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.tool-fleet__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tool-fleet__meta a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.tool-fleet__repos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: 3 220px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.tool-fleet__repos li {
+  padding: 2px 0;
+}

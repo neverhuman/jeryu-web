@@ -126,7 +126,11 @@ test('tools scan, expand, propose, ignore, tool fleet, and non-admin settings @a
 
   await page.goto('/tool-fleet');
   await expect(page.getByTestId('tool-fleet-page')).toBeVisible();
-  await expect(page.getByTestId('tool-row-action-coverage')).toContainText(
+  await expect(page.getByTestId('tool-row-action-coverage')).toBeVisible();
+  await page.getByTestId('tool-fleet-search').fill('alice/jeryu');
+  await expect(page.getByTestId('tool-row-action-coverage')).toBeVisible();
+  await page.getByRole('link', { name: 'action-coverage' }).click();
+  await expect(page.getByTestId('tool-fleet-tool-page')).toContainText(
     'alice/jeryu'
   );
 

@@ -31,6 +31,7 @@ import { RepositoryOverviewPage } from '../pages/RepositoryOverviewPage';
 import { RepositorySettingsPage } from '../pages/RepositorySettingsPage';
 import { SearchResultsPage } from '../pages/SearchResultsPage';
 import { ToolFleetPage } from '../pages/ToolFleetPage';
+import { ToolFleetToolPage } from '../pages/ToolFleetToolPage';
 import { ToolsPage } from '../pages/ToolsPage';
 import { RepoRouter } from '../pages/RepoRouter';
 import { WorkDetailPage } from '../pages/WorkDetailPage';
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
       { path: 'intelligence', element: <IntelligencePage /> },
       { path: 'fleet', element: <FleetPage /> },
       { path: 'tool-fleet', element: <ToolFleetPage /> },
+      { path: 'tool-fleet/:tool', element: <ToolFleetToolPage /> },
       { path: 'tools', element: <ToolsPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'audit', element: <AuditPage /> },
