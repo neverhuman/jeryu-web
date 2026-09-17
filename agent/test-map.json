@@ -115,6 +115,11 @@
       "lane": "ci",
       "purpose": "verify pre-push gates delegate to local CI lanes"
     },
+    "package-lock.json": {
+      "command": "bash ops/ci/pr-ci.sh",
+      "lane": "web-ui",
+      "purpose": "verify locked frontend dependencies through the complete PR gate"
+    },
     "package.json": {
       "command": "just check",
       "lane": "check",

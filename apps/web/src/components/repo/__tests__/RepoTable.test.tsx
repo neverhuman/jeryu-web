@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
+import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import type { RepositorySummary } from '../../../api/types';
@@ -33,6 +34,25 @@ const REPO: RepositorySummary = {
 };
 
 describe('RepoTable', () => {
+  it.each(['mouse', 'keyboard'])('opens the PR count link with the %s without opening the row', async (input) => {
+    const user = userEvent.setup();
+    const router = createMemoryRouter([
+      { path: '/', element: <RepoTable repos={[REPO]} /> },
+      { path: '/pull-room', element: <h1>Pull Room</h1> },
+      { path: '/repos/*', element: <h1>Repository</h1> },
+    ]);
+    render(<RouterProvider router={router} />);
+    const link = screen.getByRole('link', { name: '0 open pull requests in Pull Room' });
+    if (input === 'mouse') await user.click(link);
+    else {
+      link.focus();
+      await user.keyboard('{Enter}');
+    }
+    expect(router.state.location.pathname).toBe('/pull-room');
+    expect(new URLSearchParams(router.state.location.search).get('repo')).toBe('neverhuman/jeryu-core');
+    expect(screen.getByRole('heading', { name: 'Pull Room' })).toBeInTheDocument();
+  });
+
   it('renders split-member role badges in rows', () => {
     render(
       <MemoryRouter>

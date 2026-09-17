@@ -24,6 +24,7 @@
     "ops/ci/": "ops",
     "ops/git-hooks/": "ops",
     "package.json": "jeryu-web",
+    "package-lock.json": "jeryu-web",
     "packages/ux-qa/": "jeryu-web",
     "repos.manifest.toml": "split",
     "rust-toolchain.toml": "workspace",

@@ -11,6 +11,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    minify: 'terser',
+    terserOptions: { compress: { passes: 2 } },
     // Manual chunking keeps the main entry under Vite's 500 KB
     // warning threshold by splitting the three large vendor surfaces
     // (Monaco editor, markdown pipeline, TanStack data layer) into

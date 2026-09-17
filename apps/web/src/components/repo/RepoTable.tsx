@@ -210,6 +210,7 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
               aria-label={`Open ${repo.id.name}`}
               onClick={() => navigate(repoHref(repo))}
               onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   navigate(repoHref(repo));

@@ -13,12 +13,12 @@ async function blockWebSocket(page: Page): Promise<void> {
   );
 }
 
-async function mockPullRoom(page: Page): Promise<void> {
+async function mockPullRoom(page: Page, snapshot = controlPlane()): Promise<void> {
   await page.route('**/api/v1/control-plane/status', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(controlPlane()),
+      body: JSON.stringify(snapshot),
     });
   });
   await page.route('**/api/v1/ecosystem', async (route) => {
@@ -110,7 +110,44 @@ test('Pull Room renders filters, queue lanes, PR cards, tooling rail, and cockpi
   await expect(page.getByText(/W-FE-11/i)).toHaveCount(0);
 });
 
-function controlPlane(): Record<string, unknown> {
+test('Pull Room follows repository URLs and browser history @action:pull_room.filters', async ({ page }, testInfo) => {
+  await blockWebSocket(page);
+  await mockBootstrap(page);
+  const snapshot = controlPlane();
+  snapshot.pullRequests[1].repo = 'bob/jeryu';
+  await mockPullRoom(page, snapshot);
+  const shell = new AppShellPage(page);
+  await shell.goto('/pull-room?repo=alice%2Fjeryu&view=queue');
+  await shell.assertShellLoaded();
+  const repo = page.getByRole('combobox', { name: 'Repo', exact: true });
+  await expect(repo).toHaveValue('alice/jeryu');
+  await expect(page.getByText('Fix BFF PR list')).toBeVisible();
+  await expect(page.getByText('Repair check posture')).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'State', exact: true }).selectOption('open');
+
+  await page.evaluate(() => {
+    window.history.pushState(null, '', '/pull-room?repo=bob%2Fjeryu&view=queue');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await expect(repo).toHaveValue('bob/jeryu');
+  await expect(page.getByText('Repair check posture')).toBeVisible();
+  await expect(page.getByText('Fix BFF PR list')).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'State', exact: true })).toHaveValue('open');
+  await page.goBack();
+  await expect(repo).toHaveValue('alice/jeryu');
+  await page.goForward();
+  await expect(repo).toHaveValue('bob/jeryu');
+  await repo.selectOption('all');
+  await expect(page).toHaveURL(/\/pull-room\?view=queue$/);
+  await expect(page.getByText('Fix BFF PR list')).toBeVisible();
+  await expect(page.getByText('Repair check posture')).toBeVisible();
+  await testInfo.attach('pull-room-url-navigation', {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  });
+});
+
+function controlPlane() {
   return {
     schemaVersion: 'jeryu.control_plane/v1',
     generatedAt: '2026-06-05T00:00:00Z',

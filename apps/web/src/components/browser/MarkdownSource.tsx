@@ -11,7 +11,7 @@ import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeSlug from 'rehype-slug';
-import remarkGfm from 'remark-gfm';
+import { remarkGfmRead } from './remarkGfmRead';
 
 import './browser.css';
 
@@ -70,7 +70,7 @@ export function MarkdownSource({ markdown, linkBase, className }: MarkdownSource
   return (
     <div className={`markdown-body ${className ?? ''}`.trim()}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfmRead]}
         rehypePlugins={[rehypeSlug, rehypeSanitize]}
         urlTransform={defaultUrlTransform}
         components={{ a: Anchor }}

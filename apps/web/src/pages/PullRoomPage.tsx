@@ -31,23 +31,16 @@ export function PullRoomPage(): JSX.Element {
   const toolClusters = useToolBuildClusters(8);
   const ecosystem = useEcosystem();
   const [searchParams, setSearchParams] = useSearchParams();
-  // `?repo=owner/name` seeds the repo filter so other pages can link here
-  // pre-filtered; changing the filter keeps the URL in step.
-  const [filters, setFiltersState] = useState<PullRoomFilters>(() => ({
-    ...DEFAULT_PULL_ROOM_FILTERS,
-    repo: searchParams.get('repo') || DEFAULT_PULL_ROOM_FILTERS.repo,
-  }));
-  const setFilters = (update: (current: PullRoomFilters) => PullRoomFilters): void =>
-    setFiltersState((current) => {
-      const next = update(current);
-      if (next.repo !== current.repo) {
-        const params = new URLSearchParams(searchParams);
-        if (next.repo === 'all') params.delete('repo');
-        else params.set('repo', next.repo);
-        setSearchParams(params, { replace: true });
-      }
-      return next;
-    });
+  const [localFilters, setFilters] = useState<PullRoomFilters>(DEFAULT_PULL_ROOM_FILTERS);
+  // Keep the repository in the URL so shared links and history update the results.
+  const repo = searchParams.get('repo') || DEFAULT_PULL_ROOM_FILTERS.repo;
+  const filters = useMemo(() => ({ ...localFilters, repo }), [localFilters, repo]);
+  const setRepo = (value: string): void => {
+    const params = new URLSearchParams(searchParams);
+    if (value === 'all') params.delete('repo');
+    else params.set('repo', value);
+    setSearchParams(params, { replace: true });
+  };
 
   const items = useMemo(
     () => snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],
@@ -116,9 +109,7 @@ export function PullRoomPage(): JSX.Element {
           Repo
           <select
             value={filters.repo}
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, repo: event.target.value }))
-            }
+            onChange={(event) => setRepo(event.target.value)}
           >
             <option value="all">All repos</option>
             {repos.map((repo) => (
