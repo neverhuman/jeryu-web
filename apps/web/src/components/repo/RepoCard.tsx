@@ -65,15 +65,13 @@ export function RepoCard({ repo }: RepoCardProps): JSX.Element {
         <span className="repo-card__meta-item" title="Visibility">
           {repo.visibility}
         </span>
-        <a
-          href={pullRoomHref(`${repo.id.owner}/${repo.id.name}`)}
+        <span
           className="repo-card__meta-item"
-          title="Open pull requests in Pull Room"
-          onClick={(e) => e.stopPropagation()}
+          title="Open pull requests"
           aria-label={`${repo.open_pull_requests} open pull requests`}
         >
           <GitMerge size={12} aria-hidden="true" /> {repo.open_pull_requests}
-        </a>
+        </span>
         <span
           className="repo-card__meta-item"
           title="Failing checks"
@@ -99,6 +97,17 @@ export function RepoCard({ repo }: RepoCardProps): JSX.Element {
         </span>
       </div>
       <div className="repo-card__actions">
+        <a
+          href={pullRoomHref(`${repo.id.owner}/${repo.id.name}`)}
+          className="repo-card__agents-link"
+          data-testid={`repo-pulls-link-${repo.id.owner}-${repo.id.name}`}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Open ${repo.open_pull_requests} pull requests for ${repo.id.name} in Pull Room`}
+        >
+          <GitMerge size={14} aria-hidden="true" />
+          <span className="repo-card__agents-count">{repo.open_pull_requests}</span>
+          PRs
+        </a>
         <a
           href={`${repoHref(repo)}/agents`}
           className="repo-card__agents-link"
