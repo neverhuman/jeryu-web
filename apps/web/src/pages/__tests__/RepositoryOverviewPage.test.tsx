@@ -25,7 +25,7 @@ describe('RepositoryOverviewPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('routes split repositories into the family browser', async () => {
+  it('opens the repository itself, even when it belongs to a family', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const parsed = new URL(String(input), 'http://localhost');
       if (parsed.pathname === '/api/v1/repos') {
@@ -61,7 +61,10 @@ describe('RepositoryOverviewPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Split family browser')).toBeInTheDocument();
+    // A repo in a family used to redirect to /repos/family/:family, which made every split
+    // repository unreachable from the repos table. The family is reachable from its own pill.
+    expect(await screen.findByTestId('repo-overview-page')).toBeInTheDocument();
+    expect(screen.queryByText('Split family browser')).not.toBeInTheDocument();
   });
 });
 
