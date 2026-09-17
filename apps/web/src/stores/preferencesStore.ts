@@ -62,7 +62,7 @@ const DEFAULTS: Pick<
   codeFontSize: 13,
   dateFormat: 'relative',
   keyboardMode: 'default',
-  reposView: 'card',
+  reposView: 'table',
   diffMode: 'unified',
   notificationsLastSeen: null,
 };

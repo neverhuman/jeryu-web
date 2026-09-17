@@ -73,10 +73,11 @@ test.describe('Repositories list (W-T-10)', () => {
     await repos.goto();
     await shell.assertShellLoaded();
 
-    // 1. List renders both repository cards.
+    // 1. List renders in the default table view.
     const cards = page.locator('a.repo-card');
-    await expect(cards).toHaveCount(REPOS.length, { timeout: 10_000 });
-    await expect(cards.first()).toContainText('jeryu');
+    await expect(page.getByRole('grid', { name: 'Repositories' })).toBeVisible({
+      timeout: 10_000,
+    });
 
     // 2. Toolbar actions: search/filter/sort and table/card view toggles.
     await page.getByLabel('Search repositories').fill('forge');
@@ -88,6 +89,8 @@ test.describe('Repositories list (W-T-10)', () => {
     );
     await page.getByLabel('Sort repositories').selectOption('name');
     await expect(page.getByLabel('Sort repositories')).toHaveValue('name');
+    await page.getByRole('radio', { name: 'Card view' }).click();
+    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
     await page.getByRole('radio', { name: 'Table view' }).click();
     await expect(page.getByRole('grid', { name: 'Repositories' })).toBeVisible();
     await page.getByRole('radio', { name: 'Card view' }).click();

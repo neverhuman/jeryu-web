@@ -103,8 +103,16 @@ export function RepositoriesPage({
   return (
     <div className="page page--wide" data-testid="repositories-page">
       <header className="page__header">
-        <div className="page__welcome">
+        <div className="page__title-row">
           <h1 className="page__title">Repositories</h1>
+          <ActionButton
+            variant="primary"
+            icon={<Plus size={14} aria-hidden="true" />}
+            onClick={() => setDialogOpen(true)}
+            aria-label="Create repository"
+          >
+            Create repo
+          </ActionButton>
         </div>
         <p className="page__subtitle">
           Browse, search, and create repositories across all hosts.
@@ -217,15 +225,6 @@ export function RepositoriesPage({
               Table
             </ActionButton>
           </div>
-
-          <ActionButton
-            variant="primary"
-            icon={<Plus size={14} aria-hidden="true" />}
-            onClick={() => setDialogOpen(true)}
-            aria-label="Create repository"
-          >
-            Create repo
-          </ActionButton>
         </div>
       </header>
 

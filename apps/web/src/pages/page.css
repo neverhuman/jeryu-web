@@ -45,6 +45,13 @@
   color: var(--color-fg-primary);
 }
 
+.page__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .page__subtitle {
   margin: 0;
   color: var(--color-fg-secondary);
