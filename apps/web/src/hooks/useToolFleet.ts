@@ -1,7 +1,7 @@
 // useToolFleet.ts — React Query hook for `GET /fleet/tool-adoption`.
 //
 // Projects every repo's latest recorded jankurai score (tool_adoption.items)
-// into a per-tool adoption matrix. Read-only; powers the Tool Fleet page.
+// into a per-tool adoption matrix. Read-only; powers Shared tools → Adoption.
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 

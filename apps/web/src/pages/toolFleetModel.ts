@@ -1,4 +1,4 @@
-// toolFleetModel.ts — pure filter/sort projection for the Tool Fleet table.
+// toolFleetModel.ts — pure filter/sort projection for the Adoption table.
 //
 // Kept free of React so the table's ordering and filtering rules are unit
 // testable without rendering.

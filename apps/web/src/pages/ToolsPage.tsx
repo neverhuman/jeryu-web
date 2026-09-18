@@ -1,15 +1,14 @@
-// ToolsPage.tsx — the /shared-code control surface behind the golden jeryu-tool box.
+// ToolsPage.tsx — Shared tools → Findings (`/shared-tools/findings`).
 //
-// Left rail: every registry tool ranked by LOC saved (realized + anticipated),
-// from the same summary endpoint the golden box reads. Main area: the
-// system-wide duplicate-code dashboard — pattern families over the persisted
+// The system-wide duplicate-code dashboard — pattern families over the persisted
 // cross-repo scan, each expandable into member clusters with exact file spans,
 // plus per-cluster Ignore (durable feedback) and Propose (files a registry
 // proposal + build task) actions. The "Run live scan" button starts a
-// server-side scan of every split family; progress streams in real time over
+// server-side scan of every split family (the server also re-runs it on a
+// schedule); progress streams in real time over
 // the `tool_finder.scan` WebSocket scope into the progress panel.
 
-import { Layers, Radar, Sparkles } from 'lucide-react';
+import { Radar, Sparkles } from 'lucide-react';
 
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import {
@@ -18,13 +17,13 @@ import {
 } from '../hooks/useToolFinder';
 import {
   PatternFamilyCard,
-  RegistryRail,
   ScanProgressPanel,
   formatCount,
   formatScannedAt,
 } from './tools';
 import './page.css';
 import './ToolsPage.css';
+import { SharedToolsTabs } from './sharedTools/SharedToolsTabs';
 
 export function ToolsPage(): JSX.Element {
   const dashboard = useToolFinderDashboard();
@@ -38,9 +37,7 @@ export function ToolsPage(): JSX.Element {
     <div className="page page--wide" data-testid="tools-page">
       <header className="page__header tools-header">
         <div className="tools-header__row">
-          <h1 className="page__title">
-            <Layers size={20} aria-hidden="true" /> Shared Code
-          </h1>
+          <h1 className="page__title">Shared tools</h1>
           <div className="tools-header__scan">
             {dashboard.data ? (
               <span className="tools-header__meta">
@@ -63,44 +60,42 @@ export function ToolsPage(): JSX.Element {
           </div>
         </div>
         <p className="page__subtitle">
-          Cross-repo duplicate-code pattern families across every split family
-          on this host — the strongest candidates for central tool builds,
-          ranked by the lines a shared tool would save.
+          Duplicated code across every split family, ranked by the lines a
+          shared tool would save. Propose a cluster to send it to Proposals;
+          the scan re-runs on its own every day.
         </p>
         {scan.startError ? (
           <p className="tools-scan__error">{scan.startError.message}</p>
         ) : null}
       </header>
+      <SharedToolsTabs />
 
       {showProgress && scan.status ? (
         <ScanProgressPanel status={scan.status} feed={scan.feed} />
       ) : null}
 
-      <div className="tools-body">
-        <RegistryRail />
-        <section className="tools-dashboard" aria-label="Pattern families">
-          {dashboard.isPending ? (
-            <LoadingState title="Loading the duplicate-code dashboard…" variant="message" />
-          ) : dashboard.isError ? (
-            <ErrorState
-              title="Could not load the dashboard."
-              error={dashboard.error}
-            />
-          ) : dashboard.data.families.length === 0 ? (
-            <EmptyState
-              icon={Sparkles}
-              title="No cross-repo clusters yet."
-              description="Run a live scan to mine every split family for duplicated code worth extracting into shared tools."
-            />
-          ) : (
-            <div className="tools-dashboard__families">
-              {dashboard.data.families.map((family) => (
-                <PatternFamilyCard key={family.family_id} family={family} />
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+      <section className="tools-dashboard" aria-label="Pattern families">
+        {dashboard.isPending ? (
+          <LoadingState title="Loading the duplicate-code dashboard…" variant="message" />
+        ) : dashboard.isError ? (
+          <ErrorState
+            title="Could not load the dashboard."
+            error={dashboard.error}
+          />
+        ) : dashboard.data.families.length === 0 ? (
+          <EmptyState
+            icon={Sparkles}
+            title="No cross-repo clusters yet."
+            description="Run a live scan to mine every split family for duplicated code worth extracting into shared tools."
+          />
+        ) : (
+          <div className="tools-dashboard__families">
+            {dashboard.data.families.map((family) => (
+              <PatternFamilyCard key={family.family_id} family={family} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

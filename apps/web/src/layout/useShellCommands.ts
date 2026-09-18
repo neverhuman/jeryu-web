@@ -62,10 +62,10 @@ export function useShellCommands(): void {
       },
       {
         id: 'nav.tools',
-        title: 'Go to Shared Code',
-        keywords: ['shared', 'code', 'tools', 'duplicate', 'finder', 'loc', 'adoption'],
+        title: 'Go to Shared tools',
+        keywords: ['shared', 'code', 'tools', 'duplicate', 'finder', 'loc', 'proposals', 'approve', 'adoption', 'fleet'],
         icon: 'layers',
-        target: { kind: 'route', path: '/shared-code' },
+        target: { kind: 'route', path: '/shared-tools' },
         shortcut: 'g t',
       },
       {
@@ -83,14 +83,6 @@ export function useShellCommands(): void {
         icon: 'search',
         target: { kind: 'route', path: '/search' },
         shortcut: '/',
-      },
-      {
-        id: 'nav.audit',
-        title: 'Go to Audit',
-        keywords: ['audit', 'compliance', 'logs'],
-        icon: 'shield',
-        target: { kind: 'route', path: '/audit' },
-        shortcut: 'g a',
       },
       {
         id: 'nav.settings',

@@ -1,7 +1,7 @@
-// ToolsPage.test.tsx — render smoke for the /shared-code control surface.
+// ToolsPage.test.tsx — render smoke for Shared tools → Findings.
 //
 // Drives the page with mocked registry + dashboard + scan endpoints and
-// asserts: the left rail ranks tools by total LOC saved, family cards render
+// asserts: family cards render
 // sorted with category chips, expanding a family exposes member clusters with
 // exact occurrence spans, the Ignore action POSTs durable feedback to the
 // cluster-feedback endpoint, and the Run-scan button POSTs the scan trigger.
@@ -191,21 +191,22 @@ describe('ToolsPage', () => {
     });
     render(
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/shared-code']}>
+        <MemoryRouter initialEntries={['/shared-tools/findings']}>
           <ToolsPage />
         </MemoryRouter>
       </QueryClientProvider>
     );
   }
 
-  it('ranks the rail by LOC saved and renders sorted family cards', async () => {
+  it('renders sorted family cards under the Shared tools tabs', async () => {
     renderPage();
 
-    // Rail: big-tool (1250 total) above small-tool (100).
-    await screen.findByTestId('rail-tool-big-tool');
-    const rail = screen.getAllByTestId(/^rail-tool-/);
-    expect(rail[0]).toHaveAttribute('data-testid', 'rail-tool-big-tool');
-    expect(rail[1]).toHaveAttribute('data-testid', 'rail-tool-small-tool');
+    await screen.findByTestId('family-toolfam-aaa');
+    expect(screen.getByRole('link', { name: 'Findings' })).toHaveAttribute(
+      'href',
+      '/shared-tools/findings'
+    );
+    expect(screen.queryByTestId(/^rail-tool-/)).toBeNull();
 
     // Families render with labels + category chips, candidates first.
     const families = screen.getAllByTestId(/^family-/);

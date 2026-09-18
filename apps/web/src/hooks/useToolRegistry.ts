@@ -1,15 +1,20 @@
-// useToolRegistry.ts — React Query hook for `GET /api/v1/tools/registry/summary`.
+// useToolRegistry.ts — React Query hooks for the reusable-tool registry.
 //
-// Read-only snapshot of the reusable-tool registry owned by the special
-// `jeryu-tool` repo (the family "tool control plane"). Powers the gold box at
-// the top of the repositories grid. Mirrors `useToolFleet`/`useRepositories`:
-// same query client, the shared `apiGet` error handling, and a 30 s stale
-// window. Consumers degrade to nothing on loading/error/empty so the box never
-// breaks the page when the backend handler is not yet deployed.
+// `useToolRegistry` reads `GET /api/v1/tools/registry/summary`, the snapshot
+// of `jeryu-tool`'s registry that powers Shared tools → Proposals.
+// `useDecideProposal` approves or rejects a proposed tool. The summary may be
+// absent on older backends, so it does not retry and consumers degrade to an
+// empty state.
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 
-import { apiGet } from '../api/client';
+import { apiGet, apiSend } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { ToolRegistrySummary } from '../api/types';
 
@@ -23,5 +28,37 @@ export function useToolRegistry(): UseQueryResult<ToolRegistrySummary, Error> {
     // miss is a permanent "not ready" signal for this surface, not a flake —
     // don't hammer it with retries; the box just renders null.
     retry: false,
+  });
+}
+
+export type ProposalDecision = 'approve' | 'reject';
+
+/** Receipt from `POST /api/v1/tool-finder/proposals/:tool_id/decision`. */
+export interface ProposalDecisionReceipt {
+  tool_id: string;
+  decision: ProposalDecision;
+  /** Status after the decision; `null` once a rejected proposal is removed. */
+  status: string | null;
+  removed_tasks: string[];
+  decided_by: string;
+}
+
+/** Approve (→ building) or reject (removed + cluster ignored) a proposal. */
+export function useDecideProposal(): UseMutationResult<
+  ProposalDecisionReceipt,
+  Error,
+  { toolId: string; decision: ProposalDecision; reason?: string }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ toolId, decision, reason }) =>
+      apiSend<ProposalDecisionReceipt>(endpoints.toolProposalDecision(toolId), {
+        decision,
+        reason,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tools', 'registry'] });
+      void queryClient.invalidateQueries({ queryKey: ['tool-finder', 'dashboard'] });
+    },
   });
 }

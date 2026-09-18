@@ -24,9 +24,9 @@ import type { ToolRegistryEntry, ToolRegistrySummary } from '../../api/types';
 
 import './repo.css';
 
-/** Drill-down target: the /shared-code control surface (registry rail + the
+/** Drill-down target: Shared tools → Findings (registry rail + the
  *  system-wide duplicate-code dashboard + live scan). */
-export const TOOL_CONTROL_PLANE_HREF = '/shared-code';
+export const TOOL_CONTROL_PLANE_HREF = '/shared-tools/findings';
 
 const MAX_LISTED_TOOLS = 3;
 

@@ -104,7 +104,7 @@ describe('GoldenToolBox', () => {
     const link = screen.getByRole('link', {
       name: /jeryu-tool control plane \(4 reusable tools\)/,
     });
-    expect(link).toHaveAttribute('href', '/shared-code');
+    expect(link).toHaveAttribute('href', '/shared-tools/findings');
     expect(link).toHaveClass('repo-golden-box');
 
     expect(screen.getByText('Tool control plane')).toBeInTheDocument();

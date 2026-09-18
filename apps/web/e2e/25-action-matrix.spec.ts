@@ -102,7 +102,7 @@ test('global chrome command palette, repo switcher, sidebar, notifications, not-
   });
 });
 
-test('tools scan, expand, propose, ignore, tool fleet, and non-admin settings @action:tools.scan @action:tools.expand_cluster @action:tools.propose @action:tools.ignore @action:tool_fleet.render @action:admin.denied', async ({
+test('shared tools findings, proposals, adoption, and non-admin settings @action:tools.scan @action:tools.expand_cluster @action:tools.propose @action:tools.ignore @action:shared_tools.proposals @action:tool_fleet.render @action:admin.denied', async ({
   page,
 }) => {
   await mockBootstrap(page, {
@@ -113,8 +113,8 @@ test('tools scan, expand, propose, ignore, tool fleet, and non-admin settings @a
 
   page.once('dialog', (dialog) => dialog.accept('covered by existing helper'));
   await page.goto('/shared-code');
+  await expect(page).toHaveURL(/\/shared-tools\/findings$/);
   await expect(page.getByTestId('tools-page')).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByTestId('rail-tool-action-coverage')).toBeVisible();
   await page.getByTestId('run-scan-button').click();
   await expect(page.getByTestId('scan-progress-panel')).toBeVisible();
   await page.getByRole('button', { name: /Shared API client/ }).click();
@@ -124,7 +124,15 @@ test('tools scan, expand, propose, ignore, tool fleet, and non-admin settings @a
   await expect(cluster).toContainText('proposal filed');
   await cluster.getByRole('button', { name: 'Ignore' }).click();
 
-  await page.goto('/tool-fleet');
+  await page.getByRole('link', { name: 'Proposals', exact: true }).click();
+  await expect(page.getByTestId('proposals-page')).toBeVisible();
+  const published = page.getByTestId('proposal-action-coverage');
+  await expect(published).toBeVisible();
+  // A non-admin viewer sees the registry but cannot decide proposals.
+  await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Adoption', exact: true }).click();
+  await expect(page).toHaveURL(/\/shared-tools\/adoption$/);
   await expect(page.getByTestId('tool-fleet-page')).toBeVisible();
   await expect(page.getByTestId('tool-row-action-coverage')).toBeVisible();
   await page.getByTestId('tool-fleet-search').fill('alice/jeryu');

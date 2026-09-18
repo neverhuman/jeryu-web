@@ -9,7 +9,7 @@
 //
 // The repoRouteParser utility centralizes this parsing.
 
-import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { Navigate, createBrowserRouter, useParams } from 'react-router-dom';
 
 import { AppShell } from '../layout/AppShell';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
@@ -20,6 +20,7 @@ import { IntelligencePage } from '../pages/IntelligencePage';
 import { IssuesPage } from '../pages/IssuesPage';
 import { PullRequestPage } from '../pages/PullRequestPage';
 import { PullRoomPage } from '../pages/PullRoomPage';
+import { ProposalsPage } from '../pages/ProposalsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
 import { RepositoriesPage } from '../pages/RepositoriesPage';
@@ -37,6 +38,17 @@ import { ToolsPage } from '../pages/ToolsPage';
 import { RepoRouter } from '../pages/RepoRouter';
 import { WorkDetailPage } from '../pages/WorkDetailPage';
 import { WorkPage } from '../pages/WorkPage';
+
+import {
+  ADOPTION_PATH,
+  FINDINGS_PATH,
+} from '../pages/sharedTools/SharedToolsTabs';
+
+/** `/tool-fleet/:tool` → `/shared-tools/adoption/:tool`. */
+function LegacyToolAdoptionRedirect(): JSX.Element {
+  const { tool = '' } = useParams();
+  return <Navigate to={`${ADOPTION_PATH}/${encodeURIComponent(tool)}`} replace />;
+}
 
 export const router = createBrowserRouter([
   {
@@ -64,10 +76,16 @@ export const router = createBrowserRouter([
       { path: 'intelligence', element: <IntelligencePage /> },
       { path: 'runners', element: <FleetPage /> },
       { path: 'fleet', element: <Navigate to="/runners" replace /> },
-      { path: 'tool-fleet', element: <ToolFleetPage /> },
-      { path: 'tool-fleet/:tool', element: <ToolFleetToolPage /> },
-      { path: 'shared-code', element: <ToolsPage /> },
-      { path: 'tools', element: <Navigate to="/shared-code" replace /> },
+      { path: 'shared-tools', element: <Navigate to={FINDINGS_PATH} replace /> },
+      { path: 'shared-tools/findings', element: <ToolsPage /> },
+      { path: 'shared-tools/proposals', element: <ProposalsPage /> },
+      { path: 'shared-tools/adoption', element: <ToolFleetPage /> },
+      { path: 'shared-tools/adoption/:tool', element: <ToolFleetToolPage /> },
+      // Pre-rename paths keep working.
+      { path: 'shared-code', element: <Navigate to={FINDINGS_PATH} replace /> },
+      { path: 'tools', element: <Navigate to={FINDINGS_PATH} replace /> },
+      { path: 'tool-fleet', element: <Navigate to={ADOPTION_PATH} replace /> },
+      { path: 'tool-fleet/:tool', element: <LegacyToolAdoptionRedirect /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'audit', element: <AuditPage /> },
       { path: 'search', element: <SearchResultsPage /> },

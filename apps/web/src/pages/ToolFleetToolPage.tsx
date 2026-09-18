@@ -1,4 +1,4 @@
-// ToolFleetToolPage.tsx — one jankurai tool's adoption, at `/tool-fleet/:tool`.
+// ToolFleetToolPage.tsx — one jankurai tool's adoption, at `/shared-tools/adoption/:tool`.
 //
 // Reads the same `GET /fleet/tool-adoption` payload as the table and lists the
 // adopting and should-adopt repos, each linking to the repo. The tool lanes are
@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useToolFleet } from '../hooks/useToolFleet';
 import { adoptionPillClass } from './ToolFleetPage';
 import { TOOL_DEFINITION_REPO, repoHref, toolRow } from './toolFleetModel';
+import { ADOPTION_PATH } from './sharedTools/SharedToolsTabs';
 import './page.css';
 import './ToolFleetPage.css';
 
@@ -35,8 +36,8 @@ export function ToolFleetToolPage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="tool-fleet-tool-page">
-      <Link className="tool-fleet__back" to="/tool-fleet">
-        <ArrowLeft size={14} aria-hidden="true" /> Tool Fleet
+      <Link className="tool-fleet__back" to={ADOPTION_PATH}>
+        <ArrowLeft size={14} aria-hidden="true" /> Adoption
       </Link>
       {isPending ? (
         <LoadingState title="Loading tool adoption…" variant="message" />

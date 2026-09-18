@@ -176,6 +176,8 @@ export const endpoints = {
   },
   toolFinderPropose: (clusterId: string): string =>
     `/api/v1/tool-finder/propose/${encodeURIComponent(clusterId)}`,
+  toolProposalDecision: (toolId: string): string =>
+    `/api/v1/tool-finder/proposals/${encodeURIComponent(toolId)}/decision`,
   toolBuildClusterFeedback: (clusterId: string): string =>
     `/api/v1/codegraph/tool-build/clusters/${encodeURIComponent(clusterId)}/feedback`,
   agentRuns: (): string => '/api/v1/agent-runs',

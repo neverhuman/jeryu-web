@@ -16,13 +16,10 @@ import {
   Brain,
   FolderGit2,
   GitMerge,
-  History,
   Layers,
   LayoutDashboard,
   Rocket,
   ServerCog,
-  ShieldCheck,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -44,10 +41,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/releases', label: 'Releases', icon: Rocket },
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
   { to: '/runners', label: 'Runners', icon: ServerCog },
-  { to: '/tool-fleet', label: 'Tool Fleet', icon: Wrench },
-  { to: '/shared-code', label: 'Shared Code', icon: Layers },
+  { to: '/shared-tools', label: 'Shared tools', icon: Layers },
   { to: '/notifications', label: 'Notifications', icon: Bell },
-  { to: '/audit', label: 'Audit', icon: ShieldCheck },
   { to: '/settings', label: 'Settings', icon: Cog },
 ];
 
@@ -133,19 +128,6 @@ export function LeftNav(): JSX.Element {
           </Link>
         </>
       ) : null}
-
-      <div className="left-nav__divider" />
-      <span className="left-nav__group">Activity</span>
-      <a
-        href="/audit"
-        className={`left-nav__item${
-          isActivePath(pathname, '/audit') ? ' is-active' : ''
-        }`}
-        aria-current={isActivePath(pathname, '/audit') ? 'page' : undefined}
-      >
-        <History aria-hidden="true" size={16} />
-        Recent events
-      </a>
     </nav>
   );
 }

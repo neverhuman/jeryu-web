@@ -1,9 +1,9 @@
-// ToolFleetPage.tsx — the tool-compounding visibility surface.
+// ToolFleetPage.tsx — Shared tools → Adoption (`/shared-tools/adoption`).
 //
 // Renders the per-tool adoption matrix from `GET /fleet/tool-adoption` as a
 // filterable, sortable table: for each jankurai tool, how many repos have
 // adopted it and how many are applicable-but-missing. Each tool links to its
-// detail page (`/tool-fleet/:tool`). Data is projected from each repo's latest
+// detail page (`/shared-tools/adoption/:tool`). Data is projected from each repo's latest
 // recorded score — no extra computation.
 
 import { ArrowDown, ArrowUp, Boxes } from 'lucide-react';
@@ -23,6 +23,7 @@ import {
 } from './toolFleetModel';
 import './page.css';
 import './ToolFleetPage.css';
+import { ADOPTION_PATH, SharedToolsTabs } from './sharedTools/SharedToolsTabs';
 
 const COLUMNS: { key: ToolFleetSortKey; label: string; numeric?: boolean }[] = [
   { key: 'tool', label: 'Tool' },
@@ -77,7 +78,7 @@ function ToolRow({ row }: { row: ToolFleetRow }): JSX.Element {
   return (
     <tr data-testid={`tool-row-${entry.tool}`}>
       <td>
-        <Link className="tool-fleet__tool" to={`/tool-fleet/${encodeURIComponent(entry.tool)}`}>
+        <Link className="tool-fleet__tool" to={`${ADOPTION_PATH}/${encodeURIComponent(entry.tool)}`}>
           {entry.tool}
         </Link>
       </td>
@@ -124,13 +125,14 @@ export function ToolFleetPage(): JSX.Element {
   return (
     <div className="page page--wide" data-testid="tool-fleet-page">
       <header className="page__header">
-        <h1 className="page__title">Tool Fleet</h1>
+        <h1 className="page__title">Shared tools</h1>
         <p className="page__subtitle">
-          Jankurai tool-compounding adoption across the fleet — which repos use
-          each shared tool, and which are applicable but haven&apos;t adopted it
-          yet. Projected from each repo&apos;s latest recorded audit score.
+          Where each shared tool is in use: which repos have adopted it, and
+          which should but haven&apos;t yet. Read from each repo&apos;s latest
+          jankurai score, recorded on every push.
         </p>
       </header>
+      <SharedToolsTabs />
 
       {isPending ? (
         <LoadingState title="Loading tool adoption…" variant="message" />

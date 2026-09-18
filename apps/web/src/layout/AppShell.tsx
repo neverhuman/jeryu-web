@@ -101,18 +101,13 @@ export function AppShell(): JSX.Element {
     group: 'Navigation',
     enabled: !!auth.user,
   });
-  useKeyboardShortcut('g t', () => navigate('/shared-code'), {
-    label: 'Go to Shared Code',
+  useKeyboardShortcut('g t', () => navigate('/shared-tools'), {
+    label: 'Go to Shared tools',
     group: 'Navigation',
     enabled: !!auth.user,
   });
   useKeyboardShortcut('g n', () => navigate('/notifications'), {
     label: 'Go to Notifications',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g a', () => navigate('/audit'), {
-    label: 'Go to Audit',
     group: 'Navigation',
     enabled: !!auth.user,
   });

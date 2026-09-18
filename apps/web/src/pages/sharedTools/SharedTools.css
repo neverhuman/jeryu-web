@@ -1,0 +1,73 @@
+/* SharedTools.css — tab strip + Proposals page for the Shared tools section. */
+
+.shared-tools-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  margin-bottom: 16px;
+}
+
+.shared-tools-tabs__tab {
+  padding: 6px 12px;
+  color: var(--color-fg-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.shared-tools-tabs__tab:hover {
+  color: var(--color-fg-primary);
+}
+
+.shared-tools-tabs__tab.is-active {
+  color: var(--color-fg-primary);
+  border-bottom-color: var(--color-accent-info);
+}
+
+.proposals__group {
+  margin-bottom: 24px;
+}
+
+.proposals__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proposals__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+}
+
+.proposals__name {
+  color: var(--color-fg-primary);
+  font-weight: 600;
+}
+
+.proposals__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--color-fg-muted);
+  font-size: 12px;
+}
+
+.proposals__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.proposals__error {
+  color: var(--color-accent-danger);
+  font-size: 12px;
+  width: 100%;
+}

@@ -152,7 +152,7 @@ async function mockIntelligence(page: Page): Promise<void> {
 }
 
 test.describe('Primary left navigation', () => {
-  test('routes every left-nav destination without hitting NotFound @action:chrome.sidebar_nav @action:notifications.page @action:audit.render @action:settings.render @action:tools.nav @action:tool_fleet.nav', async ({
+  test('routes every left-nav destination without hitting NotFound @action:chrome.sidebar_nav @action:notifications.page @action:settings.render @action:shared_tools.nav', async ({
     page,
   }) => {
     await blockWebSocket(page);
@@ -229,13 +229,9 @@ test.describe('Primary left navigation', () => {
         testId: 'fleet-page',
       },
       {
-        label: 'Tool Fleet',
-        path: '/tool-fleet',
-        testId: 'tool-fleet-page',
-      },
-      {
-        label: 'Shared Code',
-        path: '/shared-code',
+        // Lands on the first tab (Findings) through the section redirect.
+        label: 'Shared tools',
+        path: '/shared-tools/findings',
         testId: 'tools-page',
       },
       {
@@ -244,19 +240,9 @@ test.describe('Primary left navigation', () => {
         testId: 'notifications-page',
       },
       {
-        label: 'Audit',
-        path: '/audit',
-        testId: 'audit-page',
-      },
-      {
         label: 'Settings',
         path: '/settings',
         testId: 'settings-page',
-      },
-      {
-        label: 'Recent events',
-        path: '/audit',
-        testId: 'audit-page',
       },
     ] as const;
 

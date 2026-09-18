@@ -77,9 +77,9 @@ scm ✓   db ✓   cache ✓   vault ✓`,
   },
   {
     id: 'tools',
-    label: 'SHARED CODE',
-    title: 'Shared Code',
-    tagline: 'Duplicate-code radar & tool-adoption fleet, ranked by LOC saved.',
+    label: 'SHARED TOOLS',
+    title: 'Shared tools',
+    tagline: 'Find duplicated code, approve shared tools, track where they are adopted.',
     accent: 'var(--color-gold)',
     preview: `tool             repos    LOC saved
 jankurai-diff    7/7      ▰▰▰▰▰ 4.2k

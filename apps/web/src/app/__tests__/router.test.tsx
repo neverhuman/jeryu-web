@@ -36,13 +36,24 @@ describe('router route table', () => {
     expect(familyIdx).toBeLessThan(catchAllIdx);
   });
 
-  it('registers the /shared-code surface above the not-found catch-all', () => {
+  it('registers the Shared tools pages and legacy redirects above the catch-all', () => {
     const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
-    const toolsIdx = paths.indexOf('shared-code');
     const notFoundIdx = paths.indexOf('*');
-    expect(toolsIdx).toBeGreaterThan(-1);
     expect(notFoundIdx).toBeGreaterThan(-1);
-    expect(toolsIdx).toBeLessThan(notFoundIdx);
+    for (const path of [
+      'shared-tools',
+      'shared-tools/findings',
+      'shared-tools/proposals',
+      'shared-tools/adoption',
+      'shared-tools/adoption/:tool',
+      'shared-code',
+      'tool-fleet',
+      'tool-fleet/:tool',
+    ]) {
+      const idx = paths.indexOf(path);
+      expect(idx, path).toBeGreaterThan(-1);
+      expect(idx, path).toBeLessThan(notFoundIdx);
+    }
   });
 
   it('registers /runners and keeps /fleet as a redirect above the catch-all', () => {
