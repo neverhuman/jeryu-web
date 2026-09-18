@@ -138,6 +138,9 @@ export const endpoints = {
       ? `/api/v1/control-plane/artifacts/latest?repo=${encodeURIComponent(repo)}`
       : '/api/v1/control-plane/artifacts/latest',
   controlPlaneRunners: (): string => '/api/v1/control-plane/runners',
+  /** Every readable repository's live deployment in an environment, with its lag. */
+  deployedRepositories: (environment = 'production'): string =>
+    `/api/v1/deployments?environment=${encodeURIComponent(environment)}`,
   /** GitHub-shaped per-environment summary (latest, current, previous). */
   repoEnvironments: (owner: string, repo: string): string =>
     `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/environments`,

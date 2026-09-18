@@ -63,6 +63,25 @@ export interface EnvironmentsResponse {
   environments: EnvironmentSummary[];
 }
 
+/** One row of `GET /api/v1/deployments?environment=`. */
+export interface DeployedRepository {
+  /** `owner/name`. */
+  repo: string;
+  default_branch: string;
+  sha: string;
+  release: string | null;
+  deployed_at: string;
+  deployed_by: string;
+  /** Commits on the default branch the deployment lacks; null = git could not say. */
+  commits_behind: number | null;
+}
+
+/** Repositories with a live deployment in `environment`; others are omitted. */
+export interface DeployedRepositoriesResponse {
+  environment: string;
+  repositories: DeployedRepository[];
+}
+
 export interface CompareCommit {
   sha: string;
   summary: string;

@@ -25,6 +25,7 @@ import {
   PermissionDeniedState,
 } from '../components/state';
 import type { RepoSort } from '../hooks/useRepositories';
+import type { DeployedRepository } from '../api/types/deployments';
 import type { RepositorySummary } from '../api/types';
 
 export interface FilterState {
@@ -136,6 +137,8 @@ interface RepositoriesBodyProps {
   /** Active `?family=` filter; set disables family tiles. */
   familyFilter?: string;
   onClearFilters: () => void;
+  /** Live production deployments keyed by `owner/name`, for the table view. */
+  deployed?: ReadonlyMap<string, DeployedRepository>;
 }
 
 export function RepositoriesBody({
@@ -146,6 +149,7 @@ export function RepositoriesBody({
   search,
   familyFilter,
   onClearFilters,
+  deployed,
 }: RepositoriesBodyProps): JSX.Element {
   if (loading) {
     return <LoadingState title="Loading repositories…" rows={6} />;
@@ -190,7 +194,7 @@ export function RepositoriesBody({
   }
 
   if (view === 'table') {
-    return <RepoTable repos={repos} />;
+    return <RepoTable repos={repos} deployed={deployed} />;
   }
 
   // When searching or drilling into a specific family the user wants the

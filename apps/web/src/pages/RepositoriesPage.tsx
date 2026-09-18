@@ -27,6 +27,7 @@ import {
   type RepoSort,
   type RepositoriesQuery,
 } from '../hooks/useRepositories';
+import { useDeployedRepositories } from '../hooks/useDeployedRepositories';
 import { usePreferencesStore } from '../stores/preferencesStore';
 import {
   DEFAULT_FILTER,
@@ -89,6 +90,7 @@ export function RepositoriesPage({
     [filter]
   );
   const list = useRepositories(query);
+  const deployed = useDeployedRepositories();
 
   const closeDialog = (): void => {
     setDialogOpen(false);
@@ -235,6 +237,7 @@ export function RepositoriesPage({
         view={reposView}
         search={filter.search}
         familyFilter={filter.family}
+        deployed={deployed}
         onClearFilters={() => {
           setFilter(DEFAULT_FILTER);
           setSearchInput('');

@@ -18,8 +18,10 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import type { RepositorySummary } from '../../api/types';
+import type { DeployedRepository } from '../../api/types/deployments';
 
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
+import { unshippedCell, unshippedSortValue, unshippedTitle } from './unshipped';
 import { MirrorStatusBadge } from './MirrorStatusBadge';
 import { RepoHealthPill } from './RepoHealthPill';
 import { RepoRoleBadge } from './RepoRoleBadge';
@@ -33,9 +35,16 @@ import './repo.css';
 
 export interface RepoTableProps {
   repos: RepositorySummary[];
+  /** Live production deployments keyed by `owner/name`; absent = nothing deployed. */
+  deployed?: ReadonlyMap<string, DeployedRepository>;
 }
 
-export function RepoTable({ repos }: RepoTableProps): JSX.Element {
+const NOTHING_DEPLOYED: ReadonlyMap<string, DeployedRepository> = new Map();
+
+export function RepoTable({
+  repos,
+  deployed = NOTHING_DEPLOYED,
+}: RepoTableProps): JSX.Element {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'name', desc: false },
@@ -123,6 +132,44 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
         ),
       },
       {
+        id: 'unshipped',
+        header: 'Unshipped',
+        // Commits on the default branch that production does not run yet.
+        accessorFn: (row) =>
+          unshippedSortValue(
+            unshippedCell(deployed.get(`${row.id.owner}/${row.id.name}`))
+          ),
+        cell: ({ row }) => {
+          const repo = `${row.original.id.owner}/${row.original.id.name}`;
+          const cell = unshippedCell(deployed.get(repo));
+          const title = unshippedTitle(cell);
+          if (cell.kind === 'behind') {
+            return (
+              <Link
+                to={`/releases?repo=${encodeURIComponent(repo)}`}
+                className="repo-table__unshipped"
+                onClick={(e) => e.stopPropagation()}
+                title={title}
+                aria-label={title}
+                data-testid={`repo-unshipped-${row.original.id.name}`}
+              >
+                {cell.commits}
+              </Link>
+            );
+          }
+          return (
+            <span
+              className="text-muted"
+              title={title}
+              aria-label={title}
+              data-testid={`repo-unshipped-${row.original.id.name}`}
+            >
+              {cell.kind === 'up_to_date' ? '0' : cell.kind === 'unknown' ? '?' : '—'}
+            </span>
+          );
+        },
+      },
+      {
         id: 'failing_checks',
         header: 'Checks',
         accessorFn: (row) => row.failing_checks,
@@ -154,7 +201,7 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
         ),
       },
     ],
-    []
+    [deployed]
   );
 
   const table = useReactTable({

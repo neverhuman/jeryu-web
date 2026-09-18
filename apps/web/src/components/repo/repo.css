@@ -905,3 +905,8 @@
   outline: 2px solid var(--color-accent-danger);
   outline-offset: 1px;
 }
+
+.repo-table__unshipped {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
