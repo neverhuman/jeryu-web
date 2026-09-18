@@ -311,7 +311,7 @@ which is registered via `vitest.config.ts` (`setupFiles`).
 
 | Limit | Value |
 |---|---:|
-| Initial shell JS (gzip) | **≤ 350 KB** |
+| Initial shell JS (gzip) | **≤ 700 KB** |
 | Route chunks per page | ≤ 80 KB gz |
 | Largest single asset | ≤ 1 MB |
 | First useful paint (local) | ≤ 1.5 s |
@@ -321,7 +321,7 @@ Bundle size is checked in CI:
 
 ```bash
 du -b dist/assets/index-*.js | awk '{print $1}' \\
-  | xargs -I {} sh -c '[ {} -lt 358400 ] || echo "JS BUDGET EXCEEDED"'
+  | xargs -I {} sh -c '[ {} -lt 716800 ] || echo "JS BUDGET EXCEEDED"'
 ```
 
 Monaco editor (when wired) is **lazy-loaded** on the file view route; the

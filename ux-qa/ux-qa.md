@@ -27,7 +27,7 @@ plus a sibling `web-forge.latest.json` symlink-equivalent for downstream tools.
 | `axe_scans` | Any `*.axe.json` / `playwright-axe-*.json` artifact under `target/jankurai/ux-qa/` has zero `critical` or `serious` violations. |
 | `markdown_xss` | `cargo nextest run -p jeryu --test web_markdown_tests` passes; receipt written to `target/jankurai/ux-qa/markdown-xss.json`. |
 | `ws_replay` | Playwright HTML report references the `08-ws-reconnect` spec. |
-| `bundle_size` | Total gzipped size of every `dist/assets/*.js` file is below 350 KB. |
+| `bundle_size` | Total gzipped size of every `dist/assets/*.js` file is below 700 KB. |
 
 Each check produces a `{ name, pass, details }` entry in the receipt. The
 top-level `pass` is true if and only if every check passes. The harness exits

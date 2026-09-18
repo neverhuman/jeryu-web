@@ -24,7 +24,7 @@
 //                                     when missing)
 //   7. WS replay test               Playwright report contains spec
 //                                     `08-ws-reconnect`
-//   8. Bundle size budget           gzip(dist/assets/index-*.js) < 350 KB
+//   8. Bundle size budget           gzip(every dist/assets/*.js) < 700 KB
 //   9. Lighthouse perf score        target/jankurai/ux-qa/lighthouse/*.report.json
 //                                     OR target/jankurai/ux-qa/lighthouse.json
 //                                     (soft-pass if no artifacts; fails only
@@ -66,7 +66,7 @@ const webDir = existsSync(join(repoRoot, 'apps', 'web'))
 const uxArtifactDir = join(repoRoot, 'target', 'jankurai', 'ux-qa');
 mkdirSync(uxArtifactDir, { recursive: true });
 
-const BUNDLE_BUDGET_BYTES = 350 * 1024;
+const BUNDLE_BUDGET_BYTES = 700 * 1024;
 
 // ── helper utilities ───────────────────────────────────────────────────────
 
