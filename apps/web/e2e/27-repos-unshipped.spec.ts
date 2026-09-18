@@ -44,7 +44,6 @@ test('repositories table shows commits production lacks @action:repos.unshipped'
   );
 
   await page.goto('/repos');
-  await page.getByRole('radio', { name: 'Table view' }).click();
   await expect(page.getByRole('columnheader', { name: 'Unshipped' })).toBeVisible();
 
   const behind = page.getByTestId('repo-unshipped-jeryu-deploy');

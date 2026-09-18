@@ -11,12 +11,8 @@ import { Search } from 'lucide-react';
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
 import {
-  GoldenToolBox,
-  RepoCard,
-  RepoFamilyCard,
   RepoTable,
   formatFamilyName,
-  partitionByFamily,
 } from '../components/repo';
 import {
   EmptyState,
@@ -131,13 +127,8 @@ interface RepositoriesBodyProps {
   loading: boolean;
   error: Error | null;
   repos: RepositorySummary[];
-  view: 'card' | 'table';
-  /** Active free-text search; non-empty disables family tiles. */
-  search: string;
-  /** Active `?family=` filter; set disables family tiles. */
-  familyFilter?: string;
   onClearFilters: () => void;
-  /** Live production deployments keyed by `owner/name`, for the table view. */
+  /** Live production deployments keyed by `owner/name`. */
   deployed?: ReadonlyMap<string, DeployedRepository>;
 }
 
@@ -145,9 +136,6 @@ export function RepositoriesBody({
   loading,
   error,
   repos,
-  view,
-  search,
-  familyFilter,
   onClearFilters,
   deployed,
 }: RepositoriesBodyProps): JSX.Element {
@@ -193,42 +181,5 @@ export function RepositoriesBody({
     );
   }
 
-  if (view === 'table') {
-    return <RepoTable repos={repos} deployed={deployed} />;
-  }
-
-  // When searching or drilling into a specific family the user wants the
-  // matching repos themselves — render flat cards without family tiles.
-  // Within a family drill-down the split family surfaces its public
-  // portal first (see `sortFamilyRepos`).
-  const flat = search.trim() !== '' || Boolean(familyFilter);
-  if (flat) {
-    const ordered = familyFilter
-      ? sortFamilyRepos(familyFilter, repos)
-      : repos;
-    return (
-      <div className="page__cards">
-        {ordered.map((repo) => (
-          <RepoCard key={repo.id.id} repo={repo} />
-        ))}
-      </div>
-    );
-  }
-
-  const { families, singles } = partitionByFamily(repos);
-  return (
-    <div className="page__cards">
-      {families.map((family) => (
-        <RepoFamilyCard key={family.name} family={family} />
-      ))}
-      {singles.map((repo) => (
-        <RepoCard key={repo.id.id} repo={repo} />
-      ))}
-      {/* Gold "tool control plane" box pinned to the VERY BOTTOM of the
-          default view at 3x card width. Self-degrades to null while loading /
-          on error / when the registry endpoint is absent, so it never
-          disturbs the grid. */}
-      <GoldenToolBox />
-    </div>
-  );
+  return <RepoTable repos={repos} deployed={deployed} />;
 }

@@ -1,8 +1,7 @@
 // RepositoriesPage.tsx — Phase 2 implementation (W-FE-08).
 //
-// Renders the repository list/grid with a debounced search input, filter
-// chips, sort dropdown, and a card/table view toggle whose state is
-// persisted in `preferencesStore.reposView`. The "Create repo" button
+// Renders the repository table with a debounced search input, filter
+// chips, and sort dropdown. The "Create repo" button
 // surfaces the 2-step preview→execute dialog (`CreateRepoDialog`).
 //
 // All five UX-QA states are wired:
@@ -10,9 +9,9 @@
 //   * empty         — `total === 0`
 //   * error         — non-403 ApiError
 //   * permission    — 403 from the list endpoint
-//   * success       — family tiles first, then single repo cards.
+//   * success       — the repository table.
 
-import { LayoutGrid, Plus, Table } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   useLocation,
@@ -28,7 +27,6 @@ import {
   type RepositoriesQuery,
 } from '../hooks/useRepositories';
 import { useDeployedRepositories } from '../hooks/useDeployedRepositories';
-import { usePreferencesStore } from '../stores/preferencesStore';
 import {
   DEFAULT_FILTER,
   FilterChips,
@@ -52,9 +50,6 @@ export function RepositoriesPage({
   const location = useLocation();
   const effectiveMode =
     mode ?? (params.get('new') === '1' ? 'create' : 'list');
-
-  const reposView = usePreferencesStore((s) => s.reposView);
-  const setReposView = usePreferencesStore((s) => s.setReposView);
 
   const [filter, setFilter] = useState<FilterState>(DEFAULT_FILTER);
   const [searchInput, setSearchInput] = useState('');
@@ -205,28 +200,6 @@ export function RepositoriesPage({
             <option value="failing_checks">Failing checks</option>
           </select>
 
-          <div className="repo-toolbar__group" role="radiogroup" aria-label="View">
-            <ActionButton
-              variant={reposView === 'card' ? 'primary' : 'ghost'}
-              onClick={() => setReposView('card')}
-              role="radio"
-              aria-checked={reposView === 'card'}
-              icon={<LayoutGrid size={12} aria-hidden="true" />}
-              aria-label="Card view"
-            >
-              Cards
-            </ActionButton>
-            <ActionButton
-              variant={reposView === 'table' ? 'primary' : 'ghost'}
-              onClick={() => setReposView('table')}
-              role="radio"
-              aria-checked={reposView === 'table'}
-              icon={<Table size={12} aria-hidden="true" />}
-              aria-label="Table view"
-            >
-              Table
-            </ActionButton>
-          </div>
         </div>
       </header>
 
@@ -234,9 +207,6 @@ export function RepositoriesPage({
         loading={list.isPending}
         error={list.error}
         repos={repos}
-        view={reposView}
-        search={filter.search}
-        familyFilter={filter.family}
         deployed={deployed}
         onClearFilters={() => {
           setFilter(DEFAULT_FILTER);

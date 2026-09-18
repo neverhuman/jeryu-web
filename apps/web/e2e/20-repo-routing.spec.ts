@@ -138,23 +138,4 @@ test.describe('Repository sub-page routing', () => {
     // The agents link should point to the correct URL.
     await expect(agentsLink).toHaveAttribute('href', `${REPO_PATH}/agents`);
   });
-
-  test('clicking Agents quick-action on repo card navigates to agents page @action:repo.agents_quick_nav', async ({
-    page,
-  }) => {
-    await seed(page);
-    const shell = new AppShellPage(page);
-    await shell.goto('/repos');
-    await shell.assertShellLoaded();
-    await page.getByRole('radio', { name: 'Card view' }).click();
-
-    // Find and click the agents link on the repo card.
-    const agentsLink = page.getByTestId(`repo-agents-link-${REPO.owner}-${REPO.name}`);
-    await expect(agentsLink).toBeVisible();
-    await agentsLink.click();
-
-    // Should navigate to the agents page.
-    await expect(page).toHaveURL(new RegExp(`${REPO_PATH}/agents$`));
-    await expect(page.getByTestId('repo-agents-page')).toBeVisible({ timeout: 10000 });
-  });
 });

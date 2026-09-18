@@ -1,9 +1,9 @@
-// 21-repo-families.spec.ts — repository family tiles + drill-down.
+// 21-repo-families.spec.ts — repository family links + drill-down.
 //
-// The repos card view rolls repos that share `family` into one tile
-// (rollup health, member count, summed activity) and clicking the tile
-// drills into `/repos/family/:family`, which renders only the member
-// repos inside the boxed panel. Repos without a family stay plain cards.
+// The repos table links each repo that shares `family` to its family page;
+// clicking the link drills into `/repos/family/:family`, which renders only
+// the member repos inside the boxed panel. Repos without a family have no
+// link.
 // The list mock honours `?family=` like the real backend, so the
 // drill-down page exercises the same filter path the SPA ships.
 
@@ -44,7 +44,7 @@ const REPOS = [
 ];
 
 test.describe('Repository families', () => {
-  test('list shows one family tile + plain cards, tile drills into the family page @action:repos.family_drilldown @action:repos.split_repo_switch @action:code.file_select @action:code.readme_preview', async ({
+  test('list links each family member, the family link drills into the family page @action:repos.family_drilldown @action:repos.split_repo_switch @action:code.file_select @action:code.readme_preview', async ({
     page,
   }) => {
     // Regression net for the keyboard-registry re-render loop: it kept
@@ -69,23 +69,21 @@ test.describe('Repository families', () => {
     const shell = new AppShellPage(page);
     await page.goto('/repos');
     await shell.assertShellLoaded();
-    await page.getByRole('radio', { name: 'Card view' }).click();
 
-    // 1. One family tile for the two veox-split repos.
-    const tile = page.locator('a.repo-family-card');
-    await expect(tile).toHaveCount(1, { timeout: 10_000 });
-    await expect(tile).toContainText('veox');
-    await expect(tile).toHaveAttribute('href', '/repos/family/veox-split');
-    await expect(tile).toContainText('2 repos');
+    // 1. Both veox-split rows link their family; the familyless repo has none.
+    const familyLinks = page.getByRole('link', { name: 'Open family veox-split' });
+    await expect(familyLinks).toHaveCount(2, { timeout: 10_000 });
+    await expect(familyLinks.first()).toHaveAttribute('href', '/repos/family/veox-split');
+    await expect(page.locator('a.repo-table__family-link')).toHaveCount(2);
 
-    // 2. The familyless repo renders as a plain card (no tile membership).
-    const plainCards = page.locator('a.repo-card:not(.repo-family-card)');
-    await expect(plainCards).toHaveCount(1);
-    await expect(plainCards.first()).toContainText('solo');
+    // 2. Every repo, including the familyless one, is a table row.
+    const rows = page.getByRole('grid', { name: 'Repositories' }).locator('tbody tr');
+    await expect(rows).toHaveCount(REPOS.length);
+    await expect(rows.filter({ hasText: 'solo' })).toHaveCount(1);
 
-    // 3. Clicking the tile commits the SPA transition: URL AND rendered
+    // 3. Clicking the family link commits the SPA transition: URL AND rendered
     //    outlet move to the family page (not just pushState).
-    await tile.click();
+    await familyLinks.first().click();
     await expect(page).toHaveURL(/\/repos\/family\/veox-split/, {
       timeout: 10_000,
     });
@@ -101,7 +99,7 @@ test.describe('Repository families', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Repositories' })
     ).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('a.repo-family-card')).toHaveCount(1);
+    await expect(page.locator('a.repo-table__family-link')).toHaveCount(2);
     expect(pageErrors).toEqual([]);
     await page.screenshot({
       path: 'playwright-report/repo-family-back-nav.png',
@@ -171,30 +169,8 @@ test.describe('Repository families', () => {
     });
     await expect(page.getByText(/missing: repo\.read/)).toBeVisible();
     // The non-owner viewer sees zero repository data.
-    await expect(page.locator('a.repo-card')).toHaveCount(0);
+    await expect(page.getByRole('grid', { name: 'Repositories' })).toHaveCount(0);
     await expect(page.locator('section.split-browser')).toHaveCount(0);
-  });
-
-  test('searching collapses tiles into flat repo cards @action:repos.search', async ({ page }) => {
-    await mockBootstrap(page);
-    await mockRepoList(page, REPOS);
-
-    await page.goto('/repos');
-    await page.getByRole('radio', { name: 'Card view' }).click();
-    await expect(page.locator('a.repo-family-card')).toHaveCount(1, {
-      timeout: 10_000,
-    });
-
-    // Typing a search disables grouping — every repo renders flat. The
-    // mock does not filter on `q`, so all three repos stay visible; the
-    // assertion under test is the tile collapse, not the result set.
-    await page.getByLabel('Search repositories').fill('red');
-    await expect(page.locator('a.repo-family-card')).toHaveCount(0, {
-      timeout: 10_000,
-    });
-    await expect(
-      page.locator('a.repo-card:not(.repo-family-card)')
-    ).toHaveCount(REPOS.length);
   });
 });
 

@@ -55,23 +55,6 @@ async function seed(page: Page): Promise<void> {
 }
 
 test.describe('Agents page navigation and discoverability', () => {
-  test('repo card shows an "Agents" quick-action link on the Repositories page @action:agents.quick_action_visible', async ({
-    page,
-  }) => {
-    await seed(page);
-
-    const shell = new AppShellPage(page);
-    await shell.goto('/repos');
-    await shell.assertShellLoaded();
-    await page.getByRole('radio', { name: 'Card view' }).click();
-
-    // Find the agents link on the repo card.
-    const agentsLink = page.getByTestId(`repo-agents-link-${REPO.owner}-${REPO.name}`);
-    await expect(agentsLink).toBeVisible();
-    await expect(agentsLink).toContainText('Agents');
-    await expect(agentsLink).toContainText('3');
-  });
-
   test('left-nav shows repo-context navigation with Agents link when inside a repo @action:agents.left_nav_visible', async ({
     page,
   }) => {

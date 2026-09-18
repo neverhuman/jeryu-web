@@ -58,7 +58,7 @@ test.describe('Repositories list (W-T-10)', () => {
     }
   });
 
-  test('SPA renders mocked list, filters/sorts/toggles view, navigates, opens Create dialog @action:repos.filter @action:repos.sort @action:repos.view_toggle @action:repos.open_repo @action:repos.create_dialog', async ({
+  test('SPA renders mocked list, searches/filters/sorts, navigates, opens Create dialog @action:repos.search @action:repos.filter @action:repos.sort @action:repos.open_repo @action:repos.create_dialog', async ({
     page,
   }) => {
     await mockBootstrap(page);
@@ -74,12 +74,12 @@ test.describe('Repositories list (W-T-10)', () => {
     await shell.assertShellLoaded();
 
     // 1. List renders in the default table view.
-    const cards = page.locator('a.repo-card');
+    const rows = page.getByRole('grid', { name: 'Repositories' }).locator('tbody tr');
     await expect(page.getByRole('grid', { name: 'Repositories' })).toBeVisible({
       timeout: 10_000,
     });
 
-    // 2. Toolbar actions: search/filter/sort and table/card view toggles.
+    // 2. Toolbar actions: search/filter/sort.
     await page.getByLabel('Search repositories').fill('forge');
     await expect(page.getByLabel('Search repositories')).toHaveValue('forge');
     await page.getByLabel('Visibility: private').click();
@@ -89,18 +89,13 @@ test.describe('Repositories list (W-T-10)', () => {
     );
     await page.getByLabel('Sort repositories').selectOption('name');
     await expect(page.getByLabel('Sort repositories')).toHaveValue('name');
-    await page.getByRole('radio', { name: 'Card view' }).click();
-    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
-    await page.getByRole('radio', { name: 'Table view' }).click();
-    await expect(page.getByRole('grid', { name: 'Repositories' })).toBeVisible();
-    await page.getByRole('radio', { name: 'Card view' }).click();
-    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
 
     // 3. Click a repo card and assert the SPA transition COMMITS: the URL
     //    changes AND the overview outlet renders (regression net for the
     //    keyboard-registry re-render loop that kept interrupting router
     //    transitions, leaving the old route on screen after pushState).
-    await cards
+    await rows
       .filter({ hasText: 'jeryu' })
       .first()
       .click();
@@ -114,7 +109,7 @@ test.describe('Repositories list (W-T-10)', () => {
 
     // 4. Return to the list and open the Create repo dialog.
     await page.goto('/repos');
-    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
 
     const createButton = page.getByRole('button', {
       name: /create repository/i,

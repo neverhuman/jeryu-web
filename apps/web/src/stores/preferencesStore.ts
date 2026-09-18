@@ -12,7 +12,6 @@ export type ThemePreference = 'system' | 'light' | 'dark' | 'high-contrast';
 export type DensityPreference = 'comfortable' | 'compact' | 'ultra-compact';
 export type KeyboardMode = 'default' | 'vim';
 export type DateFormat = 'relative' | 'iso' | 'long';
-export type ReposViewMode = 'card' | 'table';
 export type DiffMode = 'unified' | 'split';
 
 export interface PreferencesState {
@@ -21,7 +20,6 @@ export interface PreferencesState {
   codeFontSize: number;
   dateFormat: DateFormat;
   keyboardMode: KeyboardMode;
-  reposView: ReposViewMode;
   diffMode: DiffMode;
   /**
    * ISO timestamp of the most recent `mark-all-as-read` action on the
@@ -34,7 +32,6 @@ export interface PreferencesState {
   setCodeFontSize: (size: number) => void;
   setDateFormat: (format: DateFormat) => void;
   setKeyboardMode: (mode: KeyboardMode) => void;
-  setReposView: (view: ReposViewMode) => void;
   setDiffMode: (mode: DiffMode) => void;
   /** Stamp `notificationsLastSeen` to `now` (or a caller-supplied ISO). */
   markNotificationsSeen: (at?: string) => void;
@@ -53,7 +50,6 @@ const DEFAULTS: Pick<
   | 'codeFontSize'
   | 'dateFormat'
   | 'keyboardMode'
-  | 'reposView'
   | 'diffMode'
   | 'notificationsLastSeen'
 > = {
@@ -62,7 +58,6 @@ const DEFAULTS: Pick<
   codeFontSize: 13,
   dateFormat: 'relative',
   keyboardMode: 'default',
-  reposView: 'table',
   diffMode: 'unified',
   notificationsLastSeen: null,
 };
@@ -89,7 +84,6 @@ function loadInitial(): typeof DEFAULTS {
       dateFormat: validateDateFormat(field('dateFormat')) ?? DEFAULTS.dateFormat,
       keyboardMode:
         validateKeyboardMode(field('keyboardMode')) ?? DEFAULTS.keyboardMode,
-      reposView: validateReposView(field('reposView')) ?? DEFAULTS.reposView,
       diffMode: validateDiffMode(field('diffMode')) ?? DEFAULTS.diffMode,
       notificationsLastSeen:
         validateIsoTimestamp(field('notificationsLastSeen')) ??
@@ -131,10 +125,6 @@ function validateKeyboardMode(input: unknown): KeyboardMode | undefined {
   return input === 'default' || input === 'vim' ? input : undefined;
 }
 
-function validateReposView(input: unknown): ReposViewMode | undefined {
-  return input === 'card' || input === 'table' ? input : undefined;
-}
-
 function validateDiffMode(input: unknown): DiffMode | undefined {
   return input === 'unified' || input === 'split' ? input : undefined;
 }
@@ -169,10 +159,6 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => {
       set({ keyboardMode });
       persistFromState(get);
     },
-    setReposView: (reposView) => {
-      set({ reposView });
-      persistFromState(get);
-    },
     setDiffMode: (diffMode) => {
       set({ diffMode });
       persistFromState(get);
@@ -197,7 +183,6 @@ function persistFromState(get: () => PreferencesState): void {
     codeFontSize: s.codeFontSize,
     dateFormat: s.dateFormat,
     keyboardMode: s.keyboardMode,
-    reposView: s.reposView,
     diffMode: s.diffMode,
     notificationsLastSeen: s.notificationsLastSeen,
   });
