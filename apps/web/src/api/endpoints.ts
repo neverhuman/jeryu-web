@@ -138,6 +138,9 @@ export const endpoints = {
       ? `/api/v1/control-plane/artifacts/latest?repo=${encodeURIComponent(repo)}`
       : '/api/v1/control-plane/artifacts/latest',
   controlPlaneRunners: (): string => '/api/v1/control-plane/runners',
+  /** GitHub-shaped per-environment summary (latest, current, previous). */
+  repoEnvironments: (owner: string, repo: string): string =>
+    `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/environments`,
   ecosystem: (): string => '/api/v1/ecosystem',
   toolBuildClusters: (params?: {
     repo?: string;

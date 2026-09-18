@@ -15,6 +15,7 @@ import { AppShell } from '../layout/AppShell';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { AuditPage } from '../pages/AuditPage';
 import { FleetPage } from '../pages/FleetPage';
+import { ReleasesPage } from '../pages/ReleasesPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
 import { IssuesPage } from '../pages/IssuesPage';
 import { PullRequestPage } from '../pages/PullRequestPage';
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
       { path: 'work', element: <WorkPage /> },
       { path: 'work/:key', element: <WorkDetailPage /> },
       { path: 'pull-room', element: <PullRoomPage /> },
+      { path: 'releases', element: <ReleasesPage /> },
       { path: 'intelligence', element: <IntelligencePage /> },
       { path: 'runners', element: <FleetPage /> },
       { path: 'fleet', element: <Navigate to="/runners" replace /> },

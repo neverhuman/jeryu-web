@@ -19,6 +19,7 @@ import {
   History,
   Layers,
   LayoutDashboard,
+  Rocket,
   ServerCog,
   ShieldCheck,
   Wrench,
@@ -40,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   // `/pull-room` / "Pull Room"; the nav previously pointed at a dead
   // `/merge-room` path that fell through to NotFound.
   { to: '/pull-room', label: 'Pull Room', icon: GitMerge },
+  { to: '/releases', label: 'Releases', icon: Rocket },
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
   { to: '/runners', label: 'Runners', icon: ServerCog },
   { to: '/tool-fleet', label: 'Tool Fleet', icon: Wrench },

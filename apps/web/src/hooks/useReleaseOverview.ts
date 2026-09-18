@@ -1,0 +1,77 @@
+// useReleaseOverview.ts — environments, their compare against the default
+// branch, and the repository's pull requests, folded into Releases page rows.
+
+import { useMemo } from 'react';
+import { useQueries, useQuery } from '@tanstack/react-query';
+
+import { apiGet } from '../api/client';
+import { endpoints } from '../api/endpoints';
+import type { CompareResponse, EnvironmentsResponse } from '../api/types/deployments';
+import type { PullRequestListResponse } from '../api/types/pullRequests';
+import { buildEnvironmentRows, type EnvironmentRow } from '../pages/releasesModel';
+
+export interface ReleaseOverview {
+  rows: EnvironmentRow[];
+  isLoading: boolean;
+  /** Set when the environments themselves could not be read. */
+  error: Error | null;
+}
+
+export function useReleaseOverview(repoId: string, defaultBranch: string): ReleaseOverview {
+  const [owner = '', repo = ''] = repoId.split('/');
+  const environments = useQuery({
+    queryKey: ['releases', 'environments', repoId],
+    queryFn: ({ signal }) =>
+      apiGet<EnvironmentsResponse>(endpoints.repoEnvironments(owner, repo), { signal }),
+    enabled: owner !== '' && repo !== '',
+    staleTime: 15_000,
+  });
+  const pulls = useQuery({
+    queryKey: ['releases', 'pulls', repoId],
+    queryFn: ({ signal }) =>
+      apiGet<PullRequestListResponse>(endpoints.pulls(repoId, 'all'), { signal }),
+    enabled: owner !== '' && repo !== '',
+    staleTime: 30_000,
+  });
+
+  const liveShas = useMemo(
+    () => [
+      ...new Set(
+        (environments.data?.environments ?? [])
+          .map((env) => env.current?.deployment.sha)
+          .filter((sha): sha is string => typeof sha === 'string')
+      ),
+    ],
+    [environments.data]
+  );
+  const compares = useQueries({
+    queries: liveShas.map((sha) => ({
+      queryKey: ['releases', 'compare', repoId, sha, defaultBranch],
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        apiGet<CompareResponse>(endpoints.compare(repoId, sha, defaultBranch), { signal }),
+      staleTime: 30_000,
+    })),
+  });
+
+  // useQueries returns a fresh array every render; key the fold on when each
+  // compare last changed instead.
+  const comparesVersion = compares.map((query) => query.dataUpdatedAt).join(',');
+  const rows = useMemo(() => {
+    const bySha = new Map<string, CompareResponse>();
+    compares.forEach((query, index) => {
+      if (query.data) bySha.set(liveShas[index]!, query.data);
+    });
+    return buildEnvironmentRows(
+      environments.data?.environments ?? [],
+      bySha,
+      pulls.data?.items ?? null
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [environments.data, pulls.data, liveShas, comparesVersion]);
+
+  return {
+    rows,
+    isLoading: environments.isLoading,
+    error: environments.error ?? null,
+  };
+}

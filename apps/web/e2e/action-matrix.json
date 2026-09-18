@@ -111,6 +111,8 @@
     { "id": "tools.propose", "surface": "Shared Code", "route": "/shared-code", "action": "Propose tool from cluster", "variants": ["receipt"], "testTag": "@action:tools.propose", "owner": "e2e/25-action-matrix.spec.ts" },
     { "id": "tools.ignore", "surface": "Shared Code", "route": "/shared-code", "action": "Ignore tool cluster", "variants": ["prompt feedback"], "testTag": "@action:tools.ignore", "owner": "e2e/25-action-matrix.spec.ts" },
     { "id": "tool_fleet.render", "surface": "Tool Fleet", "route": "/tool-fleet", "action": "Render tool adoption matrix", "variants": ["adopted and missing"], "testTag": "@action:tool_fleet.render", "owner": "e2e/25-action-matrix.spec.ts" },
-    { "id": "admin.denied", "surface": "Admin", "route": "/settings", "action": "Hide admin access controls for non-admin", "variants": ["user role"], "testTag": "@action:admin.denied", "owner": "e2e/25-action-matrix.spec.ts" }
+    { "id": "admin.denied", "surface": "Admin", "route": "/settings", "action": "Hide admin access controls for non-admin", "variants": ["user role"], "testTag": "@action:admin.denied", "owner": "e2e/25-action-matrix.spec.ts" },
+    { "id": "releases.environments", "surface": "Releases", "route": "/releases", "action": "Show each environment's live release, rollback target and unshipped PRs", "variants": ["live with failed newer attempt", "unconfigured environment"], "testTag": "@action:releases.environments", "owner": "e2e/26-releases.spec.ts" },
+    { "id": "releases.empty", "surface": "Releases", "route": "/releases", "action": "Explain that no deployment has been recorded yet", "variants": ["no environments"], "testTag": "@action:releases.empty", "owner": "e2e/26-releases.spec.ts" }
   ]
 }
