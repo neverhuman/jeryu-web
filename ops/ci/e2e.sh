@@ -6,9 +6,9 @@ cd "$repo_root"
 
 mkdir -p target/jankurai/e2e
 
-if [ ! -d apps/web/node_modules ]; then
-  npm ci --prefix apps/web
-fi
+# shellcheck source=ops/ci/web-deps.sh
+source ops/ci/web-deps.sh
+ensure_web_deps
 
 if ! find "${HOME}/.cache/ms-playwright" -maxdepth 1 -type d -name 'chromium-*' 2>/dev/null | grep -q .; then
   if [ -n "${CI:-}" ]; then

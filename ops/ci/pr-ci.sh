@@ -63,7 +63,9 @@ if [ -x "$JERYU_TOOL_RENDER" ]; then
 fi
 
 # Install web deps FIRST: the check lane already typechecks the workspace.
-if [ ! -d apps/web/node_modules ]; then npm ci --prefix apps/web; fi
+# shellcheck source=ops/ci/web-deps.sh
+source ops/ci/web-deps.sh
+ensure_web_deps
 
 echo "[pr-ci] (jobs=$JOBS) standard lanes" >&2
 bash ops/ci/fast.sh
