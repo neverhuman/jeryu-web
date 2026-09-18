@@ -53,21 +53,18 @@ export function useReleaseOverview(repoId: string, defaultBranch: string): Relea
     })),
   });
 
-  // useQueries returns a fresh array every render; key the fold on when each
-  // compare last changed instead.
-  const comparesVersion = compares.map((query) => query.dataUpdatedAt).join(',');
-  const rows = useMemo(() => {
-    const bySha = new Map<string, CompareResponse>();
-    compares.forEach((query, index) => {
-      if (query.data) bySha.set(liveShas[index]!, query.data);
-    });
-    return buildEnvironmentRows(
-      environments.data?.environments ?? [],
-      bySha,
-      pulls.data?.items ?? null
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [environments.data, pulls.data, liveShas, comparesVersion]);
+  // A handful of environments: folding them every render is cheaper than
+  // memoizing on useQueries' per-render result array.
+  const bySha = new Map<string, CompareResponse>();
+  compares.forEach((query, index) => {
+    const sha = liveShas[index];
+    if (query.data && sha) bySha.set(sha, query.data);
+  });
+  const rows = buildEnvironmentRows(
+    environments.data?.environments ?? [],
+    bySha,
+    pulls.data?.items ?? null
+  );
 
   return {
     rows,
