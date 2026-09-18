@@ -134,3 +134,12 @@
     grid-template-columns: 1fr;
   }
 }
+
+.repo-family-strip__link {
+  color: var(--color-accent-primary);
+  text-decoration: none;
+}
+
+.repo-family-strip__link:hover {
+  text-decoration: underline;
+}

@@ -365,3 +365,23 @@
     grid-template-columns: 1fr;
   }
 }
+
+.pull-room__scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+.pull-room__scope-clear {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}

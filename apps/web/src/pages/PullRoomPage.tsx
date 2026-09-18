@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import type { EvidenceState } from '../api/types';
 import { useControlPlane } from '../hooks/useControlPlane';
+import { useRepositories } from '../hooks/useRepositories';
 import { useEcosystem, useToolBuildClusters } from '../hooks/useToolingEvidence';
 import { PullRequestListView } from './PullRequestListView';
 import {
@@ -13,6 +14,7 @@ import {
   pullRoomCounts,
   rankToolBuildOpportunities,
   repoOptions,
+  scopeToRepos,
   type PullRoomFilters,
 } from './pullRoomModel';
 
@@ -36,6 +38,25 @@ export function PullRoomPage(): JSX.Element {
   // Keep the repository in the URL so shared links and history update the results.
   const repo = searchParams.get('repo') || DEFAULT_PULL_ROOM_FILTERS.repo;
   const filters = useMemo(() => ({ ...localFilters, repo }), [localFilters, repo]);
+  // `?family=` scopes everything on the page to that family's repos.
+  const family = searchParams.get('family') ?? '';
+  const familyRepos = useRepositories({ family }, { enabled: family !== '' });
+  const familyRepoSet = useMemo(
+    () =>
+      family
+        ? new Set(
+            (familyRepos.data?.repositories ?? []).map(
+              (member) => `${member.id.owner}/${member.id.name}`
+            )
+          )
+        : null,
+    [family, familyRepos.data]
+  );
+  const clearFamily = (): void => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('family');
+    setSearchParams(params, { replace: true });
+  };
   const setRepo = (value: string): void => {
     const params = new URLSearchParams(searchParams);
     if (value === 'all') params.delete('repo');
@@ -44,8 +65,12 @@ export function PullRoomPage(): JSX.Element {
   };
 
   const items = useMemo(
-    () => snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],
-    [snapshot.data]
+    () =>
+      scopeToRepos(
+        snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],
+        familyRepoSet
+      ),
+    [snapshot.data, familyRepoSet]
   );
   const filtered = useMemo(
     () => filterPullRequests(items, filters),
@@ -97,6 +122,17 @@ export function PullRoomPage(): JSX.Element {
           <p className="page__subtitle">
             Cross-repo pull request cockpit from local control-plane truth.
           </p>
+          {family ? (
+            <p className="pull-room__scope" data-testid="pull-room-family-scope">
+              Family{' '}
+              <Link to={`/repos/family/${encodeURIComponent(family)}`}>{family}</Link>
+              {familyRepos.isLoading ? ' · loading members' : null}
+              {familyRepos.isError ? ' · members unavailable' : null}{' '}
+              <button type="button" className="pull-room__scope-clear" onClick={clearFamily}>
+                Show all repos
+              </button>
+            </p>
+          ) : null}
         </div>
         <div className="pull-room__summary">
           <Metric label="open" value={counts.open} />

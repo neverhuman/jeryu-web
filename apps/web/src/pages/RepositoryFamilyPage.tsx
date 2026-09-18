@@ -29,6 +29,7 @@ import {
 } from '../components/state';
 import { useBlob } from '../hooks/useBlob';
 import { useRepositories } from '../hooks/useRepositories';
+import { pullRoomFamilyHref } from './pullRoomModel';
 
 import '../components/browser/browser.css';
 import '../components/repo/repo.css';
@@ -110,14 +111,15 @@ export function RepositoryFamilyPage(): JSX.Element {
               {rollup.memberCount} repo{rollup.memberCount === 1 ? '' : 's'}
             </span>
             <RepoHealthPill health={rollup.health} />
-            <span
-              className="repo-family-strip__item"
-              title="Open pull requests"
-              aria-label={`${rollup.openPullRequests} open pull requests`}
+            <Link
+              to={pullRoomFamilyHref(family)}
+              className="repo-family-strip__item repo-family-strip__link"
+              title="Open pull requests in Pull Room"
+              aria-label={`${rollup.openPullRequests} open pull requests, open in Pull Room`}
             >
               <GitMerge size={12} aria-hidden="true" />{' '}
               {rollup.openPullRequests} open
-            </span>
+            </Link>
             <span
               className="repo-family-strip__item"
               title="Failing checks"

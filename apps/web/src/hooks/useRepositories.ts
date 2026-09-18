@@ -65,12 +65,14 @@ export function repositoriesQueryKey(
 }
 
 export function useRepositories(
-  query: RepositoriesQuery
+  query: RepositoriesQuery,
+  options: { enabled?: boolean } = {}
 ): UseQueryResult<RepositoryListResponse, Error> {
   return useQuery({
     queryKey: repositoriesQueryKey(query),
     queryFn: ({ signal }) =>
       apiGet<RepositoryListResponse>(buildUrl(query), { signal }),
     staleTime: 30_000,
+    enabled: options.enabled ?? true,
   });
 }

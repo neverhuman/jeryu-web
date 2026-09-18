@@ -18,6 +18,15 @@ vi.mock('../hooks/useControlPlane', () => ({ useControlPlane: () => ({
     toolBuild: { clusterCount: 0, topClusters: [] },
   },
 }) }));
+vi.mock('../hooks/useRepositories', () => ({
+  useRepositories: (query: { family?: string }) => ({
+    isLoading: false,
+    isError: false,
+    data: query.family === 'fam'
+      ? { repositories: [{ id: { owner: 'owner', name: 'a' } }] }
+      : undefined,
+  }),
+}));
 vi.mock('../hooks/useToolingEvidence', () => ({
   useToolBuildClusters: () => ({ data: { clusters: [] } }),
   useEcosystem: () => ({ data: { tools: [] } }),
@@ -75,5 +84,17 @@ describe('Pull Room URL navigation', () => {
     await act(async () => { await router.navigate(-1); });
     expectRepo('owner/b');
     expect(router.state.location.search).toBe('?repo=owner%2Fb');
+  });
+
+  it('scopes to a family from ?family= and can clear it', async () => {
+    const user = userEvent.setup();
+    const router = setup(['/pull-room?family=fam']);
+    expect(screen.getByTestId('pull-room-family-scope')).toHaveTextContent('fam');
+    expect(screen.getByTestId('pull-card-owner/a-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('pull-card-owner/b-1')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show all repos' }));
+    expect(router.state.location.search).toBe('');
+    expect(screen.getByTestId('pull-card-owner/b-1')).toBeInTheDocument();
   });
 });

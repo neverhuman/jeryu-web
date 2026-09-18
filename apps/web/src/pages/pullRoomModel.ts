@@ -312,3 +312,16 @@ function suggestedProofLane(language: string | null): string {
 export function pullRoomHref(repo: string): string {
   return `/pull-room?repo=${encodeURIComponent(repo)}`;
 }
+
+/** Pull Room scoped to the repos of one family. */
+export function pullRoomFamilyHref(family: string): string {
+  return `/pull-room?family=${encodeURIComponent(family)}`;
+}
+
+/** Keep only PRs whose repo (`owner/name`) is in `repos`; `null` keeps all. */
+export function scopeToRepos(
+  items: PullListItem[],
+  repos: ReadonlySet<string> | null
+): PullListItem[] {
+  return repos ? items.filter((item) => repos.has(item.repo)) : items;
+}
