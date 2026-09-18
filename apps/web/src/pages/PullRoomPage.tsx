@@ -10,6 +10,7 @@ import {
   filterPullRequests,
   fromControlPullRequest,
   groupPullRequests,
+  pullRoomCounts,
   rankToolBuildOpportunities,
   repoOptions,
   type PullRoomFilters,
@@ -52,6 +53,7 @@ export function PullRoomPage(): JSX.Element {
   );
   const lanes = useMemo(() => groupPullRequests(filtered), [filtered]);
   const repos = useMemo(() => repoOptions(items), [items]);
+  const counts = useMemo(() => pullRoomCounts(items), [items]);
   const opportunities = useMemo(
     () =>
       snapshot.data
@@ -97,9 +99,9 @@ export function PullRoomPage(): JSX.Element {
           </p>
         </div>
         <div className="pull-room__summary">
-          <Metric label="open" value={snapshot.data.summary.openPrCount} />
-          <Metric label="missing checks" value={snapshot.data.summary.missingCheckPrCount} />
-          <Metric label="failing checks" value={snapshot.data.summary.failingCheckCount} />
+          <Metric label="open" value={counts.open} />
+          <Metric label="missing checks" value={counts.missingChecks} />
+          <Metric label="failing checks" value={counts.failingChecks} />
           <Metric label="tool clusters" value={snapshot.data.toolBuild.clusterCount} />
         </div>
       </header>
@@ -127,6 +129,7 @@ export function PullRoomPage(): JSX.Element {
               setFilters((current) => ({ ...current, state: event.target.value }))
             }
           >
+            <option value="active">Active (not merged/closed)</option>
             <option value="all">All states</option>
             <option value="draft">Draft</option>
             <option value="open">Open</option>

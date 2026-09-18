@@ -76,9 +76,12 @@ export interface ToolOpportunity {
   suggestedProofLane: string;
 }
 
+/** State filter value that hides merged and closed PRs. */
+export const ACTIVE_STATE_FILTER = 'active';
+
 export const DEFAULT_PULL_ROOM_FILTERS: PullRoomFilters = {
   repo: 'all',
-  state: 'all',
+  state: ACTIVE_STATE_FILTER,
   evidence: 'all',
   checkPosture: 'all',
   search: '',
@@ -174,7 +177,11 @@ export function filterPullRequests(
   const needle = filters.search.trim().toLowerCase();
   return items.filter((item) => {
     if (filters.repo !== 'all' && item.repo !== filters.repo) return false;
-    if (filters.state !== 'all' && item.state !== filters.state) return false;
+    if (filters.state === ACTIVE_STATE_FILTER) {
+      if (isFinished(item)) return false;
+    } else if (filters.state !== 'all' && item.state !== filters.state) {
+      return false;
+    }
     if (
       filters.evidence !== 'all' &&
       item.evidenceState !== filters.evidence
@@ -203,8 +210,30 @@ export function filterPullRequests(
   });
 }
 
+export function isFinished(item: PullListItem): boolean {
+  return item.state === 'merged' || item.state === 'closed';
+}
+
+/**
+ * Header counts over PRs that are still in flight. The snapshot summary
+ * counts every PR it knows about, merged and closed included, and every
+ * failing check run, so it cannot answer "how many are open".
+ */
+export function pullRoomCounts(items: PullListItem[]): {
+  open: number;
+  missingChecks: number;
+  failingChecks: number;
+} {
+  const active = items.filter((item) => !isFinished(item));
+  return {
+    open: active.length,
+    missingChecks: active.filter((item) => item.checkPosture === 'missing').length,
+    failingChecks: active.filter((item) => item.checkPosture === 'failing').length,
+  };
+}
+
 export function laneForPullRequest(item: PullListItem): PullLaneId {
-  if (item.state === 'merged' || item.state === 'closed') {
+  if (isFinished(item)) {
     return 'merged_closed';
   }
   if (item.checkPosture === 'missing') return 'missing_checks';

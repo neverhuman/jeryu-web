@@ -6,6 +6,7 @@ import {
   filterPullRequests,
   fromControlPullRequest,
   groupPullRequests,
+  pullRoomCounts,
   rankToolBuildOpportunities,
 } from '../pullRoomModel';
 
@@ -43,6 +44,23 @@ describe('pullRoomModel', () => {
         search: 'cache',
       }).map((item) => item.title)
     ).toEqual(['Fix cache key']);
+  });
+
+  it('hides merged and closed PRs by default and counts only active ones', () => {
+    const items = [
+      pr({ number: 1, state: 'blockedbychecks', checks: { total: 1, failing: 1 } }),
+      pr({ number: 2, state: 'merged', checks: { total: 1, failing: 1 } }),
+      pr({ number: 3, state: 'closed', checks: { total: 1, failing: 1 } }),
+      pr({ number: 4, state: 'draft', draft: true }),
+    ].map(fromControlPullRequest);
+
+    expect(
+      filterPullRequests(items, DEFAULT_PULL_ROOM_FILTERS).map((item) => item.number)
+    ).toEqual([1, 4]);
+    expect(
+      filterPullRequests(items, { ...DEFAULT_PULL_ROOM_FILTERS, state: 'all' })
+    ).toHaveLength(4);
+    expect(pullRoomCounts(items)).toEqual({ open: 2, missingChecks: 1, failingChecks: 1 });
   });
 
   it('ranks populated tool-build clusters before lower-scored summary fallbacks', () => {
