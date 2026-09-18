@@ -1,6 +1,6 @@
 // AdminSettingsPage.tsx — admin preferences surface.
 //
-// Implements theme and density preferences plus account access controls wired
+// Implements theme preferences plus account access controls wired
 // through typed HTTP endpoints.
 
 import { Moon, Monitor, Sun, ToggleRight } from 'lucide-react';
@@ -14,7 +14,6 @@ import { ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import {
   usePreferencesStore,
-  type DensityPreference,
   type ThemePreference,
 } from '../stores/preferencesStore';
 
@@ -23,8 +22,6 @@ import './page.css';
 export function AdminSettingsPage(): JSX.Element {
   const theme = usePreferencesStore((s) => s.theme);
   const setTheme = usePreferencesStore((s) => s.setTheme);
-  const density = usePreferencesStore((s) => s.density);
-  const setDensity = usePreferencesStore((s) => s.setDensity);
   const { user } = useAuth();
 
   return (
@@ -36,7 +33,7 @@ export function AdminSettingsPage(): JSX.Element {
         </p>
         <div className="page__inline-actions">
           <span className="page__pill page__pill--warning">
-            Theme + density preferences
+            Theme preferences
           </span>
         </div>
       </header>
@@ -74,27 +71,6 @@ export function AdminSettingsPage(): JSX.Element {
             icon={<ToggleRight size={14} />}
             onSelect={setTheme}
           />
-        </div>
-      </section>
-
-      <section className="page__section" aria-labelledby="density-section">
-        <h2 className="page__section-title" id="density-section">
-          Density
-        </h2>
-        <div className="page__inline-actions" role="radiogroup">
-          {(
-            ['comfortable', 'compact', 'ultra-compact'] as DensityPreference[]
-          ).map((value) => (
-            <ActionButton
-              key={value}
-              variant={density === value ? 'primary' : 'default'}
-              role="radio"
-              aria-checked={density === value}
-              onClick={() => setDensity(value)}
-            >
-              {value}
-            </ActionButton>
-          ))}
         </div>
       </section>
 

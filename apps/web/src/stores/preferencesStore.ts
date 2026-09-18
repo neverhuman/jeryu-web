@@ -9,14 +9,12 @@ import { create } from 'zustand';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 
 export type ThemePreference = 'system' | 'light' | 'dark' | 'high-contrast';
-export type DensityPreference = 'comfortable' | 'compact' | 'ultra-compact';
 export type KeyboardMode = 'default' | 'vim';
 export type DateFormat = 'relative' | 'iso' | 'long';
 export type DiffMode = 'unified' | 'split';
 
 export interface PreferencesState {
   theme: ThemePreference;
-  density: DensityPreference;
   codeFontSize: number;
   dateFormat: DateFormat;
   keyboardMode: KeyboardMode;
@@ -28,7 +26,6 @@ export interface PreferencesState {
    */
   notificationsLastSeen: string | null;
   setTheme: (theme: ThemePreference) => void;
-  setDensity: (density: DensityPreference) => void;
   setCodeFontSize: (size: number) => void;
   setDateFormat: (format: DateFormat) => void;
   setKeyboardMode: (mode: KeyboardMode) => void;
@@ -46,7 +43,6 @@ const STORAGE_KEY = 'jeryu.preferences.v2';
 const DEFAULTS: Pick<
   PreferencesState,
   | 'theme'
-  | 'density'
   | 'codeFontSize'
   | 'dateFormat'
   | 'keyboardMode'
@@ -54,7 +50,6 @@ const DEFAULTS: Pick<
   | 'notificationsLastSeen'
 > = {
   theme: 'dark',
-  density: 'comfortable',
   codeFontSize: 13,
   dateFormat: 'relative',
   keyboardMode: 'default',
@@ -74,7 +69,6 @@ function loadInitial(): typeof DEFAULTS {
     const codeFontSize = field('codeFontSize');
     return {
       theme: validateTheme(field('theme')) ?? DEFAULTS.theme,
-      density: validateDensity(field('density')) ?? DEFAULTS.density,
       codeFontSize:
         typeof codeFontSize === 'number' &&
         codeFontSize >= 10 &&
@@ -107,14 +101,6 @@ function validateTheme(input: unknown): ThemePreference | null {
     : null;
 }
 
-function validateDensity(input: unknown): DensityPreference | undefined {
-  return input === 'comfortable' ||
-    input === 'compact' ||
-    input === 'ultra-compact'
-    ? input
-    : undefined;
-}
-
 function validateDateFormat(input: unknown): DateFormat | undefined {
   return input === 'relative' || input === 'iso' || input === 'long'
     ? input
@@ -141,10 +127,6 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => {
     ...initial,
     setTheme: (theme) => {
       set({ theme });
-      persistFromState(get);
-    },
-    setDensity: (density) => {
-      set({ density });
       persistFromState(get);
     },
     setCodeFontSize: (codeFontSize) => {
@@ -179,7 +161,6 @@ function persistFromState(get: () => PreferencesState): void {
   const s = get();
   persist({
     theme: s.theme,
-    density: s.density,
     codeFontSize: s.codeFontSize,
     dateFormat: s.dateFormat,
     keyboardMode: s.keyboardMode,
