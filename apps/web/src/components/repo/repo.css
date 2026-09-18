@@ -168,9 +168,9 @@
 }
 
 .repo-role-badge--split_member {
-  background-color: var(--color-accent-success-bg);
-  color: var(--color-accent-success);
-  border-color: var(--color-accent-success);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  border-color: var(--color-border-subtle);
 }
 
 .repo-role-badge--tool_control_plane {
@@ -483,6 +483,7 @@
 
 .repo-table__family-link {
   display: inline-flex;
+  white-space: nowrap;
   align-items: center;
   gap: var(--space-1);
   padding: 2px var(--space-2);
@@ -521,12 +522,13 @@
   flex-shrink: 0;
 }
 
+/* Healthy is the no-action case: keep it quiet so problems stand out. */
 .repo-health-pill--healthy {
-  background-color: var(--color-accent-success-bg);
-  color: var(--color-accent-success);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-muted);
 }
 .repo-health-pill--healthy .repo-health-pill__dot {
-  background-color: var(--color-accent-success);
+  background-color: var(--color-fg-muted);
 }
 
 .repo-health-pill--degraded {
@@ -768,9 +770,10 @@
   white-space: nowrap;
 }
 
+/* A passing score needs no action, so it is muted rather than green. */
 .repo-score-badge--good {
-  background-color: var(--color-accent-success-bg);
-  color: var(--color-accent-success);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-muted);
 }
 
 .repo-score-badge--warn {
@@ -778,9 +781,9 @@
   color: var(--color-accent-warning);
 }
 
-.repo-score-badge--neutral {
-  background-color: var(--color-bg-2);
-  color: var(--color-fg-muted);
+.repo-score-badge--danger {
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
 }
 
 .repo-mirror-badge {

@@ -1,7 +1,7 @@
 // JankuraiScoreBadge.test.tsx — threshold + null-state coverage.
 //
-// The pill has four shapes: good (score >= 85), warn (score < 85),
-// "audit failed" (no score but a decision), and neutral "no score"
+// The pill has four shapes: good (score >= 85, muted), warn (score < 85),
+// danger "audit failed" (no score but a decision), and warn "no score"
 // (no audit ingested). Relative-time output depends on the wall clock,
 // so assertions match on the stable "scored" prefix instead of exact text.
 
@@ -40,15 +40,15 @@ describe('JankuraiScoreBadge', () => {
     );
     const badge = screen.getByRole('status');
     expect(badge).toHaveTextContent('audit failed');
-    expect(badge).toHaveClass('repo-score-badge--warn');
+    expect(badge).toHaveClass('repo-score-badge--danger');
     expect(badge.getAttribute('aria-label')).toContain('tool-failed');
   });
 
-  it('renders neutral "no score" when no audit exists', () => {
+  it('flags "no score" as a warning when no audit exists', () => {
     render(<JankuraiScoreBadge />);
     const badge = screen.getByRole('status');
     expect(badge).toHaveTextContent('no score');
-    expect(badge).toHaveClass('repo-score-badge--neutral');
+    expect(badge).toHaveClass('repo-score-badge--warn');
   });
 
   it('carries the score and scored-at time in title and aria-label', () => {

@@ -23,6 +23,7 @@ import { JankuraiScoreBadge } from './JankuraiScoreBadge';
 import { MirrorStatusBadge } from './MirrorStatusBadge';
 import { RepoHealthPill } from './RepoHealthPill';
 import { RepoRoleBadge } from './RepoRoleBadge';
+import { relativeTime } from './relativeTime';
 import { pullRoomHref } from '../../pages/pullRoomModel';
 
 import { repoHref } from './RepoCard';
@@ -43,17 +44,6 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
   const columns = useMemo<ColumnDef<RepositorySummary>[]>(
     () => [
       {
-        id: 'name',
-        header: 'Repository',
-        accessorFn: (row) => row.id.name,
-        cell: ({ row }) => (
-          <span className="repo-table__repo-cell">
-            <strong>{row.original.id.name}</strong>
-            <RepoRoleBadge role={row.original.repo_role} />
-          </span>
-        ),
-      },
-      {
         id: 'family',
         header: 'Family',
         accessorFn: (row) => row.family ?? '',
@@ -71,6 +61,17 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
             </Link>
           );
         },
+      },
+      {
+        id: 'name',
+        header: 'Repository',
+        accessorFn: (row) => row.id.name,
+        cell: ({ row }) => (
+          <span className="repo-table__repo-cell">
+            <strong>{row.original.id.name}</strong>
+            <RepoRoleBadge role={row.original.repo_role} />
+          </span>
+        ),
       },
       {
         id: 'description',
@@ -145,6 +146,12 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
         id: 'updated_at',
         header: 'Updated',
         accessorFn: (row) => row.updated_at,
+        // Sort on the raw timestamp; show it abbreviated, full on hover.
+        cell: ({ row }) => (
+          <time dateTime={row.original.updated_at} title={row.original.updated_at}>
+            {relativeTime(row.original.updated_at)}
+          </time>
+        ),
       },
     ],
     []

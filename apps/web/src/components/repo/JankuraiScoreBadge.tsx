@@ -2,12 +2,13 @@
 //
 // The backend ships the newest default-branch audit on `RepositorySummary`
 // (`jankurai_score` / `jankurai_decision` / `jankurai_scored_at`, all
-// TS-optional). Four states:
-//   * score >= 85           → good (success tokens)
+// TS-optional). The pill points at problems, so a passing score is muted
+// and everything needing action is coloured. Four states:
+//   * score >= 85           → good (muted, nothing to do)
 //   * score <  85           → warn (warning tokens)
-//   * no score + a decision → "audit failed" warn pill (the tool ran but
+//   * no score + a decision → "audit failed" danger pill (the tool ran but
 //                              could not score the tree, e.g. `tool-failed`)
-//   * no score, no decision → neutral "no score" (no audit ingested yet)
+//   * no score, no decision → "no score" warn pill (no audit ingested yet)
 //
 // The title/aria-label carry the numeric score plus a relative "scored
 // <when>" so the pill stays compact while hover/AT get the full context.
@@ -17,7 +18,7 @@ import { Gauge } from 'lucide-react';
 import { relativeTime } from './relativeTime';
 import './repo.css';
 
-/** Scores at or above this are rendered with success tokens. */
+/** Scores at or above this are rendered muted, as needing no action. */
 export const JANKURAI_GOOD_THRESHOLD = 85;
 
 export interface JankuraiScoreBadgeProps {
@@ -26,7 +27,7 @@ export interface JankuraiScoreBadgeProps {
   scoredAt?: string | null;
 }
 
-type Variant = 'good' | 'warn' | 'neutral';
+type Variant = 'good' | 'warn' | 'danger';
 
 function scoredSuffix(scoredAt: string | null | undefined): string {
   return scoredAt ? ` · scored ${relativeTime(scoredAt)}` : '';
@@ -40,13 +41,13 @@ function resolve(
   if (score === null || score === undefined) {
     if (decision !== null && decision !== undefined) {
       return {
-        variant: 'warn',
+        variant: 'danger',
         text: 'audit failed',
         detail: `jankurai audit failed (${decision})${scoredSuffix(scoredAt)}`,
       };
     }
     return {
-      variant: 'neutral',
+      variant: 'warn',
       text: 'no score',
       detail: 'No jankurai audit recorded for this repository.',
     };
