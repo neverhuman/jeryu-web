@@ -62,4 +62,34 @@ describe('RepoTable', () => {
 
     expect(screen.getByText('Split member')).toBeInTheDocument();
   });
+
+  it('labels the column Failing CI and shows a muted dash when nothing fails', () => {
+    render(
+      <MemoryRouter>
+        <RepoTable repos={[{ ...REPO, running_jobs: 2 }]} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('columnheader', { name: /Failing CI/ })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /^Checks/ })).not.toBeInTheDocument();
+    const cell = screen.getByTestId('repo-failing-ci-jeryu-core');
+    expect(cell).toHaveTextContent('—');
+    expect(cell).toHaveClass('text-muted');
+    expect(cell.tagName).not.toBe('A');
+    expect(screen.getByLabelText('2 running jobs')).toBeInTheDocument();
+  });
+
+  it('links a non-zero failing CI count to the repo overview without opening the row', async () => {
+    const user = userEvent.setup();
+    const router = createMemoryRouter([
+      { path: '/', element: <RepoTable repos={[{ ...REPO, failing_checks: 3 }]} /> },
+      { path: '/repos/*', element: <h1>Repository</h1> },
+    ]);
+    render(<RouterProvider router={router} />);
+    const link = screen.getByRole('link', { name: '3 failing CI checks' });
+    expect(link).toHaveTextContent('3');
+    await user.click(link);
+    expect(router.state.location.pathname.startsWith('/repos/')).toBe(true);
+    expect(screen.getByRole('heading', { name: 'Repository' })).toBeInTheDocument();
+  });
 });

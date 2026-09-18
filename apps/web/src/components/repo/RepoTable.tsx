@@ -171,11 +171,33 @@ export function RepoTable({
       },
       {
         id: 'failing_checks',
-        header: 'Checks',
+        header: 'Failing CI',
+        // Failing check runs on the default-branch head plus open PR heads.
+        // There is no per-commit checks view, so a non-zero count links to the
+        // repo overview, which lists them.
         accessorFn: (row) => row.failing_checks,
         cell: ({ row }) => (
           <span className="repo-table__checks">
-            {row.original.failing_checks}
+            {row.original.failing_checks > 0 ? (
+              <Link
+                to={repoHref(row.original)}
+                onClick={(e) => e.stopPropagation()}
+                title="Failing CI checks on the default branch and open pull requests"
+                aria-label={`${row.original.failing_checks} failing CI checks`}
+                data-testid={`repo-failing-ci-${row.original.id.name}`}
+              >
+                {row.original.failing_checks}
+              </Link>
+            ) : (
+              <span
+                className="text-muted"
+                title="No failing CI checks"
+                aria-label="No failing CI checks"
+                data-testid={`repo-failing-ci-${row.original.id.name}`}
+              >
+                —
+              </span>
+            )}
             {row.original.running_jobs > 0 ? (
               <span
                 className="repo-table__running"
