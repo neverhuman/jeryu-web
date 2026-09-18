@@ -4,8 +4,8 @@
 // rollback target, and how far it trails the default branch. "Behind" comes
 // from `compare?base=<deployed sha>&head=<default branch>`. Because the forge
 // only allows fast-forward merges, a merged pull request is unshipped exactly
-// when its head sha is one of those compare commits, so the count of PRs is
-// exact rather than a timestamp guess.
+// when its head sha is one of those compare commits. A capped compare cannot
+// establish the complete PR count; retain only its exact commit count.
 
 import type { PullRequestSummary } from '../../../../contracts/generated/PullRequestSummary';
 import type {
@@ -102,7 +102,7 @@ export function buildEnvironmentRows(
       pendingAttempt,
       url: env?.current?.status?.environment_url ?? null,
       commitsBehind: compare ? compare.ahead_by : null,
-      unshipped: compare && pulls ? unshippedPulls(compare, pulls) : null,
+      unshipped: compare && !compare.truncated && pulls ? unshippedPulls(compare, pulls) : null,
     };
   });
 }

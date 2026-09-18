@@ -128,4 +128,16 @@ describe('releasesModel', () => {
     const rows = buildEnvironmentRows([production], new Map([[sha('b'), compare('b', ['c'])]]), null);
     expect(behindLabel(rows[0]!)).toBe('1 commit behind');
   });
+it('does not present a partial compare as an exact PR count', () => {
+  const capped = { ...compare('b', ['c']), ahead_by: 251, truncated: true };
+  const rows = buildEnvironmentRows(
+    [production],
+    new Map([[sha('b'), capped]]),
+    [pull(10, 'c', 'merged'), pull(11, 'd', 'merged')]
+  );
+  expect(rows[0]!.unshipped).toBeNull();
+  expect(rows[0]!.commitsBehind).toBe(251);
+  expect(behindLabel(rows[0]!)).toBe('251 commits behind');
+});
+
 });
