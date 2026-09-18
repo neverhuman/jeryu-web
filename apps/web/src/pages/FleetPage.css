@@ -501,3 +501,12 @@
     margin-left: 0;
   }
 }
+
+.fleet__node-last--running {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: inherit;
+  text-decoration: none;
+}

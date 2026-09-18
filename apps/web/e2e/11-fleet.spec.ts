@@ -155,10 +155,13 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
       /draining/
     );
     await expect(page.getByTestId('fleet-node-local')).toContainText(/local/);
-    await expect(page.getByTestId('fleet-task-ar-000001')).toContainText(
-      'publishing patch'
+    await expect(page.getByTestId('fleet-task-ar-000001')).toContainText('running');
+    await expect(page.getByTestId('fleet-task-ar-000001')).toHaveAttribute(
+      'title',
+      /publishing patch/
     );
-    await expect(page.getByTestId('fleet-task-ar-local-1')).toContainText(
+    await expect(page.getByTestId('fleet-task-ar-local-1')).toHaveAttribute(
+      'title',
       /TTY preview unavailable/i
     );
 
@@ -215,11 +218,11 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
 
     const taskCard = page.getByTestId('fleet-task-ar-000001');
     await expect(taskCard).toBeVisible();
-    await expect(taskCard).toContainText('Open terminal');
+    await expect(taskCard).toHaveAttribute('aria-label', /Open terminal/);
 
     const localTask = page.getByTestId('fleet-task-ar-local-1');
     await expect(localTask).toBeVisible();
-    await expect(localTask).not.toContainText('Open terminal');
+    await expect(localTask).not.toHaveAttribute('aria-label', /Open terminal/);
 
     await taskCard.click();
     await page.waitForURL(/\/repos\/jeryu\/jeryu%2Fveox\/agents\/ar-000001/);
@@ -246,7 +249,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     const localTask = page.getByTestId('fleet-task-ar-local-1');
     await expect(localTask).toBeVisible();
     const tagName = await localTask.evaluate((el) => el.tagName.toLowerCase());
-    expect(tagName).toBe('article');
+    expect(tagName).toBe('p');
   });
 
 });

@@ -1,7 +1,7 @@
 // fleet/RunnerNetwork.tsx — the runner-network drilldown view for the /fleet
 // dashboard: one list row per runner node (status, slot usage, last gate,
-// labels) with that node's active-task TTY previews and terminal drill-down
-// links listed beneath it.
+// labels). While a node is busy its running task takes the last-gate cell,
+// labelled running, so the row never grows and the list never shifts.
 
 import { Link } from 'react-router-dom';
 import {
@@ -10,7 +10,6 @@ import {
   Server,
   CircleAlert,
   CircleSlash,
-  ExternalLink,
 } from 'lucide-react';
 
 import type { RunnerNetworkNode } from '../runnerNetworkModel';
@@ -90,7 +89,9 @@ function RunnerNodeRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
         <span className="fleet__node-mono" data-label="Tasks">
           {node.activeTaskCount}
         </span>
-        {node.lastActivity ? (
+        {node.tasks[0] ? (
+          <RunningTask task={node.tasks[0]} more={node.tasks.length - 1} />
+        ) : node.lastActivity ? (
           <p className="fleet__node-last" data-testid={`fleet-node-last-${nodeId}`}>
             <strong>
               {node.lastActivity.repo}#{node.lastActivity.pr}
@@ -131,13 +132,6 @@ function RunnerNodeRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
         </span>
       </div>
 
-      {node.tasks.length > 0 ? (
-        <div className="fleet__task-list">
-          {node.tasks.map((task) => (
-            <RunnerTaskCard key={task.taskId} task={task} />
-          ))}
-        </div>
-      ) : null}
     </article>
   );
 }
@@ -150,52 +144,34 @@ function taskTerminalPath(task: RunnerNetworkNode['tasks'][number]): string | un
   return `/repos/${encodeURIComponent(provider)}/${fullName}/agents/${encodeURIComponent(task.agentRunId)}`;
 }
 
-function RunnerTaskCard({ task }: { task: RunnerNetworkNode['tasks'][number] }): JSX.Element {
-  const taskId = testIdSegment(task.taskId);
+/** A node's running task, shown in the last-gate cell in place of the last finished gate. */
+function RunningTask({
+  task,
+  more,
+}: {
+  task: RunnerNetworkNode['tasks'][number];
+  more: number;
+}): JSX.Element {
   const drillPath = taskTerminalPath(task);
-  const cardContent = (
+  const content = (
     <>
-      <div className="fleet__task-head">
-        <h4 className="fleet__task-title">{task.label}</h4>
-        <span className="page__pill page__pill--warning">{task.state}</span>
-      </div>
-      <p className="fleet__task-meta">
-        <span>{task.jobId}</span>
-        {task.workcellId ? <span>workcell {task.workcellId}</span> : null}
-        {task.agentRunId ? <span>agent {task.agentRunId}</span> : null}
-        {task.repo ? <span>{task.repo}</span> : <span>repo unavailable</span>}
-      </p>
-      <p className="fleet__task-program">{task.program}</p>
-      <p className="fleet__task-tty">
-        {task.lastTtyLine ?? 'TTY preview unavailable.'}
-      </p>
-      {drillPath ? (
-        <span className="fleet__task-open">
-          <ExternalLink size={12} aria-hidden="true" /> Open terminal
-        </span>
-      ) : null}
+      <strong>{task.label}</strong>{' '}
+      <span className="page__pill page__pill--warning">running</span>{' '}
+      <span>{task.program}</span>
+      {more > 0 ? <span className="fleet__node-muted"> +{more}</span> : null}
     </>
   );
-  if (drillPath) {
-    return (
-      <Link
-        to={drillPath}
-        className="fleet__task-card fleet__task-card--interactive"
-        data-testid={`fleet-task-${taskId}`}
-        aria-label={`Open terminal for ${task.label}`}
-      >
-        {cardContent}
-      </Link>
-    );
-  }
-  return (
-    <article
-      className="fleet__task-card"
-      data-testid={`fleet-task-${taskId}`}
-      aria-label={`Runner task ${task.label}`}
-    >
-      {cardContent}
-    </article>
+  const props = {
+    className: 'fleet__node-last fleet__node-last--running',
+    'data-testid': `fleet-task-${testIdSegment(task.taskId)}`,
+    title: task.lastTtyLine ?? 'TTY preview unavailable.',
+  };
+  return drillPath ? (
+    <Link to={drillPath} {...props} aria-label={`Open terminal for ${task.label}`}>
+      {content}
+    </Link>
+  ) : (
+    <p {...props}>{content}</p>
   );
 }
 

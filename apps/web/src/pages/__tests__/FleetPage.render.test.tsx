@@ -189,11 +189,13 @@ describe('FleetPage render', () => {
     );
     expect(screen.getByTestId('fleet-node-xbabe0')).toHaveTextContent('xbabe0');
     expect(screen.getByTestId('fleet-node-local')).toHaveTextContent('local');
-    expect(screen.getByTestId('fleet-task-ar-1')).toHaveTextContent(
+    expect(screen.getByTestId('fleet-task-ar-1')).toHaveTextContent('running');
+    expect(screen.getByTestId('fleet-task-ar-1').getAttribute('title')).toContain(
       'publishing patch'
     );
-    expect(screen.getByTestId('fleet-task-ar-local')).toHaveTextContent(
-      /TTY preview unavailable/i
+    expect(screen.getByTestId('fleet-task-ar-local')).toHaveAttribute(
+      'title',
+      'TTY preview unavailable.'
     );
   });
 
@@ -265,9 +267,10 @@ describe('FleetPage render', () => {
       }
     );
     expect(screen.getByRole('heading', { level: 1, name: 'Runners' })).toBeInTheDocument();
-    expect(screen.getByText('veox/jain-deploy#31')).toBeInTheDocument();
-    expect(screen.getByText('success')).toBeInTheDocument();
-    expect(screen.getByText(/just required in 46s · 3926cbd/)).toBeInTheDocument();
+    // The running gate takes the last-gate cell in place of the finished one.
+    const running = screen.getByTestId('fleet-task-xbabe2_slot0_abc30d78');
+    expect(running).toHaveTextContent('veox/jain-web#13 running just required');
+    expect(screen.queryByText('veox/jain-deploy#31')).not.toBeInTheDocument();
     const metrics = screen.getByTestId('fleet-metrics');
     expect(metrics).toHaveTextContent('100%');
     expect(metrics).toHaveTextContent('1 runner(s)');
