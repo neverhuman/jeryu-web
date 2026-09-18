@@ -116,6 +116,7 @@ function IntelligenceSnapshot({
           <MetricCard
             icon={<ServerCog size={18} aria-hidden="true" />}
             label="Runners"
+            to="/runners"
             value={snapshot.runners.local.onlineRunners}
             detail={`${snapshot.runners.local.offlineRunners} offline`}
             state={

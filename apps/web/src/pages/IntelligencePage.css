@@ -700,3 +700,14 @@
     grid-template-columns: 1fr;
   }
 }
+
+.intelligence__metric--link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.intelligence__metric--link:hover,
+.intelligence__metric--link:focus-visible {
+  border-color: var(--color-accent-primary);
+  text-decoration: none;
+}
