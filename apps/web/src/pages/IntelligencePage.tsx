@@ -98,6 +98,7 @@ function IntelligenceSnapshot({
           <MetricCard
             icon={<GitPullRequest size={18} aria-hidden="true" />}
             label="Open PRs"
+            to="/pull-room"
             value={snapshot.summary.openPrCount}
             detail={`${snapshot.summary.missingCheckPrCount} missing checks`}
             state={

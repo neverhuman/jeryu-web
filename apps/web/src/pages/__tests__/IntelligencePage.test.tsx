@@ -39,6 +39,7 @@ describe('IntelligencePage', () => {
     );
     expect(screen.getByText('absence=evidence')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Runners: 4/ })).toHaveAttribute('href', '/runners');
+    expect(screen.getByRole('link', { name: /^Open PRs: 1/ })).toHaveAttribute('href', '/pull-room');
     expect(screen.getByTestId('repo-graph-preview')).toBeInTheDocument();
     expect(screen.getByTestId('operator-graph-console')).toBeInTheDocument();
     expect(screen.getByTestId('node-inspector')).toHaveTextContent(
