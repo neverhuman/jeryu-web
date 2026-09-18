@@ -1,7 +1,7 @@
 // 11-fleet.spec.ts — Fleet runner-network smoke (Slice C-web).
 //
-// The Fleet page now keeps the existing pool summary and adds a live
-// runner-network drilldown sourced from `/api/v1/control-plane/runners`.
+// The Runners page is the live runner-network drilldown sourced from
+// `/api/v1/control-plane/runners` (the fixture-backed pool summary is gone).
 // This spec exercises the rendered node cards, active task preview, last TTY
 // line, and the rule that `local` only appears when the backend payload
 // actually includes it.

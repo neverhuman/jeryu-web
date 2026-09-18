@@ -22,6 +22,7 @@ export function useControlPlaneRunners(): UseQueryResult<
         signal,
       }),
     staleTime: 15_000,
+    refetchInterval: 15_000,
     refetchOnWindowFocus: true,
   });
 }

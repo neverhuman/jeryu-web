@@ -148,8 +148,8 @@ async function scanAndAssert(
 
 test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', () => {
   test('axe scan: Fleet operator dashboard', async ({ page }) => {
-    // /fleet hydrates from the bootstrap `tui` snapshot; a saturated pool
-    // forces the alert banner so the scan covers the populated state.
+    // /runners renders from the control-plane runners snapshot; the bootstrap
+    // pool mock is unused by the page but harmless.
     await mockFleetBootstrap(page, [
       { pool: 'trusted', running_jobs: 1, active_slots: 4, online_runners: 4 },
       {

@@ -22,31 +22,6 @@ import type {
 // ── Fixtures ─────────────────────────────────────────────────────────────
 
 /** A `PoolRollup`-shaped JSON object (the wire shape over `pool.{name}`). */
-function rollup(over: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    pool: 'trusted',
-    tags: ['rust-hot'],
-    trust_tier: 'trusted',
-    paused: false,
-    queued_jobs: 0,
-    running_jobs: 1,
-    failed_jobs: 0,
-    active_slots: 4,
-    configured_max_slots: 4,
-    online_runners: 4,
-    stuck_runners: 0,
-    ...over,
-  };
-}
-
-const SYSTEM_HEALTH = {
-  scm: { name: 'scm', status: 'healthy', latency_ms: 12, detail: null },
-  database: { name: 'database', status: 'healthy', latency_ms: 3, detail: null },
-  sandbox: { name: 'sandbox', status: 'degraded', latency_ms: null, detail: 'slow' },
-  cache: { name: 'cache', status: 'healthy', latency_ms: 1, detail: null },
-  vault: { name: 'vault', status: 'warning', latency_ms: null, detail: null },
-};
-
 const EMPTY_RUNNERS: RunnerFabricResponse = {
   schemaVersion: 'jeryu.runner_fabric/v1',
   local: {
@@ -114,48 +89,6 @@ describe('FleetPage render', () => {
   afterEach(() => {
     // Reset the realtime singleton so events do not leak between tests.
     useRealtimeStore.setState({ events: [], status: 'idle' });
-  });
-
-  it('renders pool cards + system-health strip from bootstrap, with a freshness badge', () => {
-    // No live event arrives in this test, and the bootstrap timestamp is far
-    // in the past, so the freshness badge must appear.
-    useRealtimeStore.setState({ events: [], status: 'open' });
-    renderFleet({
-      generated_at: '2020-01-01T00:00:00Z',
-      pool_activity: {
-        repos: [{ repo: 'veox/redline' }],
-        pools: [rollup({ pool: 'trusted' })],
-        unplaceable: [],
-      },
-      system: SYSTEM_HEALTH,
-    });
-
-    expect(screen.getByTestId('fleet-page')).toBeInTheDocument();
-    expect(screen.getByTestId('fleet-pool-trusted')).toBeInTheDocument();
-    expect(screen.getByTestId('fleet-health-strip')).toBeInTheDocument();
-    expect(screen.getByTestId('fleet-health-sandbox')).toBeInTheDocument();
-    // Out of date because the only data is a 2020 bootstrap timestamp.
-    expect(screen.getByTestId('fleet-freshness-badge')).toBeInTheDocument();
-  });
-
-  it('renders the empty-pools roadmap note when no pools report', () => {
-    useRealtimeStore.setState({ events: [], status: 'open' });
-    renderFleet({
-      generated_at: new Date().toISOString(),
-      pool_activity: { repos: [], pools: [], unplaceable: [] },
-      system: {},
-    });
-    expect(screen.getByTestId('fleet-page')).toBeInTheDocument();
-    expect(
-      screen.getByText(/No runner pools are reporting yet/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/No system health reported yet/i)
-    ).toBeInTheDocument();
-    // No pools/components → the banner reports "Awaiting fleet telemetry."
-    expect(screen.getByTestId('fleet-banner')).toHaveTextContent(
-      /Awaiting fleet telemetry/i
-    );
   });
 
   it('renders the runner-network drilldown from the control-plane runners payload', () => {
@@ -335,5 +268,12 @@ describe('FleetPage render', () => {
     expect(screen.getByText('veox/jain-deploy#31')).toBeInTheDocument();
     expect(screen.getByText('success')).toBeInTheDocument();
     expect(screen.getByText(/just required in 46s · 3926cbd/)).toBeInTheDocument();
+    const metrics = screen.getByTestId('fleet-metrics');
+    expect(metrics).toHaveTextContent('100%');
+    expect(metrics).toHaveTextContent('1 runner(s)');
+    expect(metrics).toHaveTextContent('1 busy');
+    expect(metrics).toHaveTextContent('1 active task(s)');
+    expect(screen.queryByText('Runner pools')).not.toBeInTheDocument();
+    expect(screen.queryByText('System health')).not.toBeInTheDocument();
   });
 });
