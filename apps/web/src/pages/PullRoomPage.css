@@ -385,3 +385,179 @@
   font: inherit;
   cursor: pointer;
 }
+
+/* Pull request timeline: one horizontal stage track per PR. */
+.pull-room__views {
+  display: inline-flex;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.pull-room__views button {
+  border: 0;
+  background: var(--color-bg-1);
+  color: var(--color-fg-secondary);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.pull-room__views button[aria-pressed='true'] {
+  background: var(--color-bg-2);
+  color: var(--color-fg-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pull-timeline {
+  --pull-timeline-cols: minmax(220px, 2fr) repeat(5, minmax(96px, 1fr));
+  overflow-x: auto;
+}
+
+.pull-timeline__head,
+.pull-timeline__row {
+  display: grid;
+  grid-template-columns: var(--pull-timeline-cols);
+  gap: 0 var(--space-2);
+  align-items: center;
+  min-width: 760px;
+}
+
+.pull-timeline__head {
+  padding: 0 var(--space-3) var(--space-2);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.pull-timeline__rows,
+.pull-timeline__track {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pull-timeline__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pull-timeline__row {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-1);
+  padding: var(--space-3);
+}
+
+.pull-timeline__row.is-closed,
+.pull-timeline__row.is-merged {
+  opacity: 0.72;
+}
+
+.pull-timeline__pr {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pull-timeline__pr a {
+  overflow: hidden;
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pull-timeline__number,
+.pull-timeline__meta {
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.pull-timeline__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The track spans the five stage columns; subgrid keeps it aligned to the header. */
+.pull-timeline__track {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+}
+
+.pull-stage {
+  --pull-stage-color: var(--color-border-strong);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Connector from this stage's dot to the next one. */
+.pull-stage:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 14px;
+  right: calc(-1 * var(--space-2));
+  height: 2px;
+  background: var(--color-border-subtle);
+}
+
+.pull-stage.is-done:not(:last-child)::after {
+  background: var(--color-accent-success);
+}
+
+.pull-stage__dot {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--pull-stage-color);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-0);
+}
+
+.pull-stage.is-done { --pull-stage-color: var(--color-accent-success); }
+.pull-stage.is-active { --pull-stage-color: var(--color-accent-info); }
+.pull-stage.is-blocked { --pull-stage-color: var(--color-accent-danger); }
+.pull-stage.is-skipped { opacity: 0.45; }
+
+.pull-stage.is-done .pull-stage__dot,
+.pull-stage.is-blocked .pull-stage__dot {
+  background: var(--pull-stage-color);
+}
+
+.pull-stage.is-active .pull-stage__dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-info) 30%, transparent);
+}
+
+.pull-stage.is-blocked .pull-stage__label,
+.pull-stage.is-active .pull-stage__label {
+  color: var(--color-fg-primary);
+}
+
+.pull-stage__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pull-timeline__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

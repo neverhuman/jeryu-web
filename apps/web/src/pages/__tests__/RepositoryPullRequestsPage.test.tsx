@@ -37,6 +37,28 @@ describe('RepositoryPullRequestsPage', () => {
       expect(screen.getByText('Fix Pull Room')).toBeInTheDocument();
     });
     expect(screen.queryByText(/W-FE-11/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('pull-timeline')).toBeInTheDocument();
+    expect(screen.getByTestId('pull-stage-12-mergeable')).toHaveAttribute('data-status', 'done');
+  });
+
+  it('switches to the board view from the URL', async () => {
+    mockFetch([
+      [
+        '/api/v1/repos?host=jeryu',
+        {
+          generated_at: '2026-06-05T00:00:00Z',
+          total: 1,
+          repositories: [repoSummary()],
+          facets: { hosts: ['jeryu'], owners: ['alice'], families: [], languages: [] },
+        },
+      ],
+      ['/api/v1/repos/repo-1/pulls', { total: 1, items: [pullSummary()] }],
+    ]);
+
+    renderPage('/repos/jeryu/alice%2Fjeryu/pulls?view=board');
+
+    expect(await screen.findByTestId('pull-lanes')).toBeInTheDocument();
+    expect(screen.queryByTestId('pull-timeline')).not.toBeInTheDocument();
   });
 
   it('renders the required empty state', async () => {

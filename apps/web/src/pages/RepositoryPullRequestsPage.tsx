@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { PullRequestListResponse } from '../api/types';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { PullRequestListView } from './PullRequestListView';
+import { PullRequestTimeline } from './PullRequestTimeline';
 import { fromPullRequestSummary, groupPullRequests } from './pullRoomModel';
 
 import './page.css';
@@ -22,6 +23,10 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   const provider = props.provider ?? params.provider ?? 'unknown';
   const fullName = props.fullName ?? params.fullName ?? '';
   const resolved = useResolveRepo(provider, fullName);
+  const [search, setSearch] = useSearchParams();
+  const view = search.get('view') === 'board' ? 'board' : 'timeline';
+  const setView = (next: 'timeline' | 'board') =>
+    setSearch(next === 'timeline' ? {} : { view: next }, { replace: true });
   const repoId = resolved.data?.id ?? null;
   const pulls = useQuery({
     queryKey: ['repo-pulls', repoId],
@@ -70,11 +75,21 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
             {resolved.data.summary.id.owner}/{resolved.data.summary.id.name}
           </p>
         </div>
+        <div className="pull-room__views" role="group" aria-label="View">
+          <button type="button" aria-pressed={view === 'timeline'} onClick={() => setView('timeline')}>
+            Timeline
+          </button>
+          <button type="button" aria-pressed={view === 'board'} onClick={() => setView('board')}>
+            Board
+          </button>
+        </div>
       </header>
       {pulls.isPending ? (
         <p className="page__roadmap-note">Loading pull requests.</p>
       ) : pulls.isError ? (
         <p className="page__roadmap-note">{pulls.error.message}</p>
+      ) : view === 'timeline' ? (
+        <PullRequestTimeline pulls={pulls.data.items} emptyMessage="No pull requests" />
       ) : (
         <PullRequestListView lanes={lanes} emptyMessage="No pull requests" />
       )}
