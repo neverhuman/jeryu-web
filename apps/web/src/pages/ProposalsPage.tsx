@@ -8,6 +8,7 @@
 import { Check, GitPullRequestArrow, X } from 'lucide-react';
 
 import { ActionButton } from '../components/action/ActionButton';
+import { RETIRED_STATUS_LABEL } from '../components/repo/toolStatusProductCopy';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { useDecideProposal, useToolRegistry } from '../hooks/useToolRegistry';
@@ -17,11 +18,13 @@ import { formatCount } from './tools';
 import './page.css';
 import './sharedTools/SharedTools.css';
 
+// The retired status word comes from the registry product-copy table so the
+// lifecycle vocabulary is spelled in one place.
 const GROUPS = [
   { status: 'proposed', title: 'Awaiting decision' },
   { status: 'building', title: 'Approved · building' },
   { status: 'published', title: 'Published' },
-  { status: 'deprecated', title: 'Deprecated' },
+  { status: RETIRED_STATUS_LABEL, title: 'Retired' },
 ] as const;
 
 function ToolMeta({ tool }: { tool: ToolRegistryEntry }): JSX.Element {
