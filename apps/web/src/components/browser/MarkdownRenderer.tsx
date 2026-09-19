@@ -10,6 +10,8 @@ import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
 import { createElement, useMemo, type MouseEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { MarkdownImage } from './MarkdownImage';
+
 import './browser.css';
 
 export interface MarkdownRendererProps {
@@ -114,6 +116,16 @@ function renderNode(
       props.target = '_blank';
       props.rel = 'noopener noreferrer';
     }
+  }
+
+  if (tagName === 'img') {
+    // A blocked or missing image shows its alt text as a link, never a broken icon.
+    return createElement(MarkdownImage, {
+      key,
+      src: element.getAttribute('src') ?? '',
+      alt: element.getAttribute('alt') ?? '',
+      title: element.getAttribute('title') ?? undefined,
+    });
   }
 
   const children = Array.from(element.childNodes).map((child, index) =>

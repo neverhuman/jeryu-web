@@ -29,8 +29,8 @@ function makeStorage(): Storage {
   };
 }
 
-function renderAt(path: string): void {
-  render(
+function renderAt(path: string): { unmount: () => void } {
+  return render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[path]}>
         <LeftNav />
@@ -87,5 +87,23 @@ describe('LeftNav', () => {
       'href',
       '/repos/jeryu/jeryu/jeryu-web/pulls'
     );
+  });
+
+  it('points Code at the repository front page, active wherever code is read; no Tracker', () => {
+    for (const path of [
+      '/repos/jeryu/jeryu/jeryu-web',
+      '/repos/jeryu/jeryu/jeryu-web/blob/main/README.md',
+      '/repos/jeryu/jeryu/jeryu-web/code',
+    ]) {
+      const { unmount } = renderAt(path);
+      const code = screen.getByRole('link', { name: 'Code' });
+      expect(code).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-web');
+      expect(code).toHaveAttribute('aria-current', 'page');
+      expect(screen.queryByRole('link', { name: 'Tracker' })).toBeNull();
+      unmount();
+    }
+    const { unmount } = renderAt('/repos/jeryu/jeryu/jeryu-web/pulls');
+    expect(screen.getByRole('link', { name: 'Code' })).not.toHaveAttribute('aria-current');
+    unmount();
   });
 });

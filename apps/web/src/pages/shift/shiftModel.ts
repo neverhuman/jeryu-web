@@ -213,7 +213,8 @@ export function repoOwners(
 /** SPA path of a family repo's code, or null when the repo is not hosted here. */
 export function repoCodeHref(owners: RepoOwners, repo: string): string | null {
   const owner = owners(repo);
-  return owner === null ? null : `${repoPath(owner, repo)}/code`;
+  // The repository front page is where its code is read (README + Files panel).
+  return owner === null ? null : repoPath(owner, repo);
 }
 
 /** SPA path for a family repo; repos may come bare (`jeryu-web`) or qualified. */

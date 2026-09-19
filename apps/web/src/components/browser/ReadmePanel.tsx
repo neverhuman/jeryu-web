@@ -8,6 +8,7 @@
 import { FileText } from 'lucide-react';
 
 import { ApiError } from '../../api/client';
+import { endpoints } from '../../api/endpoints';
 import { useMarkdown } from '../../hooks/useMarkdown';
 import {
   EmptyState,
@@ -77,7 +78,15 @@ export function ReadmePanel({ repoId, ref, linkBase }: ReadmePanelProps): JSX.El
   // source when present (see MarkdownSource for why).
   const source = (data as { markdown?: unknown }).markdown;
   if (typeof source === 'string' && source.trim() !== '') {
-    return <MarkdownSource markdown={source} linkBase={linkBase} />;
+    return (
+      <MarkdownSource
+        markdown={source}
+        linkBase={linkBase}
+        imageSrc={
+          repoId && ref ? (path) => endpoints.raw(repoId, { ref, path }) : undefined
+        }
+      />
+    );
   }
   return <MarkdownRenderer html={data.html} />;
 }

@@ -167,20 +167,13 @@ export function LeftNav(): JSX.Element {
             {repo.repoName}
           </span>
           <Link
-            to={`${repo.base}/code`}
+            // The repository front page is the code: README and the Files panel.
+            to={repo.base}
             className={`left-nav__item${isCodePath(pathname, repo.base) ? ' is-active' : ''}`}
             aria-current={isCodePath(pathname, repo.base) ? 'page' : undefined}
           >
             <Code2 aria-hidden="true" size={16} />
             Code
-          </Link>
-          <Link
-            to={`${repo.base}/work`}
-            className={`left-nav__item${isActivePath(pathname, `${repo.base}/work`) || isActivePath(pathname, `${repo.base}/issues`) ? ' is-active' : ''}`}
-          >
-            <ClipboardList aria-hidden="true" size={16} />
-            {/* "Work" is the global shift queue; this is the repo's item tracker. */}
-            Tracker
           </Link>
           <Link
             to={`${repo.base}/pulls`}
@@ -214,7 +207,10 @@ export function LeftNav(): JSX.Element {
 
 /** Code is where a file is read, whichever route shows it. */
 function isCodePath(pathname: string, base: string): boolean {
-  return ['code', 'blob', 'tree'].some((part) => isActivePath(pathname, `${base}/${part}`));
+  return (
+    pathname === base ||
+    ['code', 'blob', 'tree'].some((part) => isActivePath(pathname, `${base}/${part}`))
+  );
 }
 
 function isActivePath(pathname: string, to: string, end = false): boolean {

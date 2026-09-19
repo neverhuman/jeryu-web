@@ -2,26 +2,30 @@
 //
 // All repo URLs go through `repos/:provider/*`. This component parses the
 // splat to extract the owner/name (always the first two segments after
-// provider) and the sub-path (agents, code, pulls, settings, blob, work).
+// provider) and the sub-path (agents, pulls, settings, blob).
 //
 // URL examples:
 //   /repos/jeryu/jeryu/jankurai          → overview (owner=jeryu, name=jankurai)
 //   /repos/jeryu/jeryu/jankurai/agents   → agents page
 //   /repos/jeryu/jeryu/jankurai/agents/run-42 → agents page with run-42
-//   /repos/jeryu/jeryu/jankurai/code     → code browser
-//   /repos/jeryu/jeryu/jankurai/blob/main/src/lib.rs → file viewer
+//   /repos/jeryu/jeryu/jankurai/blob/main/src/lib.rs → the same page, file open
+//   /repos/jeryu/jeryu/jankurai/tree/main/docs → front page, Files open on docs/
+//   /repos/jeryu/jeryu/jankurai/code     → redirects to the front page, Files open
+//   /repos/jeryu/jeryu/jankurai/work     → redirects to the front page (tracker retired)
 
-import { useParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 
 import { RepositoryAgentsPage } from './RepositoryAgentsPage';
-import { RepositoryCodePage } from './RepositoryCodePage';
-import { RepositoryFilePage } from './RepositoryFilePage';
-import { RepositoryOverviewPage } from './RepositoryOverviewPage';
+import { RepositoryBrowserPage } from './RepositoryBrowserPage';
 import { RepositoryPullRequestsPage } from './RepositoryPullRequestsPage';
 import { RepositorySettingsPage } from './RepositorySettingsPage';
-import { IssuesPage } from './IssuesPage';
 import { PullRequestPage } from './PullRequestPage';
-import { WorkPage } from './WorkPage';
+import {
+  OPEN_FILES_STATE,
+  parseRefAndPath,
+  repoFrontPath,
+  revealFolderState,
+} from './repoBrowserModel';
 
 /** Parse the splat into { fullName, subPath, subTail }.
  *
@@ -53,24 +57,36 @@ export function parseRepoSplat(splat: string): {
   return { fullName, subPath, subTail };
 }
 
-const KNOWN_SUB_PATHS = new Set([
-  'agents', 'code', 'blob', 'pulls', 'work', 'issues', 'settings',
-]);
-
 export function RepoRouter(): JSX.Element {
   const params = useParams();
   const provider = params.provider ?? 'unknown';
   const splat = params['*'] ?? '';
+  const { search } = useLocation();
   const { fullName, subPath, subTail } = parseRepoSplat(splat);
+  const front = repoFrontPath(provider, fullName);
 
   // Dispatch to the correct sub-page based on the sub-path.
   switch (subPath) {
     case 'agents':
       return <RepositoryAgentsPage provider={provider} fullName={fullName} splatTail={subTail} />;
     case 'code':
-      return <RepositoryCodePage provider={provider} fullName={fullName} />;
+      // The Files panel of the front page is the code browser.
+      return <Navigate to={{ pathname: front, search }} state={OPEN_FILES_STATE} replace />;
+    case 'tree': {
+      // A link to a folder: the front page at that ref, Files open on the folder.
+      const { ref, path } = parseRefAndPath(subTail);
+      return (
+        <Navigate
+          to={{ pathname: front, search: ref ? `?ref=${encodeURIComponent(ref)}` : '' }}
+          state={revealFolderState(path)}
+          replace
+        />
+      );
+    }
     case 'blob':
-      return <RepositoryFilePage provider={provider} fullName={fullName} blobPath={subTail} />;
+      // The same component as the front page, in the same position, so the
+      // Files panel keeps its state while the reader moves between files.
+      return <RepositoryBrowserPage provider={provider} fullName={fullName} blobSplat={subTail} />;
     case 'pulls': {
       // /pulls or /pulls/:number
       if (subTail) {
@@ -79,14 +95,14 @@ export function RepoRouter(): JSX.Element {
       return <RepositoryPullRequestsPage provider={provider} fullName={fullName} />;
     }
     case 'issues':
-      return <IssuesPage provider={provider} fullName={fullName} />;
     case 'work':
-      return <WorkPage provider={provider} fullName={fullName} />;
+      // The per-repo tracker is retired (the shift queue at /work replaced it);
+      // old links land on the repository instead of a 404.
+      return <Navigate to={front} replace />;
     case 'settings':
       return <RepositorySettingsPage provider={provider} fullName={fullName} section={subTail || undefined} />;
     default:
-      // No known sub-path — it's the overview page.
-      // The remaining segments (if any) are extra namespace path segments.
-      return <RepositoryOverviewPage provider={provider} fullName={fullName} />;
+      // No known sub-path: the repository front page.
+      return <RepositoryBrowserPage provider={provider} fullName={fullName} />;
   }
 }

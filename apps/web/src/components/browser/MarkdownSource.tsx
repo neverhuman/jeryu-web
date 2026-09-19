@@ -6,11 +6,13 @@
 // GitHub-flavoured Markdown, sanitized by rehype-sanitize, into the same
 // `.markdown-body` container the global stylesheet already styles.
 
-import type { AnchorHTMLAttributes, MouseEvent } from 'react';
+import { useMemo, useRef, type AnchorHTMLAttributes, type ImgHTMLAttributes, type MouseEvent } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
+import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeSlug from 'rehype-slug';
+import { MarkdownImage } from './MarkdownImage';
 import { remarkGfmRead } from './remarkGfmRead';
 
 import './browser.css';
@@ -22,6 +24,10 @@ export interface MarkdownSourceProps {
    * (e.g. `/repos/jeryu/root/bullet-kernel/blob/main/`).
    */
   linkBase?: string;
+  /** Directory of this Markdown file inside the repository, ending in `/`. */
+  docDir?: string;
+  /** Maps a repository path to a loadable URL, for relative images. */
+  imageSrc?: (repoPath: string) => string;
   className?: string;
 }
 
@@ -40,40 +46,65 @@ function isPlainLeftClick(event: MouseEvent): boolean {
   return !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
 }
 
-export function MarkdownSource({ markdown, linkBase, className }: MarkdownSourceProps): JSX.Element {
+export function MarkdownSource({
+  markdown,
+  linkBase,
+  docDir,
+  imageSrc,
+  className,
+}: MarkdownSourceProps): JSX.Element {
   const navigate = useNavigate();
+  // Callers pass `imageSrc` inline; keep the latest without changing the
+  // component identities below, or every parent render would remount each
+  // image and load it again.
+  const imageSrcRef = useRef(imageSrc);
+  imageSrcRef.current = imageSrc;
 
-  function Anchor({ href = '', children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>): JSX.Element {
-    const target = resolveMarkdownHref(href, linkBase);
-    if (/^https?:\/\//i.test(target)) {
+  const components = useMemo(() => {
+    function Anchor({ href = '', children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>): JSX.Element {
+      const target = resolveMarkdownHref(href, linkBase);
+      if (/^https?:\/\//i.test(target)) {
+        return (
+          <a {...rest} href={target} target="_blank" rel="noopener noreferrer">
+            {children}
+          </a>
+        );
+      }
       return (
-        <a {...rest} href={target} target="_blank" rel="noopener noreferrer">
+        <a
+          {...rest}
+          href={target}
+          onClick={(event) => {
+            if (!target.startsWith('/') || !isPlainLeftClick(event)) return;
+            event.preventDefault();
+            navigate(target);
+          }}
+        >
           {children}
         </a>
       );
     }
-    return (
-      <a
-        {...rest}
-        href={target}
-        onClick={(event) => {
-          if (!target.startsWith('/') || !isPlainLeftClick(event)) return;
-          event.preventDefault();
-          navigate(target);
-        }}
-      >
-        {children}
-      </a>
-    );
-  }
+    function Image(props: ImgHTMLAttributes<HTMLImageElement>): JSX.Element {
+      return (
+        <MarkdownImage
+          {...props}
+          docDir={docDir}
+          imageSrc={(repoPath) => imageSrcRef.current?.(repoPath) ?? repoPath}
+        />
+      );
+    }
+    return { a: Anchor, img: Image };
+  }, [linkBase, docDir, navigate]);
 
+  // HTML written in the Markdown (an <img>, a comment) is parsed and then
+  // sanitized like everything else; without the parse it showed as literal text.
   return (
     <div className={`markdown-body ${className ?? ''}`.trim()}>
       <ReactMarkdown
         remarkPlugins={[remarkGfmRead]}
-        rehypePlugins={[rehypeSlug, rehypeSanitize]}
+        rehypePlugins={[rehypeRaw, rehypeSlug, rehypeSanitize]}
         urlTransform={defaultUrlTransform}
-        components={{ a: Anchor }}
+        components={components}
       >
         {markdown}
       </ReactMarkdown>

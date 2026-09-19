@@ -42,7 +42,7 @@ describe('ShiftQueuePage', () => {
     const done = await screen.findByTestId('shift-todo-20260918-2201-a9z');
     expect(within(done).getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute(
       'href',
-      '/repos/jeryu/jeryu/jeryu-deploy/code'
+      '/repos/jeryu/jeryu/jeryu-deploy'
     );
     // One table for what is live, one folded away for what is finished.
     expect(screen.getAllByRole('columnheader', { name: 'Cost' })).toHaveLength(2);
@@ -253,7 +253,7 @@ describe('ShiftQueuePage', () => {
     expect(within(live).getByRole('button', { name: 'Open review PR for nightshift/2026-09-18' })).toBeInTheDocument();
     expect(within(live).getByRole('link', { name: 'jain-deploy' })).toHaveAttribute(
       'href',
-      '/repos/jeryu/veox/jain-deploy/code'
+      '/repos/jeryu/veox/jain-deploy'
     );
     expect(within(live).getByRole('link', { name: 'PR #70 (merged)' })).toHaveAttribute(
       'href',

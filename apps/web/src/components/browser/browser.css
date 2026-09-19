@@ -336,29 +336,7 @@
   overflow: auto;
 }
 
-/* Code page three-pane layout ---------------------------------------------- */
-
-.code-browser-layout {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: var(--space-4);
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.code-browser-layout__sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-height: 400px;
-}
-
-.code-browser-layout__main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-height: 400px;
-}
+/* File toolbar (Raw / Download / Copy permalink) ------------------------- */
 
 .code-browser-layout__top {
   display: flex;
@@ -367,24 +345,69 @@
   gap: var(--space-3);
 }
 
-/* Repository overview layout ----------------------------------------------- */
+/* The one repository page: content, and a Files panel on the right --------- */
 
-.repo-overview {
+.repo-browser {
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: var(--space-6);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
 }
 
-@media (max-width: 960px) {
-  .repo-overview {
-    grid-template-columns: 1fr;
-  }
+.repo-browser--with-files {
+  grid-template-columns: minmax(0, 1fr) 320px;
 }
 
-.repo-overview__sidebar {
+.repo-browser__main {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.repo-browser__files {
+  position: sticky;
+  top: var(--space-3);
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-1);
+}
+
+.repo-browser__files[hidden] {
+  display: none;
+}
+
+/* One quiet line: branch, open pull requests, clone; the panel controls right. */
+.repo-browser__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.repo-browser__fact {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+.repo-browser__spacer {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 1000px) {
+  /* Narrow: the panel, when asked for, sits above what it opens. */
+  .repo-browser--with-files {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .repo-browser__files {
+    order: -1;
+    position: static;
+    max-height: 320px;
+  }
 }
 
 .repo-overview__head {
@@ -399,15 +422,6 @@
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-semibold);
   letter-spacing: -0.01em;
-}
-
-.repo-overview__strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
-  font-size: var(--font-size-sm);
-  color: var(--color-fg-secondary);
 }
 
 .repo-overview__clone-button {
@@ -445,29 +459,6 @@
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-sm);
   color: var(--color-fg-primary);
-}
-
-.repo-overview__sidebar-card {
-  background-color: var(--color-bg-1);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.repo-overview__sidebar-card p a {
-  text-decoration: underline;
-}
-
-.repo-overview__sidebar-title {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-fg-muted);
 }
 
 /* File picker -------------------------------------------------------------- */
@@ -536,4 +527,21 @@
   color: var(--color-fg-muted);
   text-align: center;
   border-top: 1px solid var(--color-border-subtle);
+}
+
+/* An image that could not be shown: its alt text, as a quiet link to it. */
+.markdown-image-chip {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+a.markdown-image-chip:hover {
+  color: var(--color-fg-primary);
+  border-color: var(--color-border-strong);
 }

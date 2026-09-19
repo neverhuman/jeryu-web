@@ -22,11 +22,12 @@ import {
   Folder,
   FolderOpen,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ApiError } from '../../api/client';
 import { useRepoTree } from '../../hooks/useRepoTree';
 import { INDENT_PX, fileIcon } from './fileTreeIcons';
+import { ancestorsOf } from './fileTreePaths';
 import type { TreeEntry } from '../../api/types';
 
 import './browser.css';
@@ -37,8 +38,13 @@ export type { FlatFileListProps } from './FlatFileList';
 export interface FileTreeProps {
   repoId: string | null;
   refName: string;
-  /** Selected file path so the row is highlighted. */
+  /**
+   * Selected file path so the row is highlighted. Its folders open so the row
+   * is visible; folders the reader opened stay open when the selection moves.
+   */
   selectedPath?: string;
+  /** A folder to open, with the folders above it (a link to a directory). */
+  revealDir?: string;
   /** Invoked when the user activates a file row. */
   onSelectFile: (entry: TreeEntry) => void;
 }
@@ -207,10 +213,26 @@ export function FileTree({
   repoId,
   refName,
   selectedPath,
+  revealDir,
   onSelectFile,
 }: FileTreeProps): JSX.Element {
   // Expanded directory paths. The root path "" is always conceptually open.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  // Reveal the selected file: open every folder above it, once per selection.
+  // The reader may close them again; only a new selection reopens them.
+  useEffect(() => {
+    const dirs = [
+      ...ancestorsOf(selectedPath ?? ''),
+      ...(revealDir ? [...ancestorsOf(revealDir), revealDir] : []),
+    ];
+    if (dirs.length === 0) return;
+    setExpanded((prev) => {
+      if (dirs.every((dir) => prev.has(dir))) return prev;
+      const next = new Set(prev);
+      for (const dir of dirs) next.add(dir);
+      return next;
+    });
+  }, [selectedPath, revealDir]);
   const toggle = useMemo(
     () => (path: string) => {
       setExpanded((prev) => {

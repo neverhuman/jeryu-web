@@ -221,8 +221,8 @@ describe('slotLabel', () => {
     expect(commitHref({ pr: { ...pr, repo: 'jeryu/jeryu-web' } }, owners, 'jeryu-web')).toBe(
       '/repos/jeryu/jeryu/jeryu-web/pulls/35'
     );
-    expect(commitHref({ pr }, owners, 'jeryu-deploy')).toBe('/repos/jeryu/jeryu/jeryu-deploy/code');
-    expect(commitHref({}, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/code');
+    expect(commitHref({ pr }, owners, 'jeryu-deploy')).toBe('/repos/jeryu/jeryu/jeryu-deploy');
+    expect(commitHref({}, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web');
     expect(todoPrHref({ pr }, owners)).toBe(pr.url);
     expect(todoPrHref({ pr: { ...pr, url: 'https://elsewhere.example/x' } }, owners)).toBe(
       '/repos/jeryu/jeryu/jeryu-web/pulls/35'
@@ -240,11 +240,11 @@ describe('slotLabel', () => {
         { name: 'jain-report', order: 0 },
       ],
     });
-    expect(repoCodeHref(jain, 'jain-deploy')).toBe('/repos/jeryu/veox/jain-deploy/code');
+    expect(repoCodeHref(jain, 'jain-deploy')).toBe('/repos/jeryu/veox/jain-deploy');
     expect(repoCodeHref(jain, 'jain-elsewhere')).toBeNull();
     // An older server names no owner: the queue's owner is the best guess.
-    expect(repoCodeHref(jain, 'jain-report')).toBe('/repos/jeryu/jain-split/jain-report/code');
-    expect(repoCodeHref(jain, 'veox/jain-web')).toBe('/repos/jeryu/veox/jain-web/code');
+    expect(repoCodeHref(jain, 'jain-report')).toBe('/repos/jeryu/jain-split/jain-report');
+    expect(repoCodeHref(jain, 'veox/jain-web')).toBe('/repos/jeryu/veox/jain-web');
     expect(commitHref({}, jain, 'jain-elsewhere')).toBeNull();
   });
 

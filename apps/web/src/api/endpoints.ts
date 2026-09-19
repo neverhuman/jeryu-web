@@ -77,21 +77,6 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/approve`,
   pullMerge: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge`,
-  work: (params?: WorkQueryParams): string => {
-    const qs = workQuery(params);
-    return qs ? `/api/v1/work?${qs}` : '/api/v1/work';
-  },
-  workItem: (key: string): string =>
-    `/api/v1/work/${encodeURIComponent(key)}`,
-  workComments: (key: string): string =>
-    `/api/v1/work/${encodeURIComponent(key)}/comments`,
-  workLinks: (key: string): string =>
-    `/api/v1/work/${encodeURIComponent(key)}/links`,
-  repoWork: (id: string, params?: WorkQueryParams): string => {
-    const qs = workQuery(params);
-    const base = `/api/v1/repos/${encodeURIComponent(id)}/work`;
-    return qs ? `${base}?${qs}` : base;
-  },
   settings: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/settings`,
   settingsPreview: (id: string): string =>
@@ -185,25 +170,3 @@ export const endpoints = {
 } as const;
 
 export type Endpoints = typeof endpoints;
-
-export interface WorkQueryParams {
-  repo_id?: string;
-  status?: string;
-  kind?: string;
-  priority?: string;
-  assignee?: string;
-  label?: string;
-  search?: string;
-  q?: string;
-}
-
-function workQuery(params: WorkQueryParams | undefined): string {
-  const qs = new URLSearchParams();
-  if (!params) return '';
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== '') {
-      qs.set(key, value);
-    }
-  }
-  return qs.toString();
-}

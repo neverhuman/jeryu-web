@@ -11,6 +11,7 @@ import { usePreferencesStore } from '../../stores/preferencesStore';
 
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { MarkdownSource } from './MarkdownSource';
+import { dirOf } from './markdownImages';
 import { SourceView } from './SourceView';
 import { isMarkdownPath } from '../../hooks/useBlob';
 
@@ -25,6 +26,8 @@ export interface CodeViewerProps {
   renderedHtml?: string | null;
   /** SPA path relative Markdown links resolve against, ending in `/`. */
   linkBase?: string;
+  /** Maps a repository path to a loadable URL, for relative Markdown images. */
+  imageSrc?: (repoPath: string) => string;
   /** Best-effort MIME type from the blob response. */
   mime?: string;
   /** When true, the viewer renders a "Binary file" notice instead. */
@@ -38,6 +41,7 @@ export function CodeViewer({
   mime,
   isBinary,
   linkBase,
+  imageSrc,
 }: CodeViewerProps): JSX.Element {
   const isMd = isMarkdownPath(path);
   const hasRenderedHtml = isMd && (typeof text === 'string' || typeof renderedHtml === 'string');
@@ -86,7 +90,12 @@ export function CodeViewer({
       {tab === 'rendered' && hasRenderedHtml ? (
         <div className="code-viewer__rendered">
           {typeof text === 'string' ? (
-            <MarkdownSource markdown={text} linkBase={linkBase} />
+            <MarkdownSource
+              markdown={text}
+              linkBase={linkBase}
+              docDir={dirOf(path)}
+              imageSrc={imageSrc}
+            />
           ) : (
             <MarkdownRenderer html={renderedHtml ?? ''} />
           )}

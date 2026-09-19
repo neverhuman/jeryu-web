@@ -11,6 +11,8 @@ export { BranchSelector } from './BranchSelector';
 export type { BranchSelectorProps } from './BranchSelector';
 export { FileTree, FlatFileList } from './FileTree';
 export type { FileTreeProps, FlatFileListProps } from './FileTree';
+export { FileFinder } from './FileFinder';
+export type { FileFinderProps } from './FileFinder';
 export { CodeViewer } from './CodeViewer';
 export type { CodeViewerProps } from './CodeViewer';
 export { MarkdownSource, resolveMarkdownHref } from './MarkdownSource';

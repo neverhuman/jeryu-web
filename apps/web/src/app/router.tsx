@@ -18,7 +18,6 @@ import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { FleetPage } from '../pages/FleetPage';
 import { ReleasesPage, UnreleasedRedirect } from '../pages/ReleasesPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
-import { IssuesPage } from '../pages/IssuesPage';
 import { PullRequestPage } from '../pages/PullRequestPage';
 import { PullRoomPage } from '../pages/PullRoomPage';
 import { ProposalsPage } from '../pages/ProposalsPage';
@@ -26,17 +25,13 @@ import { NeedsYouPage } from '../pages/needsYou';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RepositoriesPage } from '../pages/RepositoriesPage';
 import { RepositoryAgentsPage } from '../pages/RepositoryAgentsPage';
-import { RepositoryCodePage } from '../pages/RepositoryCodePage';
-import { RepositoryFilePage } from '../pages/RepositoryFilePage';
 import { RepositoryFamilyPage } from '../pages/RepositoryFamilyPage';
 import { RepositoryPullRequestsPage } from '../pages/RepositoryPullRequestsPage';
-import { RepositoryOverviewPage } from '../pages/RepositoryOverviewPage';
 import { RepositorySettingsPage } from '../pages/RepositorySettingsPage';
 import { ToolFleetPage } from '../pages/ToolFleetPage';
 import { ToolFleetToolPage } from '../pages/ToolFleetToolPage';
 import { ToolsPage } from '../pages/ToolsPage';
 import { RepoRouter } from '../pages/RepoRouter';
-import { WorkDetailPage } from '../pages/WorkDetailPage';
 import { ShiftAddPage, ShiftQueuePage, ShiftWorkersPage } from '../pages/shift';
 
 import {
@@ -78,7 +73,8 @@ export const router = createBrowserRouter([
       { path: 'work/shift', element: <ShiftQueuePage /> },
       { path: 'work/shift/new', element: <ShiftAddPage /> },
       { path: 'work/shift/workers', element: <ShiftWorkersPage /> },
-      { path: 'work/:key', element: <WorkDetailPage /> },
+      // The item tracker is retired; its detail links land on the shift queue.
+      { path: 'work/:key', element: <Navigate to="/work/shift" replace /> },
       { path: 'pull-room', element: <PullRoomPage /> },
       { path: 'releases', element: <ReleasesPage /> },
       // Unreleased is the last section of Releases; old links keep working.
