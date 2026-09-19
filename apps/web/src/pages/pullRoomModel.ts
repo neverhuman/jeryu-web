@@ -263,15 +263,41 @@ export function knownSha(sha: string | null | undefined): string | null {
  * that can merge, so the merge chip is only added when it says something new,
  * and evidence is only named when it is a problem.
  */
+/**
+ * The forge's pull request states, in words. The API sends them as one
+ * lowercase token ("blockedbychecks"); anything not listed is shown as sent.
+ */
+const STATE_WORDS: Record<string, string> = {
+  mergeable: 'can merge',
+  blockedbychecks: 'waiting on checks',
+  blockedbyreview: 'waiting on review',
+  blockedbyreviews: 'waiting on review',
+  blockedbyconflict: 'has conflicts',
+  blockedbyconflicts: 'has conflicts',
+  blocked: 'blocked',
+  open: 'open',
+  draft: 'draft',
+  merged: 'merged',
+  closed: 'closed',
+};
+
+/** One state token in words; an unlisted one passes through. */
+export function stateWords(state: string): string {
+  return STATE_WORDS[state.toLowerCase().replace(/[^a-z]/g, '')] ?? state;
+}
+
 export function cardFacts(item: PullListItem): string[] {
-  const facts = [item.draft ? 'draft' : item.state, `checks ${item.checkPosture}`];
-  facts.push(item.mergeable ? 'mergeable' : item.mergeableState);
+  const state = stateWords(item.draft ? 'draft' : item.state);
+  const facts = [state, `checks ${item.checkPosture}`];
+  // The merge state repeats the state for most pull requests; say it only when
+  // it adds something ("can merge" beside "open").
+  const merge = item.mergeable ? 'can merge' : stateWords(item.mergeableState);
+  if (merge !== 'blocked' || state === 'open') facts.push(merge);
   if (item.changedFileCount > 0) {
     facts.push(`${item.changedFileCount} ${item.changedFileCount === 1 ? 'file' : 'files'}`);
   }
-  if (item.evidenceState === 'failed' || item.evidenceState === 'missing') {
-    facts.push(`evidence ${item.evidenceState}`);
-  }
+  if (item.evidenceState === 'failed') facts.push('jankurai proof failing');
+  if (item.evidenceState === 'missing') facts.push('no jankurai proof');
   return Array.from(new Set(facts.filter((fact) => fact && fact !== 'unknown')));
 }
 

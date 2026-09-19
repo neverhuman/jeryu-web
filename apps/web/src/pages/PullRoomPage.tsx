@@ -35,6 +35,15 @@ export function PullRoomPage(): JSX.Element {
   // Keep the repository in the URL so shared links and history update the results.
   const repo = searchParams.get('repo') || DEFAULT_PULL_ROOM_FILTERS.repo;
   const filters = useMemo(() => ({ ...localFilters, repo }), [localFilters, repo]);
+  // Five controls for a handful of pull requests is more to read than the list
+  // itself: they fold away unless one of them is doing something.
+  const filtersActive =
+    filters.repo !== DEFAULT_PULL_ROOM_FILTERS.repo ||
+    filters.state !== DEFAULT_PULL_ROOM_FILTERS.state ||
+    filters.evidence !== DEFAULT_PULL_ROOM_FILTERS.evidence ||
+    filters.checkPosture !== DEFAULT_PULL_ROOM_FILTERS.checkPosture ||
+    filters.search !== DEFAULT_PULL_ROOM_FILTERS.search;
+  const [filtersOpen, setFiltersOpen] = useState(filtersActive);
   // `?family=` scopes everything on the page to that family's repos.
   const family = searchParams.get('family') ?? '';
   const familyRepos = useRepositories({ family }, { enabled: family !== '' });
@@ -127,6 +136,12 @@ export function PullRoomPage(): JSX.Element {
         </div>
       </header>
 
+      <details
+        className="pull-room__filter-fold"
+        open={filtersOpen}
+        onToggle={(event) => setFiltersOpen(event.currentTarget.open)}
+      >
+        <summary>{filtersActive ? 'Filters (on)' : 'Filters'}</summary>
       <section className="pull-room__filters" aria-label="Pull request filters">
         <label>
           Repo
@@ -209,6 +224,7 @@ export function PullRoomPage(): JSX.Element {
           />
         </label>
       </section>
+      </details>
 
       <div className="pull-room__content">
         <PullRequestListView

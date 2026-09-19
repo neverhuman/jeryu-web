@@ -91,6 +91,10 @@ test('Pull Room renders filters, queue lanes, PR cards and cockpit links @action
   await shell.assertShellLoaded();
 
   await expect(page.getByTestId('pull-room-page')).toBeVisible();
+  // The filters fold away until someone wants them (they open by themselves
+  // when the URL already carries one).
+  await expect(page.getByLabel('Search pull requests')).toBeHidden();
+  await page.getByText('Filters', { exact: true }).click();
   await page.getByLabel('Search pull requests').fill('Fix');
   await page
     .locator('section[aria-label="Pull request filters"]')

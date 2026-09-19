@@ -7,6 +7,7 @@ import {
   fromControlPullRequest,
   groupPullRequests,
   cardFacts,
+  stateWords,
   knownSha,
   pullRequestPath,
   pullRoomCounts,
@@ -82,10 +83,21 @@ describe('pullRoomModel', () => {
       pr({ state: 'mergeable', mergeable: true, mergeableState: 'mergeable', checks: { total: 1, failing: 1 } })
     );
     expect(cardFacts({ ...mergeable, evidenceState: 'failed' })).toEqual([
-      'mergeable',
+      'can merge',
       'checks failing',
-      'evidence failed',
+      'jankurai proof failing',
     ]);
+    // The API's one-token states read as words; a waiting pull request is not "blocked" twice.
+    const waiting = fromControlPullRequest(
+      pr({ state: 'blockedbychecks', mergeable: false, mergeableState: 'blocked' })
+    );
+    expect(cardFacts({ ...waiting, evidenceState: 'missing' })).toEqual([
+      'waiting on checks',
+      `checks ${waiting.checkPosture}`,
+      'no jankurai proof',
+    ]);
+    expect(stateWords('blockedbychecks')).toBe('waiting on checks');
+    expect(stateWords('some_new_state')).toBe('some_new_state');
     const open = fromControlPullRequest(pr({ mergeable: false, mergeableState: 'unknown' }));
     expect(cardFacts({ ...open, changedFileCount: 1, evidenceState: 'fresh' })).toEqual([
       'open',
