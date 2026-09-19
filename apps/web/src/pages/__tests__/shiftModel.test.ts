@@ -15,6 +15,7 @@ import {
   parseList,
   queueOptions,
   repoPath,
+  slotLabel,
   sortShifts,
   splitParagraphs,
   todoWorkers,
@@ -123,5 +124,13 @@ describe('shiftModel', () => {
     expect(geo.queuePoints).toBe('25,0 75,40');
     expect(capacityGeometry([{ at: 'h', planned: 1, busy: 0 }], 10, 10).queuePoints).toBe('');
     expect(capacityGeometry([], 10, 10).bars).toEqual([]);
+  });
+});
+
+describe('slotLabel', () => {
+  it('does not repeat a host the operator name already carries', () => {
+    expect(slotLabel('alton@xbabe0', 'xbabe0', 'w1')).toBe('alton@xbabe0/w1');
+    expect(slotLabel('alton', 'xbabe0', 'w1')).toBe('alton@xbabe0/w1');
+    expect(slotLabel('alton', '', 'w1')).toBe('alton/w1');
   });
 });

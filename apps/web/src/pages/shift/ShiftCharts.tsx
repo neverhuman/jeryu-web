@@ -5,7 +5,7 @@
 // role="img" with a text summary, and <title> tooltips on each mark.
 
 import type { ShiftCapacityPoint, ShiftSlotHistory } from '../../api/types';
-import { capacityGeometry, layoutSegments, timeTicks } from './shiftModel';
+import { capacityGeometry, layoutSegments, slotLabel, timeTicks } from './shiftModel';
 
 const WIDTH = 960;
 const LABEL = 170;
@@ -63,7 +63,7 @@ export function ShiftTimeline({
           return (
             <g key={`${slot.operator}/${slot.host}/${slot.slot}/${slot.family}`}>
               <text className="shift-chart__lane-label" x={0} y={y + LANE * 0.65}>
-                {slot.operator}@{slot.host}/{slot.slot}
+                {slotLabel(slot.operator, slot.host, slot.slot)}
               </text>
               {bars.map((bar, i) => (
                 <g key={i}>

@@ -36,6 +36,7 @@ import {
   queueOptions,
   repoPath,
   shortSha,
+  slotLabel,
   sortShifts,
   statusTone,
   type QueueFilters,
@@ -321,7 +322,7 @@ function TodoDetail({ todo }: { todo: ShiftTodo }): JSX.Element {
             {todo.worked_by.map((attempt, i) => (
               <tr key={`${attempt.started}-${i}`}>
                 <td>
-                  {attempt.by}@{attempt.host}/{attempt.slot}
+                  {slotLabel(attempt.by, attempt.host, attempt.slot)}
                 </td>
                 <td>{attempt.model}</td>
                 <td>{attempt.started}</td>

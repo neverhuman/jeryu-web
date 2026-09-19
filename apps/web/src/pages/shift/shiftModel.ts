@@ -302,3 +302,9 @@ function round(n: number): number {
 function uniqueSorted(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
+
+/** `operator/slot`, adding `@host` only when the operator name does not already carry it. */
+export function slotLabel(operator: string, host: string, slot: string): string {
+  const who = host && !operator.endsWith(`@${host}`) ? `${operator}@${host}` : operator;
+  return `${who}/${slot}`;
+}
