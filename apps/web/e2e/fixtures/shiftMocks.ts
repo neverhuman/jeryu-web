@@ -117,6 +117,14 @@ export const SHIFT_TODOS = [
       },
     ],
   }),
+  // A second family, so the one Work page shows every family and a pill filters it.
+  todo({
+    id: '20260919-0940-eee',
+    family: 'jain',
+    title: 'Tighten the release notes',
+    repos: ['jain-web'],
+    mode: 'night',
+  }),
 ];
 
 export interface ShiftMockLog {
@@ -139,11 +147,11 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
         if (Array.isArray(body.texts)) {
           return fulfill(route, {
             todos: (body.texts as string[]).map((text, i) =>
-              todo({ id: `20260919-1000-n${i}`, title: text, mode: body.mode, triaged: false })
+              todo({ id: `20260919-1000-n${i}`, family: body.family, title: text, mode: body.mode, triaged: false })
             ),
           });
         }
-        return fulfill(route, todo({ id: '20260919-1000-new', title: body.text, mode: body.mode }));
+        return fulfill(route, todo({ id: '20260919-1000-new', family: body.family, title: body.text, mode: body.mode }));
       }
       if (path.endsWith('/pr')) {
         return fulfill(route, {
@@ -166,11 +174,26 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
               shift_tz: TZ,
               landing: 'shifts',
             },
+            {
+              name: 'jain',
+              queue_repo: 'veox/jain-todo',
+              repos: [{ name: 'jain-web', order: 1 }],
+              shift_tz: TZ,
+              landing: 'shifts',
+            },
           ],
         });
-      case '/api/v1/shift/todos':
-        return fulfill(route, { generated_at: iso(0), todos: SHIFT_TODOS });
+      case '/api/v1/shift/todos': {
+        // No `family` means every family, as the server answers it.
+        const wanted = url.searchParams.get('family');
+        return fulfill(route, {
+          generated_at: iso(0),
+          todos: wanted ? SHIFT_TODOS.filter((entry) => entry.family === wanted) : SHIFT_TODOS,
+        });
+      }
       case '/api/v1/shift/shifts':
+        // A shift branch carries no family: the page asks once per family.
+        if (url.searchParams.get('family') !== 'jeryu') return fulfill(route, { shifts: [] });
         return fulfill(route, {
           shifts: [
             {

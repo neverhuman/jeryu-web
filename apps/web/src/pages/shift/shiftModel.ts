@@ -1,4 +1,4 @@
-// shiftModel.ts — pure helpers for the Work → Queue / Add / Workers tabs.
+// shiftModel.ts — pure helpers for the Work page: the queue, the composer and the workers.
 //
 // Everything here is deterministic given its inputs (including `now`) so the
 // filters, shift dating and chart geometry are unit-tested without a DOM.

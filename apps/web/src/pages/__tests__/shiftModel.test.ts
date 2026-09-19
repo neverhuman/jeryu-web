@@ -1,4 +1,4 @@
-// shiftModel.test.ts — pure helpers behind the Work → Queue / Add / Workers tabs.
+// shiftModel.test.ts — pure helpers behind the Work page.
 
 import { describe, expect, it } from 'vitest';
 

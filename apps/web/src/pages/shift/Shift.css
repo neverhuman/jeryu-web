@@ -221,6 +221,11 @@
   min-width: 0;
 }
 
+/* A link inside a sentence is told apart by more than its colour. */
+.work-workers__summary a {
+  text-decoration: underline;
+}
+
 .work-workers__spark {
   flex: none;
   color: var(--color-accent-info);

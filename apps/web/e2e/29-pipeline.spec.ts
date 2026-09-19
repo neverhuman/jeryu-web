@@ -61,7 +61,7 @@ test.describe('Pipeline visibility', () => {
       .getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66')
       .getByRole('link', { name: /^Open: Allow PATCH/ })
       .click();
-    await expect(page).toHaveURL(/\/work\/shift\?family=jeryu&todo=20260919-130515-f8cc66$/);
+    await expect(page).toHaveURL(/\/work\?family=jeryu&todo=20260919-130515-f8cc66$/);
     // The badge counts critical + action (not watch) and follows the operator.
     await expect(page.getByTestId('needs-you-badge')).toHaveText('3');
   });

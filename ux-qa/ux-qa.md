@@ -91,7 +91,7 @@ under `apps/web/e2e/fixtures/`, and a Playwright screenshot from the route spec.
 | `/runners` (one sentence for the gate network; rows say Runner, Now, Last job, Seen; PR reviewers share the shape, and a missing reviewer is said) | `fleet` | `mocks.ts` (`mockFleetBootstrap`) | `11-fleet.spec.ts` |
 | `/repos` Status column: a red chip opens the failing checks and what to do, in place; Mirror, Unshipped and Failing CI columns removed | `repositories`, `repositories-status` | `mocks.ts` (`mockRepoList`) | `27-repos-status.spec.ts`, `02-repos.spec.ts` |
 | Repository Settings, read-only: branch protection and the GitHub mirror | `repo-settings` | `mocks.ts` (`mockRepoList`) | `31-repo-settings-readonly.spec.ts` |
-| `/work/shift*` | `shift-queue`, `shift-add`, `shift-workers` | `shiftMocks.ts` | `28-shift.spec.ts` |
+| `/work` (one page: a one-line Add work composer that opens when used, a one-line workers summary that opens to the slots, timeline and capacity chart, then every family's queue with a family pill at the far left of each row; `/work/shift`, `/work/shift/new` and `/work/shift/workers` redirect to it, to `#add` and to `#workers`, query string kept) | `shift-queue` (as it opens), `shift-add` (composer opened), `shift-workers` (workers opened) | `shiftMocks.ts` (two families) | `28-shift.spec.ts` |
 | `/releases` (one page: what runs, Ready to pin, Merged not yet released; `/unreleased` redirects to its last section) | `unreleased` | `unreleasedMocks.ts`, `pipelineMocks.ts` (pins) | `28-unreleased.spec.ts`, `29-pipeline.spec.ts` (Ready to pin) |
 | Shell chrome on every page: skip link, home logo, the search-or-jump palette (pages, repositories, `name#n`), the left nav's System disclosure, header at 900 and 480 px | `shell-chrome` | `mocks.ts` (`mockRepoList`), `pipelineMocks.ts` | `25-action-matrix.spec.ts`, `13-left-nav.spec.ts`, `29-pipeline.spec.ts` (narrow), `10-a11y.spec.ts` (palette + System open) |
 | The one repository page: `/repos/:host/:owner/:repo` (README) and `…/blob/<ref>/<path>` (a file) share a layout with a Files panel on the right that stays while files open; `/code`, `/work` and `/issues` redirect to it | `repo-overview`, `repo-file` | `mocks.ts` (`mockTreeByPath`, `mockBlob`, `mockReadme`) | `04-code.spec.ts`, `20-repo-routing.spec.ts` |
@@ -108,6 +108,20 @@ and the dock is one line until opened and absent on `/activity`
 (`22-repo-danger-zone.spec.ts`); the header names the repository and links to
 the list (`25-action-matrix.spec.ts`). `/search` is gone: no server route ever
 backed it.
+
+Work (`/work`, 2026-09-19, owner request): the Queue, Add and Workers tabs are
+one page, so there is one place to look and one obvious thing to do. Add work
+is first: a family select (the active filter's family, else the first), Night
+before Now with Night the default, one line, and one filled button that waits
+for text; stepping into the line or pressing More opens the full form in place,
+and filing collapses and clears it and highlights the new todo in the queue.
+Under it one line says how many slots are healthy, who is working on what (each
+linked to its todo) and how many are paused, with a 24 h sparkline; it takes a
+warning tone only when a slot that should be up is not, and its open state is
+remembered. The queue shows every family; the family pill at the far left of a
+row, or the counted strip above, filters the whole page through `?family=`, and
+the same pill again, or All, clears it. The palette has "Go to Work" and "Add
+work" (`28-shift.spec.ts`).
 
 Pull requests (`/pull-room`, 2026-09-19, owner request): the page is the same
 Opened > Checks > Review > Mergeable > Merged timeline the per-repo page shows,

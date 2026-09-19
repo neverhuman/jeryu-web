@@ -1,7 +1,7 @@
-// 28-shift.spec.ts — Work → Queue / Add / Workers (todoq shifts).
+// 28-shift.spec.ts — Work, one page: add work, who is working, the queue.
 //
 // The Shift API is mocked at the browser boundary in the exact shape of the
-// Phase 2 contract so the SPA routes, tab strip, admin gating and chart
+// Phase 2 contract so the page, its family filter, admin gating and chart
 // surfaces are locked without a live queue.
 
 import { expect, test } from '@playwright/test';
@@ -9,25 +9,28 @@ import { expect, test } from '@playwright/test';
 import { mockBootstrap } from './fixtures/mocks';
 import { NIGHT, mockShiftApi } from './fixtures/shiftMocks';
 
-test.describe('Work shift tabs', () => {
+test.describe('Work, one page', () => {
   test.beforeEach(async ({ page }) => {
     await page.context().route('**/api/v1/ws', (route) => route.abort());
   });
 
-  test('opens Work on the Queue, filter and expand a todo @action:shift.tabs @action:shift.queue_filter', async ({
+  test('Work is one page: composer, workers line, queue; old addresses land on it @action:shift.tabs @action:shift.queue_filter', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'user' } });
     await mockShiftApi(page);
 
     await page.goto('/work');
-    const tabs = page.getByRole('navigation', { name: 'Work' });
-    await expect(page).toHaveURL(/\/work\/shift$/);
-    await expect(tabs.getByRole('link', { name: 'Queue' })).toHaveAttribute('aria-current', 'page');
-    await expect(tabs.getByRole('link', { name: 'Tracker' })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/work$/);
+    await expect(page.getByRole('navigation', { name: 'Work' })).toHaveCount(0);
     await expect(page.getByTestId('shift-queue-page')).toBeVisible();
+    // Add work, then who is working, then the queue, in that order down the page.
+    await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible({ timeout: 15_000 });
+    const order = await page
+      .locator('#add, #workers, [data-testid="shift-todo-20260919-0800-aaa"]')
+      .evaluateAll((nodes) => nodes.map((node) => node.id || 'queue'));
+    expect(order).toEqual(['add', 'workers', 'queue']);
     await expect(page.getByTestId(`shift-branch-${NIGHT}`)).toContainText('last night');
-    await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();
 
     // What is live is the page; finished todos and finished shifts fold away.
     const finished = page.getByTestId('shift-finished-todos');
@@ -47,14 +50,51 @@ test.describe('Work shift tabs', () => {
     await expect(detail).toContainText('Slots POST heartbeats every 30 s.');
     await expect(detail).toContainText('landed clean');
     await expect(detail).toContainText('alton@xbabe0/w1');
-    // Non-admins see no row actions and no review-PR button.
+    // Non-admins see no row actions, no review-PR button, and why they cannot file.
     await expect(page.getByRole('button', { name: /Open review PR/ })).toHaveCount(0);
     await expect(page.getByRole('columnheader', { name: 'Action' })).toHaveCount(0);
+    await expect(page.getByTestId('work-composer-readonly')).toContainText('Only admins can file todos');
 
-    await tabs.getByRole('link', { name: 'Workers' }).click();
-    await expect(page).toHaveURL(/\/work\/shift\/workers$/);
-    await tabs.getByRole('link', { name: 'Add' }).click();
-    await expect(page.getByText('Only admins can file shift todos.')).toBeVisible();
+    // The three old addresses are this page, query string kept.
+    await page.goto('/work/shift?family=jeryu&todo=20260919-0900-ccc');
+    await expect(page).toHaveURL(/\/work\?family=jeryu&todo=20260919-0900-ccc$/);
+    await page.goto('/work/shift/workers?family=jeryu');
+    await expect(page).toHaveURL(/\/work\?family=jeryu#workers$/);
+    await expect(page.getByTestId('shift-workers-panel')).toBeVisible();
+    await page.goto('/work/shift/new');
+    await expect(page).toHaveURL(/\/work#add$/);
+  });
+
+  test('every family is listed, and a pill on a row filters the whole page @action:shift.family_pill', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockShiftApi(page);
+    await page.goto('/work');
+    const jain = page.getByTestId('shift-todo-20260919-0940-eee');
+    await expect(jain).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();
+    const strip = page.getByRole('group', { name: 'Filter by family' });
+    await expect(strip.getByRole('button', { name: /^All 4$/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(strip.getByRole('button', { name: /^jeryu 3$/ })).toBeVisible();
+
+    // The pill is the first thing in the row.
+    await expect(jain.locator('td').first().getByRole('button', { name: 'Show only jain' })).toBeVisible();
+    await jain.getByRole('button', { name: 'Show only jain' }).click();
+    await expect(page).toHaveURL(/\/work\?family=jain$/);
+    await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toHaveCount(0);
+    await expect(page.getByTestId(`shift-branch-${NIGHT}`)).toHaveCount(0);
+    // The composer follows the filter, and can still be pointed elsewhere.
+    await expect(page.getByLabel('Family', { exact: true })).toHaveValue('jain');
+
+    // The same pill again, or All, shows every family.
+    await jain.getByRole('button', { name: /^Showing only jain/ }).click();
+    await expect(page).toHaveURL(/\/work$/);
+    await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();
+    await strip.getByRole('button', { name: /^jeryu 3$/ }).click();
+    await expect(jain).toHaveCount(0);
+    await strip.getByRole('button', { name: /^All 4$/ }).click();
+    await expect(jain).toBeVisible();
   });
 
   test('admin row actions and open review PR @action:shift.row_action @action:shift.open_pr', async ({
@@ -62,7 +102,7 @@ test.describe('Work shift tabs', () => {
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
     const log = await mockShiftApi(page);
-    await page.goto('/work/shift');
+    await page.goto('/work');
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible({ timeout: 15_000 });
 
     // Block asks for its reason inline, never through a browser dialog.
@@ -94,7 +134,7 @@ test.describe('Work shift tabs', () => {
   }) => {
     await mockBootstrap(page, { auth: { role: 'user' } });
     await mockShiftApi(page);
-    await page.goto('/work/shift');
+    await page.goto('/work');
     const blocked = page.getByTestId('shift-todo-20260919-0930-ddd');
     await expect(blocked).toBeVisible({ timeout: 15_000 });
     // Blocked sorts above claimed and open work, with its failed attempts on the row.
@@ -128,39 +168,74 @@ test.describe('Work shift tabs', () => {
     await expect(blocked).toBeVisible();
   });
 
-  test('admin files one todo and many todos @action:shift.add_single @action:shift.add_many', async ({
+  test('admin files one todo from the one-line composer, and many from the opened form @action:shift.add_single @action:shift.add_many', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
     const log = await mockShiftApi(page);
-    await page.goto('/work/shift/new');
-    await expect(page.getByTestId('shift-add-page')).toBeVisible({ timeout: 15_000 });
+    await page.goto('/work');
+    const composer = page.getByRole('region', { name: 'Add work' });
+    await expect(composer).toBeVisible({ timeout: 15_000 });
 
-    await page.getByLabel('Todo', { exact: true }).fill('Fix flaky gate\n\nDetails here.');
-    await page.getByLabel('Night').check();
-    await page.getByRole('button', { name: 'File todo' }).click();
-    await expect(page.getByTestId('shift-add-filed')).toContainText('20260919-1000-new');
-    expect(log.posts[0].body).toEqual({ family: 'jeryu', text: 'Fix flaky gate\n\nDetails here.', mode: 'night' });
+    // One row: family, night by default, one line, one filled button that waits for text.
+    await expect(composer.getByLabel('Family', { exact: true })).toHaveValue('jeryu');
+    await expect(composer.getByLabel('Night')).toBeChecked();
+    const file = composer.getByRole('button', { name: 'File todo' });
+    await expect(file).toBeDisabled();
+    await expect(composer.getByLabel(/Paste many/)).toBeHidden();
+    // Stepping into the line opens the full form in place, cursor in the text.
+    await composer.getByLabel('What should be done?').click();
+    await expect(composer.getByLabel('Todo', { exact: true })).toBeFocused();
+    await composer.getByLabel('Todo', { exact: true }).fill('Fix flaky gate');
+    await file.click();
+    await expect(page).toHaveURL(/\/work\?todo=20260919-1000-new$/);
+    expect(log.posts[0].body).toEqual({ family: 'jeryu', text: 'Fix flaky gate', mode: 'night' });
+    // Filed: the composer is one empty line again.
+    await expect(composer.getByLabel('What should be done?')).toHaveValue('');
+    await expect(composer.getByLabel(/Paste many/)).toBeHidden();
 
-    await page.getByLabel(/Paste many/).check();
-    await page.getByLabel('Todos', { exact: true }).fill('one\n\ntwo\n\nthree');
-    await expect(page.getByTestId('shift-add-count')).toHaveText('3 todos will be filed as night.');
-    await page.getByRole('button', { name: 'File 3 todos' }).click();
-    await expect(page.getByTestId('shift-add-filed')).toContainText('Filed 3 todos');
-    await page.getByRole('link', { name: 'View in Queue' }).click();
-    await expect(page).toHaveURL(/\/work\/shift\?family=jeryu&todo=/);
-    expect(log.posts[1].body).toEqual({ family: 'jeryu', texts: ['one', 'two', 'three'], mode: 'night' });
+    await composer.getByRole('button', { name: 'More' }).click();
+    await composer.getByLabel('Family', { exact: true }).selectOption('jain');
+    await composer.getByLabel(/Paste many/).check();
+    await composer.getByLabel('Todos', { exact: true }).fill('one\n\ntwo\n\nthree');
+    await expect(page.getByTestId('shift-add-count')).toHaveText('3 todos will be filed as night for jain.');
+    await composer.getByRole('button', { name: 'File 3 todos' }).click();
+    await expect(page).toHaveURL(/\/work\?todo=20260919-1000-n0/);
+    expect(log.posts[1].body).toEqual({ family: 'jain', texts: ['one', 'two', 'three'], mode: 'night' });
   });
 
-  test('workers table, timeline range and capacity chart @action:shift.workers', async ({ page }) => {
+  test('palette: Add work puts the cursor in the composer @action:shift.add_palette', async ({ page }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockShiftApi(page);
+    await page.goto('/needs-you');
+    await page.getByRole('button', { name: /^Search or jump to/ }).click();
+    await page.getByRole('combobox', { name: 'Command palette' }).fill('Add work');
+    await page.getByRole('option', { name: 'Add work' }).click();
+    await expect(page).toHaveURL(/\/work#add$/);
+    await expect(page.getByRole('region', { name: 'Add work' }).getByLabel('Todo', { exact: true })).toBeFocused();
+  });
+
+  test('workers: one line that opens to the table, timeline and capacity chart @action:shift.workers', async ({ page }) => {
     await mockBootstrap(page, { auth: { role: 'user' } });
     await mockShiftApi(page);
-    await page.goto('/work/shift/workers');
+    await page.goto('/work');
+    const workers = page.getByTestId('work-workers');
+    const summary = page.getByTestId('work-workers-summary');
+    await expect(summary).toContainText('1 of 2 slots healthy', { timeout: 15_000 });
+    await expect(summary).toContainText('1 working');
+    await expect(summary.getByRole('link', { name: /Claimed refactor/ })).toHaveAttribute(
+      'href',
+      '/work?family=jeryu&todo=20260919-0900-ccc'
+    );
+    await expect(workers.getByRole('img', { name: 'Busy worker slots over the last 24 hours' })).toBeVisible();
+    await expect(page.getByTestId('shift-workers-panel')).toHaveCount(0);
+
+    await workers.getByRole('button', { name: 'Workers' }).click();
     const row = page.getByTestId('shift-worker-xbabe0-w1');
-    await expect(row).toContainText('healthy', { timeout: 15_000 });
+    await expect(row).toContainText('healthy');
     await expect(row.getByRole('link', { name: '20260919-0900-ccc' })).toHaveAttribute(
       'href',
-      '/work/shift?family=jeryu&todo=20260919-0900-ccc'
+      '/work?family=jeryu&todo=20260919-0900-ccc'
     );
     await expect(page.getByTestId('shift-worker-xbabe1-w2')).toContainText('stale');
     await expect(page.getByTestId('shift-timeline').getByRole('img')).toBeVisible();
@@ -169,5 +244,9 @@ test.describe('Work shift tabs', () => {
     await page.getByRole('button', { name: '7d' }).click();
     await history;
     await expect(page.getByRole('button', { name: '7d' })).toHaveAttribute('aria-pressed', 'true');
+
+    // Open stays open across a reload; the line is still there to close it.
+    await page.reload();
+    await expect(page.getByTestId('shift-workers-panel')).toBeVisible({ timeout: 15_000 });
   });
 });

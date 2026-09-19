@@ -1,4 +1,4 @@
-// workersModel.ts — what the Workers tab shows by default, and how a lane is named.
+// workersModel.ts — what the opened workers block shows by default, and how a lane is named.
 //
 // A supervisor slot starts and stops workers; it never carries a todo, so its
 // rows and lanes say nothing about work. They fold away until asked for. Lane
