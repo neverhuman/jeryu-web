@@ -35,6 +35,7 @@ import {
   mockRepoLookup,
 } from './fixtures/mocks';
 import { mockPipelineApi } from './fixtures/pipelineMocks';
+import { controlPlane, mockPullRoom } from './fixtures/pullRoomMocks';
 import { mockShiftApi } from './fixtures/shiftMocks';
 import { mockUnreleasedFamily } from './fixtures/unreleasedMocks';
 
@@ -320,6 +321,21 @@ test.describe('Accessibility scans — Work shift tabs', () => {
 });
 
 test.describe('Accessibility scans — Unreleased', () => {
+  test('axe scan: Pull requests timeline with family pills', async ({ page }) => {
+    // Rows from two repositories, one family pill pressed, so the timeline
+    // track, the pills and the view toggle are all on the page.
+    await page.context().route('**/api/v1/ws', (route) => route.abort());
+    await mockBootstrap(page);
+    const snapshot = controlPlane();
+    snapshot.pullRequests[1].repo = 'bob/jeryu';
+    await mockPullRoom(page, snapshot);
+    await page.goto('/pull-room?family=core');
+    await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible({
+      timeout: 15_000,
+    });
+    await scanAndAssert(page, 'pull-requests');
+  });
+
   test('axe scan: unreleased family view', async ({ page }) => {
     // Hydrated family view: one table per member across all three release
     // sources, with the released-PR toggle on so every row state renders, under

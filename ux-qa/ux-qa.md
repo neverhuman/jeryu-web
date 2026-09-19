@@ -116,5 +116,5 @@ the lane board is behind the Timeline / Board toggle (`?view=board`, or the olde
 `queue`). Family pills with counts filter through `?family=` (a repo with no
 family is "other"); three stat tiles became one sentence. `14-pull-room.spec.ts`
 covers the default timeline, the filters, the board, the pills and the back
-button, a repo whose list fails (one quiet line, never a page error), and an axe
-scan persisted as `pull-requests.axe.json`.
+button and a repo whose list fails (one quiet line, never a page error);
+`10-a11y.spec.ts` scans it (`pull-requests.axe.json` with rendered evidence).
