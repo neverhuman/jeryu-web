@@ -219,6 +219,12 @@
   font-size: var(--font-size-xs);
 }
 
+.file-tree__empty {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
 /* Code viewer --------------------------------------------------------------*/
 
 .code-viewer {

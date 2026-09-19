@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import type { PullRequestSummary } from '../api/types';
+import { pullRequestPath } from './pullRoomModel';
 import { PULL_STAGE_LABELS, pullStages, timelineOrder } from './pullTimelineModel';
 
 import './PullRoomPage.css';
@@ -38,7 +39,7 @@ export function PullRequestTimeline({
               data-testid={`pull-timeline-${pr.number}`}
             >
               <div className="pull-timeline__pr">
-                <Link to={`/repos/${pr.repo.host}/${encodeURIComponent(repo)}/pulls/${pr.number}`}>
+                <Link to={pullRequestPath(pr.repo.host, repo, pr.number)}>
                   <span className="pull-timeline__number">#{pr.number}</span> {pr.title}
                 </Link>
                 <span className="pull-timeline__meta">

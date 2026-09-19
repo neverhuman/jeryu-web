@@ -98,19 +98,6 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/settings/preview`,
 
   ws: (): string => '/api/v1/ws',
-  search: (
-    q: string,
-    options?: { kinds?: ReadonlyArray<string>; limit?: number }
-  ): string => {
-    const qs = new URLSearchParams({ q });
-    if (options?.kinds && options.kinds.length > 0) {
-      qs.set('kinds', options.kinds.join(','));
-    }
-    if (options?.limit !== undefined) {
-      qs.set('limit', String(options.limit));
-    }
-    return `/api/v1/search?${qs.toString()}`;
-  },
   controlPlaneStatus: (): string => '/api/v1/control-plane/status',
   controlPlaneRunners: (): string => '/api/v1/control-plane/runners',
   /** Every readable repository's live deployment in an environment, with its lag. */

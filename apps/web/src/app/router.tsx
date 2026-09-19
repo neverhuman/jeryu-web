@@ -33,7 +33,6 @@ import { RepositoryFamilyPage } from '../pages/RepositoryFamilyPage';
 import { RepositoryPullRequestsPage } from '../pages/RepositoryPullRequestsPage';
 import { RepositoryOverviewPage } from '../pages/RepositoryOverviewPage';
 import { RepositorySettingsPage } from '../pages/RepositorySettingsPage';
-import { SearchResultsPage } from '../pages/SearchResultsPage';
 import { ToolFleetPage } from '../pages/ToolFleetPage';
 import { ToolFleetToolPage } from '../pages/ToolFleetToolPage';
 import { ToolsPage } from '../pages/ToolsPage';
@@ -102,7 +101,6 @@ export const router = createBrowserRouter([
       // a person and Activity is the event feed. Old links land on the feed.
       { path: 'notifications', element: <Navigate to="/activity" replace /> },
       { path: 'audit', element: <AuditPage /> },
-      { path: 'search', element: <SearchResultsPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

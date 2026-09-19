@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { ApiError } from '../../api/client';
 import { useRepoTree } from '../../hooks/useRepoTree';
 import { INDENT_PX, fileIcon } from './fileTreeIcons';
 import type { TreeEntry } from '../../api/types';
@@ -79,9 +80,18 @@ function Subtree({
     );
   }
   if (query.isError) {
+    // A repository whose source is hosted elsewhere has no tree here at all.
+    // That is a fact about the repository, not a failure to load.
+    const noCode = path === '' && query.error instanceof ApiError && query.error.status === 404;
     return (
-      <div className="file-tree__error" role="treeitem" aria-level={depth + 1}>
-        Could not load {path || '/'}.
+      <div
+        className={noCode ? 'file-tree__empty' : 'file-tree__error'}
+        role="treeitem"
+        aria-level={depth + 1}
+      >
+        {noCode
+          ? 'No code on this forge. This repository’s source is hosted elsewhere.'
+          : `Could not load ${path || '/'}.`}
       </div>
     );
   }

@@ -8,6 +8,7 @@ import {
   groupPullRequests,
   cardFacts,
   knownSha,
+  pullRequestPath,
   pullRoomCounts,
   visibleLanes,
 } from '../pullRoomModel';
@@ -101,6 +102,13 @@ describe('pullRoomModel', () => {
 type PrOverrides = Omit<Partial<ControlPullRequest>, 'checks'> & {
   checks?: Partial<ControlPullRequest['checks']>;
 };
+
+describe('pullRequestPath', () => {
+  it('spells a pull request page one way, never with an encoded slash', () => {
+    expect(pullRequestPath('jeryu', 'veox-ai/ai-veox-app', 1)).toBe('/repos/jeryu/veox-ai/ai-veox-app/pulls/1');
+    expect(pullRequestPath('jeryu', 'odd owner/na me', 7)).toBe('/repos/jeryu/odd%20owner/na%20me/pulls/7');
+  });
+});
 
 function pr(overrides: PrOverrides = {}): ControlPullRequest {
   return {

@@ -109,7 +109,7 @@ export function fromControlPullRequest(pr: ControlPullRequest): PullListItem {
     evidenceState: pr.stateEvidence,
     checkPosture: checkPosture(pr.checks),
     checks: pr.checks,
-    url: `/repos/jeryu/${encodeURIComponent(pr.repo)}/pulls/${pr.number}`,
+    url: pullRequestPath('jeryu', pr.repo, pr.number),
     updatedAt: null,
   };
 }
@@ -143,7 +143,7 @@ export function fromPullRequestSummary(pr: PullRequestSummary): PullListItem {
     evidenceState: pr.checks.total === 0 ? 'missing' : 'fresh',
     checkPosture: checkPosture(checks),
     checks,
-    url: `/repos/${pr.repo.host}/${encodeURIComponent(repo)}/pulls/${pr.number}`,
+    url: pullRequestPath(pr.repo.host, repo, pr.number),
     updatedAt: pr.updated_at,
   };
 }
@@ -291,4 +291,14 @@ export function scopeToRepos(
   repos: ReadonlySet<string> | null
 ): PullListItem[] {
   return repos ? items.filter((item) => repos.has(item.repo)) : items;
+}
+
+/**
+ * The one spelling of a pull request's page: `/repos/<host>/<owner>/<name>/pulls/<n>`.
+ * Encoding the whole `owner/name` turned its slash into `%2F`, a second URL for
+ * the same page that the nav and breadcrumbs did not recognise.
+ */
+export function pullRequestPath(host: string, fullName: string, number: number): string {
+  const name = fullName.split('/').map(encodeURIComponent).join('/');
+  return `/repos/${encodeURIComponent(host)}/${name}/pulls/${number}`;
 }

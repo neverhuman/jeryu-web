@@ -109,7 +109,7 @@ test('Pull Room renders filters, queue lanes, PR cards and cockpit links @action
   const link = page.getByRole('link', { name: 'Fix BFF PR list' });
   await expect(link).toHaveAttribute(
     'href',
-    '/repos/jeryu/alice%2Fjeryu/pulls/7'
+    '/repos/jeryu/alice/jeryu/pulls/7'
   );
   await expect(page.getByText(/W-FE-11/i)).toHaveCount(0);
 });

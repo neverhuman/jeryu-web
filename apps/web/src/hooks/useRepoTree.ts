@@ -8,7 +8,7 @@
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { apiGet } from '../api/client';
+import { ApiError, apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { TreeEntry } from '../api/types';
 
@@ -35,5 +35,7 @@ export function useRepoTree(
     enabled:
       typeof repoId === 'string' && repoId.length > 0 && ref.length > 0,
     staleTime: 30_000,
+    // A missing tree (a repository with no code here) will not appear on a second ask.
+    retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 1,
   });
 }
