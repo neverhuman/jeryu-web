@@ -78,3 +78,16 @@ Timing thresholds:
 
 If `@lhci/cli` is not installed (lockfile-only environment), install it with
 `npm install --workspace @jeryu/web @lhci/cli@latest` and re-run the script.
+
+## Rendered surfaces
+
+New product surfaces join the rendered lane with three pieces of evidence:
+an axe scan plus `persistRenderedEvidence` (screenshot + geometry + design
+tokens) in `apps/web/e2e/10-a11y.spec.ts`, shared browser-boundary API mocks
+under `apps/web/e2e/fixtures/`, and a Playwright screenshot from the route spec.
+
+| Surface | Scope | Mocks | Route spec |
+|---|---|---|---|
+| `/runners` | `fleet` | `mocks.ts` (`mockFleetBootstrap`) | `11-fleet.spec.ts` |
+| `/work/shift*` | `shift-queue`, `shift-add`, `shift-workers` | `shiftMocks.ts` | `28-shift.spec.ts` |
+| `/unreleased` | `unreleased` | `unreleasedMocks.ts` | `28-unreleased.spec.ts` |

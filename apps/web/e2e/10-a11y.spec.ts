@@ -35,6 +35,7 @@ import {
   mockRepoLookup,
 } from './fixtures/mocks';
 import { mockShiftApi } from './fixtures/shiftMocks';
+import { mockUnreleasedFamily } from './fixtures/unreleasedMocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -246,4 +247,23 @@ test.describe('Accessibility scans — Work shift tabs', () => {
       expect(blockers.map((v) => v.id)).toEqual([]);
     });
   }
+});
+
+test.describe('Accessibility scans — Unreleased', () => {
+  test('axe scan: unreleased family view', async ({ page }) => {
+    // Hydrated family view: one table per member across all three release
+    // sources, with the released-PR toggle on so every row state renders.
+    await mockBootstrap(page);
+    await mockUnreleasedFamily(page);
+    await page.goto('/unreleased?family=jeryu&released=1');
+    await expect(page.getByTestId('unreleased-table-jeryu/jeryu-deploy')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId('unreleased-summary-jeryu/jeryu-docs')).toBeVisible();
+    await scanAndAssert(page, 'unreleased');
+    const blockers = blockingViolations(
+      await runAxe(page, { disableRules: ['color-contrast'] })
+    );
+    expect(blockers.map((v) => v.id)).toEqual([]);
+  });
 });
