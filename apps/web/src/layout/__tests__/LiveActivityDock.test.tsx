@@ -2,7 +2,7 @@
 // remembers its collapsed state, and stays out of the way otherwise.
 
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LiveActivityDock } from '../LiveActivityDock';
 import { htmlShell, mockPipelineApi } from '../../pages/__tests__/pipelinePageHelpers';
@@ -13,10 +13,37 @@ vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: { login: 'alton', role } }),
 }));
 
+// The gate's Node defines a global localStorage that is undefined without a
+// backing file, and it shadows jsdom's. The dock goes through the storage
+// adapter, so the test installs its own Storage, as the adapter's test does.
+function makeStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+  };
+}
+
 describe('LiveActivityDock', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: makeStorage(),
+    });
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
-    window.localStorage.clear();
     role = 'admin';
   });
 
