@@ -50,8 +50,6 @@ export const endpoints = {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/readme`;
     return ref ? `${base}?ref=${encodeURIComponent(ref)}` : base;
   },
-  readmeUpdate: (id: string): string =>
-    `/api/v1/repos/${encodeURIComponent(id)}/readme`,
   compare: (id: string, base: string, head: string): string => {
     const qs = new URLSearchParams({ base, head });
     return `/api/v1/repos/${encodeURIComponent(id)}/compare?${qs.toString()}`;
@@ -75,14 +73,10 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/threads`,
   pullReviews: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/reviews`,
-  pullComments: (id: string, prNumber: string): string =>
-    `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/comments`,
   pullApprove: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/approve`,
   pullMerge: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge`,
-  issues: (id: string): string =>
-    `/api/v1/repos/${encodeURIComponent(id)}/issues`,
   work: (params?: WorkQueryParams): string => {
     const qs = workQuery(params);
     return qs ? `/api/v1/work?${qs}` : '/api/v1/work';
@@ -104,7 +98,6 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/settings/preview`,
 
   ws: (): string => '/api/v1/ws',
-  markdownRender: (): string => '/api/v1/markdown/render',
   search: (
     q: string,
     options?: { kinds?: ReadonlyArray<string>; limit?: number }
@@ -118,32 +111,7 @@ export const endpoints = {
     }
     return `/api/v1/search?${qs.toString()}`;
   },
-  activity: (): string => '/api/v1/activity',
   controlPlaneStatus: (): string => '/api/v1/control-plane/status',
-  controlPlanePriorities: (limit?: number): string => {
-    const base = '/api/v1/control-plane/priorities';
-    return limit ? `${base}?limit=${encodeURIComponent(String(limit))}` : base;
-  },
-  controlPlaneRepoGraph: (params?: {
-    repo?: string;
-    clusterKind?: string;
-    query?: string;
-    limit?: number;
-  }): string => {
-    const qs = new URLSearchParams();
-    if (params?.repo) qs.set('repo', params.repo);
-    if (params?.clusterKind) qs.set('cluster_kind', params.clusterKind);
-    if (params?.query) qs.set('query', params.query);
-    if (params?.limit !== undefined) qs.set('limit', String(params.limit));
-    const suffix = qs.toString();
-    return suffix
-      ? `/api/v1/control-plane/repo-graph?${suffix}`
-      : '/api/v1/control-plane/repo-graph';
-  },
-  controlPlaneArtifactsLatest: (repo?: string): string =>
-    repo
-      ? `/api/v1/control-plane/artifacts/latest?repo=${encodeURIComponent(repo)}`
-      : '/api/v1/control-plane/artifacts/latest',
   controlPlaneRunners: (): string => '/api/v1/control-plane/runners',
   /** Every readable repository's live deployment in an environment, with its lag. */
   deployedRepositories: (environment = 'production'): string =>
@@ -187,7 +155,6 @@ export const endpoints = {
     `/api/v1/tool-finder/proposals/${encodeURIComponent(toolId)}/decision`,
   toolBuildClusterFeedback: (clusterId: string): string =>
     `/api/v1/codegraph/tool-build/clusters/${encodeURIComponent(clusterId)}/feedback`,
-  agentRuns: (): string => '/api/v1/agent-runs',
   repoAgentRuns: (id: string): string => `/api/v1/repos/${encodeURIComponent(id)}/agent-runs`,
   repoSessions: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/sessions`,

@@ -59,7 +59,6 @@ apps/web/
     │   ├── PullRoomPage.tsx
     │   ├── RepositorySettingsPage.tsx
     │   ├── AdminSettingsPage.tsx
-    │   ├── NotificationsPage.tsx
     │   ├── AuditPage.tsx
     │   ├── IssuesPage.tsx
     │   ├── StubPage.tsx

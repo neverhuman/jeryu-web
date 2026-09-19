@@ -26,7 +26,6 @@ import { PullRoomPage } from '../pages/PullRoomPage';
 import { ProposalsPage } from '../pages/ProposalsPage';
 import { NeedsYouPage } from '../pages/needsYou';
 import { NotFoundPage } from '../pages/NotFoundPage';
-import { NotificationsPage } from '../pages/NotificationsPage';
 import { RepositoriesPage } from '../pages/RepositoriesPage';
 import { RepositoryAgentsPage } from '../pages/RepositoryAgentsPage';
 import { RepositoryCodePage } from '../pages/RepositoryCodePage';
@@ -99,7 +98,9 @@ export const router = createBrowserRouter([
       { path: 'tools', element: <Navigate to={FINDINGS_PATH} replace /> },
       { path: 'tool-fleet', element: <Navigate to={ADOPTION_PATH} replace /> },
       { path: 'tool-fleet/:tool', element: <ToolFleetToolRedirect /> },
-      { path: 'notifications', element: <NotificationsPage /> },
+      // The in-memory notifications inbox is gone: Needs you says what waits on
+      // a person and Activity is the event feed. Old links land on the feed.
+      { path: 'notifications', element: <Navigate to="/activity" replace /> },
       { path: 'audit', element: <AuditPage /> },
       { path: 'search', element: <SearchResultsPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },

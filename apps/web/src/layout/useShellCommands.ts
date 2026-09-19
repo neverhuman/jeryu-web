@@ -60,7 +60,7 @@ export function useShellCommands(): void {
       {
         id: 'nav.activity',
         title: 'Go to Activity',
-        keywords: ['activity', 'events', 'log', 'feed', 'live', 'pipeline', 'wall'],
+        keywords: ['activity', 'events', 'log', 'feed', 'live', 'pipeline', 'notifications', 'alerts'],
         icon: 'activity',
         target: { kind: 'route', path: '/activity' },
         shortcut: 'g a',
@@ -119,14 +119,6 @@ export function useShellCommands(): void {
         icon: 'layers',
         target: { kind: 'route', path: '/shared-tools' },
         shortcut: 'g t',
-      },
-      {
-        id: 'nav.notifications',
-        title: 'Go to Notifications',
-        keywords: ['notify', 'alerts'],
-        icon: 'bell',
-        target: { kind: 'route', path: '/notifications' },
-        shortcut: 'g n',
       },
       {
         id: 'nav.search',

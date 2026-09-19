@@ -6,7 +6,6 @@
 import { Search } from 'lucide-react';
 
 import { JeryuLogo } from '../components/brand/JeryuLogo';
-import { NotificationInbox } from '../components/NotificationInbox';
 import { useBootstrap } from '../hooks/useBootstrap';
 import { useRealtimeStore } from '../stores/realtimeStore';
 import { useCommandStore } from '../stores/commandStore';
@@ -51,7 +50,6 @@ export function GlobalHeader(): JSX.Element {
         />
         {liveLabel}
       </span>
-      <NotificationInbox viewerId={bootstrap.data?.viewer.id ?? null} />
       <UserMenu
         login={bootstrap.data?.viewer.login ?? 'Loading…'}
         displayName={bootstrap.data?.viewer.display_name ?? null}

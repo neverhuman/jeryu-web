@@ -69,8 +69,9 @@ export function ReleasesPage(): JSX.Element {
           <button type="submit">Show</button>
         </form>
         <p className="releases__muted">
-          Merged work that is not live yet, per pull request:{' '}
-          <Link to={`/unreleased?repo=${encodeURIComponent(repoId)}`}>Unreleased</Link>
+          <Link to={`/unreleased?repo=${encodeURIComponent(repoId)}`}>
+            See this repository&apos;s unreleased pull requests
+          </Link>
         </p>
       </header>
 

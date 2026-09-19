@@ -19,7 +19,7 @@ export function NotFoundPage(): JSX.Element {
         description={`We couldn't find ${location.pathname}. The link may be outdated, or the resource may have been moved.`}
         action={
           <ActionButton variant="primary" onClick={() => navigate('/')}>
-            Back to dashboard
+            Back to home
           </ActionButton>
         }
       />

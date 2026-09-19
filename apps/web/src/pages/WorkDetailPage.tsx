@@ -153,7 +153,7 @@ export function WorkDetailPage(): JSX.Element {
     return (
       <div className="page" data-testid="work-detail-page">
         <header className="page__header">
-          <h1 className="page__title">Work</h1>
+          <h1 className="page__title">Tracker</h1>
         </header>
         <p className="page__roadmap-note">
           {detail.error?.message ?? 'Work item not found.'}

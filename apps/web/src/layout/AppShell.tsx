@@ -124,11 +124,6 @@ export function AppShell(): JSX.Element {
     group: 'Navigation',
     enabled: !!auth.user,
   });
-  useKeyboardShortcut('g n', () => navigate('/notifications'), {
-    label: 'Go to Notifications',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
   useKeyboardShortcut('g s', () => navigate('/settings'), {
     label: 'Go to Settings',
     group: 'Navigation',

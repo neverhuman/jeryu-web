@@ -71,7 +71,7 @@ function RepoWorkPage({ provider = 'unknown', fullName = '', alias }: WorkPagePr
     return (
       <div className="page" data-testid="work-page">
         <header className="page__header">
-          <h1 className="page__title">Work</h1>
+          <h1 className="page__title">Tracker</h1>
         </header>
         <p className="page__roadmap-note">
           {resolved.error?.message ?? `No repository ${fullName}.`}
@@ -88,7 +88,7 @@ function RepoWorkPage({ provider = 'unknown', fullName = '', alias }: WorkPagePr
 
   return (
     <WorkBoard
-      title="Work"
+      title="Tracker"
       subtitle={subtitle}
       queryKey={['repo-work', resolved.data.id]}
       queryUrl={endpoints.repoWork(resolved.data.id)}

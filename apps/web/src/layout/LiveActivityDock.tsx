@@ -67,24 +67,26 @@ export function LiveActivityDock(): JSX.Element | null {
         </Link>
       </header>
       {collapsed ? null : (
-        <ol className="activity-dock__body" id="activity-dock-body" role="log" aria-live="off">
-          {events.length === 0 ? (
-            <li className="activity-dock__empty">No pipeline events yet.</li>
-          ) : (
-            events.map((event) => (
-              <li
-                key={event.seq}
-                className={`activity-dock__item activity-dock__item--${eventTone(event)}`}
-              >
-                <time className="activity-dock__meta" dateTime={event.ts}>
-                  {formatClock(event.ts)}
-                </time>
-                <span className="activity-dock__scope">{event.kind}</span>
-                <span className="activity-dock__summary">{event.summary}</span>
-              </li>
-            ))
-          )}
-        </ol>
+        <div id="activity-dock-body" role="log" aria-live="off" aria-label="Newest pipeline events">
+          <ol className="activity-dock__body">
+            {events.length === 0 ? (
+              <li className="activity-dock__empty">No pipeline events yet.</li>
+            ) : (
+              events.map((event) => (
+                <li
+                  key={event.seq}
+                  className={`activity-dock__item activity-dock__item--${eventTone(event)}`}
+                >
+                  <time className="activity-dock__meta" dateTime={event.ts}>
+                    {formatClock(event.ts)}
+                  </time>
+                  <span className="activity-dock__scope">{event.kind}</span>
+                  <span className="activity-dock__summary">{event.summary}</span>
+                </li>
+              ))
+            )}
+          </ol>
+        </div>
       )}
     </section>
   );

@@ -102,7 +102,7 @@ describe('ReleasesPage', () => {
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/48'
     );
-    expect(screen.getByRole('link', { name: 'Unreleased' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: "See this repository's unreleased pull requests" })).toHaveAttribute(
       'href',
       '/unreleased?repo=jeryu%2Fjeryu-deploy'
     );

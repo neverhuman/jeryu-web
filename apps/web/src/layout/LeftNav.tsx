@@ -9,7 +9,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   Activity,
-  Bell,
   Bot,
   Code2,
   Cog,
@@ -53,7 +52,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
   { to: '/runners', label: 'Runners', icon: ServerCog },
   { to: '/shared-tools', label: 'Shared tools', icon: Layers },
-  { to: '/notifications', label: 'Notifications', icon: Bell },
   { to: '/settings', label: 'Settings', icon: Cog },
 ];
 
@@ -127,7 +125,8 @@ export function LeftNav(): JSX.Element {
             className={`left-nav__item${isActivePath(pathname, `${repo.base}/work`) || isActivePath(pathname, `${repo.base}/issues`) ? ' is-active' : ''}`}
           >
             <ClipboardList aria-hidden="true" size={16} />
-            Work
+            {/* "Work" is the global shift queue; this is the repo's item tracker. */}
+            Tracker
           </Link>
           <Link
             to={`${repo.base}/pulls`}
