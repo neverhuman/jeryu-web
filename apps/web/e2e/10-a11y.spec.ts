@@ -253,10 +253,13 @@ test.describe('Accessibility scans — Work shift tabs', () => {
 test.describe('Accessibility scans — Unreleased', () => {
   test('axe scan: unreleased family view', async ({ page }) => {
     // Hydrated family view: one table per member across all three release
-    // sources, with the released-PR toggle on so every row state renders.
-    await mockBootstrap(page);
+    // sources, with the released-PR toggle on so every row state renders, under
+    // the admin-only "Ready to pin" section with a pin row opened.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
     await mockUnreleasedFamily(page);
     await page.goto('/unreleased?family=jeryu&released=1');
+    await page.getByTestId('pin-jeryu/jeryu-web').locator('summary').click();
     await expect(page.getByTestId('unreleased-table-jeryu/jeryu-deploy')).toBeVisible({
       timeout: 15_000,
     });

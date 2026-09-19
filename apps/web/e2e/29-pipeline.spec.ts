@@ -1,11 +1,12 @@
 // 29-pipeline.spec.ts — Needs you, Activity (feed, filters, wall), and the
-// live dock, on the pipeline visibility contract mocked at the browser
+// live dock and the pins ("Ready to pin"), on the pipeline visibility contract mocked at the browser
 // boundary; plus the same surfaces against a server that predates it.
 
 import { expect, test } from '@playwright/test';
 
 import { mockBootstrap } from './fixtures/mocks';
-import { DEPLOY_COMMAND, mockPipelineApi } from './fixtures/pipelineMocks';
+import { DEPLOY_COMMAND, mockPipelineApi, pinsBody } from './fixtures/pipelineMocks';
+import { compareBody, mockRepo, production, pull } from './fixtures/unreleasedMocks';
 
 test.describe('Pipeline visibility', () => {
   test.beforeEach(async ({ page }) => {
@@ -127,5 +128,66 @@ test.describe('Pipeline visibility', () => {
     );
     await page.getByTestId('activity-dock').getByRole('link', { name: 'All activity' }).click();
     await expect(page).toHaveURL(/\/activity$/);
+  });
+  test('Unreleased and Releases say what is merged but not pinned, with one next step @action:unreleased.ready_to_pin', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    await mockRepo(page, 'jeryu-deploy', {
+      environments: [production],
+      pulls: [pull('jeryu-deploy', 27, 'feat: already live', 'merged', 'a')],
+      compare: compareBody('a', []),
+    });
+
+    await page.goto('/unreleased');
+    const ready = page.getByTestId('ready-to-pin');
+    await expect(ready).toBeVisible({ timeout: 15_000 });
+    const web = ready.getByTestId('pin-jeryu/jeryu-web');
+    await expect(web).toContainText('9 merged commits not pinned yet');
+    await expect(web).toContainText('the pin bump opens by itself within minutes');
+    await expect(web.getByText('test: the dock test brings its own Storage')).toBeHidden();
+    await web.locator('summary').click();
+    await expect(web.getByText('test: the dock test brings its own Storage')).toBeVisible();
+    await expect(ready.getByTestId('pin-jeryu/jeryu-core')).toContainText(
+      '3 commits since tag jeryu-core-v5.0.0-split.6, needs a new tag'
+    );
+    await expect(ready.getByTestId('pins-current-jeryu/jeryu-deploy')).toHaveText('1 pin current');
+    // The existing content stays below it.
+    await expect(page.getByTestId('unreleased-summary-jeryu/jeryu-deploy')).toBeVisible();
+
+    await page.goto('/releases');
+    const unpinned = page.getByTestId('releases-unpinned');
+    await expect(unpinned).toContainText("jeryu-web has 9 merged commits not in this repo's pin");
+    await unpinned.getByRole('link', { name: 'See what a bump would ship' }).click();
+    await expect(page).toHaveURL(/\/unreleased\?repo=jeryu%2Fjeryu-deploy$/);
+  });
+
+  test('an open bump PR is the next step, and an older server stays quiet @action:unreleased.ready_to_pin', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page, {
+      pins: pinsBody({ number: 53, state: 'open', url: '/repos/jeryu/jeryu/jeryu-deploy/pulls/53' }),
+    });
+    await mockRepo(page, 'jeryu-deploy', {
+      environments: [production],
+      pulls: [pull('jeryu-deploy', 27, 'feat: already live', 'merged', 'a')],
+      compare: compareBody('a', []),
+    });
+    await page.goto('/unreleased');
+    await expect(
+      page.getByTestId('pin-jeryu/jeryu-web').getByRole('link', { name: 'bump PR #53 is open' })
+    ).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-deploy/pulls/53');
+
+    // A server that predates the route answers with the SPA shell.
+    await page.route(/\/api\/v1\/pins(\?.*)?$/, (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><html></html>' })
+    );
+    await page.reload();
+    await expect(page.getByTestId('ready-to-pin-unavailable')).toHaveText(
+      'Pins are not available on this server version.'
+    );
+    await expect(page.getByTestId('unreleased-summary-jeryu/jeryu-deploy')).toBeVisible();
   });
 });

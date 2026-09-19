@@ -1,5 +1,5 @@
 // pipelineMocks.ts — browser-boundary mocks for the pipeline visibility
-// contract v1: `GET /api/v1/attention` and `GET /api/v1/events`.
+// contract v1: `GET /api/v1/attention`, `GET /api/v1/events` and `GET /api/v1/pins`.
 //
 // Register AFTER `mockBootstrap` (Playwright matches the newest route first).
 // Without these mocks the shared 404 fallback answers, which is exactly what a
@@ -154,13 +154,67 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
   ];
 }
 
+/** `GET /api/v1/pins`: jeryu-deploy's web pin is behind, a tag needs cutting, one pin is current. */
+export function pinsBody(
+  webBumpPr: { number: number; state: string; url: string } | null = null
+): Record<string, unknown> {
+  const pin = (partial: Record<string, unknown>): Record<string, unknown> => ({
+    kind: 'commit',
+    source: 'jeryu-split.lock.toml',
+    pinned_ref: '8afe03c49bbdf1ad26d1282095561b50c840bf0e',
+    pinned_sha: '8afe03c49bbdf1ad26d1282095561b50c840bf0e',
+    latest_sha: '427bebecb848d7b7bb37ecc71521d7461072694d',
+    behind: 0,
+    latest_green: true,
+    state: 'current',
+    bump_pr: null,
+    unreleased: [],
+    ...partial,
+  });
+  return {
+    schema_version: '1',
+    generated_at: '2026-09-19T15:00:00Z',
+    consumers: [
+      {
+        repo: 'jeryu/jeryu-deploy',
+        family: 'jeryu',
+        branch: 'main',
+        pins: [
+          pin({
+            dependency: 'jeryu/jeryu-web',
+            behind: 9,
+            state: 'behind',
+            bump_pr: webBumpPr,
+            unreleased: [
+              { sha: '427bebecb848d7b7bb37ecc71521d7461072694d', subject: 'test: the dock test brings its own Storage' },
+            ],
+          }),
+          pin({
+            dependency: 'jeryu/jeryu-core',
+            kind: 'tag',
+            source: 'crates/jeryu-api/Cargo.toml',
+            pinned_ref: 'jeryu-core-v5.0.0-split.6',
+            behind: 3,
+            state: 'behind',
+          }),
+          pin({ dependency: 'jeryu/jeryu-cache', kind: 'tag', pinned_ref: 'jeryu-cache-v5.0.0-split.0' }),
+        ],
+      },
+    ],
+  };
+}
+
 export interface PipelineMockLog {
   eventQueries: string[];
 }
 
 export async function mockPipelineApi(
   page: Page,
-  options: { attention?: Record<string, unknown>; events?: Array<Record<string, unknown>> } = {}
+  options: {
+    attention?: Record<string, unknown>;
+    events?: Array<Record<string, unknown>>;
+    pins?: Record<string, unknown>;
+  } = {}
 ): Promise<PipelineMockLog> {
   const log: PipelineMockLog = { eventQueries: [] };
   const events = options.events ?? pipelineEvents();
@@ -168,6 +222,7 @@ export async function mockPipelineApi(
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 
   await page.route(/\/api\/v1\/attention(\?.*)?$/, (route) => json(route, options.attention ?? attentionBody()));
+  await page.route(/\/api\/v1\/pins(\?.*)?$/, (route) => json(route, options.pins ?? pinsBody()));
   await page.route(/\/api\/v1\/events(\?.*)?$/, (route, request) => {
     const qs = new URL(request.url()).searchParams;
     log.eventQueries.push(qs.toString());
