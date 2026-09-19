@@ -4,7 +4,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { EvidenceState } from '../api/types';
 import { useControlPlane } from '../hooks/useControlPlane';
 import { useRepositories } from '../hooks/useRepositories';
-import { useEcosystem, useToolBuildClusters } from '../hooks/useToolingEvidence';
 import { PullRequestListView } from './PullRequestListView';
 import {
   DEFAULT_PULL_ROOM_FILTERS,
@@ -12,7 +11,6 @@ import {
   fromControlPullRequest,
   groupPullRequests,
   pullRoomCounts,
-  rankToolBuildOpportunities,
   repoOptions,
   scopeToRepos,
   type PullRoomFilters,
@@ -32,8 +30,6 @@ const EVIDENCE_STATES: EvidenceState[] = [
 export function PullRoomPage(): JSX.Element {
   // Checks, reviews and merges move without this tab doing anything: poll.
   const snapshot = useControlPlane({ refetchInterval: 30_000 });
-  const toolClusters = useToolBuildClusters(8);
-  const ecosystem = useEcosystem();
   const [searchParams, setSearchParams] = useSearchParams();
   const [localFilters, setFilters] = useState<PullRoomFilters>(DEFAULT_PULL_ROOM_FILTERS);
   // Keep the repository in the URL so shared links and history update the results.
@@ -80,24 +76,13 @@ export function PullRoomPage(): JSX.Element {
   const lanes = useMemo(() => groupPullRequests(filtered), [filtered]);
   const repos = useMemo(() => repoOptions(items), [items]);
   const counts = useMemo(() => pullRoomCounts(items), [items]);
-  const opportunities = useMemo(
-    () =>
-      snapshot.data
-        ? rankToolBuildOpportunities(
-            snapshot.data,
-            toolClusters.data?.clusters ?? []
-          )
-        : [],
-    [snapshot.data, toolClusters.data]
-  );
-
   if (snapshot.isLoading) {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
         <header className="page__header">
           <h1 className="page__title">Pull Room</h1>
         </header>
-        <p className="page__roadmap-note">Loading pull request control plane.</p>
+        <p className="page__roadmap-note">Loading pull requests.</p>
       </div>
     );
   }
@@ -109,7 +94,7 @@ export function PullRoomPage(): JSX.Element {
           <h1 className="page__title">Pull Room</h1>
         </header>
         <p className="page__roadmap-note">
-          {snapshot.error?.message ?? 'Pull Room control-plane snapshot unavailable.'}
+          {snapshot.error?.message ?? 'Pull requests are unavailable right now.'}
         </p>
       </div>
     );
@@ -121,7 +106,7 @@ export function PullRoomPage(): JSX.Element {
         <div>
           <h1 className="page__title">Pull Room</h1>
           <p className="page__subtitle">
-            Cross-repo pull request cockpit from local control-plane truth.
+            Open pull requests across every repository.
           </p>
           {family ? (
             <p className="pull-room__scope" data-testid="pull-room-family-scope">
@@ -139,7 +124,6 @@ export function PullRoomPage(): JSX.Element {
           <Metric label="open" value={counts.open} />
           <Metric label="missing checks" value={counts.missingChecks} />
           <Metric label="failing checks" value={counts.failingChecks} />
-          <Metric label="tool clusters" value={snapshot.data.toolBuild.clusterCount} />
         </div>
       </header>
 
@@ -231,48 +215,6 @@ export function PullRoomPage(): JSX.Element {
           lanes={lanes}
           emptyMessage="No pull requests match the current filters."
         />
-        <aside className="pull-room__rail" aria-labelledby="tooling-opportunities">
-          <h2 id="tooling-opportunities">Tooling opportunities</h2>
-          <div className="pull-room__rail-panel">
-            <h3>Tool graph</h3>
-            {ecosystem.isError ? (
-              <p>Tool graph unavailable: {ecosystem.error.message}</p>
-            ) : (
-              <p>
-                {ecosystem.data?.tools.length ?? 0} tools ·{' '}
-                {ecosystem.data?.tools.filter((tool) => tool.conformance === 'mutating').length ?? 0}{' '}
-                mutating · {ecosystem.data?.degradedReason || 'live'}
-              </p>
-            )}
-          </div>
-          <div className="pull-room__opportunities">
-            {toolClusters.isError ? (
-              <p className="pull-room__rail-note">
-                Tool-build clusters unavailable: {toolClusters.error.message}
-              </p>
-            ) : opportunities.length === 0 ? (
-              <p className="pull-room__rail-note">
-                No tool-building clusters available.
-              </p>
-            ) : (
-              opportunities.slice(0, 6).map((item) => (
-                <article className="pull-room__opportunity" key={item.id}>
-                  <div className="pull-room__opportunity-top">
-                    <strong>{item.repo}</strong>
-                    <span>{item.score}</span>
-                  </div>
-                  <p>{item.insight}</p>
-                  <div className="pull-room__opportunity-meta">
-                    <span>{item.occurrenceCount} occurrences</span>
-                    <span>{item.fileCount} files</span>
-                    {item.language ? <span>{item.language}</span> : null}
-                  </div>
-                  <code>{item.suggestedProofLane}</code>
-                </article>
-              ))
-            )}
-          </div>
-        </aside>
       </div>
     </div>
   );

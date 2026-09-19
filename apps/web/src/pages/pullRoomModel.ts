@@ -1,10 +1,7 @@
 import type {
-  ControlPlaneSnapshot,
   ControlPullRequest,
   EvidenceState,
   PullRequestSummary,
-  ToolBuildCluster,
-  ToolBuildClusterSummary,
 } from '../api/types';
 
 export type CheckPosture =
@@ -63,17 +60,6 @@ export interface PullLane {
   id: PullLaneId;
   title: string;
   items: PullListItem[];
-}
-
-export interface ToolOpportunity {
-  id: string;
-  repo: string;
-  score: number;
-  occurrenceCount: number;
-  fileCount: number;
-  language: string | null;
-  insight: string;
-  suggestedProofLane: string;
 }
 
 /** State filter value that hides merged and closed PRs. */
@@ -262,50 +248,31 @@ export function repoOptions(items: PullListItem[]): string[] {
   return Array.from(new Set(items.map((item) => item.repo))).sort();
 }
 
-export function rankToolBuildOpportunities(
-  snapshot: ControlPlaneSnapshot,
-  clusters: ToolBuildCluster[] = []
-): ToolOpportunity[] {
-  const fromClusters = clusters.map((cluster) => ({
-    id: cluster.cluster_id,
-    repo: cluster.repo_id,
-    score: cluster.score,
-    occurrenceCount: cluster.occurrence_count,
-    fileCount: cluster.file_count,
-    language: cluster.language || null,
-    insight: cluster.insight,
-    suggestedProofLane: suggestedProofLane(cluster.language),
-  }));
-  const seedClusters = snapshot.toolBuild.topClusters.map(summaryOpportunity);
-  return [...fromClusters, ...seedClusters]
-    .filter((item, index, all) => all.findIndex((x) => x.id === item.id) === index)
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        b.occurrenceCount - a.occurrenceCount ||
-        b.fileCount - a.fileCount ||
-        a.id.localeCompare(b.id)
-    );
+/** Lanes that hold something; an empty lane is a header over nothing. */
+export function visibleLanes(lanes: PullLane[]): PullLane[] {
+  return lanes.filter((lane) => lane.items.length > 0);
 }
 
-function summaryOpportunity(cluster: ToolBuildClusterSummary): ToolOpportunity {
-  return {
-    id: cluster.clusterId,
-    repo: cluster.repoId,
-    score: cluster.score,
-    occurrenceCount: cluster.occurrenceCount,
-    fileCount: cluster.fileCount,
-    language: null,
-    insight: cluster.insight,
-    suggestedProofLane: 'bash ops/ci/codegraph-tool-build.sh',
-  };
+/** A full or short commit sha, or null for the placeholders the snapshot may carry. */
+export function knownSha(sha: string | null | undefined): string | null {
+  return sha && /^[0-9a-f]{7,64}$/i.test(sha) ? sha.slice(0, 8) : null;
 }
 
-function suggestedProofLane(language: string | null): string {
-  if (language === 'rust') {
-    return 'cargo test -p jeryu-codegraph --jobs 40 tool_build';
+/**
+ * One chip per fact. The snapshot's `state` is already `mergeable` for a PR
+ * that can merge, so the merge chip is only added when it says something new,
+ * and evidence is only named when it is a problem.
+ */
+export function cardFacts(item: PullListItem): string[] {
+  const facts = [item.draft ? 'draft' : item.state, `checks ${item.checkPosture}`];
+  facts.push(item.mergeable ? 'mergeable' : item.mergeableState);
+  if (item.changedFileCount > 0) {
+    facts.push(`${item.changedFileCount} ${item.changedFileCount === 1 ? 'file' : 'files'}`);
   }
-  return 'bash ops/ci/codegraph-tool-build.sh';
+  if (item.evidenceState === 'failed' || item.evidenceState === 'missing') {
+    facts.push(`evidence ${item.evidenceState}`);
+  }
+  return Array.from(new Set(facts.filter((fact) => fact && fact !== 'unknown')));
 }
 
 /** Pull Room filtered to one repo (`owner/name`). */

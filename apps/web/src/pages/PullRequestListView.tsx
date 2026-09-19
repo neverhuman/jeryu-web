@@ -2,14 +2,18 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock3,
-  FileText,
-  GitMerge,
   GitPullRequest,
   type LucideIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import type { PullLane, PullListItem } from './pullRoomModel';
+import {
+  cardFacts,
+  knownSha,
+  visibleLanes,
+  type PullLane,
+  type PullListItem,
+} from './pullRoomModel';
 
 import './PullRoomPage.css';
 
@@ -19,6 +23,8 @@ export function PullRequestCard({
   item: PullListItem;
 }): JSX.Element {
   const Icon = postureIcon(item.checkPosture);
+  const head = knownSha(item.headSha);
+  const base = knownSha(item.baseSha);
   return (
     <article
       className={`pull-card is-${item.checkPosture}`}
@@ -34,7 +40,9 @@ export function PullRequestCard({
         </div>
       ) : null}
       <h3 className="pull-card__title">
-        <Link to={item.url}>{item.title}</Link>
+        <Link to={item.url} className="pull-card__link">
+          {item.title}
+        </Link>
       </h3>
       <div className="pull-card__refs">
         <code>{item.headRef}</code>
@@ -42,27 +50,25 @@ export function PullRequestCard({
         <code>{item.baseRef}</code>
       </div>
       <div className="pull-card__facts">
-        <span className="pull-card__pill">{item.draft ? 'draft' : item.state}</span>
-        <span className="pull-card__pill">
-          <Icon size={12} aria-hidden="true" />
-          {item.checkPosture}
-        </span>
-        <span className="pull-card__pill">
-          <GitMerge size={12} aria-hidden="true" />
-          {item.mergeable ? 'mergeable' : item.mergeableState}
-        </span>
-        <span className="pull-card__pill">
-          <FileText size={12} aria-hidden="true" />
-          {item.changedFileCount} files
-        </span>
-        <span className="pull-card__pill">evidence {item.evidenceState}</span>
+        {cardFacts(item).map((fact, index) => (
+          <span className="pull-card__pill" key={fact}>
+            {index === 1 ? <Icon size={12} aria-hidden="true" /> : null}
+            {fact}
+          </span>
+        ))}
       </div>
-      <div className="pull-card__sha">
-        <span>head</span>
-        <code>{compactSha(item.headSha)}</code>
-        <span>base</span>
-        <code>{compactSha(item.baseSha)}</code>
-      </div>
+      {head ? (
+        <div className="pull-card__sha">
+          <span>head</span>
+          <code>{head}</code>
+          {base ? (
+            <>
+              <span>base</span>
+              <code>{base}</code>
+            </>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -80,7 +86,7 @@ export function PullRequestListView({
   }
   return (
     <div className="pull-lanes" data-testid="pull-lanes">
-      {lanes.map((lane) => (
+      {visibleLanes(lanes).map((lane) => (
         <section
           key={lane.id}
           className="pull-lane"
@@ -107,8 +113,4 @@ function postureIcon(posture: PullListItem['checkPosture']): LucideIcon {
   if (posture === 'queued' || posture === 'running') return Clock3;
   if (posture === 'missing' || posture === 'failing') return AlertTriangle;
   return GitPullRequest;
-}
-
-function compactSha(sha: string): string {
-  return sha && sha !== 'unknown' ? sha.slice(0, 8) : 'unknown';
 }

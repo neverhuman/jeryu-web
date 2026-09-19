@@ -78,14 +78,14 @@
 
 .pull-room__content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   align-items: start;
 }
 
 .pull-lanes {
   display: grid;
-  grid-template-columns: repeat(5, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 360px));
   gap: var(--space-3);
   align-items: start;
 }
@@ -257,89 +257,10 @@
   color: var(--color-fg-secondary);
 }
 
-.pull-room__rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.pull-room__rail h2 {
-  margin: 0;
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0;
-}
-
-.pull-room__rail-panel,
-.pull-room__opportunity {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-1);
-  padding: var(--space-3);
-}
-
-.pull-room__rail-panel h3,
-.pull-room__rail-panel p,
-.pull-room__opportunity p {
-  margin: 0;
-}
-
-.pull-room__rail-panel h3 {
-  margin-bottom: var(--space-2);
-  color: var(--color-fg-primary);
-  font-size: var(--font-size-sm);
-}
-
-.pull-room__rail-panel p,
-.pull-room__opportunity p,
-.pull-room__rail-note {
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-relaxed);
-}
-
 .pull-room__opportunities {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.pull-room__opportunity {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.pull-room__opportunity-top,
-.pull-room__opportunity-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.pull-room__opportunity-top {
-  justify-content: space-between;
-}
-
-.pull-room__opportunity-top strong {
-  min-width: 0;
-  color: var(--color-fg-primary);
-  font-size: var(--font-size-sm);
-}
-
-.pull-room__opportunity-top span,
-.pull-room__opportunity code {
-  color: var(--color-fg-muted);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-}
-
-.pull-room__opportunity-meta span {
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-xs);
 }
 
 @media (max-width: 1180px) {
@@ -568,4 +489,20 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The whole card opens the pull request: the title link stretches over it. */
+.pull-card {
+  position: relative;
+}
+
+.pull-card__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.pull-card:hover,
+.pull-card:focus-within {
+  border-color: var(--color-border-strong);
 }

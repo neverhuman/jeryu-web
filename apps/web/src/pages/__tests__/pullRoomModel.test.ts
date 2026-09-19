@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ControlPlaneSnapshot, ControlPullRequest } from '../../api/types';
+import type { ControlPullRequest } from '../../api/types';
 import {
   DEFAULT_PULL_ROOM_FILTERS,
   filterPullRequests,
   fromControlPullRequest,
   groupPullRequests,
+  cardFacts,
+  knownSha,
   pullRoomCounts,
-  rankToolBuildOpportunities,
+  visibleLanes,
 } from '../pullRoomModel';
 
 describe('pullRoomModel', () => {
@@ -68,31 +70,31 @@ describe('pullRoomModel', () => {
     expect(pullRoomCounts(items)).toEqual({ open: 2, missingChecks: 1, failingChecks: 1 });
   });
 
-  it('ranks populated tool-build clusters before lower-scored summary fallbacks', () => {
-    const ranked = rankToolBuildOpportunities(snapshot(), [
-      {
-        cluster_id: 'cluster-live',
-        repo_id: 'alice/jeryu',
-        commit_sha: 'abc',
-        fingerprint: 'fp',
-        score: 99,
-        occurrence_count: 4,
-        repo_count: 1,
-        file_count: 3,
-        total_lines: 80,
-        language: 'rust',
-        insight: 'normalized polling loop',
-        normalized_preview: 'loop call retry',
-        occurrences: [],
-      },
-    ]);
+  it('shows only lanes that hold something', () => {
+    const items = [pr({ number: 2, checks: { total: 2, failing: 1 } })].map(fromControlPullRequest);
+    expect(visibleLanes(groupPullRequests(items)).map((lane) => lane.id)).toEqual(['failing_checks']);
+    expect(visibleLanes(groupPullRequests([]))).toEqual([]);
+  });
 
-    expect(ranked[0]).toMatchObject({
-      id: 'cluster-live',
-      score: 99,
-      suggestedProofLane: 'cargo test -p jeryu-codegraph --jobs 40 tool_build',
-    });
-    expect(ranked.map((item) => item.id)).toContain('cluster-summary');
+  it('gives a card one chip per fact and drops placeholders', () => {
+    const mergeable = fromControlPullRequest(
+      pr({ state: 'mergeable', mergeable: true, mergeableState: 'mergeable', checks: { total: 1, failing: 1 } })
+    );
+    expect(cardFacts({ ...mergeable, evidenceState: 'failed' })).toEqual([
+      'mergeable',
+      'checks failing',
+      'evidence failed',
+    ]);
+    const open = fromControlPullRequest(pr({ mergeable: false, mergeableState: 'unknown' }));
+    expect(cardFacts({ ...open, changedFileCount: 1, evidenceState: 'fresh' })).toEqual([
+      'open',
+      `checks ${open.checkPosture}`,
+      '1 file',
+    ]);
+    expect(knownSha('fa808afe1234')).toBe('fa808afe');
+    expect(knownSha('base')).toBeNull();
+    expect(knownSha('unknown')).toBeNull();
+    expect(knownSha('')).toBeNull();
   });
 });
 
@@ -125,111 +127,6 @@ function pr(overrides: PrOverrides = {}): ControlPullRequest {
       successful: 0,
       missing: false,
       ...overrides.checks,
-    },
-  };
-}
-
-function snapshot(): ControlPlaneSnapshot {
-  return {
-    schemaVersion: 'jeryu.control_plane/v1',
-    generatedAt: '2026-06-05T00:00:00Z',
-    localAuthority: {
-      sourceOfTruth: 'local_jeryu',
-      state: 'fresh',
-      docsUrl: 'docs/architecture.md',
-    },
-    summary: {
-      repoCount: 0,
-      openPrCount: 0,
-      draftPrCount: 0,
-      queuedCheckCount: 0,
-      runningCheckCount: 0,
-      failingCheckCount: 0,
-      missingCheckPrCount: 0,
-      priorityCount: 0,
-      criticalPriorityCount: 0,
-      highPriorityCount: 0,
-      mirrorState: 'missing',
-      artifactState: 'missing',
-      runnerState: 'fresh',
-    },
-    repos: [],
-    pullRequests: [],
-    checkRuns: [],
-    workflows: [],
-    releases: {},
-    artifacts: {
-      schemaVersion: 'jeryu.artifacts.latest/v1',
-      state: 'missing',
-      latestBuild: { state: 'missing', artifactCount: 0, reason: '', sourceLinks: [] },
-      latestRelease: { state: 'missing', artifactCount: 0, reason: '', sourceLinks: [] },
-      mirrorArtifacts: { state: 'missing', artifactCount: 0, reason: '', sourceLinks: [] },
-      docsUrl: 'docs/release.md',
-      absenceIsSuccess: false,
-    },
-    runners: {
-      schemaVersion: 'jeryu.runner_fabric/v1',
-      local: {
-        state: 'fresh',
-        nodes: 0,
-        onlineRunners: 0,
-        offlineRunners: 0,
-        busyRunners: 0,
-        idleRunners: 0,
-        totalSlots: 0,
-        activeSlots: 0,
-        utilization: 0,
-        lastUpdated: null,
-        nodeDetails: [],
-      },
-      mirror: { name: 'mirror', state: 'missing', reason: '', docsUrl: '' },
-    },
-    workcells: {},
-    agentRuns: [],
-    codegraph: {
-      state: 'missing',
-      indexedSymbols: 0,
-      indexedReferences: 0,
-      crateEdges: 0,
-      indexedFiles: 0,
-      latestIndexRun: null,
-      reason: 'empty',
-    },
-    toolBuild: {
-      state: 'fresh',
-      clusterCount: 1,
-      ignoredCount: 0,
-      topClusters: [
-        {
-          clusterId: 'cluster-summary',
-          repoId: 'bob/api',
-          score: 10,
-          occurrenceCount: 2,
-          fileCount: 2,
-          insight: 'summary cluster',
-        },
-      ],
-    },
-    mcp: { state: 'fresh', toolCount: 0, liveBackedTools: [], degradedTools: [] },
-    mirror: {
-      schemaVersion: 'jeryu.remote.status/v1',
-      state: 'missing',
-      mirrors: [],
-      divergence: {
-        state: 'unknown',
-        reason: '',
-        localDefaultBranches: [],
-        mirrorDefaultBranches: [],
-      },
-    },
-    priorities: [],
-    repoGraph: {
-      schemaVersion: 'jeryu.repo_graph/v1',
-      generatedAt: '2026-06-05T00:00:00Z',
-      nodes: [],
-      edges: [],
-      clusters: [],
-      insights: [],
     },
   };
 }

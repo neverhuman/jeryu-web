@@ -219,7 +219,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     // Success: the sidebar reflects the new approval posture and NO recovery
     // banner appears (the banner only renders on a 409 drift).
     await expect(page.locator('.review-sidebar__approvals')).toHaveText(
-      /1\/1 approvals/,
+      /1 of 1 approvals/,
       { timeout: 10_000 }
     );
     await expect(page.locator('.pr-cockpit__recovery')).toHaveCount(0);

@@ -97,11 +97,14 @@ test('Pull Room renders filters, queue lanes, PR cards, tooling rail, and cockpi
     .getByLabel('Checks')
     .selectOption('missing');
   await expect(page.getByTestId('pull-lane-missing_checks')).toBeVisible();
-  await expect(page.getByTestId('pull-lane-failing_checks')).toBeVisible();
+  // An empty lane is a header over nothing: only lanes that hold a PR render.
+  await expect(page.getByTestId('pull-lane-failing_checks')).toHaveCount(0);
   await expect(page.getByText('Fix BFF PR list')).toBeVisible();
   await expect(page.getByTestId('pull-card-alice/jeryu-7').getByTestId('pull-card-author')).toHaveText('by alice');
-  await expect(page.getByText('Tooling opportunities')).toBeVisible();
-  await expect(page.getByText('normalized retry loop repeated across API clients')).toBeVisible();
+  // The page is about pull requests only: no tooling rail, no tool tiles.
+  await expect(page.getByText('Open pull requests across every repository.')).toBeVisible();
+  await expect(page.getByText('Tooling opportunities')).toHaveCount(0);
+  await expect(page.getByText(/tool clusters/i)).toHaveCount(0);
 
   const link = page.getByRole('link', { name: 'Fix BFF PR list' });
   await expect(link).toHaveAttribute(
