@@ -150,6 +150,29 @@ async function scanAndAssert(
 }
 
 test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', () => {
+  test('axe scan: shell chrome with the System group and the palette open', async ({ page }) => {
+    await mockBootstrap(page);
+    await mockRepoList(page, [{ id: REPO, default_branch: 'main', visibility: 'internal' }]);
+    await page.goto('/repos');
+    await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 });
+
+    // The interactive states the top bar and nav added: a disclosure in the
+    // nav, and the combobox/listbox of the search-or-jump palette with
+    // repository options in it.
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'System' }).click();
+    await page.getByRole('button', { name: /^Search or jump to/ }).click();
+    await page.getByRole('combobox', { name: 'Command palette' }).fill('jeryu');
+    await expect(page.getByRole('option', { name: `${REPO.owner}/${REPO.name}` })).toBeVisible();
+
+    const result = await runAxe(page, { disableRules: ['color-contrast'] });
+    await persistAxeResult('shell-chrome', result);
+    const blockers = blockingViolations(result);
+    expect(
+      blockers.map((v) => `${v.impact ?? '?'} ${v.id}`),
+      'the palette and the nav disclosure add no serious or critical violation'
+    ).toEqual([]);
+  });
+
   test('axe scan: Fleet operator dashboard', async ({ page }) => {
     // /runners renders from the control-plane runners snapshot; the bootstrap
     // pool mock is unused by the page but harmless.
