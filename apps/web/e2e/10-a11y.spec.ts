@@ -284,8 +284,19 @@ test.describe('Accessibility scans — pipeline visibility', () => {
       await mockPipelineApi(page);
       await page.goto(target.path);
       await expect(page.getByTestId(target.testId)).toBeVisible({ timeout: 15_000 });
-      // The live dock is part of every page for an admin; scan it open.
-      await expect(page.getByTestId('activity-dock')).toBeVisible();
+      // The live dock is on every page for an admin except Activity, which is
+      // the same feed at full size. Where it is, scan it opened.
+      if (target.path.startsWith('/activity')) {
+        await expect(page.getByTestId('activity-dock')).toHaveCount(0);
+      } else {
+        const dock = page.getByTestId('activity-dock');
+        await dock.getByRole('button', { name: 'Live activity' }).click();
+        await expect(dock.getByRole('log')).toBeVisible();
+      }
+      // An Activity row opened to its facts and log tail is part of the page.
+      if (target.scope === 'activity') {
+        await page.getByRole('button', { name: 'Log for event 10' }).click();
+      }
       await scanAndAssert(page, target.scope);
       const blockers = blockingViolations(
         await runAxe(page, { disableRules: ['color-contrast'] })
