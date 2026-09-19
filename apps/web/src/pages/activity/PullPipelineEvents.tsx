@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/useAuth';
 import { usePipelineEvents } from '../../hooks/usePipeline';
-import { activityHref } from './activityModel';
+import { activityHref, foldEchoes } from './activityModel';
 import { EventRow } from './EventRow';
 
 import './Activity.css';
@@ -24,7 +24,7 @@ export function PullPipelineEvents({ repo, pr }: { repo: string; pr: string }): 
     { enabled: user?.role === 'admin' && Number.isInteger(prNumber), refetchInterval: 15_000 }
   );
   if (!feed.isSuccess) return null;
-  const events = feed.data.events;
+  const events = foldEchoes(feed.data.events);
 
   return (
     <section className="pull-events" aria-label="Pipeline events" data-testid="pull-pipeline-events">

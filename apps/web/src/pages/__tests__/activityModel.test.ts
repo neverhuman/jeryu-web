@@ -9,17 +9,20 @@ import {
   eventLinks,
   eventTone,
   filtersToQuery,
+  foldEchoes,
   formatClock,
   formatSeconds,
   hasActiveFilters,
   hasMoreFilters,
   isWallMode,
+  matchesKind,
   maxSeq,
   mergeEvents,
   minSeq,
   parseActivityFilters,
   primaryLink,
   summaryParts,
+  visibleEvents,
   wallCounters,
 } from '../activity/activityModel';
 import { EVENTS, pipelineEvent } from './pipelineTestData';
@@ -176,3 +179,104 @@ describe('activityModel', () => {
     expect(primaryLink(pipelineEvent({ seq: 4, kind: 'todo.claimed', family: 'jeryu', todo_id: 't1' }))?.label).toBe('todo t1');
   });
 });
+
+describe('foldEchoes', () => {
+  const SHA = '5c9fbdb1f4c6c5f23349bdab0bed81b8343a3718';
+  const finished = pipelineEvent({
+    seq: 40,
+    kind: 'gate.finished',
+    source: 'forge',
+    repo: 'jeryu/jeryu-web',
+    pr: 37,
+    sha: SHA,
+    outcome: 'success',
+    ts: '2026-09-19T14:50:10Z',
+  });
+  const log = pipelineEvent({
+    seq: 41,
+    kind: 'gate.log',
+    source: 'pr-gate',
+    repo: 'jeryu/jeryu-web',
+    pr: 37,
+    sha: SHA,
+    outcome: 'success',
+    ts: '2026-09-19T14:50:16Z',
+    log_tail: 'jeryu-web OK',
+  });
+
+  it('shows a finished gate once, as the report that carries the log', () => {
+    expect(foldEchoes([log, finished]).map((e) => e.seq)).toEqual([41]);
+    // Order in the list does not matter.
+    expect(foldEchoes([finished, log]).map((e) => e.seq)).toEqual([41]);
+  });
+
+  it('keeps a lone report of either kind', () => {
+    expect(foldEchoes([finished])).toEqual([finished]);
+    expect(foldEchoes([log])).toEqual([log]);
+  });
+
+  it('keeps both when they are different gates', () => {
+    const otherSha = { ...finished, sha: 'b3002ffafb4c80d6b421b9473b9c6873262c1757' };
+    const otherOutcome = { ...finished, outcome: 'failure' };
+    const otherRepo = { ...finished, repo: 'jeryu/jeryu-deploy' };
+    const hoursLater = { ...finished, ts: '2026-09-19T16:50:16Z' };
+    for (const other of [otherSha, otherOutcome, otherRepo, hoursLater]) {
+      expect(foldEchoes([log, other])).toHaveLength(2);
+    }
+  });
+
+  it('treats the heartbeat error as the timed_out or inputs_changed the runner reports', () => {
+    const timedOut = { ...log, outcome: 'timed_out' };
+    const error = { ...finished, outcome: 'error' };
+    expect(foldEchoes([timedOut, error]).map((e) => e.kind)).toEqual(['gate.log']);
+    // A plain failure is not an "error".
+    expect(foldEchoes([{ ...log, outcome: 'failure' }, error])).toHaveLength(2);
+  });
+
+  it('shows a review once, as the verdict', () => {
+    const verdict = pipelineEvent({
+      seq: 50,
+      kind: 'pr.review',
+      repo: 'jeryu/jeryu-web',
+      pr: 37,
+      sha: SHA,
+      outcome: 'approve',
+      reason: 'Red team: approved.',
+    });
+    const beat = pipelineEvent({ seq: 49, kind: 'review.finished', repo: 'jeryu/jeryu-web', pr: 37, sha: SHA });
+    const started = pipelineEvent({ seq: 48, kind: 'review.started', repo: 'jeryu/jeryu-web', pr: 37, sha: SHA });
+    expect(foldEchoes([verdict, beat, started]).map((e) => e.kind)).toEqual(['pr.review', 'review.started']);
+    expect(foldEchoes([beat])).toEqual([beat]);
+    expect(foldEchoes([verdict, { ...beat, pr: 38 }])).toHaveLength(2);
+  });
+
+  it('does not let the wall count a gate twice', () => {
+    const now = new Date('2026-09-19T15:00:00Z');
+    expect(wallCounters(visibleEvents([log, finished]), now).events).toBe(1);
+  });
+});
+
+describe('matchesKind', () => {
+  it('follows the server rule, for one kind or several', () => {
+    expect(matchesKind('gate.log', 'gate.')).toBe(true);
+    expect(matchesKind('gate.log', 'gate.finished')).toBe(false);
+    expect(matchesKind('pr.review', 'review.,pr.review')).toBe(true);
+    expect(matchesKind('review.started', 'review.,pr.review')).toBe(true);
+    expect(matchesKind('pr.merged', 'review.,pr.review')).toBe(false);
+    expect(matchesKind('anything', '')).toBe(true);
+  });
+
+  it('asks the server for everything when a chip spans several kinds, and narrows here', () => {
+    const reviews = ACTIVITY_CHIPS.find((chip) => chip.id === 'reviews');
+    const filters = parseActivityFilters(applyChip(new URLSearchParams(), reviews!));
+    expect(filtersToQuery(filters).kind).toBeUndefined();
+    expect(activeChip(filters)).toBe('reviews');
+    const events = [
+      pipelineEvent({ seq: 1, kind: 'pr.review' }),
+      pipelineEvent({ seq: 2, kind: 'pr.merged' }),
+      pipelineEvent({ seq: 3, kind: 'review.started' }),
+    ];
+    expect(visibleEvents(events, filters.kind).map((e) => e.seq)).toEqual([1, 3]);
+  });
+});
+

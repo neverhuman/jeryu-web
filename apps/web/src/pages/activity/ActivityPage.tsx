@@ -23,6 +23,7 @@ import {
   hasMoreFilters,
   isWallMode,
   parseActivityFilters,
+  visibleEvents,
   wallCounters,
   type ActivityFilters,
 } from './activityModel';
@@ -51,7 +52,8 @@ export function ActivityPage(): JSX.Element {
   const query = useMemo(() => filtersToQuery(filters), [filters]);
   const feed = useActivityFeed(query);
   usePipelineNudge(feed.base.isSuccess, activityTailKey(query));
-  const events = feed.base.data?.events ?? [];
+  // Cursors run on the raw feed (`feed`); what is shown and counted is folded.
+  const events = visibleEvents(feed.base.data?.events ?? [], filters.kind);
   const newest = events[0]?.seq ?? 0;
 
   // Wall mode keeps the newest event in view as the tail grows.

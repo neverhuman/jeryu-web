@@ -43,7 +43,9 @@ export function filtersToQuery(filters: ActivityFilters): PipelineEventsQuery {
   if (filters.family) query.family = filters.family;
   if (filters.repo) query.repo = filters.repo;
   if (filters.source) query.source = filters.source;
-  if (filters.kind) query.kind = filters.kind;
+  // The server takes one kind (or one prefix). A chip that spans several
+  // (`review.,pr.review`) asks for everything and narrows here: `matchesKind`.
+  if (filters.kind && !filters.kind.includes(',')) query.kind = filters.kind;
   if (filters.todo_id) query.todo_id = filters.todo_id;
   if (filters.pr) query.pr = Number(filters.pr);
   if (filters.needs_human) query.needs_human = true;
@@ -62,6 +64,81 @@ export function activityHref(filters: Partial<Record<(typeof FILTER_KEYS)[number
   }
   const suffix = qs.toString();
   return suffix ? `${ACTIVITY_PATH}?${suffix}` : ACTIVITY_PATH;
+}
+
+/** The kinds a `kind` filter names: one, or several separated by commas. */
+export function kindPatterns(kind: string): string[] {
+  return kind
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part !== '');
+}
+
+/** The server's rule, applied here too: exact, or a prefix when it ends with `.`. */
+export function matchesKind(eventKind: string, kind: string): boolean {
+  const patterns = kindPatterns(kind);
+  if (patterns.length === 0) return true;
+  return patterns.some((pattern) =>
+    pattern.endsWith('.') ? eventKind.startsWith(pattern) : eventKind === pattern
+  );
+}
+
+/** Minutes two reports of one happening may lie apart and still be one happening. */
+export const SAME_HAPPENING_MS = 5 * 60 * 1000;
+
+const PLAIN_GATE_OUTCOMES = new Set(['success', 'failure']);
+
+/** The forge's heartbeat schema knows success, failure and error; the runner's
+ *  own report also says timed_out and inputs_changed, which arrive as error. */
+function sameGateOutcome(log: string | null, finished: string | null): boolean {
+  if (log === finished) return true;
+  return finished === 'error' && log !== null && !PLAIN_GATE_OUTCOMES.has(log);
+}
+
+/**
+ * One row per happening. A finished gate is reported twice: `gate.finished`
+ * (the forge, from the runner's heartbeat) and `gate.log` (the runner's
+ * reporter, seconds later, with the log tail). The same goes for a review:
+ * `review.finished` (heartbeat) and `pr.review` (the verdict itself). Keep the
+ * one that carries more (`gate.log`, `pr.review`) and drop its echo. A lone
+ * report of either kind is kept.
+ */
+export function foldEchoes(events: PipelineEvent[]): PipelineEvent[] {
+  const logs = events.filter((event) => event.kind === 'gate.log');
+  const verdicts = events.filter((event) => event.kind === 'pr.review');
+  if (logs.length === 0 && verdicts.length === 0) return events;
+  return events.filter((event) => {
+    if (event.kind === 'gate.finished') {
+      const at = Date.parse(event.ts);
+      return !logs.some(
+        (log) =>
+          log.repo !== null &&
+          log.repo === event.repo &&
+          log.sha !== null &&
+          log.sha === event.sha &&
+          sameGateOutcome(log.outcome, event.outcome) &&
+          Math.abs(Date.parse(log.ts) - at) <= SAME_HAPPENING_MS
+      );
+    }
+    if (event.kind === 'review.finished') {
+      return !verdicts.some(
+        (verdict) =>
+          verdict.repo !== null &&
+          verdict.repo === event.repo &&
+          verdict.pr !== null &&
+          verdict.pr === event.pr &&
+          verdict.sha !== null &&
+          verdict.sha === event.sha
+      );
+    }
+    return true;
+  });
+}
+
+/** What a list shows: echoes folded, a multi-kind chip applied. */
+export function visibleEvents(events: PipelineEvent[], kind = ''): PipelineEvent[] {
+  const folded = foldEchoes(events);
+  return kind.includes(',') ? folded.filter((event) => matchesKind(event.kind, kind)) : folded;
 }
 
 /** Union by `seq`, newest first. Later arguments win on a duplicate seq. */
@@ -278,7 +355,8 @@ export const ACTIVITY_CHIPS: readonly ActivityChip[] = [
   { id: 'human', label: 'Needs a human', needsHuman: true },
   { id: 'todos', label: 'Todos', kind: 'todo.' },
   { id: 'gates', label: 'Gates', kind: 'gate.' },
-  { id: 'reviews', label: 'Reviews', kind: 'review.' },
+  // A verdict is `pr.review`; the reviewer's start/finish beats are `review.*`.
+  { id: 'reviews', label: 'Reviews', kind: 'review.,pr.review' },
   { id: 'pulls', label: 'Pull requests', kind: 'pr.' },
   { id: 'merges', label: 'Merges', kind: 'queue.' },
   { id: 'releases', label: 'Releases', kind: 'release.' },

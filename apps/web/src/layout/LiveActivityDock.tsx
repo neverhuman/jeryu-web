@@ -12,7 +12,13 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../hooks/useAuth';
 import { PIPELINE_KEY, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
-import { ACTIVITY_PATH, eventLabel, eventTone, formatClock } from '../pages/activity/activityModel';
+import {
+  ACTIVITY_PATH,
+  eventLabel,
+  eventTone,
+  foldEchoes,
+  formatClock,
+} from '../pages/activity/activityModel';
 import type { PipelineEventsQuery } from '../api/types/pipeline';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 
@@ -21,7 +27,8 @@ import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 // something else. The key is new so the old default (open) is not remembered.
 const EXPANDED_KEY = 'jeryu.activityDock.expanded.v1';
 const DOCK_EVENTS = 8;
-const DOCK_QUERY: PipelineEventsQuery = { limit: DOCK_EVENTS };
+// Twice what is shown: a finished gate arrives as two events that fold into one row.
+const DOCK_QUERY: PipelineEventsQuery = { limit: DOCK_EVENTS * 2 };
 
 export function LiveActivityDock(): JSX.Element | null {
   const { user } = useAuth();
@@ -38,7 +45,7 @@ export function LiveActivityDock(): JSX.Element | null {
   // The Activity page (and its wall) is this feed at full size.
   if (pathname === ACTIVITY_PATH) return null;
   if (!feed.isSuccess) return null;
-  const events = feed.data.events.slice(0, DOCK_EVENTS);
+  const events = foldEchoes(feed.data.events).slice(0, DOCK_EVENTS);
   const waiting = events.filter((event) => event.needs_human).length;
 
   const toggle = (): void => {

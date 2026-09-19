@@ -55,7 +55,7 @@ describe('LiveActivityDock', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByText(/Release staged · Staged prod-20260919T130210Z/)).toBeInTheDocument();
     expect(screen.queryByText('Merged jeryu/jeryu-web#35')).toBeNull();
-    expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?limit=8')).toBe(true);
+    expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?limit=16')).toBe(true);
     expect(screen.getByText('2 need you')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'All activity' })).toHaveAttribute('href', '/activity');
 
