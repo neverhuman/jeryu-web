@@ -5,7 +5,9 @@
 
 import type {
   ShiftBranch,
+  ShiftBranchRepo,
   ShiftCapacityPoint,
+  ShiftFamily,
   ShiftSegment,
   ShiftTodo,
   ShiftWorker,
@@ -181,9 +183,37 @@ export function sortShifts(shifts: ShiftBranch[]): ShiftBranch[] {
   );
 }
 
-/** Owner half of `owner/name` (the queue repo's owner hosts the family repos). */
+/** Owner half of `owner/name`: the queue repo's owner, the fallback host of family repos. */
 export function ownerOf(queueRepo: string | undefined): string {
   return queueRepo?.split('/')[0] || 'jeryu';
+}
+
+/** Owner a family repo is hosted under, or null when it is not on this forge. */
+export type RepoOwners = (repo: string) => string | null;
+
+/**
+ * A family's code may live under another owner than its queue (the jain queue
+ * is jain-split/jain-todo, its repos are veox/*). The server says which; an
+ * older server says nothing and the queue's owner is the best guess.
+ */
+export function repoOwners(
+  family: Pick<ShiftFamily, 'queue_repo' | 'repos'> | undefined
+): RepoOwners {
+  const fallback = ownerOf(family?.queue_repo);
+  const known = new Map<string, string | null>();
+  for (const repo of family?.repos ?? []) {
+    if (repo.owner !== undefined) known.set(repo.name, repo.owner);
+  }
+  return (repo) => {
+    if (repo.includes('/')) return repo.split('/')[0] ?? fallback;
+    return known.has(repo) ? (known.get(repo) ?? null) : fallback;
+  };
+}
+
+/** SPA path of a family repo's code, or null when the repo is not hosted here. */
+export function repoCodeHref(owners: RepoOwners, repo: string): string | null {
+  const owner = owners(repo);
+  return owner === null ? null : `${repoPath(owner, repo)}/code`;
 }
 
 /** SPA path for a family repo; repos may come bare (`jeryu-web`) or qualified. */
@@ -296,21 +326,67 @@ export function attemptSummary(todo: Pick<ShiftTodo, 'attempts' | 'worked_by'>):
   return { text, failing: outcome !== '' && outcome !== 'done' };
 }
 
-/** Where a commit chip leads: the PR that carries it, else the repo's code. */
-export function commitHref(todo: Pick<ShiftTodo, 'pr'>, owner: string, repo: string): string {
+/** Where a commit chip leads: the PR that carries it, else the repo's code, else nowhere. */
+export function commitHref(
+  todo: Pick<ShiftTodo, 'pr'>,
+  owners: RepoOwners,
+  repo: string
+): string | null {
   const pr = todo.pr;
-  if (pr && bareRepo(pr.repo) === bareRepo(repo)) {
-    return `${repoPath(owner, pr.repo)}/pulls/${pr.number}`;
-  }
-  return `${repoPath(owner, repo)}/code`;
+  if (pr && bareRepo(pr.repo) === bareRepo(repo)) return todoPrHref(todo, owners);
+  return repoCodeHref(owners, repo);
 }
 
 /** SPA path of the todo's shift PR (the server's `url` is already an app path). */
-export function todoPrHref(todo: Pick<ShiftTodo, 'pr'>, owner: string): string | null {
+export function todoPrHref(todo: Pick<ShiftTodo, 'pr'>, owners: RepoOwners): string | null {
   const pr = todo.pr;
   if (!pr) return null;
   if (pr.url && pr.url.startsWith('/') && !pr.url.startsWith('//')) return pr.url;
-  return `${repoPath(owner, pr.repo)}/pulls/${pr.number}`;
+  const owner = owners(pr.repo);
+  return owner === null ? null : `${repoPath(owner, pr.repo)}/pulls/${pr.number}`;
+}
+
+/** A todo nobody has to think about any more: it is done. */
+export function isFinishedTodo(todo: Pick<ShiftTodo, 'status'>): boolean {
+  return todo.status === 'done';
+}
+
+/** Live todos first in their own list, finished ones apart. */
+export function splitFinished(todos: ShiftTodo[]): { live: ShiftTodo[]; finished: ShiftTodo[] } {
+  return {
+    live: todos.filter((t) => !isFinishedTodo(t)),
+    finished: todos.filter(isFinishedTodo),
+  };
+}
+
+function prIsOpen(pr: ShiftBranchRepo['pr']): boolean {
+  return Boolean(pr) && pr?.state !== 'merged' && pr?.state !== 'closed';
+}
+
+/**
+ * Work on the branch that no pull request is carrying to the base. With the
+ * server's `unmerged_todos` this is exact; without it (older server) the best
+ * available signal is commits ahead and no pull request at all.
+ */
+export function repoNeedsReviewPr(repo: ShiftBranchRepo): boolean {
+  if (prIsOpen(repo.pr)) return false;
+  if (repo.unmerged_todos !== undefined) return repo.unmerged_todos.length > 0;
+  return repo.ahead > 0 && !repo.pr;
+}
+
+/** Offer "Open review PR" only when it would carry something. */
+export function canOpenReviewPr(shift: Pick<ShiftBranch, 'repos'>): boolean {
+  return shift.repos.some(repoNeedsReviewPr);
+}
+
+/** A shift still in play: a pull request is open, or work waits for one. */
+export function shiftIsLive(shift: Pick<ShiftBranch, 'repos'>): boolean {
+  return shift.repos.some((repo) => prIsOpen(repo.pr) || repoNeedsReviewPr(repo));
+}
+
+/** Live shifts to show, finished ones to fold away. */
+export function splitShifts(shifts: ShiftBranch[]): { live: ShiftBranch[]; finished: ShiftBranch[] } {
+  return { live: shifts.filter(shiftIsLive), finished: shifts.filter((s) => !shiftIsLive(s)) };
 }
 
 function bareRepo(repo: string): string {

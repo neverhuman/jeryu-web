@@ -2,6 +2,8 @@
 
 import { describe, expect, it } from 'vitest';
 
+import type { ShiftBranch } from '../../api/types';
+
 import {
   DEFAULT_QUEUE_FILTERS,
   attemptSummary,
@@ -19,7 +21,13 @@ import {
   layoutSegments,
   parseList,
   queueOptions,
+  canOpenReviewPr,
+  repoCodeHref,
+  repoNeedsReviewPr,
+  repoOwners,
   repoPath,
+  shiftIsLive,
+  splitFinished,
   slotLabel,
   sortShifts,
   splitParagraphs,
@@ -206,18 +214,65 @@ describe('slotLabel', () => {
   });
 
   it('links a commit to the PR that carries it, else to the code', () => {
+    const owners = repoOwners({ queue_repo: 'jeryu/jeryu-todo', repos: [] });
     const pr = { repo: 'jeryu-web', number: 35, state: 'open', url: '/repos/jeryu/jeryu/jeryu-web/pulls/35' };
-    expect(commitHref({ pr }, 'jeryu', 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/pulls/35');
-    expect(commitHref({ pr: { ...pr, repo: 'jeryu/jeryu-web' } }, 'jeryu', 'jeryu-web')).toBe(
+    expect(commitHref({ pr }, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/pulls/35');
+    expect(commitHref({ pr: { ...pr, repo: 'jeryu/jeryu-web' } }, owners, 'jeryu-web')).toBe(
       '/repos/jeryu/jeryu/jeryu-web/pulls/35'
     );
-    expect(commitHref({ pr }, 'jeryu', 'jeryu-deploy')).toBe('/repos/jeryu/jeryu/jeryu-deploy/code');
-    expect(commitHref({}, 'jeryu', 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/code');
-    expect(todoPrHref({ pr }, 'jeryu')).toBe(pr.url);
-    expect(todoPrHref({ pr: { ...pr, url: 'https://elsewhere.example/x' } }, 'jeryu')).toBe(
+    expect(commitHref({ pr }, owners, 'jeryu-deploy')).toBe('/repos/jeryu/jeryu/jeryu-deploy/code');
+    expect(commitHref({}, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/code');
+    expect(todoPrHref({ pr }, owners)).toBe(pr.url);
+    expect(todoPrHref({ pr: { ...pr, url: 'https://elsewhere.example/x' } }, owners)).toBe(
       '/repos/jeryu/jeryu/jeryu-web/pulls/35'
     );
-    expect(todoPrHref({ pr: null }, 'jeryu')).toBeNull();
+    expect(todoPrHref({ pr: null }, owners)).toBeNull();
+  });
+
+  it('links a family repo under the owner that hosts it, or not at all', () => {
+    // The jain queue is jain-split/jain-todo; its code is veox/*.
+    const jain = repoOwners({
+      queue_repo: 'jain-split/jain-todo',
+      repos: [
+        { name: 'jain-deploy', order: 1, owner: 'veox' },
+        { name: 'jain-elsewhere', order: 2, owner: null },
+        { name: 'jain-report', order: 0 },
+      ],
+    });
+    expect(repoCodeHref(jain, 'jain-deploy')).toBe('/repos/jeryu/veox/jain-deploy/code');
+    expect(repoCodeHref(jain, 'jain-elsewhere')).toBeNull();
+    // An older server names no owner: the queue's owner is the best guess.
+    expect(repoCodeHref(jain, 'jain-report')).toBe('/repos/jeryu/jain-split/jain-report/code');
+    expect(repoCodeHref(jain, 'veox/jain-web')).toBe('/repos/jeryu/veox/jain-web/code');
+    expect(commitHref({}, jain, 'jain-elsewhere')).toBeNull();
+  });
+
+  it('offers a review PR only when it would carry something, and folds finished work', () => {
+    const repo = (over: Partial<ShiftBranch['repos'][number]>): ShiftBranch['repos'][number] => ({
+      repo: 'jeryu-deploy',
+      head: 'abc',
+      ahead: 0,
+      behind: 0,
+      ...over,
+    });
+    // Level with its base, no pull request: nothing to review.
+    expect(canOpenReviewPr({ repos: [repo({ ahead: 0 })] })).toBe(false);
+    // The server says exactly what is unmerged.
+    expect(canOpenReviewPr({ repos: [repo({ ahead: 2, unmerged_todos: ['t1'] })] })).toBe(true);
+    expect(canOpenReviewPr({ repos: [repo({ ahead: 6, unmerged_todos: [], pr: { number: 44, state: 'closed', url: '/x' } })] })).toBe(false);
+    expect(repoNeedsReviewPr(repo({ ahead: 1, unmerged_todos: ['t'], pr: { number: 70, state: 'merged', url: '/x' } }))).toBe(true);
+    expect(repoNeedsReviewPr(repo({ ahead: 1, unmerged_todos: ['t'], pr: { number: 71, state: 'mergeable', url: '/x' } }))).toBe(false);
+    // An older server: commits ahead and no pull request at all.
+    expect(canOpenReviewPr({ repos: [repo({ ahead: 2 })] })).toBe(true);
+    expect(canOpenReviewPr({ repos: [repo({ ahead: 2, pr: { number: 1, state: 'merged', url: '/x' } })] })).toBe(false);
+
+    expect(shiftIsLive({ repos: [repo({ pr: { number: 9, state: 'mergeable', url: '/x' } })] })).toBe(true);
+    expect(shiftIsLive({ repos: [repo({ ahead: 3, unmerged_todos: [], pr: { number: 9, state: 'merged', url: '/x' } })] })).toBe(false);
+
+    const todos = [todo({ id: 'a', status: 'done' }), todo({ id: 'b', status: 'blocked' }), todo({ id: 'c', status: 'open' })];
+    const split = splitFinished(todos);
+    expect(split.live.map((t) => t.id)).toEqual(['b', 'c']);
+    expect(split.finished.map((t) => t.id)).toEqual(['a']);
   });
 
   it('prefers the server cost and hides slots unseen for over an hour', () => {

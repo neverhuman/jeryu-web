@@ -392,3 +392,30 @@
   font: inherit;
   font-size: var(--font-size-sm);
 }
+
+/* Queue: what is live is the page; filters and finished work fold away. */
+.shift__more-filters > summary,
+.shift__finished > summary {
+  cursor: pointer;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) 0;
+}
+
+.shift__more-filters[open] > summary,
+.shift__finished[open] > summary {
+  margin-bottom: var(--space-3);
+}
+
+.shift__finished {
+  margin-top: var(--space-4);
+}
+
+/* Why a todo is stuck, shown on the row. */
+.shift__why {
+  margin: var(--space-1) 0;
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  max-width: 72ch;
+  white-space: pre-wrap;
+}

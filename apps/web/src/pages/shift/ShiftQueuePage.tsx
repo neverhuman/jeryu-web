@@ -7,7 +7,7 @@
 // "Open review PR" on each shift.
 
 import { GitBranch, Inbox } from 'lucide-react';
-import { Fragment, useMemo, useState, type FormEvent } from 'react';
+import { Fragment, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type { ShiftBranch, ShiftFamily, ShiftTodo } from '../../api/types';
@@ -36,7 +36,12 @@ import {
   todoCost,
   isLastNight,
   latestWorker,
-  ownerOf,
+  repoOwners,
+  repoCodeHref,
+  splitFinished,
+  splitShifts,
+  canOpenReviewPr,
+  type RepoOwners,
   queueOptions,
   repoPath,
   shortSha,
@@ -115,9 +120,20 @@ function FamilyQueue({
     const shown = filterShiftTodos(all, filters);
     return focusIds.length > 0 ? shown.filter((t) => focusIds.includes(t.id)) : shown;
   }, [all, filters, focusIds]);
-  const owner = ownerOf(family.queue_repo);
+  const owners = useMemo(() => repoOwners(family), [family]);
   const waiting = useMemo(() => countNeedsHuman(all), [all]);
   const humanOnly = filters.attention === 'human';
+  // What is live or waits on someone is the page; what is finished folds away.
+  // A todo someone asked for by id, or a status filter, is shown as asked.
+  const asked = focusIds.length > 0 || filters.status !== 'all';
+  const { live, finished } = useMemo(
+    () => (asked ? { live: filtered, finished: [] } : splitFinished(filtered)),
+    [asked, filtered]
+  );
+  const showFinished = params.get('finished') === '1';
+  const filtersInUse = Object.entries(filters).some(
+    ([key, value]) => key !== 'attention' && value !== 'all'
+  );
 
   const set = (key: keyof QueueFilters) => (value: string) =>
     setFilters((current) => ({ ...current, [key]: value }));
@@ -128,12 +144,6 @@ function FamilyQueue({
         {families.length > 1 ? (
           <FamilyPicker families={families} value={family.name} onChange={onFamily} />
         ) : null}
-        <FilterSelect label="Status" value={filters.status} options={[...SHIFT_STATUSES]} onChange={set('status')} />
-        <FilterSelect label="Mode" value={filters.mode} options={[...SHIFT_MODES]} onChange={set('mode')} />
-        <FilterSelect label="Repo" value={filters.repo} options={options.repos} onChange={set('repo')} />
-        <FilterSelect label="Requested by" value={filters.requested_by} options={options.requesters} onChange={set('requested_by')} />
-        <FilterSelect label="Worked by" value={filters.worked_by} options={options.workers} onChange={set('worked_by')} />
-        <FilterSelect label="Shift" value={filters.shift} options={options.shifts} onChange={set('shift')} />
         {waiting > 0 || humanOnly ? (
           <button
             type="button"
@@ -146,6 +156,17 @@ function FamilyQueue({
             {waiting === 1 ? 's' : ''} a human
           </button>
         ) : null}
+        <details className="shift__more-filters" open={filtersInUse || undefined}>
+          <summary>More filters</summary>
+          <div className="shift__toolbar">
+            <FilterSelect label="Status" value={filters.status} options={[...SHIFT_STATUSES]} onChange={set('status')} />
+            <FilterSelect label="Mode" value={filters.mode} options={[...SHIFT_MODES]} onChange={set('mode')} />
+            <FilterSelect label="Repo" value={filters.repo} options={options.repos} onChange={set('repo')} />
+            <FilterSelect label="Requested by" value={filters.requested_by} options={options.requesters} onChange={set('requested_by')} />
+            <FilterSelect label="Worked by" value={filters.worked_by} options={options.workers} onChange={set('worked_by')} />
+            <FilterSelect label="Shift" value={filters.shift} options={options.shifts} onChange={set('shift')} />
+          </div>
+        </details>
         {focusIds.length > 0 ? (
           <Link to={`?family=${encodeURIComponent(family.name)}`} className="shift__muted">
             Showing {focusIds.length} filed todo{focusIds.length === 1 ? '' : 's'} · show all
@@ -153,12 +174,9 @@ function FamilyQueue({
         ) : null}
       </section>
 
-      <ShiftsPanel family={family} owner={owner} isAdmin={isAdmin} />
-
       <section className="shift__section" aria-label="Todos">
         <h2 className="page__section-title">
-          Todos · {filtered.length}
-          {filtered.length !== all.length ? ` of ${all.length}` : ''}
+          {asked ? 'Todos' : 'In progress'} · {live.length}
         </h2>
         {todos.isPending ? (
           <LoadingState title="Loading todos…" variant="message" />
@@ -174,38 +192,69 @@ function FamilyQueue({
         ) : filtered.length === 0 ? (
           <EmptyState icon={Inbox} title="No todos match the current filters." />
         ) : (
-          <div className="shift__table-wrap">
-            <table className="shift__table">
-              <thead>
-                <tr>
-                  <th scope="col">Todo</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Mode</th>
-                  <th scope="col">Repos</th>
-                  <th scope="col">Requested by</th>
-                  <th scope="col">Worker</th>
-                  <th scope="col">Lease / attempts</th>
-                  <th scope="col">Cost</th>
-                  <th scope="col">Commits</th>
-                  {isAdmin ? <th scope="col">Actions</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((todo) => (
-                  <TodoRow
-                    key={todo.id}
-                    todo={todo}
-                    owner={owner}
-                    isAdmin={isAdmin}
-                    initiallyOpen={focusIds.includes(todo.id)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {live.length === 0 ? (
+              <p className="shift__muted" data-testid="shift-nothing-live">
+                Nothing is queued, being worked or waiting on anyone.
+              </p>
+            ) : (
+              <TodoTable todos={live} owners={owners} isAdmin={isAdmin} focusIds={focusIds} />
+            )}
+            {finished.length > 0 ? (
+              <details className="shift__finished" open={showFinished || undefined} data-testid="shift-finished-todos">
+                <summary>
+                  {finished.length} finished todo{finished.length === 1 ? '' : 's'}
+                </summary>
+                <TodoTable todos={finished} owners={owners} isAdmin={isAdmin} focusIds={focusIds} />
+              </details>
+            ) : null}
+          </>
         )}
       </section>
+
+      <ShiftsPanel family={family} owners={owners} isAdmin={isAdmin} showFinished={showFinished} />
     </>
+  );
+}
+
+function TodoTable({
+  todos,
+  owners,
+  isAdmin,
+  focusIds,
+}: {
+  todos: ShiftTodo[];
+  owners: RepoOwners;
+  isAdmin: boolean;
+  focusIds: string[];
+}): JSX.Element {
+  return (
+    <div className="shift__table-wrap">
+      <table className="shift__table">
+        <thead>
+          <tr>
+            <th scope="col">Todo</th>
+            <th scope="col">Status</th>
+            <th scope="col">Repos</th>
+            <th scope="col">Attempts</th>
+            <th scope="col">Cost</th>
+            <th scope="col">Commits</th>
+            {isAdmin ? <th scope="col">Action</th> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {todos.map((todo) => (
+            <TodoRow
+              key={todo.id}
+              todo={todo}
+              owners={owners}
+              isAdmin={isAdmin}
+              initiallyOpen={focusIds.includes(todo.id)}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -237,12 +286,12 @@ function FilterSelect({
 
 function TodoRow({
   todo,
-  owner,
+  owners,
   isAdmin,
   initiallyOpen,
 }: {
   todo: ShiftTodo;
-  owner: string;
+  owners: RepoOwners;
   isAdmin: boolean;
   initiallyOpen: boolean;
 }): JSX.Element {
@@ -250,8 +299,8 @@ function TodoRow({
   const now = new Date();
   const detailId = `shift-todo-detail-${todo.id}`;
   const commits = Object.entries(todo.commits);
-  const worker = latestWorker(todo);
   const attempts = attemptSummary(todo);
+  const stuck = todo.status === 'blocked' || todo.status === 'handoff';
 
   return (
     <Fragment>
@@ -266,21 +315,34 @@ function TodoRow({
           >
             {todo.title}
           </button>
+          {/* Why it is stuck is the information; it does not hide behind a click. */}
+          {stuck && todo.note ? (
+            <p className="shift__why" data-testid={`shift-why-${todo.id}`}>
+              {todo.note}
+            </p>
+          ) : null}
           <span className="shift__id">
-            {todo.id} · P{todo.priority}
+            {todo.id} · P{todo.priority} · {todo.mode}
             {todo.triaged ? '' : ' · untriaged'}
           </span>
-          <TodoTrace todo={todo} owner={owner} />
+          <TodoTrace todo={todo} owners={owners} />
         </td>
         <td>
           <span className={`page__pill page__pill--${statusTone(todo.status)}`}>
             {todo.merged ? 'merged' : todo.status}
           </span>
         </td>
-        <td>{todo.mode}</td>
-        <td>{todo.repos.length > 0 ? todo.repos.join(', ') : '—'}</td>
-        <td>{todo.requested_by || '—'}</td>
-        <td>{worker ?? '—'}</td>
+        <td>
+          {todo.repos.length > 0 ? (
+            <span className="shift__commits">
+              {todo.repos.map((repo) => (
+                <RepoName key={repo} owners={owners} repo={repo} />
+              ))}
+            </span>
+          ) : (
+            '—'
+          )}
+        </td>
         <td>
           {todo.lease_live && todo.lease_until ? `lease ${formatAgo(todo.lease_until, now)}` : null}
           {attempts ? (
@@ -297,24 +359,32 @@ function TodoRow({
             '—'
           ) : (
             <span className="shift__commits">
-              {commits.map(([repo, sha]) => (
-                <Link key={repo} to={commitHref(todo, owner, repo)} title={`${repo}@${sha}`}>
-                  {repo}@{shortSha(sha)}
-                </Link>
-              ))}
+              {commits.map(([repo, sha]) => {
+                const href = commitHref(todo, owners, repo);
+                const label = `${repo}@${shortSha(sha)}`;
+                return href ? (
+                  <Link key={repo} to={href} title={`${repo}@${sha}`}>
+                    {label}
+                  </Link>
+                ) : (
+                  <span key={repo} title={`${repo}@${sha}`}>
+                    {label}
+                  </span>
+                );
+              })}
             </span>
           )}
         </td>
         {isAdmin ? (
           <td>
-            <TodoActions todo={todo} />
+            <TodoPrimaryAction todo={todo} />
           </td>
         ) : null}
       </tr>
       {open ? (
         <tr className="shift__detail" id={detailId}>
-          <td colSpan={isAdmin ? 10 : 9}>
-            <TodoDetail todo={todo} />
+          <td colSpan={isAdmin ? 7 : 6}>
+            <TodoDetail todo={todo} isAdmin={isAdmin} />
           </td>
         </tr>
       ) : null}
@@ -322,10 +392,16 @@ function TodoRow({
   );
 }
 
+/** A family repo by name: a link to its code when this forge hosts it. */
+function RepoName({ owners, repo }: { owners: RepoOwners; repo: string }): JSX.Element {
+  const href = repoCodeHref(owners, repo);
+  return href ? <Link to={href}>{repo}</Link> : <span>{repo}</span>;
+}
+
 /** Queued > Claimed > Done > PR > Merged > Released, with the PR step linked. */
-function TodoTrace({ todo, owner }: { todo: ShiftTodo; owner: string }): JSX.Element {
+function TodoTrace({ todo, owners }: { todo: ShiftTodo; owners: RepoOwners }): JSX.Element {
   const steps = todoTrace(todo);
-  const prHref = todoPrHref(todo, owner);
+  const prHref = todoPrHref(todo, owners);
   return (
     <ol className="shift-trace" aria-label={`Lifecycle of ${todo.id}: ${traceSummary(steps)}`}>
       {steps.map((step) => (
@@ -338,13 +414,15 @@ function TodoTrace({ todo, owner }: { todo: ShiftTodo; owner: string }): JSX.Ele
   );
 }
 
-function TodoDetail({ todo }: { todo: ShiftTodo }): JSX.Element {
+function TodoDetail({ todo, isAdmin }: { todo: ShiftTodo; isAdmin: boolean }): JSX.Element {
+  const worker = latestWorker(todo);
   return (
     <div data-testid={`shift-todo-detail-${todo.id}`}>
       <pre>{todo.body || '(no body)'}</pre>
       {todo.note ? <p><strong>Note:</strong> {todo.note}</p> : null}
+      {isAdmin ? <TodoAdjust todo={todo} /> : null}
       <p className="shift__muted">
-        Filed {todo.filed_at}
+        Requested by {todo.requested_by || '—'} · worker {worker ?? '—'} · filed {todo.filed_at}
         {todo.shift ? ` · shift ${todo.shift}` : ''}
         {todo.blocked_by.length > 0 ? ` · blocked by ${todo.blocked_by.join(', ')}` : ''}
         {todo.change_set ? ` · change set ${todo.change_set}` : ''}
@@ -385,7 +463,8 @@ function TodoDetail({ todo }: { todo: ShiftTodo }): JSX.Element {
   );
 }
 
-function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element {
+/** The one thing to do with this row: release what is stuck, block what should not run. */
+function TodoPrimaryAction({ todo }: { todo: ShiftTodo }): JSX.Element | null {
   const action = useShiftTodoAction();
   const base = { family: todo.family, id: todo.id };
   const [blocking, setBlocking] = useState(false);
@@ -402,20 +481,21 @@ function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element {
       }
     );
   };
-  const otherMode = todo.mode === 'now' ? 'night' : 'now';
+  const releasable =
+    todo.status === 'claimed' || todo.status === 'blocked' || todo.status === 'handoff';
+  if (todo.status === 'done') return null;
   return (
     <span className="shift__actions">
-      {todo.status === 'claimed' || todo.status === 'blocked' || todo.status === 'handoff' ? (
+      {releasable ? (
         <ActionButton
-          variant="ghost"
+          variant={todo.status === 'claimed' ? 'ghost' : 'primary'}
           disabled={action.isPending}
           onClick={() => action.mutate({ ...base, action: 'release' })}
           aria-label={`Release ${todo.id}`}
         >
           Release
         </ActionButton>
-      ) : null}
-      {todo.status !== 'blocked' && todo.status !== 'done' ? (
+      ) : (
         <ActionButton
           variant="ghost"
           disabled={action.isPending}
@@ -425,7 +505,7 @@ function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element {
         >
           Block
         </ActionButton>
-      ) : null}
+      )}
       {blocking ? (
         <form className="shift__block-form" onSubmit={submitBlock} aria-label={`Why block ${todo.id}?`}>
           <input
@@ -443,28 +523,6 @@ function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element {
           </ActionButton>
         </form>
       ) : null}
-      <select
-        aria-label={`Priority for ${todo.id}`}
-        value={todo.priority}
-        disabled={action.isPending}
-        onChange={(event) =>
-          action.mutate({ ...base, action: 'priority', value: Number(event.target.value) })
-        }
-      >
-        {SHIFT_PRIORITIES.map((p) => (
-          <option key={p} value={p}>
-            P{p}
-          </option>
-        ))}
-      </select>
-      <ActionButton
-        variant="ghost"
-        disabled={action.isPending || todo.status === 'done'}
-        onClick={() => action.mutate({ ...base, action: 'mode', value: otherMode })}
-        aria-label={`Move ${todo.id} to ${otherMode}`}
-      >
-        → {otherMode}
-      </ActionButton>
       {action.error ? (
         <span className="shift__error" role="alert">
           {action.error.message}
@@ -474,44 +532,108 @@ function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element {
   );
 }
 
+/** Priority and now/night: adjustments, so they live in the opened row. */
+function TodoAdjust({ todo }: { todo: ShiftTodo }): JSX.Element | null {
+  const action = useShiftTodoAction();
+  const base = { family: todo.family, id: todo.id };
+  if (todo.status === 'done') return null;
+  const otherMode = todo.mode === 'now' ? 'night' : 'now';
+  return (
+    <p className="shift__actions">
+      <label>
+        Priority{' '}
+        <select
+          aria-label={`Priority for ${todo.id}`}
+          value={todo.priority}
+          disabled={action.isPending}
+          onChange={(event) =>
+            action.mutate({ ...base, action: 'priority', value: Number(event.target.value) })
+          }
+        >
+          {SHIFT_PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              P{p}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ActionButton
+        variant="ghost"
+        disabled={action.isPending}
+        onClick={() => action.mutate({ ...base, action: 'mode', value: otherMode })}
+        aria-label={`Move ${todo.id} to ${otherMode}`}
+      >
+        Move to {otherMode}
+      </ActionButton>
+      {action.error ? (
+        <span className="shift__error" role="alert">
+          {action.error.message}
+        </span>
+      ) : null}
+    </p>
+  );
+}
+
 function ShiftsPanel({
   family,
-  owner,
+  owners,
   isAdmin,
+  showFinished,
 }: {
   family: ShiftFamily;
-  owner: string;
+  owners: RepoOwners;
   isAdmin: boolean;
+  showFinished: boolean;
 }): JSX.Element {
   const shifts = useShiftShifts(family.name);
-  const list = useMemo(() => sortShifts(shifts.data?.shifts ?? []), [shifts.data]);
+  const { live, finished } = useMemo(
+    () => splitShifts(sortShifts(shifts.data?.shifts ?? [])),
+    [shifts.data]
+  );
   const now = new Date();
+  const cards = (list: ShiftBranch[]): JSX.Element => (
+    <ul className="shift-branches">
+      {list.map((shift) => (
+        <ShiftCard
+          key={shift.branch}
+          shift={shift}
+          family={family.name}
+          owners={owners}
+          isAdmin={isAdmin}
+          lastNight={isLastNight(shift, now, family.shift_tz)}
+        />
+      ))}
+    </ul>
+  );
   return (
     <section className="shift__section" aria-label="Shifts">
-      <h2 className="page__section-title">Shifts · {list.length}</h2>
+      <h2 className="page__section-title">Shifts in review · {live.length}</h2>
       {shifts.isPending ? (
         <LoadingState title="Loading shifts…" variant="message" />
       ) : shifts.isError ? (
         <ShiftError title="Could not load shift branches." error={shifts.error} />
-      ) : list.length === 0 ? (
+      ) : live.length + finished.length === 0 ? (
         <EmptyState
           icon={GitBranch}
           title="No shift branches yet."
           description="A branch is cut from main when the first todo of a shift lands."
         />
       ) : (
-        <ul className="shift-branches">
-          {list.map((shift) => (
-            <ShiftCard
-              key={shift.branch}
-              shift={shift}
-              family={family.name}
-              owner={owner}
-              isAdmin={isAdmin}
-              lastNight={isLastNight(shift, now, family.shift_tz)}
-            />
-          ))}
-        </ul>
+        <>
+          {live.length === 0 ? (
+            <p className="shift__muted">Every shift's work has reached the base branch.</p>
+          ) : (
+            cards(live)
+          )}
+          {finished.length > 0 ? (
+            <details className="shift__finished" open={showFinished || undefined} data-testid="shift-finished-shifts">
+              <summary>
+                {finished.length} finished shift{finished.length === 1 ? '' : 's'}
+              </summary>
+              {cards(finished)}
+            </details>
+          ) : null}
+        </>
       )}
     </section>
   );
@@ -520,19 +642,20 @@ function ShiftsPanel({
 function ShiftCard({
   shift,
   family,
-  owner,
+  owners,
   isAdmin,
   lastNight,
 }: {
   shift: ShiftBranch;
   family: string;
-  owner: string;
+  owners: RepoOwners;
   isAdmin: boolean;
   lastNight: boolean;
 }): JSX.Element {
   const openPr = useOpenShiftPr();
-  const prs = shift.repos.filter((repo) => repo.pr);
-  const missingPr = shift.repos.some((repo) => !repo.pr && repo.ahead > 0);
+  // Only when a review PR would carry something: a branch level with its base,
+  // or one whose work already reached it, has nothing to review.
+  const offerPr = canOpenReviewPr(shift);
   return (
     <li
       className={`shift-branch${lastNight ? ' is-last-night' : ''}`}
@@ -550,20 +673,22 @@ function ShiftCard({
       <ul className="shift-branch__repos">
         {shift.repos.map((repo) => (
           <li key={repo.repo}>
-            <Link to={`${repoPath(owner, repo.repo)}/code`}>{repo.repo}</Link> · +{repo.ahead} / −
-            {repo.behind}
+            <RepoName owners={owners} repo={repo.repo} />
+            {repo.unmerged_todos && repo.unmerged_todos.length > 0
+              ? ` · ${repo.unmerged_todos.length} todo${repo.unmerged_todos.length === 1 ? '' : 's'} not on the base branch`
+              : ''}
             {repo.pr ? (
               <>
                 {' · '}
-                <a href={repo.pr.url}>
+                <PrLink url={repo.pr.url}>
                   PR #{repo.pr.number} ({repo.pr.state})
-                </a>
+                </PrLink>
               </>
             ) : null}
           </li>
         ))}
       </ul>
-      {isAdmin && (missingPr || prs.length === 0) ? (
+      {isAdmin && offerPr ? (
         <span className="shift__actions">
           <ActionButton
             variant="primary"
@@ -579,9 +704,9 @@ function ShiftCard({
         <span className="shift__muted" role="status">
           {openPr.data.prs.map((pr) => (
             <span key={pr.repo}>
-              <a href={pr.url}>
+              <PrLink url={pr.url}>
                 {pr.repo}#{pr.number}
-              </a>{' '}
+              </PrLink>{' '}
               {pr.created ? 'opened' : 'already open'}{' '}
             </span>
           ))}
@@ -593,5 +718,14 @@ function ShiftCard({
         </span>
       ) : null}
     </li>
+  );
+}
+
+/** A pull request url from the server: an app path navigates in place, anything else is a plain link. */
+function PrLink({ url, children }: { url: string; children: ReactNode }): JSX.Element {
+  return url.startsWith('/') && !url.startsWith('//') ? (
+    <Link to={url}>{children}</Link>
+  ) : (
+    <a href={url}>{children}</a>
   );
 }

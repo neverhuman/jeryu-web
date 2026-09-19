@@ -14,6 +14,12 @@ export type ShiftLanding = 'shifts' | 'batch' | string;
 export interface ShiftFamilyRepo {
   name: string;
   order: number;
+  /**
+   * Owner the repo is hosted under on this forge, which may differ from the
+   * queue repo's owner (the jain queue is jain-split/jain-todo, its code is
+   * veox/*). `null`: not hosted here. Absent on older servers.
+   */
+  owner?: string | null;
 }
 
 export interface ShiftFamily {
@@ -203,6 +209,12 @@ export interface ShiftBranchRepo {
   ahead: number;
   behind: number;
   pr?: ShiftBranchPr | null;
+  /**
+   * Todos whose commits are on the branch and on no base commit. `ahead` alone
+   * cannot say this: a linear-history merge replays commits under new shas.
+   * Absent on older servers.
+   */
+  unmerged_todos?: string[];
 }
 
 export interface ShiftBranch {
