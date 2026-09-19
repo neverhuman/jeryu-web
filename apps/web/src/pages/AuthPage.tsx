@@ -6,6 +6,7 @@ import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
 import { JeryuLogo } from '../components/brand/JeryuLogo';
 import { useAuth } from '../hooks/useAuth';
+import { homePathFor } from '../layout/HomeRedirect';
 
 import './AuthPage.css';
 
@@ -51,7 +52,7 @@ export function AuthForm({
         newPassword,
       });
       if (user && !user.mustChangePassword) {
-        navigate('/repos/family/jeryu-split', { replace: true });
+        navigate(homePathFor(user), { replace: true });
       }
       return;
     }
@@ -60,7 +61,7 @@ export function AuthForm({
         ? await auth.login.mutateAsync({ login, password, rememberMe })
         : await auth.signup.mutateAsync({ login, password });
     if (user && !user.mustChangePassword) {
-      navigate('/repos/family/jeryu-split', { replace: true });
+      navigate(homePathFor(user), { replace: true });
     }
   };
 

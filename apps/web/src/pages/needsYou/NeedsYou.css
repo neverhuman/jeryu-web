@@ -1,0 +1,86 @@
+/* NeedsYou.css — the landing page. Red means a person is the next step. */
+
+.needs-you__checked {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.needs-you__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.needs-you__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.needs-you__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-left-width: 4px;
+}
+
+.needs-you__row--danger {
+  border-left-color: var(--color-accent-danger);
+  background-image: linear-gradient(90deg, var(--color-accent-danger-bg), transparent 40%);
+}
+
+.needs-you__row--warning {
+  border-left-color: var(--color-accent-warning);
+}
+
+.needs-you__main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.needs-you__title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+}
+
+.needs-you__row--danger .needs-you__title {
+  color: var(--color-accent-danger);
+}
+
+.needs-you__reason {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.needs-you__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.needs-you__age {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.needs-you__open {
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+}

@@ -3,6 +3,8 @@
 // Single source of truth for every API path so URL bugs surface at
 // typecheck time. All paths are versioned (§35.1.1) under `/api/v1/`.
 
+import type { PipelineEventsQuery } from './types/pipeline';
+
 export const endpoints = {
   bootstrap: (): string => '/api/v1/bootstrap',
   authMe: (): string => '/api/v1/auth/me',
@@ -209,6 +211,18 @@ export const endpoints = {
       : '/api/v1/shift/shifts',
   shiftOpenPr: (family: string): string =>
     `/api/v1/shift/shifts/${encodeURIComponent(family)}/pr`,
+  /** Pipeline event log (admin-only). `kind` ending in `.` is a prefix match. */
+  events: (params?: PipelineEventsQuery): string => {
+    const qs = new URLSearchParams();
+    for (const [key, value] of Object.entries(params ?? {})) {
+      if (value === undefined || value === '' || value === false) continue;
+      qs.set(key, String(value));
+    }
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/events?${suffix}` : '/api/v1/events';
+  },
+  /** "Needs you": what is waiting on a human right now (admin-only). */
+  attention: (): string => '/api/v1/attention',
 } as const;
 
 export type Endpoints = typeof endpoints;

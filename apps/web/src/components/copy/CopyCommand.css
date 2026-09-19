@@ -1,0 +1,43 @@
+/* CopyCommand.css — a visible shell line plus its copy control. */
+
+.copy-command {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-bg-3);
+}
+
+.copy-command__text {
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-primary);
+  overflow-x: auto;
+  white-space: nowrap;
+  user-select: all;
+}
+
+.copy-command__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-left: 1px solid var(--color-border-strong);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.copy-command__button:hover {
+  color: var(--color-accent-primary);
+}
+
+.copy-command__button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

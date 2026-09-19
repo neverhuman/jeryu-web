@@ -17,10 +17,10 @@ import { CommandPalette } from './CommandPalette';
 
 const NAVIGATION_COMMANDS: Command[] = [
   {
-    id: 'nav.dashboard',
-    title: 'Go to Dashboard',
-    keywords: ['dashboard', 'home'],
-    target: { kind: 'route', path: '/' },
+    id: 'nav.needs-you',
+    title: 'Go to Needs you',
+    keywords: ['needs you', 'attention', 'home'],
+    target: { kind: 'route', path: '/needs-you' },
     shortcut: 'g d',
   },
   {

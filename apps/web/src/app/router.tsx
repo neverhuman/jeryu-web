@@ -12,6 +12,7 @@
 import { Navigate, createBrowserRouter, useParams } from 'react-router-dom';
 
 import { AppShell } from '../layout/AppShell';
+import { HomeRedirect } from '../layout/HomeRedirect';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { AuditPage } from '../pages/AuditPage';
 import { FleetPage } from '../pages/FleetPage';
@@ -22,6 +23,7 @@ import { IssuesPage } from '../pages/IssuesPage';
 import { PullRequestPage } from '../pages/PullRequestPage';
 import { PullRoomPage } from '../pages/PullRoomPage';
 import { ProposalsPage } from '../pages/ProposalsPage';
+import { NeedsYouPage } from '../pages/needsYou';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
 import { RepositoriesPage } from '../pages/RepositoriesPage';
@@ -56,9 +58,11 @@ export const router = createBrowserRouter([
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <Navigate to="/repos/family/jeryu-split" replace /> },
-      { path: 'login', element: <Navigate to="/repos/family/jeryu-split" replace /> },
-      { path: 'signup', element: <Navigate to="/repos/family/jeryu-split" replace /> },
+      // Admins land on "Needs you"; everyone else on the split family browser.
+      { index: true, element: <HomeRedirect /> },
+      { path: 'login', element: <HomeRedirect /> },
+      { path: 'signup', element: <HomeRedirect /> },
+      { path: 'needs-you', element: <NeedsYouPage /> },
       { path: 'repos', element: <RepositoriesPage /> },
       { path: 'repos/new', element: <RepositoriesPage mode="create" /> },
       // Family drill-down. Declared before the `repos/:provider/*` catch-all

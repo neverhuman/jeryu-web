@@ -13,11 +13,11 @@ export function useShellCommands(): void {
   useEffect(() => {
     const commands: Command[] = [
       {
-        id: 'nav.dashboard',
-        title: 'Go to Dashboard',
-        keywords: ['dashboard', 'home', 'attention'],
+        id: 'nav.needs-you',
+        title: 'Go to Needs you',
+        keywords: ['needs you', 'attention', 'inbox', 'blocked', 'waiting', 'home', 'dashboard'],
         icon: 'home',
-        target: { kind: 'route', path: '/' },
+        target: { kind: 'route', path: '/needs-you' },
         shortcut: 'g d',
       },
       {

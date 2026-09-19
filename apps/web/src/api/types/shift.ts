@@ -5,6 +5,8 @@
 // `contracts/generated/Shift*.ts`, swap these for re-exports in
 // `./generated` and delete this module.
 
+import type { ShiftTodoPr } from './pipeline';
+
 export type ShiftMode = 'now' | 'night';
 export type ShiftTodoStatus = 'open' | 'claimed' | 'done' | 'blocked' | 'handoff';
 export type ShiftLanding = 'shifts' | 'batch' | string;
@@ -60,6 +62,14 @@ export interface ShiftTodo {
   change_set: string | null;
   commits: Record<string, string>;
   merged: boolean;
+  /**
+   * Pipeline visibility contract v1 (server-derived, absent on older servers):
+   * whether production runs the change (null when no deployment is known),
+   * the shift PR that carries it, and the summed attempt cost.
+   */
+  released?: boolean | null;
+  pr?: ShiftTodoPr | null;
+  cost_usd?: number | null;
   note: string;
   triaged: boolean;
   worked_by: ShiftAttempt[];

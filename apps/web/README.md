@@ -48,7 +48,8 @@ apps/web/
     │   ├── RepoSwitcher.tsx
     │   └── StatusBar.tsx
     ├── pages/
-    │   ├── DashboardPage.tsx
+    │   ├── needsYou/           "Needs you" landing page (GET /api/v1/attention)
+    │   ├── activity/           pipeline event feed + wall mode (GET /api/v1/events)
     │   ├── RepositoriesPage.tsx
     │   ├── RepositoryOverviewPage.tsx
     │   ├── RepositoryCodePage.tsx

@@ -5,3 +5,4 @@ export {
   PermissionDeniedState,
   type PermissionDeniedStateProps,
 } from './PermissionDeniedState';
+export { PipelineQueryState, type PipelineQueryStateProps } from './PipelineQueryState';

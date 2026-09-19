@@ -17,22 +17,29 @@ import {
   FolderGit2,
   GitMerge,
   Layers,
-  LayoutDashboard,
+  Siren,
   Rocket,
   PackageOpen,
   ServerCog,
   type LucideIcon,
 } from 'lucide-react';
 
+import { useAttention } from '../hooks/usePipeline';
+import { useAuth } from '../hooks/useAuth';
+import { attentionBadgeCount } from '../pages/needsYou/needsYouModel';
+import { NEEDS_YOU_PATH } from './HomeRedirect';
+
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** `attention`: show the critical + action count from `/api/v1/attention`. */
+  badge?: 'attention';
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: NEEDS_YOU_PATH, label: 'Needs you', icon: Siren, badge: 'attention' },
   { to: '/repos', label: 'Repositories', icon: FolderGit2 },
   { to: '/work', label: 'Work', icon: ClipboardList },
   // Reconciled: the route map (router.tsx) and command palette both use
@@ -68,6 +75,11 @@ function extractRepoBase(
 export function LeftNav(): JSX.Element {
   const { pathname } = useLocation();
   const repo = extractRepoBase(pathname);
+  // The badge is visible from every page. Attention is admin-only, so other
+  // roles never ask; an older server answers once and the query stops polling.
+  const { user } = useAuth();
+  const attention = useAttention(user?.role === 'admin');
+  const needsYou = attentionBadgeCount(attention.data);
 
   return (
     <nav className="left-nav" aria-label="Primary">
@@ -83,6 +95,15 @@ export function LeftNav(): JSX.Element {
         >
           <item.icon aria-hidden="true" size={16} />
           {item.label}
+          {item.badge === 'attention' && needsYou > 0 ? (
+            <span
+              className="left-nav__badge"
+              data-testid="needs-you-badge"
+              aria-label={`${needsYou} item${needsYou === 1 ? '' : 's'} need you`}
+            >
+              {needsYou > 99 ? '99+' : needsYou}
+            </span>
+          ) : null}
         </a>
       ))}
 

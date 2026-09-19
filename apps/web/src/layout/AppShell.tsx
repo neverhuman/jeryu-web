@@ -27,6 +27,7 @@ import { LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { AuthPage } from '../pages/AuthPage';
 import { BootScreen } from '../pages/boot/BootScreen';
+import { NEEDS_YOU_PATH, homePathFor } from './HomeRedirect';
 
 import './AppShell.css';
 
@@ -71,8 +72,8 @@ export function AppShell(): JSX.Element {
     enabled: !!auth.user,
   });
 
-  useKeyboardShortcut('g d', () => navigate('/'), {
-    label: 'Go to Dashboard',
+  useKeyboardShortcut('g d', () => navigate(NEEDS_YOU_PATH), {
+    label: 'Go to Needs you',
     group: 'Navigation',
     enabled: !!auth.user,
   });
@@ -135,7 +136,7 @@ export function AppShell(): JSX.Element {
   }
 
   if (isAuthRoute) {
-    return <Navigate to="/repos/family/jeryu-split" replace />;
+    return <Navigate to={homePathFor(auth.user)} replace />;
   }
 
   if (auth.user.mustChangePassword) {
