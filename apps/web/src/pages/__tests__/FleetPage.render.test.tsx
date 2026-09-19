@@ -6,7 +6,7 @@
 // roadmap note, the freshness badge, and the runner-network node board.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -367,6 +367,12 @@ describe('FleetPage render', () => {
     expect(screen.getByTestId('fleet-reviewer-verdict-xbabe0_redteam')).toHaveTextContent(
       'jeryu/jeryu-deploy#43 approve'
     );
+    // The PR a reviewer last judged, and its verdict, both open that PR.
+    const verdictLinks = within(screen.getByTestId('fleet-reviewer-verdict-xbabe0_redteam')).getAllByRole('link');
+    expect(verdictLinks.map((a) => a.getAttribute('href'))).toEqual([
+      '/repos/jeryu/jeryu/jeryu-deploy/pulls/43',
+      '/repos/jeryu/jeryu/jeryu-deploy/pulls/43',
+    ]);
     expect(screen.getByTestId('fleet-reviewer-last-pass-xbabe0_redteam')).toHaveTextContent(
       '2026-09-19T05:21:43Z'
     );

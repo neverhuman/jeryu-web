@@ -7,10 +7,15 @@
 // environment does not. Environments with no recorded deployment render as
 // "not configured" rather than disappearing, so the pipeline's shape shows.
 
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+
+import { CopyCommand } from '../components/copy/CopyCommand';
+import { useAuth } from '../hooks/useAuth';
+import { useAttention } from '../hooks/usePipeline';
 
 import { useReleaseOverview } from '../hooks/useReleaseOverview';
-import { behindLabel, type DeployedRef, type EnvironmentRow } from './releasesModel';
+import { findAttention } from './needsYou/needsYouModel';
+import { behindLabel, releasePullHref, type DeployedRef, type EnvironmentRow } from './releasesModel';
 
 import './page.css';
 import './ReleasesPage.css';
@@ -63,7 +68,13 @@ export function ReleasesPage(): JSX.Element {
           />
           <button type="submit">Show</button>
         </form>
+        <p className="releases__muted">
+          Merged work that is not live yet, per pull request:{' '}
+          <Link to={`/unreleased?repo=${encodeURIComponent(repoId)}`}>Unreleased</Link>
+        </p>
       </header>
+
+      <StagedRelease />
 
       <section className="page__section" aria-labelledby="releases-environments">
         <h2 className="page__section-title" id="releases-environments">
@@ -96,7 +107,7 @@ export function ReleasesPage(): JSX.Element {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <EnvironmentRowView key={row.name} row={row} />
+                    <EnvironmentRowView key={row.name} row={row} repoId={repoId} />
                   ))}
                 </tbody>
               </table>
@@ -108,7 +119,7 @@ export function ReleasesPage(): JSX.Element {
   );
 }
 
-function EnvironmentRowView({ row }: { row: EnvironmentRow }): JSX.Element {
+function EnvironmentRowView({ row, repoId }: { row: EnvironmentRow; repoId: string }): JSX.Element {
   if (!row.current) {
     return (
       <tr className="releases__row releases__row--empty" data-testid={`releases-env-${row.name}`}>
@@ -161,7 +172,10 @@ function EnvironmentRowView({ row }: { row: EnvironmentRow }): JSX.Element {
               <ul className="releases__prs">
                 {row.unshipped.map((pr) => (
                   <li key={pr.number}>
-                    #{pr.number} {pr.title} <span className="releases__muted">· {pr.author}</span>
+                    <Link to={releasePullHref(repoId, pr.number)}>
+                      #{pr.number} {pr.title}
+                    </Link>{' '}
+                    <span className="releases__muted">· {pr.author}</span>
                   </li>
                 ))}
               </ul>
@@ -185,9 +199,42 @@ function Ref({ ref_ }: { ref_: DeployedRef }): JSX.Element {
 
 function Attempt({ attempt }: { attempt: DeployedRef }): JSX.Element {
   return (
-    <span className={`page__pill ${STATE_PILL[attempt.state] ?? ''}`} title={attempt.release ?? attempt.sha}>
-      {attempt.state.replace('_', ' ')} {attempt.shortSha}
-    </span>
+    <>
+      <span className={`page__pill ${STATE_PILL[attempt.state] ?? ''}`} title={attempt.release ?? attempt.sha}>
+        {attempt.state.replace('_', ' ')} {attempt.shortSha}
+      </span>
+      {attempt.logUrl ? (
+        <>
+          {' '}
+          <a href={attempt.logUrl} target="_blank" rel="noreferrer">
+            deploy log
+          </a>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * "A release is staged and waiting for the deploy command": the same
+ * `release_staged` item Needs you shows, here where the deploy is decided.
+ * Attention is admin-only, so other roles never ask.
+ */
+function StagedRelease(): JSX.Element | null {
+  const { user } = useAuth();
+  const attention = useAttention(user?.role === 'admin');
+  const staged = findAttention(attention.data, 'release_staged');
+  if (!staged) return null;
+  return (
+    <section className="releases__staged" role="status" aria-label="Staged release" data-testid="releases-staged">
+      <p className="releases__staged-title">
+        <span className="page__pill page__pill--danger">Staged, awaiting deploy</span> {staged.title}
+      </p>
+      {staged.reason ? <p className="releases__muted">{staged.reason}</p> : null}
+      {staged.action?.command ? (
+        <CopyCommand command={staged.action.command} label="deploy command" />
+      ) : null}
+    </section>
   );
 }
 

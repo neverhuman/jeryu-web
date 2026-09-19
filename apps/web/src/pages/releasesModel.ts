@@ -31,6 +31,8 @@ export interface DeployedRef {
   deployedAt: string;
   deployedBy: string;
   state: DeploymentState | 'unknown';
+  /** Where the deploy's log lives, when the deploy script recorded one. */
+  logUrl: string | null;
 }
 
 export interface EnvironmentRow {
@@ -59,7 +61,20 @@ export function deployedRef(entry: DeploymentWithStatus | null): DeployedRef | n
     deployedAt: deployment.created_at,
     deployedBy: deployment.creator.login,
     state: status?.state ?? 'unknown',
+    logUrl: safeLogUrl(status?.log_url),
   };
+}
+
+/** Only http(s) and same-origin paths are rendered as a link. */
+export function safeLogUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('/') && !url.startsWith('//')) return url;
+  return /^https?:\/\//i.test(url) ? url : null;
+}
+
+/** SPA path of a PR in `owner/name`. */
+export function releasePullHref(repoId: string, number: number): string {
+  return `/repos/jeryu/${repoId}/pulls/${number}`;
 }
 
 /** Merged PRs whose head is among `compare.commits`, newest first. */

@@ -13,6 +13,7 @@ import {
   CircleSlash,
 } from 'lucide-react';
 
+import { pullHref } from '../activity/activityModel';
 import { reviewVerdict, type RunnerNetworkNode } from '../runnerNetworkModel';
 
 export function RunnerNodeList({
@@ -95,7 +96,7 @@ function RunnerNodeRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
         ) : node.lastActivity ? (
           <p className="fleet__node-last" data-testid={`fleet-node-last-${nodeId}`}>
             <strong>
-              {node.lastActivity.repo}#{node.lastActivity.pr}
+              <PullLink repo={node.lastActivity.repo} pr={node.lastActivity.pr} />
             </strong>{' '}
             <span
               className={`page__pill ${
@@ -206,11 +207,15 @@ function ReviewerRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
         {last && verdict ? (
           <p className="fleet__node-last" data-testid={`fleet-reviewer-verdict-${nodeId}`}>
             <strong>
-              {last.repo}#{last.pr}
+              <PullLink repo={last.repo} pr={last.pr} />
             </strong>{' '}
-            <span className={`page__pill page__pill--${verdictVariant}`} title={last.conclusion}>
+            <Link
+              to={pullHref(last.repo, last.pr)}
+              className={`page__pill page__pill--${verdictVariant}`}
+              title={`${last.conclusion} — open the pull request`}
+            >
               {verdict}
-            </span>{' '}
+            </Link>{' '}
             <span className="fleet__node-muted">{last.sha.slice(0, 7)}</span>
           </p>
         ) : (
@@ -316,4 +321,13 @@ function ActivityPill({
 
 function testIdSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+/** `owner/name#pr`, linked to the pull request it names. */
+function PullLink({ repo, pr }: { repo: string; pr: number }): JSX.Element {
+  return (
+    <Link to={pullHref(repo, pr)}>
+      {repo}#{pr}
+    </Link>
+  );
 }

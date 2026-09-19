@@ -11,6 +11,8 @@ import {
   behindLabel,
   buildEnvironmentRows,
   EXPECTED_ENVIRONMENTS,
+  releasePullHref,
+  safeLogUrl,
   unshippedPulls,
 } from '../releasesModel';
 
@@ -140,4 +142,16 @@ it('does not present a partial compare as an exact PR count', () => {
   expect(behindLabel(rows[0]!)).toBe('251 commits behind');
 });
 
+  it('carries a deploy log link only when it is http(s) or an app path', () => {
+    const failed = deployed(3, 'c', 'failure');
+    failed.status!.log_url = 'https://git.neverhuman.org/logs/rel-c.txt';
+    const rows = buildEnvironmentRows([{ ...production, latest: failed }], new Map(), null);
+    expect(rows[0]!.pendingAttempt?.logUrl).toBe('https://git.neverhuman.org/logs/rel-c.txt');
+    expect(rows[0]!.current?.logUrl).toBeNull();
+    expect(safeLogUrl('/api/v1/logs/1')).toBe('/api/v1/logs/1');
+    expect(safeLogUrl('//evil.example/x')).toBeNull();
+    expect(safeLogUrl('javascript:alert(1)')).toBeNull();
+    expect(safeLogUrl(null)).toBeNull();
+    expect(releasePullHref('jeryu/jeryu-deploy', 48)).toBe('/repos/jeryu/jeryu/jeryu-deploy/pulls/48');
+  });
 });
