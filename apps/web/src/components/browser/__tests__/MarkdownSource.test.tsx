@@ -51,14 +51,20 @@ describe('MarkdownSource', () => {
       </MemoryRouter>
     );
     // The badge the owner asked about is an image again (or its alt chip once it fails to load).
-    expect(container.innerHTML).toContain('Jankurai');
+    const badge = container.querySelector('img[alt="Jankurai"]');
+    expect(badge ?? screen.queryByText('Jankurai')).not.toBeNull();
     // Nothing that can run or phone home with credentials survives.
     expect(container.querySelector('script')).toBeNull();
     expect(container.querySelector('iframe')).toBeNull();
     expect(container.querySelector('form')).toBeNull();
     expect(container.querySelector('input[name="pw"]')).toBeNull();
-    expect(container.innerHTML).not.toMatch(/onerror|onclick|javascript:/i);
-    expect(container.innerHTML).not.toMatch(/position:\s*fixed/i);
+    const elements = Array.from(container.querySelectorAll('*'));
+    const attributes = elements.flatMap((el) => Array.from(el.attributes));
+    expect(attributes.filter((attr) => attr.name.toLowerCase().startsWith('on'))).toEqual([]);
+    expect(attributes.filter((attr) => attr.name === 'style')).toEqual([]);
+    expect(
+      attributes.filter((attr) => /^\s*javascript:/i.test(attr.value)).map((attr) => attr.name)
+    ).toEqual([]);
   });
 
   it('resolves only relative links', () => {
