@@ -220,3 +220,33 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Plain facts with a mark: what is on, then what is off. */
+.page__fact-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.page__fact {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  color: var(--color-fg-primary);
+}
+
+.page__fact--off {
+  color: var(--color-fg-muted);
+}
+
+.page__fact-mark {
+  width: 1em;
+  color: var(--color-accent-success);
+}
+
+.page__fact--off .page__fact-mark {
+  color: var(--color-fg-muted);
+}
+

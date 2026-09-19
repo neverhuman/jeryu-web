@@ -106,6 +106,9 @@ export const endpoints = {
   /** GitHub-shaped per-environment summary (latest, current, previous). */
   repoEnvironments: (owner: string, repo: string): string =>
     `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/environments`,
+  /** GitHub-shaped branch protection rule; 404 when the branch is unprotected. */
+  branchProtection: (owner: string, repo: string, branch: string): string =>
+    `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches/${encodeURIComponent(branch)}/protection`,
   ecosystem: (): string => '/api/v1/ecosystem',
   toolBuildClusters: (params?: {
     repo?: string;

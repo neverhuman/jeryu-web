@@ -55,6 +55,8 @@ import {
   sectionTitleFor,
 } from './repositorySettingsPanels';
 
+import { BranchProtectionSummary } from './BranchProtectionSummary';
+
 import './page.css';
 
 function fullNameFromParams(params: Record<string, string | undefined>): string {
@@ -158,14 +160,23 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
       );
     }
     if (settings.error instanceof ApiError && settings.error.status === 404) {
-      // A repository whose source lives elsewhere keeps no settings on this
-      // forge. That is a fact about the repo, not a failure; removing it is
-      // still possible, so the danger zone stays.
+      // This server has no settings API to edit, so the page shows what is true
+      // instead: the rule that protects the default branch, read from the
+      // branch protection endpoint the forge does serve. Removing the
+      // repository is still possible, so the danger zone stays.
+      const [owner = '', name = ''] = fullName.split('/');
       return (
         <div className="page" data-testid="repo-settings-page">
-          <EmptyState
-            title="No settings on this forge"
-            description={`${fullName} keeps no branch rules or merge settings here, usually because its source is hosted elsewhere.`}
+          <header className="page__header">
+            <h1 className="page__title">Settings · {fullName}</h1>
+            <p className="page__subtitle">
+              Read-only on this server: rules are changed through the API.
+            </p>
+          </header>
+          <BranchProtectionSummary
+            owner={owner}
+            repo={name}
+            branch={resolved.data.summary.default_branch ?? 'main'}
           />
           <RepoDangerZone repo={resolved.data.summary} />
         </div>
