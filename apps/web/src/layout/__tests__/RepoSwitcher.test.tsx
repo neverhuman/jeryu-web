@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
-import { RepoSwitcher, repoNameFromPath } from '../RepoSwitcher';
+import { RepoSwitcher, repoHomeFromPath, repoNameFromPath } from '../RepoSwitcher';
 
 describe('repoNameFromPath', () => {
   it('names the repository a path is inside, never an id', () => {
@@ -18,23 +18,24 @@ describe('repoNameFromPath', () => {
 });
 
 describe('RepoSwitcher', () => {
-  it('links to the repository list and shows the current repository by name', () => {
+  it('names the repository you are in and links to its front page', () => {
     render(
       <MemoryRouter initialEntries={['/repos/jeryu/jeryu/jeryu-web/pulls/38']}>
         <RepoSwitcher />
       </MemoryRouter>
     );
-    const link = screen.getByRole('link', { name: 'jeryu/jeryu-web: switch repository' });
-    expect(link).toHaveAttribute('href', '/repos');
+    const link = screen.getByRole('link', { name: 'jeryu/jeryu-web' });
+    expect(link).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-web');
     expect(link).toHaveTextContent('jeryu/jeryu-web');
   });
 
-  it('reads Repositories outside a repository', () => {
-    render(
+  it('renders nothing outside a repository: the left nav already has Repositories', () => {
+    const { container } = render(
       <MemoryRouter initialEntries={['/needs-you']}>
         <RepoSwitcher />
       </MemoryRouter>
     );
-    expect(screen.getByRole('link', { name: 'All repositories' })).toHaveTextContent('Repositories');
+    expect(container).toBeEmptyDOMElement();
+    expect(repoHomeFromPath('/repos/family/jeryu-split')).toBeNull();
   });
 });

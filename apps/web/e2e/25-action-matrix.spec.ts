@@ -69,11 +69,12 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await page.getByText('Go to Repositories').click();
   await expect(page).toHaveURL(/\/repos$/);
 
-  // The header names where you are and links to every repository; it no longer
-  // opens the palette a second way.
+  // Outside a repository the header has no repository control (the left nav
+  // has Repositories); it no longer opens the palette a second way. Inside one
+  // it names the repository and links to its front page: see 05-pr-review.
   await page.goto('/needs-you');
-  await page.getByRole('banner').getByRole('link', { name: 'All repositories' }).click();
-  await expect(page).toHaveURL(/\/repos$/);
+  await expect(page.getByRole('banner').getByRole('link', { name: /repositor/i })).toHaveCount(0);
+  await expect(page.getByRole('banner').getByRole('button', { name: /repositor/i })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Collapse sidebar' }).click();
   await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();

@@ -1,36 +1,43 @@
-// RepoSwitcher.tsx — where you are, and the way to every repository (W-FE-01).
+// RepoSwitcher.tsx — where you are (W-FE-01).
 //
-// It names the repository in the address bar (`owner/name`, never an internal
-// id) and links to the repository list. It used to open the command palette,
-// which the search box beside it already does and which cannot switch repos.
+// Inside a repository it names it (`owner/name`, never an internal id) and
+// links to that repository's front page. Outside one it renders nothing: the
+// left nav already has Repositories, and a second way there is one more thing
+// to read. It used to open the command palette, which the search box beside it
+// already does and which cannot switch repos.
 
 import { FolderGit2 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
+const REPO_PATH = /^\/repos\/(?!family\/|new$)([^/]+)\/([^/]+)\/([^/]+)/;
+
 /** `owner/name` of the repository a path is inside, or null. */
 export function repoNameFromPath(pathname: string): string | null {
-  const match = /^\/repos\/(?!family\/|new$)[^/]+\/([^/]+)\/([^/]+)/.exec(pathname);
+  const match = REPO_PATH.exec(pathname);
   if (!match) return null;
   try {
-    return `${decodeURIComponent(match[1])}/${decodeURIComponent(match[2])}`;
+    return `${decodeURIComponent(match[2])}/${decodeURIComponent(match[3])}`;
   } catch {
-    return `${match[1]}/${match[2]}`;
+    return `${match[2]}/${match[3]}`;
   }
 }
 
-export function RepoSwitcher(): JSX.Element {
+/** The front page of the repository a path is inside, or null. */
+export function repoHomeFromPath(pathname: string): string | null {
+  const match = REPO_PATH.exec(pathname);
+  return match ? `/repos/${match[1]}/${match[2]}/${match[3]}` : null;
+}
+
+export function RepoSwitcher(): JSX.Element | null {
   const { pathname } = useLocation();
   const current = repoNameFromPath(pathname);
+  const home = repoHomeFromPath(pathname);
+  if (!current || !home) return null;
 
   return (
-    <Link
-      to="/repos"
-      className="repo-switcher"
-      aria-label={current ? `${current}: switch repository` : 'All repositories'}
-      title={current ? 'Switch repository' : 'All repositories'}
-    >
+    <Link to={home} className="repo-switcher" aria-label={current} title={`${current} front page`}>
       <FolderGit2 size={14} aria-hidden="true" />
-      <span className="repo-switcher__label">{current ?? 'Repositories'}</span>
+      <span className="repo-switcher__label">{current}</span>
     </Link>
   );
 }
