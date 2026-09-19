@@ -28,6 +28,7 @@ import {
   PermissionDeniedState,
 } from '../components/state';
 import { useBlob } from '../hooks/useBlob';
+import { useRepoTree } from '../hooks/useRepoTree';
 import { useRepositories } from '../hooks/useRepositories';
 import { pullRoomFamilyHref } from './pullRoomModel';
 
@@ -158,6 +159,11 @@ function SplitFamilyBrowser({
   const [activeRef, setActiveRef] = useState(selected?.default_branch ?? '');
   const [selectedFile, setSelectedFile] = useState<TreeEntry | null>(null);
   const blob = useBlob(selected?.id.id ?? null, activeRef, selectedFile?.path ?? '');
+  // The file tree asks for the same root listing (one request, shared cache).
+  // A 404 there means the source is hosted elsewhere: the tree says so, and a
+  // second empty state ("No README found") beside it would only repeat the fact.
+  const rootTree = useRepoTree(selected?.id.id ?? null, activeRef || (selected?.default_branch ?? ''), '');
+  const noCodeHere = rootTree.error instanceof ApiError && rootTree.error.status === 404;
 
   useEffect(() => {
     setActiveRef(selected?.default_branch ?? '');
@@ -229,7 +235,7 @@ function SplitFamilyBrowser({
               ) : (
                 <EmptyState title="File is empty" icon={FileText} />
               )
-            ) : (
+            ) : noCodeHere ? null : (
               <ReadmePanel
                 linkBase={`${repoHref(selected)}/blob/${activeRef || selected.default_branch}/`}
                 repoId={selected.id.id}

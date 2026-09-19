@@ -20,6 +20,12 @@ vi.mock('../../hooks/useRepositories', () => ({
   useRepositories: (query: unknown) => useRepositoriesMock(query),
 }));
 
+const useRepoTreeMock = vi.fn();
+
+vi.mock('../../hooks/useRepoTree', () => ({
+  useRepoTree: () => useRepoTreeMock(),
+}));
+
 vi.mock('../../hooks/useBlob', () => ({
   useBlob: () => ({
     isPending: false,
@@ -108,6 +114,8 @@ function renderPage(family = 'veox-split', search = ''): void {
 describe('RepositoryFamilyPage', () => {
   beforeEach(() => {
     useRepositoriesMock.mockReset();
+    useRepoTreeMock.mockReset();
+    useRepoTreeMock.mockReturnValue({ error: null });
   });
 
   it('selects the repo named in ?repo= so each repo has its own URL', () => {
@@ -173,6 +181,18 @@ describe('RepositoryFamilyPage', () => {
     expect(screen.getByText('veox/bluebird')).toBeInTheDocument();
     expect(within(browser).getByText('file tree')).toBeInTheDocument();
     expect(screen.getByText('README for uuid-bluebird')).toBeInTheDocument();
+  });
+
+  it('says a repository has no code here once, not twice', () => {
+    useRepositoriesMock.mockReturnValue(listResult([repoSummary('ai-veox-app')]));
+    // The root listing 404s: the source is hosted elsewhere. The tree says so;
+    // "No README found" beside it would only repeat the fact.
+    useRepoTreeMock.mockReturnValue({
+      error: new ApiError(404, { code: 'not_found', message: 'no tree' }),
+    });
+    renderPage();
+    expect(screen.getByText('file tree')).toBeInTheDocument();
+    expect(screen.queryByText(/^README for /)).toBeNull();
   });
 
   it('renders the empty state with a back-to-repos action', () => {
