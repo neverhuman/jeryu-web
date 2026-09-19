@@ -915,3 +915,9 @@
   padding: var(--space-2);
   font-size: var(--font-size-xs);
 }
+
+.pr-cockpit__review-error {
+  margin: 0;
+  color: var(--color-accent-danger);
+  font-size: var(--font-size-sm);
+}

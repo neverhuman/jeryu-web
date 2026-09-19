@@ -29,6 +29,7 @@ import {
 } from '../components/state';
 import { useApprovePr } from '../hooks/useApprovePr';
 import { useMergePr } from '../hooks/useMergePr';
+import { useSubmitReview } from '../hooks/useSubmitReview';
 import { usePullRequest } from '../hooks/usePullRequest';
 import { usePrChecks } from '../hooks/usePrChecks';
 import { usePrDiff } from '../hooks/usePrDiff';
@@ -86,6 +87,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
 
   const approve = useApprovePr(repoId, prNumber);
   const mergeMutation = useMergePr(repoId, prNumber);
+  const review = useSubmitReview(repoId, prNumber);
 
   // Diff viewer state.
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
@@ -122,6 +124,20 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     [approve]
   );
 
+  const handleRequestChanges = useCallback(
+    async (expectedHeadSha: string, body: string) => {
+      review.reset();
+      await review.mutateAsync({
+        verdict: 'request_changes',
+        expected_head_sha: expectedHeadSha,
+        body_markdown: body,
+        thread_comments: [],
+        evidence: null,
+      });
+    },
+    [review]
+  );
+
   const handleMerge = useCallback(
     async (input: {
       expectedHeadSha: string;
@@ -150,17 +166,22 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
       const info = extractDrift(mergeErr);
       if (info) return info;
     }
+    if (review.error instanceof ApiError) {
+      const info = extractDrift(review.error);
+      if (info) return info;
+    }
     return;
-  }, [approve.error, mergeMutation.error]);
+  }, [approve.error, mergeMutation.error, review.error]);
 
   const handleRefresh = useCallback(() => {
     approve.reset();
     mergeMutation.reset();
+    review.reset();
     void detail.refetch();
     void diff.refetch();
     void checks.refetch();
     void threads.refetch();
-  }, [approve, mergeMutation, detail, diff, checks, threads]);
+  }, [approve, mergeMutation, review, detail, diff, checks, threads]);
 
   // ── Loading + error guards. ────────────────────────────────────────
   if (resolved.isPending) {
@@ -293,7 +314,11 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         activeFile={activeFile}
         viewedPaths={viewedPaths}
         diffMode={diffMode}
-        isBusy={approve.isPending || mergeMutation.isPending}
+        isBusy={approve.isPending || mergeMutation.isPending || review.isPending}
+        reviewError={review.error && !headDrift ? review.error.message : null}
+        repoFullName={fullName}
+        prNumber={prNumber}
+        onRequestChanges={handleRequestChanges}
         onSelectFile={setActiveFilePath}
         onToggleViewed={handleToggleViewed}
         onDiffModeChange={(m: DiffViewerMode) => setDiffMode(m)}

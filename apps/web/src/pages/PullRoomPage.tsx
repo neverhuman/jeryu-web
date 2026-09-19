@@ -30,7 +30,8 @@ const EVIDENCE_STATES: EvidenceState[] = [
 ];
 
 export function PullRoomPage(): JSX.Element {
-  const snapshot = useControlPlane();
+  // Checks, reviews and merges move without this tab doing anything: poll.
+  const snapshot = useControlPlane({ refetchInterval: 30_000 });
   const toolClusters = useToolBuildClusters(8);
   const ecosystem = useEcosystem();
   const [searchParams, setSearchParams] = useSearchParams();

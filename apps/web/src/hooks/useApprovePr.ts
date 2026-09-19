@@ -19,6 +19,7 @@ import type {
   PullRequestDetail,
 } from '../api/types';
 
+import { invalidateAfterPrChange } from './prInvalidation';
 import { pullRequestQueryKey } from './usePullRequest';
 import { prThreadsQueryKey } from './usePrThreads';
 
@@ -59,6 +60,8 @@ export function useApprovePr(
       queryClient.invalidateQueries({
         queryKey: prThreadsQueryKey(repoId, prNumber),
       });
+      // The PR list, Pull Room, release views and Needs you all describe this PR.
+      invalidateAfterPrChange(queryClient, repoId);
     },
   });
 }

@@ -11,15 +11,16 @@ export const CONTROL_PLANE_QUERY_KEY: readonly ['control-plane', 'status'] = [
   'status',
 ];
 
-export function useControlPlane(): UseQueryResult<
-  ControlPlaneSnapshot,
-  Error
-> {
+export function useControlPlane(options?: {
+  /** Poll while mounted (Pull Room); off by default. */
+  refetchInterval?: number;
+}): UseQueryResult<ControlPlaneSnapshot, Error> {
   return useQuery({
     queryKey: CONTROL_PLANE_QUERY_KEY,
     queryFn: ({ signal }) =>
       apiGet<ControlPlaneSnapshot>(endpoints.controlPlaneStatus(), { signal }),
     staleTime: 15_000,
+    refetchInterval: options?.refetchInterval ?? false,
     refetchOnWindowFocus: true,
   });
 }

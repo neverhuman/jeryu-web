@@ -14,6 +14,7 @@ import {
   type DiffViewerMode,
 } from '../components/merge';
 import { ErrorState, LoadingState } from '../components/state';
+import { PullPipelineEvents } from './activity/PullPipelineEvents';
 import type { usePrChecks } from '../hooks/usePrChecks';
 import type { usePrDiff } from '../hooks/usePrDiff';
 import type { usePrThreads } from '../hooks/usePrThreads';
@@ -32,10 +33,16 @@ export interface PullRequestCockpitProps {
   viewedPaths: Set<string>;
   diffMode: string;
   isBusy: boolean;
+  /** A failed review submission that is not head drift (drift has its own banner). */
+  reviewError?: string | null;
+  /** `owner/name` and PR number, for the pipeline events panel. */
+  repoFullName?: string | null;
+  prNumber?: string | null;
   onSelectFile: (path: string) => void;
   onToggleViewed: (path: string, viewed: boolean) => void;
   onDiffModeChange: (mode: DiffViewerMode) => void;
   onApprove: (expectedHeadSha: string) => Promise<void>;
+  onRequestChanges: (expectedHeadSha: string, body: string) => Promise<void>;
   onMerge: (input: {
     expectedHeadSha: string;
     expectedPassportHash: string | null;
@@ -53,10 +60,14 @@ export function PullRequestCockpit({
   viewedPaths,
   diffMode,
   isBusy,
+  reviewError,
+  repoFullName,
+  prNumber,
   onSelectFile,
   onToggleViewed,
   onDiffModeChange,
   onApprove,
+  onRequestChanges,
   onMerge,
 }: PullRequestCockpitProps): JSX.Element {
   return (
@@ -103,12 +114,21 @@ export function PullRequestCockpit({
         <ReviewSidebar
           detail={data}
           onApprove={onApprove}
+          onRequestChanges={onRequestChanges}
           onMerge={onMerge}
           isBusy={isBusy}
         />
+        {reviewError ? (
+          <p className="pr-cockpit__review-error" role="alert">
+            Review not submitted: {reviewError}
+          </p>
+        ) : null}
         <MergeGatePanel passport={data.merge_passport} />
         <ChecksPanel checks={checks.data ?? null} isLoading={checks.isPending} />
         <ThreadList threads={threads.data?.threads ?? []} />
+        {repoFullName && prNumber ? (
+          <PullPipelineEvents repo={repoFullName} pr={prNumber} />
+        ) : null}
       </aside>
     </div>
   );

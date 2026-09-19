@@ -17,6 +17,7 @@ import type {
   PullRequestDetail,
 } from '../api/types';
 
+import { invalidateAfterPrChange } from './prInvalidation';
 import { pullRequestQueryKey } from './usePullRequest';
 
 function newIdempotencyKey(): string {
@@ -50,6 +51,8 @@ export function useMergePr(
         pullRequestQueryKey(repoId, prNumber),
         data
       );
+      // The PR list, Pull Room, release views and Needs you all describe this PR.
+      invalidateAfterPrChange(queryClient, repoId);
     },
   });
 }
