@@ -347,3 +347,205 @@ export function runnerTags(node: { labels: readonly string[]; classes: readonly 
   return tags;
 }
 
+// ── Rows in words ────────────────────────────────────────────────────────
+//
+// A runner row says four things: which runner, what it is doing now, what it
+// did last, and when it was last heard from. Everything below is pure, so the
+// page and its tests agree on the words.
+
+/** No heartbeat for this long and a runner's "seen" is shown as stale. */
+export const RUNNER_SEEN_STALE_MS = 3 * 60_000;
+
+export type RowTone = 'neutral' | 'success' | 'warning' | 'danger';
+
+/** `owner/name#12`, the label gate runners and reviewers give their task. */
+export interface PullRef {
+  repo: string;
+  pr: number;
+}
+
+const PULL_LABEL = /^([\w.-]+\/[\w.-]+)#(\d+)$/;
+
+/** The pull request a task label names, or null when it names none. */
+export function pullRefFromLabel(label: string): PullRef | null {
+  const match = PULL_LABEL.exec(label.trim());
+  if (!match) return null;
+  const pr = Number(match[2]);
+  return pr > 0 ? { repo: match[1], pr } : null;
+}
+
+/** "xbabe2 · slot 0" for `xbabe2/slot0`, "xbabe0 · redteam" for a reviewer. */
+export function runnerName(runnerId: string): string {
+  const slot = /^(.+)\/slot(\d+)$/.exec(runnerId);
+  if (slot) return `${slot[1]} · slot ${slot[2]}`;
+  const [host, ...rest] = runnerId.split('/');
+  return rest.length > 0 && host ? `${host} · ${rest.join('/')}` : runnerId;
+}
+
+/** 14 -> "14s", 127 -> "2m 7s", 3780 -> "1h 3m". */
+export function durationWords(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    const rest = seconds % 60;
+    return rest === 0 ? `${minutes}m` : `${minutes}m ${rest}s`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+  return restMinutes === 0 ? `${hours}h` : `${hours}h ${restMinutes}m`;
+}
+
+export interface RowNow {
+  /** "idle", "offline", or the verb: "gating" / "reviewing" / "running". */
+  text: string;
+  /** What is being worked on, as its label says it. */
+  subject: string | null;
+  /** The pull request the subject names, when it names one. */
+  pull: PullRef | null;
+  /** "1m 20s" since the task started, measured against `nowMs`. */
+  elapsed: string | null;
+  /** True while the runner finishes what it has and takes nothing new. */
+  draining: boolean;
+  tone: RowTone;
+}
+
+/** What a runner is doing at `nowMs` (the moment the snapshot was fetched). */
+export function rowNow(node: RunnerNetworkNode, nowMs: number): RowNow {
+  const draining = node.availability === 'draining';
+  if (node.availability === 'offline') {
+    return {
+      text: 'offline',
+      subject: null,
+      pull: null,
+      elapsed: null,
+      draining: false,
+      tone: 'danger',
+    };
+  }
+  const task = node.tasks[0];
+  if (!task) {
+    return {
+      text: draining ? 'draining' : 'idle',
+      subject: null,
+      pull: null,
+      elapsed: null,
+      draining,
+      tone: draining ? 'warning' : 'neutral',
+    };
+  }
+  const pull = pullRefFromLabel(task.label);
+  const started = task.startedAt ? new Date(task.startedAt).getTime() : Number.NaN;
+  const elapsed =
+    Number.isFinite(started) && nowMs >= started ? durationWords((nowMs - started) / 1000) : null;
+  const verb = node.kind === 'reviewer' ? 'reviewing' : pull ? 'gating' : 'running';
+  return {
+    text: verb,
+    subject: task.label || task.program,
+    pull,
+    elapsed,
+    draining,
+    tone: 'warning',
+  };
+}
+
+export interface RowLast {
+  pull: PullRef;
+  /** "passed" / "failed" / "errored", or "approved" / "held" / "no usable verdict on". */
+  verb: string;
+  /** Whether the verb comes before the subject ("approved x#1") or after ("x#1 passed"). */
+  verbFirst: boolean;
+  duration: string;
+  finishedAt: string;
+  tone: RowTone;
+}
+
+/** A runner's last finished job, in words; null when it reports none. */
+export function rowLast(node: RunnerNetworkNode): RowLast | null {
+  const last = node.lastActivity;
+  if (!last) return null;
+  const pull = { repo: last.repo, pr: last.pr };
+  const duration = durationWords(last.seconds);
+  if (node.kind === 'reviewer') {
+    const verdict = reviewVerdict(last.conclusion);
+    return {
+      pull,
+      verb:
+        verdict === 'approve'
+          ? 'approved'
+          : verdict === 'hold'
+            ? 'held'
+            : 'no usable verdict on',
+      verbFirst: true,
+      duration,
+      finishedAt: last.finishedAt,
+      tone:
+        verdict === 'approve'
+          ? 'success'
+          : verdict === 'hold'
+            ? 'danger'
+            : 'warning'
+    };
+  }
+  const passed = last.conclusion === 'success';
+  return {
+    pull,
+    verb: passed
+      ? 'passed'
+      : last.conclusion === 'failure'
+        ? 'failed'
+        : 'errored',
+    verbFirst: false,
+    duration,
+    finishedAt: last.finishedAt,
+    tone: passed ? 'success' : 'danger'
+  };
+}
+
+/** True when a runner has not been heard from for [`RUNNER_SEEN_STALE_MS`]. */
+export function seenStale(lastUpdated: string | null, nowMs: number): boolean {
+  if (!lastUpdated) return true;
+  const seen = new Date(lastUpdated).getTime();
+  return !Number.isFinite(seen) || nowMs - seen > RUNNER_SEEN_STALE_MS;
+}
+
+/** The hosts a set of runners run on, from their ids (`host/slotN`). */
+function hostsOf(nodes: readonly RunnerNetworkNode[]): string[] {
+  return [
+    ...new Set(nodes.map((node) => node.runnerId.split('/')[0]).filter(Boolean))
+  ].sort();
+}
+
+export interface NetworkSentence {
+  text: string;
+  tone: RowTone;
+}
+
+/**
+ * The whole gate network in one sentence: "6 gate runners on xbabe2: all idle
+ * · 0 offline". Red only when a runner is offline.
+ */
+export function networkSentence(
+  nodes: readonly RunnerNetworkNode[]
+): NetworkSentence {
+  if (nodes.length === 0)
+    return { text: 'No gate runner is reporting.', tone: 'warning' };
+  const offline = nodes.filter(
+    (node) => node.availability === 'offline'
+  ).length;
+  const busy = nodes.filter((node) => node.activityState === 'active').length;
+  const idle = nodes.length - busy - offline;
+  const hosts = hostsOf(nodes);
+  const where =
+    hosts.length > 0 && hosts.length <= 3 ? ` on ${hosts.join(', ')}` : '';
+  const doing =
+    busy === 0 && offline === 0
+      ? 'all idle'
+      : busy === nodes.length
+        ? 'all busy'
+        : `${busy} busy, ${Math.max(idle, 0)} idle`;
+  return {
+    text: `${nodes.length} gate runner${nodes.length === 1 ? '' : 's'}${where}: ${doing} · ${offline} offline`,
+    tone: offline > 0 ? 'danger' : 'neutral'
+  };
+}

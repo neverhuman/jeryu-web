@@ -3,7 +3,7 @@
 // Everything here comes from `GET /api/v1/control-plane/runners`, which is
 // fed by real runner heartbeats: the PR-gate slots, and the pr-redteam PR
 // reviewer, which is listed in its own section because it holds no gate slot. The page polls it
-// so the header metrics and node list stay current without a reload.
+// so the one-sentence summary and the rows stay current without a reload.
 //
 // It used to also render "Runner pools" and "System health" from the
 // bootstrap read model, but those were not real: pool capacity came from a
@@ -13,7 +13,10 @@
 import { useMemo } from 'react';
 
 import { useControlPlaneRunners } from '../hooks/useControlPlaneRunners';
-import { runnerNetworkFromResponse } from './runnerNetworkModel';
+import {
+  networkSentence,
+  runnerNetworkFromResponse
+} from './runnerNetworkModel';
 import { ReviewerList, RunnerNodeList } from './fleet';
 
 import './page.css';
@@ -28,8 +31,7 @@ export function FleetPage(): JSX.Element {
     () => runnerNetworkFromResponse(runnersQuery.data),
     [runnersQuery.data]
   );
-  const { totals } = runnerNetwork;
-  const utilization = totals.capacity > 0 ? totals.inFlight / totals.capacity : 0;
+  const sentence = networkSentence(runnerNetwork.nodes);
   // Measured against when we fetched the snapshot, so render stays pure.
   const stale =
     runnerNetwork.lastUpdated !== null &&
@@ -37,7 +39,7 @@ export function FleetPage(): JSX.Element {
       RUNNER_STALE_AFTER_MS;
 
   const runnerNetworkNote = runnersQuery.isError
-    ? runnersQuery.error?.message ?? 'Runner network snapshot unavailable.'
+    ? (runnersQuery.error?.message ?? 'Runner network snapshot unavailable.')
     : runnersQuery.isLoading
       ? 'Loading runner network snapshot.'
       : null;
@@ -58,35 +60,24 @@ export function FleetPage(): JSX.Element {
           ) : null}
         </div>
         <p className="page__subtitle">
-          Live runner network: node availability, active tasks and each
-          runner's last job, from runner heartbeats.
+          The machines that gate pull requests and the agents that review and
+          merge them, from their heartbeats.
         </p>
-        <div className="fleet__header-bar" data-testid="fleet-metrics">
-          <div className="fleet__util">
-            <span className="fleet__util-value">{Math.round(utilization * 100)}%</span>
-            <span className="fleet__util-label">utilization</span>
-          </div>
-          <span className="page__pill">{totals.nodes} runner(s)</span>
-          <span className="page__pill">{totals.busyNodes} busy</span>
-          <span className="page__pill">{totals.idleNodes} idle</span>
-          <span
-            className={`page__pill${totals.offlineNodes > 0 ? ' page__pill--warning' : ''}`}
+        {runnerNetworkNote ? null : (
+          <p
+            className={`fleet__sentence fleet__tone--${sentence.tone}`}
+            data-testid="fleet-metrics"
+            role="status"
           >
-            {totals.offlineNodes} offline
-          </span>
-          <span className="page__pill">{totals.activeTasks} active task(s)</span>
-        </div>
+            {sentence.text}
+          </p>
+        )}
       </header>
 
       <section className="page__section" aria-labelledby="fleet-runners">
-        <div className="fleet__section-head">
-          <h2 className="page__section-title" id="fleet-runners">
-            Runner network
-          </h2>
-          <span className="page__pill">{runnerNetwork.state}</span>
-          <span className="page__pill">{totals.capacity} slots</span>
-          <span className="page__pill">{totals.inFlight} in flight</span>
-        </div>
+        <h2 className="page__section-title" id="fleet-runners">
+          Gate runners
+        </h2>
         {runnerNetworkNote ? (
           <p className="page__roadmap-note">{runnerNetworkNote}</p>
         ) : runnerNetwork.nodes.length === 0 ? (
@@ -96,26 +87,36 @@ export function FleetPage(): JSX.Element {
           </p>
         ) : (
           <div className="fleet__network-layout" data-testid="fleet-network">
-            <RunnerNodeList nodes={runnerNetwork.nodes} />
+            <RunnerNodeList
+              nodes={runnerNetwork.nodes}
+              nowMs={runnersQuery.dataUpdatedAt}
+            />
           </div>
         )}
       </section>
 
-      {runnerNetwork.reviewers.length > 0 ? (
-        <section
-          className="page__section"
-          aria-labelledby="fleet-reviewers"
-          data-testid="fleet-reviewers"
-        >
-          <div className="fleet__section-head">
-            <h2 className="page__section-title" id="fleet-reviewers">
-              PR reviewers
-            </h2>
-            <span className="page__pill">{runnerNetwork.reviewers.length} reviewer(s)</span>
-          </div>
-          <ReviewerList reviewers={runnerNetwork.reviewers} />
-        </section>
-      ) : null}
+      <section
+        className="page__section"
+        aria-labelledby="fleet-reviewers"
+        data-testid="fleet-reviewers"
+      >
+        <h2 className="page__section-title" id="fleet-reviewers">
+          PR reviewers
+        </h2>
+        {runnerNetworkNote ? null : runnerNetwork.reviewers.length === 0 ? (
+          // Said, not hidden: an operator looking for the agents that approve
+          // and merge should learn that none is reporting, not wonder where
+          // the section went.
+          <p className="page__roadmap-note" data-testid="fleet-no-reviewer">
+            No review agent has reported in the last 3 minutes.
+          </p>
+        ) : (
+          <ReviewerList
+            reviewers={runnerNetwork.reviewers}
+            nowMs={runnersQuery.dataUpdatedAt}
+          />
+        )}
+      </section>
     </div>
   );
 }

@@ -88,7 +88,9 @@ under `apps/web/e2e/fixtures/`, and a Playwright screenshot from the route spec.
 
 | Surface | Scope | Mocks | Route spec |
 |---|---|---|---|
-| `/runners` | `fleet` | `mocks.ts` (`mockFleetBootstrap`) | `11-fleet.spec.ts` |
+| `/runners` (one sentence for the gate network; rows say Runner, Now, Last job, Seen; PR reviewers share the shape, and a missing reviewer is said) | `fleet` | `mocks.ts` (`mockFleetBootstrap`) | `11-fleet.spec.ts` |
+| `/repos` Status column: a red chip opens the failing checks and what to do, in place; Mirror, Unshipped and Failing CI columns removed | `repositories`, `repositories-status` | `mocks.ts` (`mockRepoList`) | `27-repos-status.spec.ts`, `02-repos.spec.ts` |
+| Repository Settings, read-only: branch protection and the GitHub mirror | `repo-settings` | `mocks.ts` (`mockRepoList`) | `31-repo-settings-readonly.spec.ts` |
 | `/work/shift*` | `shift-queue`, `shift-add`, `shift-workers` | `shiftMocks.ts` | `28-shift.spec.ts` |
 | `/releases` (one page: what runs, Ready to pin, Merged not yet released; `/unreleased` redirects to its last section) | `unreleased` | `unreleasedMocks.ts`, `pipelineMocks.ts` (pins) | `28-unreleased.spec.ts`, `29-pipeline.spec.ts` (Ready to pin) |
 | Shell chrome on every page: skip link, home logo, the search-or-jump palette (pages, repositories, `name#n`), the left nav's System disclosure, header at 900 and 480 px | `shell-chrome` | `mocks.ts` (`mockRepoList`), `pipelineMocks.ts` | `25-action-matrix.spec.ts`, `13-left-nav.spec.ts`, `29-pipeline.spec.ts` (narrow), `10-a11y.spec.ts` (palette + System open) |

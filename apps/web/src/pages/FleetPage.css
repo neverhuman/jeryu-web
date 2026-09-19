@@ -10,25 +10,32 @@
   flex-wrap: wrap;
 }
 
-.fleet__util {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-
-.fleet__util-value {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  font-family: var(--font-mono);
+/* The whole gate network in one sentence; red only when a runner is offline. */
+.fleet__sentence {
+  margin: 0;
+  font-size: var(--font-size-md, 1rem);
   color: var(--color-fg-primary);
-  letter-spacing: -0.02em;
 }
 
-.fleet__util-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+/* Tones for words inside a row: what it did, how it went, how fresh it is. */
+.fleet__tone--neutral {
+  color: var(--color-fg-secondary);
+}
+
+.fleet__tone--success {
+  color: var(--color-accent-success);
+}
+
+.fleet__tone--warning {
+  color: var(--color-accent-warning);
+}
+
+.fleet__tone--danger {
+  color: var(--color-accent-danger);
+}
+
+.fleet__sentence.fleet__tone--neutral {
+  color: var(--color-fg-primary);
 }
 
 /* Health dot — colour by level. */
@@ -203,14 +210,6 @@
   gap: var(--space-1);
 }
 
-.fleet__section-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
 .fleet__network-layout {
   display: flex;
   flex-direction: column;
@@ -224,28 +223,21 @@
   gap: var(--space-2);
 }
 
-.fleet__node-row > *,
-.fleet__reviewer-row > * {
+.fleet__node-row > * {
   min-width: 0;
 }
 
-/* PR reviewers hold no gate slot: no slot, in-flight or task columns. */
-.fleet__reviewer-row {
+/* Runner, Now, Last job, Seen: gate slots and reviewers share the shape. */
+.fleet__node-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 170px minmax(0, 1.5fr) minmax(0, 1.5fr) 190px 110px;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 2fr) minmax(0, 2.5fr) 110px;
   align-items: center;
   gap: var(--space-3);
   font-size: var(--font-size-sm);
 }
 
-.fleet__node-row {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 1fr) 170px 120px 64px 44px minmax(0, 1.5fr) minmax(0, 1.5fr)
-    110px;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--font-size-sm);
+.fleet__node-row p {
+  margin: 0;
 }
 
 .fleet__node-row--header {
@@ -279,20 +271,6 @@
   border-left-color: var(--color-accent-danger);
 }
 
-.fleet__node-slots {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.fleet__node-slots .fleet__bar {
-  flex: 1;
-}
-
-.fleet__node-mono {
-  font-family: var(--font-mono);
-}
-
 .fleet__node-muted {
   color: var(--color-fg-muted);
   font-size: var(--font-size-xs);
@@ -301,30 +279,11 @@
   text-overflow: ellipsis;
 }
 
-.fleet__node-titleblock {
-  min-width: 0;
-}
-
 .fleet__node-title {
   margin: 0;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   font-family: var(--font-mono);
-}
-
-.fleet__node-source {
-  margin: var(--space-1) 0 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.fleet__node-pills,
-.fleet__node-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
 }
 
 .fleet__node-last {
@@ -495,7 +454,6 @@
   }
 
   .fleet__node-row,
-  .fleet__reviewer-row,
   .fleet__pool-card {
     grid-template-columns: 1fr;
     gap: var(--space-2);
@@ -507,17 +465,7 @@
     font-family: var(--font-sans, inherit);
   }
 
-
   .fleet__task-list {
     margin-left: 0;
   }
-}
-
-.fleet__node-last--running {
-  flex-wrap: nowrap;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: inherit;
-  text-decoration: none;
 }

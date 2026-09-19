@@ -181,6 +181,44 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
     ).toEqual([]);
   });
 
+  test('axe scan: Repositories with a failing status opened in place', async ({ page }) => {
+    await mockBootstrap(page);
+    await mockRepoList(page, [
+      { id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-deploy' } },
+      {
+        id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-web' },
+        failing_checks: 1,
+        mirror: {
+          configured: true,
+          last_attempt_at: '2026-09-19T17:35:49Z',
+          last_attempt_ok: false,
+          last_attempt_conclusion: 'failure',
+          last_success_at: null,
+        },
+      },
+    ]);
+    await page.route('**/api/v3/repos/jeryu/jeryu-web/commits/main/check-runs', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          check_runs: [
+            {
+              name: 'jankurai/proof',
+              conclusion: 'failure',
+              completed_at: '2026-09-19T17:00:00Z',
+              output: { title: 'score 84 < floor 85', summary: '- score: 84\n- floor: 85' },
+            },
+          ],
+        }),
+      })
+    );
+    await page.goto('/repos');
+    await page.getByRole('button', { name: '1 failing check' }).click();
+    await expect(page.getByTestId('repo-status-detail-jeryu-web')).toContainText('jankurai/proof');
+    await scanAndAssert(page, 'repositories-status');
+  });
+
   test('axe scan: Fleet operator dashboard', async ({ page }) => {
     // /runners renders from the control-plane runners snapshot; the bootstrap
     // pool mock is unused by the page but harmless.

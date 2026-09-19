@@ -155,7 +155,9 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
       /draining/
     );
     await expect(page.getByTestId('fleet-node-local')).toContainText(/local/);
-    await expect(page.getByTestId('fleet-task-ar-000001')).toContainText('running');
+    // Four cells a row: Runner, Now, Last job, Seen. The header is one sentence.
+    await expect(page.getByTestId('fleet-metrics')).toContainText(/gate runners? on /);
+    await expect(page.getByTestId('fleet-node-now-xbabe0')).toContainText('running');
     await expect(page.getByTestId('fleet-task-ar-000001')).toHaveAttribute(
       'title',
       /publishing patch/
@@ -194,6 +196,10 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-node-xbabe0')).toBeVisible();
     await expect(page.getByTestId('fleet-node-xbabe1')).toBeVisible();
     await expect(page.getByTestId('fleet-node-local')).toHaveCount(0);
+    // No review agent in this snapshot: the section says so instead of vanishing.
+    await expect(page.getByTestId('fleet-no-reviewer')).toHaveText(
+      'No review agent has reported in the last 3 minutes.'
+    );
   });
 
   test('clicking a task card with repo + agentRunId navigates to the agent terminal @action:fleet.task_navigation', async ({
@@ -249,7 +255,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     const localTask = page.getByTestId('fleet-task-ar-local-1');
     await expect(localTask).toBeVisible();
     const tagName = await localTask.evaluate((el) => el.tagName.toLowerCase());
-    expect(tagName).toBe('p');
+    expect(tagName).toBe('strong');
   });
 
   test('lists the pr-redteam reviewer apart from the gate slots @action:fleet.reviewer', async ({
@@ -287,10 +293,14 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await shell.assertShellLoaded();
 
     await expect(page.getByTestId('fleet-reviewers')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('fleet-reviewer-xbabe0_redteam')).toContainText('idle');
-    await expect(page.getByTestId('fleet-reviewer-verdict-xbabe0_redteam')).toContainText(
-      'jeryu/jeryu-deploy#43 hold'
+    await expect(page.getByTestId('fleet-reviewer-now-xbabe0_redteam')).toHaveText('idle');
+    const lastReview = page.getByTestId('fleet-reviewer-last-xbabe0_redteam');
+    await expect(lastReview).toContainText('held jeryu/jeryu-deploy#43 in 22s');
+    await expect(lastReview.getByRole('link')).toHaveAttribute(
+      'href',
+      '/repos/jeryu/jeryu/jeryu-deploy/pulls/43'
     );
+    await expect(page.getByTestId('fleet-no-reviewer')).toHaveCount(0);
     await expect(page.getByTestId('fleet-node-xbabe0_redteam')).toHaveCount(0);
   });
 
