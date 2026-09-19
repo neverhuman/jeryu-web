@@ -99,3 +99,56 @@ export interface ShiftTodoPr {
   state: string;
   url: string;
 }
+
+// ---- Pins: what could be released (`GET /api/v1/pins`, admin-only) ---------
+
+/** `commit`: a lock entry the release build uses. `tag`: a git dep in a Cargo manifest. */
+export type PinKind = 'commit' | 'tag';
+
+export type PinState = 'current' | 'behind' | 'behind_not_green' | 'diverged' | 'unknown';
+
+export interface PinBumpPr {
+  number: number;
+  state: string;
+  url: string;
+}
+
+export interface PinCommit {
+  sha: string;
+  subject: string;
+}
+
+/** One dependency a deploy repo pins, compared with that dependency's main. */
+export interface Pin {
+  /** `owner/name` of the hosted dependency. */
+  dependency: string;
+  kind: PinKind | string;
+  /** The file that holds the pin. */
+  source: string;
+  /** The sha or tag as written. */
+  pinned_ref: string;
+  pinned_sha: string | null;
+  latest_sha: string | null;
+  /** Commits on the dependency's main the pin does not reach; 0 = current. */
+  behind: number;
+  latest_green: boolean | null;
+  state: PinState | string;
+  /** An open PR in the consumer that bumps this pin. */
+  bump_pr: PinBumpPr | null;
+  /** What a bump would ship, newest first (at most 20). */
+  unreleased: PinCommit[];
+}
+
+export interface PinConsumer {
+  /** `owner/name` of the deploy repo that holds the pins. */
+  repo: string;
+  family: string | null;
+  branch: string;
+  pins: Pin[];
+}
+
+export interface PinsResponse {
+  schema_version?: string | number;
+  generated_at: string;
+  consumers: PinConsumer[];
+}

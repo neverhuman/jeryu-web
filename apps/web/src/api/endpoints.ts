@@ -190,6 +190,8 @@ export const endpoints = {
   },
   /** "Needs you": what is waiting on a human right now (admin-only). */
   attention: (): string => '/api/v1/attention',
+  /** What each deploy repo pins versus its dependencies' main (admin-only). */
+  pins: (): string => '/api/v1/pins',
 } as const;
 
 export type Endpoints = typeof endpoints;

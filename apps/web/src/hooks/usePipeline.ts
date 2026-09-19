@@ -17,6 +17,7 @@ import { ApiError, apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type {
   AttentionResponse,
+  PinsResponse,
   PipelineEventsQuery,
   PipelineEventsResponse,
 } from '../api/types';
@@ -25,6 +26,7 @@ import { useRealtime } from './useRealtime';
 
 export const PIPELINE_KEY = ['pipeline'] as const;
 export const ATTENTION_QUERY_KEY: readonly string[] = [...PIPELINE_KEY, 'attention'];
+export const PINS_QUERY_KEY: readonly string[] = [...PIPELINE_KEY, 'pins'];
 export const PIPELINE_SCOPE = 'pipeline';
 
 /** True when the server does not implement the route (404, or the SPA shell). */
@@ -88,6 +90,21 @@ export function usePipelineEvents(
     enabled: options?.enabled ?? true,
     staleTime: 2_000,
     refetchInterval: (q) => (q.state.error ? false : (options?.refetchInterval ?? false)),
+    retry: false,
+  });
+}
+
+/**
+ * What each deploy repo pins versus its dependencies' main: what is merged
+ * but not yet in a release. Admin-only, server-cached, so a minute is enough.
+ */
+export function usePins(enabled = true): UseQueryResult<PinsResponse, Error> {
+  return useQuery({
+    queryKey: PINS_QUERY_KEY,
+    queryFn: ({ signal }) => apiGet<PinsResponse>(endpoints.pins(), { signal }),
+    enabled,
+    staleTime: 30_000,
+    refetchInterval: (query) => (query.state.error ? false : 60_000),
     retry: false,
   });
 }
