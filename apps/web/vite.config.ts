@@ -1,5 +1,8 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { reproducibleFileNames, sourcemapSourcePath } from './src/build/reproducibleOutput';
+
+const projectRoot = decodeURIComponent(new URL('.', import.meta.url).pathname);
 
 export default defineConfig({
   plugins: [react()],
@@ -17,8 +20,12 @@ export default defineConfig({
     // warning threshold by splitting the three large vendor surfaces
     // (Monaco editor, markdown pipeline, TanStack data layer) into
     // their own lazily-evaluated chunks.
+    // jeryu-deploy pins this build by commit and a hash of the whole dist, so
+    // the output must not depend on where the checkout lives.
     rollupOptions: {
       output: {
+        ...reproducibleFileNames,
+        sourcemapPathTransform: (source) => sourcemapSourcePath(source, projectRoot),
         manualChunks: {
           'monaco-vendor': ['@monaco-editor/react'],
           'xterm-vendor': ['@xterm/xterm', '@xterm/addon-fit'],

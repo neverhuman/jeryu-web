@@ -22,3 +22,8 @@ e2e:
 
 profile:
   printf '%s\n' "node-frontend"
+
+# Build HEAD twice in two clones and require identical dists (jeryu-deploy pins
+# the dist by commit and content hash).
+reproducible-build:
+  ./scripts/check-reproducible-web-build.sh
