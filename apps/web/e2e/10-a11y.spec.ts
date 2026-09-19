@@ -166,6 +166,8 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
 
     const result = await runAxe(page, { disableRules: ['color-contrast'] });
     await persistAxeResult('shell-chrome', result);
+    const rendered = await persistRenderedEvidence(page, 'shell-chrome');
+    expect(rendered.geometry.width).toBeGreaterThan(0);
     const blockers = blockingViolations(result);
     expect(
       blockers.map((v) => `${v.impact ?? '?'} ${v.id}`),
