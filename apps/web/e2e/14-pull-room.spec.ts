@@ -2,7 +2,12 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { blockingViolations, persistAxeResult, runAxe } from './fixtures/accessibility';
+import {
+  blockingViolations,
+  persistAxeResult,
+  persistRenderedEvidence,
+  runAxe,
+} from './fixtures/accessibility';
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 
@@ -263,8 +268,13 @@ test('axe scan: Pull requests timeline with family pills', async ({ page }) => {
   await mockPullRoom(page, snapshot);
   await page.goto('/pull-room?family=core');
   await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible({ timeout: 15_000 });
-  const results = await runAxe(page);
+  // Same rule set as the other scans (theme contrast is scanned separately),
+  // with the rendered evidence the ux-qa receipt requires beside every result.
+  const results = await runAxe(page, { disableRules: ['color-contrast'] });
   await persistAxeResult('pull-requests', results);
+  const rendered = await persistRenderedEvidence(page, 'pull-requests');
+  expect(rendered.geometry.width).toBeGreaterThan(0);
+  expect(rendered.geometry.height).toBeGreaterThan(0);
   expect(blockingViolations(results).map((v) => v.id)).toEqual([]);
 });
 
