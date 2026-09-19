@@ -21,9 +21,11 @@ import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
+import { RepoDangerZone } from '../components/repo/RepoDangerZone';
 import { ActionButton } from '../components/action/ActionButton';
 import { SettingsLayout, SettingsSection } from '../components/settings';
 import {
+  EmptyState,
   ErrorState,
   LoadingState,
   PermissionDeniedState,
@@ -150,6 +152,20 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
             description="You do not have permission to manage settings."
             missingPermission="settings.read"
           />
+        </div>
+      );
+    }
+    if (settings.error instanceof ApiError && settings.error.status === 404) {
+      // A repository whose source lives elsewhere keeps no settings on this
+      // forge. That is a fact about the repo, not a failure; removing it is
+      // still possible, so the danger zone stays.
+      return (
+        <div className="page" data-testid="repo-settings-page">
+          <EmptyState
+            title="No settings on this forge"
+            description={`${fullName} keeps no branch rules or merge settings here, usually because its source is hosted elsewhere.`}
+          />
+          <RepoDangerZone repo={resolved.data.summary} />
         </div>
       );
     }
@@ -281,21 +297,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
           <RetentionSectionView current={current} />
         )}
 
-        {activeSection === 'danger-zone' && (
-          <SettingsSection
-            title="Danger zone"
-            description="Irreversible repository operations."
-          >
-            <div className="settings-danger">
-              <p className="settings-danger__title">Archive repository</p>
-              <p className="settings-danger__hint">
-                Archiving freezes the repository to read-only. Run via the
-                Action Palette so the side-effect preview confirms blast
-                radius first.
-              </p>
-            </div>
-          </SettingsSection>
-        )}
+        {activeSection === 'danger-zone' && <RepoDangerZone repo={resolved.data.summary} />}
 
         {/* Pending changes panel — always visible while a section is open. */}
         <PendingChangesPanel

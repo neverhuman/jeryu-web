@@ -61,7 +61,7 @@ function extractRepoBase(
   // URL pattern: /repos/{provider}/{owner}/{name}[/{subPath}[/{...tail}]]
   // Always exactly 3 segments after /repos/, then optional sub-path.
   const match = pathname.match(
-    /^\/repos\/([^/]+)\/([^/]+)\/([^/]+)(?:\/(code|pulls|agents|settings|blob|work|issues)(?:\/.*)?)?$/
+    /^\/repos\/([^/]+)\/([^/]+)\/([^/]+)(?:\/(code|pulls|agents|settings|blob|tree|work|issues)(?:\/.*)?)?$/
   );
   if (!match) return;
   const [, provider, owner, name] = match;
@@ -113,7 +113,8 @@ export function LeftNav(): JSX.Element {
           </span>
           <Link
             to={`${repo.base}/code`}
-            className={`left-nav__item${isActivePath(pathname, `${repo.base}/code`) ? ' is-active' : ''}`}
+            className={`left-nav__item${isCodePath(pathname, repo.base) ? ' is-active' : ''}`}
+            aria-current={isCodePath(pathname, repo.base) ? 'page' : undefined}
           >
             <Code2 aria-hidden="true" size={16} />
             Code
@@ -135,7 +136,7 @@ export function LeftNav(): JSX.Element {
           </Link>
           <Link
             to={`${repo.base}/agents`}
-            className={`left-nav__item left-nav__item--agents${isActivePath(pathname, `${repo.base}/agents`) ? ' is-active' : ''}`}
+            className={`left-nav__item${isActivePath(pathname, `${repo.base}/agents`) ? ' is-active' : ''}`}
             data-testid="left-nav-agents"
           >
             <Bot aria-hidden="true" size={16} />
@@ -152,6 +153,11 @@ export function LeftNav(): JSX.Element {
       ) : null}
     </nav>
   );
+}
+
+/** Code is where a file is read, whichever route shows it. */
+function isCodePath(pathname: string, base: string): boolean {
+  return ['code', 'blob', 'tree'].some((part) => isActivePath(pathname, `${base}/${part}`));
 }
 
 function isActivePath(pathname: string, to: string, end = false): boolean {

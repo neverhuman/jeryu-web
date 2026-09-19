@@ -11,7 +11,6 @@
 // completes. (An earlier revision subscribed to a synthetic
 // `repo.${provider}.${fullName}` scope before opaque ids were available.)
 
-import { GitBranch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -27,7 +26,6 @@ import {
   LoadingState,
   PermissionDeniedState,
 } from '../components/state';
-import { RepoDangerZone } from '../components/repo/RepoDangerZone';
 import { RepoHealthPill } from '../components/repo/RepoHealthPill';
 import { RepoRoleBadge } from '../components/repo/RepoRoleBadge';
 import { useRealtime } from '../hooks/useRealtime';
@@ -158,9 +156,6 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
             value={activeRef}
             onSelect={setActiveRef}
           />
-          <span>
-            <GitBranch size={12} aria-hidden="true" /> {summary.default_branch}
-          </span>
           <ClonePopover
             httpUrl={summary.clone_http_url}
             sshUrl={summary.clone_ssh_url}
@@ -169,13 +164,13 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
             to={`/repos/${encodeURIComponent(provider)}/${fullName}/code`}
             aria-label="Browse code"
           >
-            <ActionButton variant="default">Browse code</ActionButton>
+            <ActionButton variant="primary">Browse code</ActionButton>
           </Link>
           <Link
             to={`/repos/${encodeURIComponent(provider)}/${fullName}/agents`}
             aria-label="Open agents and start a new session"
           >
-            <ActionButton variant="primary">Agents</ActionButton>
+            <ActionButton variant="default">Agents</ActionButton>
           </Link>
         </div>
       </header>
@@ -231,7 +226,6 @@ export function RepositoryOverviewPage(props: RepositoryOverviewPageProps = {}):
         </aside>
       </section>
 
-      <RepoDangerZone repo={summary} />
     </div>
   );
 }

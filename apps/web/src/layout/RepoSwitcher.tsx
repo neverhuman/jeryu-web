@@ -1,32 +1,36 @@
-// RepoSwitcher.tsx — current-repo selector in the global header (W-FE-01).
+// RepoSwitcher.tsx — where you are, and the way to every repository (W-FE-01).
 //
-// Displays the current repo id from `selectionStore` and opens the command
-// palette so the user can navigate. The richer combobox fed by
-// `useRepositories()` is layered on by W-FE-08.
+// It names the repository in the address bar (`owner/name`, never an internal
+// id) and links to the repository list. It used to open the command palette,
+// which the search box beside it already does and which cannot switch repos.
 
 import { FolderGit2 } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 
-import { useCommandStore } from '../stores/commandStore';
-import { useSelectionStore } from '../stores/selectionStore';
+/** `owner/name` of the repository a path is inside, or null. */
+export function repoNameFromPath(pathname: string): string | null {
+  const match = /^\/repos\/(?!family\/|new$)[^/]+\/([^/]+)\/([^/]+)/.exec(pathname);
+  if (!match) return null;
+  try {
+    return `${decodeURIComponent(match[1])}/${decodeURIComponent(match[2])}`;
+  } catch {
+    return `${match[1]}/${match[2]}`;
+  }
+}
 
 export function RepoSwitcher(): JSX.Element {
-  const currentRepoId = useSelectionStore((s) => s.currentRepoId);
-  const openPalette = useCommandStore((s) => s.open);
+  const { pathname } = useLocation();
+  const current = repoNameFromPath(pathname);
 
   return (
-    <button
-      type="button"
+    <Link
+      to="/repos"
       className="repo-switcher"
-      onClick={() => openPalette()}
-      aria-label="Switch repository"
+      aria-label={current ? `${current}: switch repository` : 'Repositories'}
+      title={current ? 'Switch repository' : 'All repositories'}
     >
       <FolderGit2 size={14} aria-hidden="true" />
-      <span className="repo-switcher__label">
-        {currentRepoId ?? 'Choose repository'}
-      </span>
-      <span className="repo-switcher__hint" aria-hidden="true">
-        ↕
-      </span>
-    </button>
+      <span className="repo-switcher__label">{current ?? 'Repositories'}</span>
+    </Link>
   );
 }

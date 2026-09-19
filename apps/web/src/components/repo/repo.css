@@ -571,15 +571,6 @@
   color: var(--color-accent-primary);
 }
 
-/* Left-nav agents emphasis ------------------------------------------------ */
-.left-nav__item--agents {
-  font-weight: var(--font-weight-semibold);
-}
-
-.left-nav__item--agents:not(.is-active) {
-  color: var(--color-accent-primary);
-}
-
 /* Score + mirror badges ---------------------------------------------------- */
 /* Compact pills surfacing the newest jankurai audit and the offsite mirror
    posture on cards and table rows. Variants reuse the accent token ramps. */

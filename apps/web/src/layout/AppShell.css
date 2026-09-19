@@ -503,18 +503,14 @@
   font-size: var(--font-size-sm);
   cursor: pointer;
   min-width: 0;
+  text-decoration: none;
 }
 
 .repo-switcher__label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
-}
-
-.repo-switcher__hint {
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-xs);
+  max-width: 260px;
 }
 
 /* CommandPalette ----------------------------------------------------- */

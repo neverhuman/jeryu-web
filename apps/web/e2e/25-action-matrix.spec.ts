@@ -69,11 +69,11 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await page.getByText('Go to Repositories').click();
   await expect(page).toHaveURL(/\/repos$/);
 
-  await page.getByRole('button', { name: 'Switch repository' }).click();
-  await expect(
-    page.getByRole('combobox', { name: 'Command palette' })
-  ).toBeVisible();
-  await page.keyboard.press('Escape');
+  // The header names where you are and links to every repository; it no longer
+  // opens the palette a second way.
+  await page.goto('/needs-you');
+  await page.getByRole('banner').getByRole('link', { name: 'Repositories' }).click();
+  await expect(page).toHaveURL(/\/repos$/);
 
   await page.getByRole('button', { name: 'Collapse sidebar' }).click();
   await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
