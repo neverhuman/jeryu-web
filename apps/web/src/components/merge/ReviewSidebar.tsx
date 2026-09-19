@@ -11,6 +11,13 @@ import { useState } from 'react';
 
 import { ActionButton } from '../action/ActionButton';
 import type { PullRequestDetail } from '../../api/types';
+import {
+  approvalsLabel,
+  isSettled,
+  mergeAllowed as canMergeNow,
+  primaryAction,
+  settledLine,
+} from './pullReviewModel';
 
 import './merge.css';
 
@@ -40,10 +47,10 @@ export function ReviewSidebar({
   className,
 }: ReviewSidebarProps): JSX.Element {
   const review = detail.summary.review;
-  const passport = detail.merge_passport;
   const headSha = detail.summary.head_sha;
-  const mergeAllowed = passport.status === 'pass' && detail.summary.mergeable.can_merge;
+  const mergeAllowed = canMergeNow(detail);
   const reviewState = review.user_review_state ?? null;
+  const primary = primaryAction(detail);
 
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);
   const [requestChangesBody, setRequestChangesBody] = useState('');
@@ -69,6 +76,23 @@ export function ReviewSidebar({
     setRequestChangesBody('');
   };
 
+  if (isSettled(detail)) {
+    return (
+      <section
+        className={`review-sidebar ${className ?? ''}`.trim()}
+        aria-label="Review"
+      >
+        <header className="review-sidebar__header">
+          <h3 className="review-sidebar__title">Review</h3>
+          <p className="review-sidebar__settled">{settledLine(detail.summary)}</p>
+          <p className="review-sidebar__posture">
+            <span className="review-sidebar__approvals">{approvalsLabel(review)}</span>
+          </p>
+        </header>
+      </section>
+    );
+  }
+
   return (
     <section
       className={`review-sidebar ${className ?? ''}`.trim()}
@@ -77,9 +101,7 @@ export function ReviewSidebar({
       <header className="review-sidebar__header">
         <h3 className="review-sidebar__title">Review</h3>
         <p className="review-sidebar__posture">
-          <span className="review-sidebar__approvals">
-            {review.approvals}/{review.required_approvals} approvals
-          </span>
+          <span className="review-sidebar__approvals">{approvalsLabel(review)}</span>
           {review.changes_requested > 0 ? (
             <span className="review-sidebar__changes">
               · {review.changes_requested} changes requested
@@ -100,7 +122,7 @@ export function ReviewSidebar({
 
       <div className="review-sidebar__actions">
         <ActionButton
-          variant="primary"
+          variant={primary === 'approve' ? 'primary' : 'default'}
           icon={<Check aria-hidden="true" size={12} />}
           onClick={handleApprove}
           disabled={isBusy}
@@ -155,10 +177,10 @@ export function ReviewSidebar({
         {mergeAllowed ? (
           <>
             <p className="review-sidebar__merge-hint">
-              All gates green — ready to merge.
+              Every required gate is green: ready to merge.
             </p>
             <ActionButton
-              variant="primary"
+              variant={primary === 'merge' ? 'primary' : 'default'}
               icon={<GitMerge aria-hidden="true" size={12} />}
               onClick={() => handleMerge('merge')}
               disabled={isBusy}

@@ -32,6 +32,7 @@ function makeDetail(
     unresolved_threads?: number;
     user_review_state?: string | null;
     passport_hash?: string | null;
+    state?: 'open' | 'closed' | 'merged';
   } = {}
 ): PullRequestDetail {
   const passport = over.passport ?? 'blocked';
@@ -47,7 +48,7 @@ function makeDetail(
       base_ref: 'main',
       head_sha: HEAD_SHA,
       base_sha: 'base000000000000000000000000000000000000',
-      state: 'open',
+      state: over.state ?? 'open',
       draft: false,
       mergeable: {
         level: canMerge ? 'mergeable' : 'blocked',
@@ -104,7 +105,7 @@ describe('ReviewSidebar', () => {
         onMerge={vi.fn()}
       />
     );
-    expect(screen.getByText('1/2 approvals')).toBeInTheDocument();
+    expect(screen.getByText('1 of 2 approvals')).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
         name: new RegExp(`Approve exact SHA ${HEAD_SHA.slice(0, 7)}`),
@@ -239,4 +240,45 @@ describe('ReviewSidebar', () => {
     expect(screen.getByText(/Your review:/i)).toBeInTheDocument();
     expect(screen.getByText('approved')).toBeInTheDocument();
   });
+
+  it('offers exactly one primary action: Approve until approvals are met, then Merge', () => {
+    const { rerender } = render(
+      <ReviewSidebar
+        detail={makeDetail({ passport: 'pass', approvals: 0, required_approvals: 1 })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    const primaries = (): string[] =>
+      screen
+        .getAllByRole('button')
+        .filter((b) => b.className.includes('action-button--primary'))
+        .map((b) => b.textContent ?? '');
+    expect(primaries()).toHaveLength(1);
+    expect(primaries()[0]).toMatch(/Approve exact SHA/);
+
+    rerender(
+      <ReviewSidebar
+        detail={makeDetail({ passport: 'pass', approvals: 1, required_approvals: 0 })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(screen.getByText('1 approval (none required)')).toBeInTheDocument();
+    expect(primaries()).toEqual(['Merge']);
+  });
+
+  it('shows a merged pull request as settled: one calm line and no controls', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ state: 'merged', passport: 'blocked', approvals: 1, required_approvals: 1 })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Merged into main\. Nothing is waiting/)).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByText(/Merge blocked/)).toBeNull();
+  });
 });
+

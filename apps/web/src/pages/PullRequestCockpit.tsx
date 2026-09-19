@@ -13,6 +13,7 @@ import {
   ThreadList,
   type DiffViewerMode,
 } from '../components/merge';
+import { failingChecksBlockMerge, isSettled } from '../components/merge/pullReviewModel';
 import { ErrorState, LoadingState } from '../components/state';
 import { PullPipelineEvents } from './activity/PullPipelineEvents';
 import type { usePrChecks } from '../hooks/usePrChecks';
@@ -70,6 +71,7 @@ export function PullRequestCockpit({
   onRequestChanges,
   onMerge,
 }: PullRequestCockpitProps): JSX.Element {
+  const settled = isSettled(data);
   return (
     <div className="pr-cockpit">
       <aside className="pr-cockpit__pane pr-cockpit__pane--files" tabIndex={0}>
@@ -91,22 +93,26 @@ export function PullRequestCockpit({
 
       <main className="pr-cockpit__pane pr-cockpit__pane--diff">
         <h2 className="pr-cockpit__pane-title">Diff</h2>
-        {!activeFile ? (
-          <LoadingState
-            title={
-              diff.isPending
-                ? 'Loading diff…'
-                : 'No file selected. Choose a file from the left.'
-            }
-            variant="message"
-          />
-        ) : (
+        {activeFile ? (
           <DiffViewer
             file={activeFile}
             mode={diffMode as DiffViewerMode}
             onModeChange={onDiffModeChange}
           />
+        ) : diff.isPending ? (
+          <LoadingState title="Loading diff…" variant="message" />
+        ) : (
+          <p className="pr-cockpit__diff-note" data-testid="pr-diff-note">
+            {(diff.data?.files ?? []).length === 0
+              ? 'This pull request changes no files.'
+              : 'Choose a file on the left to see its changes.'}
+          </p>
         )}
+        {repoFullName && prNumber ? (
+          <div className="pr-cockpit__pipeline">
+            <PullPipelineEvents repo={repoFullName} pr={prNumber} />
+          </div>
+        ) : null}
       </main>
 
       <aside className="pr-cockpit__pane pr-cockpit__pane--review" tabIndex={0}>
@@ -123,12 +129,13 @@ export function PullRequestCockpit({
             Review not submitted: {reviewError}
           </p>
         ) : null}
-        <MergeGatePanel passport={data.merge_passport} />
-        <ChecksPanel checks={checks.data ?? null} isLoading={checks.isPending} />
+        {settled ? null : <MergeGatePanel passport={data.merge_passport} />}
+        <ChecksPanel
+          checks={checks.data ?? null}
+          isLoading={checks.isPending}
+          failuresBlockMerge={!settled && failingChecksBlockMerge(data)}
+        />
         <ThreadList threads={threads.data?.threads ?? []} />
-        {repoFullName && prNumber ? (
-          <PullPipelineEvents repo={repoFullName} pr={prNumber} />
-        ) : null}
       </aside>
     </div>
   );

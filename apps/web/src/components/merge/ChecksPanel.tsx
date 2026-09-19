@@ -61,12 +61,19 @@ const TONE_LABELS: Record<Tone, string> = {
 export interface ChecksPanelProps {
   checks: PullRequestChecks | null;
   isLoading?: boolean;
+  /**
+   * False when the merge does not wait for the failing checks (the passport
+   * passes, or the pull request is already merged or closed): they are shown
+   * in a neutral tone with a note instead of as red blockers.
+   */
+  failuresBlockMerge?: boolean;
   className?: string;
 }
 
 export function ChecksPanel({
   checks,
   isLoading = false,
+  failuresBlockMerge = true,
   className,
 }: ChecksPanelProps): JSX.Element {
   if (isLoading) {
@@ -98,8 +105,13 @@ export function ChecksPanel({
               {checks.passing} passing
             </span>
             <span aria-hidden="true"> · </span>
-            <span className="checks-panel__count checks-panel__count--failing">
+            <span
+              className={`checks-panel__count checks-panel__count--${
+                failuresBlockMerge ? 'failing' : 'skipped'
+              }`}
+            >
               {checks.failing} failing
+              {!failuresBlockMerge && checks.failing > 0 ? ' (not required)' : ''}
             </span>
             <span aria-hidden="true"> · </span>
             <span className="checks-panel__count checks-panel__count--pending">
@@ -124,8 +136,10 @@ export function ChecksPanel({
       ) : (
         <ul className="checks-panel__list">
           {list.map((check) => {
-            const tone = toneFor(check);
-            const Icon = TONE_ICONS[tone];
+            const rawTone = toneFor(check);
+            const notRequired = rawTone === 'failing' && !failuresBlockMerge;
+            const tone: Tone = notRequired ? 'neutral' : rawTone;
+            const Icon = TONE_ICONS[rawTone];
             return (
               <li
                 key={check.id}
@@ -134,12 +148,17 @@ export function ChecksPanel({
               >
                 <span
                   className={`checks-panel__badge checks-panel__badge--${tone}`}
-                  aria-label={TONE_LABELS[tone]}
+                  aria-label={TONE_LABELS[rawTone]}
                 >
                   <Icon aria-hidden="true" size={14} />
                 </span>
                 <div className="checks-panel__body">
                   <div className="checks-panel__name">{check.name}</div>
+                  {notRequired ? (
+                    <div className="checks-panel__description">
+                      Failing, not required: it does not block the merge.
+                    </div>
+                  ) : null}
                   {check.description ? (
                     <div className="checks-panel__description">
                       {check.description}

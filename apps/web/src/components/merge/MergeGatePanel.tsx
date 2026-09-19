@@ -161,8 +161,8 @@ export function MergeGatePanel({
 
       {isPass ? (
         <p className="merge-gate__pass">
-          <CheckCircle2 aria-hidden="true" size={14} /> All 12 gates passed for
-          this head.
+          <CheckCircle2 aria-hidden="true" size={14} /> Every required gate
+          passed for this head.
         </p>
       ) : (
         <ul className="merge-gate__blockers" aria-label="Passport blockers">

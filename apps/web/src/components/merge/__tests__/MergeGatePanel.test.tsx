@@ -1,7 +1,7 @@
 // MergeGatePanel.test.tsx — Phase 3 (W-FE-11).
 //
 // Pins the contract that:
-//   1. A PASS verdict renders the "All 12 gates passed" line + no blockers.
+//   1. A PASS verdict renders the "Every required gate passed" line + no blockers.
 //   2. A BLOCKED verdict renders each blocker, translates known codes to
 //      human titles, and includes the raw `code` for debugging.
 //   3. An unknown blocker code falls back to the server-supplied message.
@@ -25,7 +25,7 @@ describe('MergeGatePanel', () => {
     };
     render(<MergeGatePanel passport={passport} />);
     expect(screen.getByText(/Merge Passport: PASS/)).toBeInTheDocument();
-    expect(screen.getByText(/All 12 gates passed/)).toBeInTheDocument();
+    expect(screen.getByText(/Every required gate\s+passed/)).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: /Passport blockers/i })).toBeNull();
   });
 

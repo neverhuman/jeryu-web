@@ -17,7 +17,7 @@
 
 import { GitBranch, GitMerge, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
@@ -38,6 +38,8 @@ import { useRealtime } from '../hooks/useRealtime';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { usePreferencesStore } from '../stores/preferencesStore';
 import { useSelectionStore } from '../stores/selectionStore';
+import { isSettled, pullStateBadge } from '../components/merge/pullReviewModel';
+import { relativeTime } from '../components/repo/relativeTime';
 import { PullRequestCockpit } from './PullRequestCockpit';
 import {
   extractDrift,
@@ -251,12 +253,31 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const passportTone: 'pass' | 'blocked' | 'pending' =
     data.merge_passport?.status ?? 'pending';
 
+  const badge = pullStateBadge(summary);
+  const settled = isSettled(data);
+
   return (
     <div className="page page--full">
       <div className="pr-cockpit__header">
         <h1 className="pr-cockpit__title">
           PR #{summary.number}: {summary.title}
         </h1>
+        <span
+          className={`pr-cockpit__state pr-cockpit__state--${badge.tone}`}
+          data-testid="pr-state-badge"
+        >
+          {badge.label}
+        </span>
+        <span className="pr-cockpit__meta">
+          <Link to={`/repos/${provider}/${fullName}`}>{fullName}</Link>
+          <span aria-hidden="true">·</span>
+          <span>by {summary.author}</span>
+          <span aria-hidden="true">·</span>
+          <span title={summary.updated_at}>
+            {settled ? `${badge.label.toLowerCase()} ` : 'updated '}
+            {relativeTime(summary.updated_at)}
+          </span>
+        </span>
         <span className="pr-cockpit__meta">
           <GitBranch aria-hidden="true" size={12} />
           <code>{summary.head_ref}</code>
@@ -266,12 +287,14 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         <span className="pr-cockpit__meta">
           <code title={summary.head_sha}>{summary.head_sha.slice(0, 7)}</code>
         </span>
-        <span
-          className={`pr-cockpit__passport-pill pr-cockpit__passport-pill--${passportTone}`}
-        >
-          <GitMerge aria-hidden="true" size={12} />
-          Passport: {passportTone.toUpperCase()}
-        </span>
+        {settled ? null : (
+          <span
+            className={`pr-cockpit__passport-pill pr-cockpit__passport-pill--${passportTone}`}
+          >
+            <GitMerge aria-hidden="true" size={12} />
+            Passport: {passportTone.toUpperCase()}
+          </span>
+        )}
       </div>
 
       {headDrift ? (
