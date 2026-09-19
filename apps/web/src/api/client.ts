@@ -14,6 +14,8 @@
 //
 // Error envelope per §35.1.11 — backend errors come back as:
 //   { "error": { "code": "...", "message": "...", "details": ..., "request_id": "...", "event_cursor": 123 } }
+// jeryu-api typed errors put `code`/`message` at the top level instead; both
+// shapes are accepted, preferring the nested one when present.
 // We pluck those fields into the thrown `ApiError` instance so callers can
 // branch on `err.code === 'merge_sha_stale'` etc.
 //
@@ -97,17 +99,27 @@ function buildHeaders(
 }
 
 /**
- * Runtime guard for the §35.1.11 error envelope. `response.json()` returns
- * `unknown`; we prove the `{ error: { code, message, ... } }` shape here
- * before plucking fields into `ApiError`, so no field is read off an
- * unvalidated value.
+ * Runtime guard for an error envelope. `response.json()` returns `unknown`;
+ * we prove the `{ code, message, ... }` shape here before plucking fields
+ * into `ApiError`, so no field is read off an unvalidated value.
  */
-function isErrorEnvelope(value: unknown): value is { error: ApiErrorEnvelope } {
+function isErrorEnvelope(value: unknown): value is ApiErrorEnvelope {
   if (typeof value !== 'object' || value === null) return false;
-  const error = (value as Record<string, unknown>).error;
-  if (typeof error !== 'object' || error === null) return false;
-  const e = error as Record<string, unknown>;
+  const e = value as Record<string, unknown>;
   return typeof e.code === 'string' && typeof e.message === 'string';
+}
+
+/**
+ * Accepts both server shapes: the §35.1.11 nested `{ error: { code, message } }`
+ * envelope (preferred when present) and the top-level `{ code, message }`
+ * body returned by jeryu-api's typed errors.
+ */
+function extractErrorEnvelope(body: unknown): ApiErrorEnvelope | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const nested = (body as Record<string, unknown>).error;
+  if (isErrorEnvelope(nested)) return nested;
+  if (isErrorEnvelope(body)) return body;
+  return null;
 }
 
 async function parseError(response: Response): Promise<ApiError> {
@@ -115,8 +127,9 @@ async function parseError(response: Response): Promise<ApiError> {
   if (contentType.includes('application/json')) {
     try {
       const body: unknown = await response.json();
-      if (isErrorEnvelope(body)) {
-        return new ApiError(response.status, body.error);
+      const envelope = extractErrorEnvelope(body);
+      if (envelope) {
+        return new ApiError(response.status, envelope);
       }
     } catch {
       // fall through to the generic envelope below.
