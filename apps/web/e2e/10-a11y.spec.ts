@@ -1,7 +1,7 @@
 // 10-a11y.spec.ts — axe-core accessibility scans (W-T-18).
 //
 // Runs @axe-core/playwright against the four high-traffic SPA surfaces:
-//   * Dashboard (`/`)
+//   * Home (`/`, which redirects by role)
 //   * Repositories list (`/repos`)
 //   * Repository overview (`/repos/{provider}/{name}`)
 //   * Settings (`/repos/{provider}/{name}/settings/general`)
@@ -34,6 +34,7 @@ import {
   mockRepoList,
   mockRepoLookup,
 } from './fixtures/mocks';
+import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { mockShiftApi } from './fixtures/shiftMocks';
 import { mockUnreleasedFamily } from './fixtures/unreleasedMocks';
 
@@ -48,7 +49,7 @@ interface AxeTarget {
 const REPO = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
 
 const TARGETS: AxeTarget[] = [
-  { scope: 'dashboard', path: '/', description: 'Dashboard root' },
+  { scope: 'dashboard', path: '/', description: 'Home root' },
   { scope: 'repositories', path: '/repos', description: 'Repositories list' },
   {
     scope: 'repo-overview',
@@ -266,4 +267,27 @@ test.describe('Accessibility scans — Unreleased', () => {
     );
     expect(blockers.map((v) => v.id)).toEqual([]);
   });
+});
+
+test.describe('Accessibility scans — pipeline visibility', () => {
+  for (const target of [
+    { scope: 'needs-you', path: '/needs-you', testId: 'needs-you-action' },
+    { scope: 'activity', path: '/activity', testId: 'activity-event-12' },
+    { scope: 'activity-wall', path: '/activity?wall=1', testId: 'activity-event-12' },
+  ]) {
+    test(`axe scan: ${target.scope}`, async ({ page }) => {
+      await page.context().route('**/api/v1/ws', (route) => route.abort());
+      await mockBootstrap(page, { auth: { role: 'admin' } });
+      await mockPipelineApi(page);
+      await page.goto(target.path);
+      await expect(page.getByTestId(target.testId)).toBeVisible({ timeout: 15_000 });
+      // The live dock is part of every page for an admin; scan it open.
+      await expect(page.getByTestId('activity-dock')).toBeVisible();
+      await scanAndAssert(page, target.scope);
+      const blockers = blockingViolations(
+        await runAxe(page, { disableRules: ['color-contrast'] })
+      );
+      expect(blockers.map((v) => v.id)).toEqual([]);
+    });
+  }
 });

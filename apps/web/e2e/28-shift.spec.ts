@@ -54,8 +54,10 @@ test.describe('Work shift tabs', () => {
     await page.goto('/work/shift');
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible({ timeout: 15_000 });
 
-    page.once('dialog', (dialog) => dialog.accept('needs design'));
+    // Block asks for its reason inline, never through a browser dialog.
     await page.getByRole('button', { name: 'Block 20260919-0800-aaa' }).click();
+    await page.getByLabel('Reason for blocking 20260919-0800-aaa').fill('needs design');
+    await page.getByRole('button', { name: 'Confirm block' }).click();
     await expect.poll(() => log.posts.length).toBe(1);
     await page.getByLabel('Priority for 20260919-0800-aaa').selectOption('1');
     await expect.poll(() => log.posts.length).toBe(2);
@@ -71,6 +73,40 @@ test.describe('Work shift tabs', () => {
     await page.getByRole('button', { name: `Open review PR for ${NIGHT}` }).click();
     await expect(page.getByRole('link', { name: 'jeryu-deploy#41' })).toBeVisible();
     expect(log.posts[3]).toEqual({ path: '/api/v1/shift/shifts/jeryu/pr', body: { branch: NIGHT } });
+  });
+
+  test('todos that wait on a person come first, and a row traces queue to release @action:shift.needs_human @action:shift.lifecycle', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'user' } });
+    await mockShiftApi(page);
+    await page.goto('/work/shift');
+    const blocked = page.getByTestId('shift-todo-20260919-0930-ddd');
+    await expect(blocked).toBeVisible({ timeout: 15_000 });
+    // Blocked sorts above claimed and open work, with its failed attempts on the row.
+    const first = page.locator('tbody > tr[data-testid^="shift-todo-"]').first();
+    await expect(first).toHaveAttribute('data-testid', 'shift-todo-20260919-0930-ddd');
+    await expect(blocked).toContainText('2 attempts · last: blocked');
+    await expect(blocked.getByRole('list', { name: /blocked — needs a human/ })).toBeVisible();
+
+    // The landed todo links to the PR that carries it, from the trace and the commit chip.
+    const done = page.getByTestId('shift-todo-20260918-2200-bbb');
+    await expect(done.getByRole('list', { name: /PR #41, Merged, Released not yet/ })).toBeVisible();
+    await expect(done.getByRole('link', { name: 'PR #41' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/jeryu/jeryu-deploy/pulls/41'
+    );
+    await expect(done.getByRole('link', { name: /^jeryu-deploy@/ })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/jeryu/jeryu-deploy/pulls/41'
+    );
+
+    const toggle = page.getByTestId('shift-needs-human');
+    await expect(toggle).toContainText('1 needs a human');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('shift-todo-20260918-2200-bbb')).toHaveCount(0);
+    await expect(blocked).toBeVisible();
   });
 
   test('admin files one todo and many todos @action:shift.add_single @action:shift.add_many', async ({

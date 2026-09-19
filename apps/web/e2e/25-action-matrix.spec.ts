@@ -7,7 +7,7 @@ import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
-test('global chrome command palette, repo switcher, sidebar, notifications, not-found, and logout @action:chrome.command_palette @action:chrome.repo_switcher @action:chrome.sidebar_collapse @action:notifications.popover @action:chrome.not_found_recovery @action:auth.logout', async ({
+test('global chrome command palette, repo switcher, sidebar, not-found, and logout @action:chrome.command_palette @action:chrome.repo_switcher @action:chrome.sidebar_collapse @action:chrome.not_found_recovery @action:auth.logout', async ({
   page,
 }) => {
   await mockBootstrap(page, {
@@ -79,18 +79,17 @@ test('global chrome command palette, repo switcher, sidebar, notifications, not-
   await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
   await page.getByRole('button', { name: 'Expand sidebar' }).click();
 
-  await page.getByRole('button', { name: 'Notifications (none unread)' }).click();
-  const notifications = page.getByRole('dialog', { name: 'Notifications' });
-  await expect(notifications).toBeVisible();
-  await notifications.getByRole('link', { name: 'View all' }).click();
-  await expect(page).toHaveURL(/\/notifications$/);
+  // The in-memory notifications inbox is gone; its old URL lands on Activity.
+  await expect(page.getByRole('button', { name: /^Notifications/ })).toHaveCount(0);
+  await page.goto('/notifications');
+  await expect(page).toHaveURL(/\/activity$/);
 
   await page.goto('/missing/action-matrix-route');
   await expect(page).toHaveURL(/\/missing\/action-matrix-route$/);
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible({
     timeout: 10_000,
   });
-  await page.getByRole('button', { name: 'Back to dashboard' }).click();
+  await page.getByRole('button', { name: 'Back to home' }).click();
   await expect(page).toHaveURL(/\/repos\/family\/jeryu-split$/);
 
   await page.getByRole('button', { name: 'Log out' }).click();

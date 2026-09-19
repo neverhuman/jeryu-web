@@ -152,7 +152,7 @@ async function mockIntelligence(page: Page): Promise<void> {
 }
 
 test.describe('Primary left navigation', () => {
-  test('routes every left-nav destination without hitting NotFound @action:chrome.sidebar_nav @action:notifications.page @action:settings.render @action:shared_tools.nav', async ({
+  test('routes every left-nav destination without hitting NotFound @action:chrome.sidebar_nav @action:settings.render @action:shared_tools.nav', async ({
     page,
   }) => {
     await blockWebSocket(page);
@@ -204,9 +204,14 @@ test.describe('Primary left navigation', () => {
 
     const routes = [
       {
-        label: 'Dashboard',
-        path: '/repos/family/jeryu-split',
-        testId: 'repository-family-page',
+        label: 'Needs you',
+        path: '/needs-you',
+        testId: 'needs-you-page',
+      },
+      {
+        label: 'Activity',
+        path: '/activity',
+        testId: 'activity-page',
       },
       {
         label: 'Repositories',
@@ -233,11 +238,6 @@ test.describe('Primary left navigation', () => {
         label: 'Shared tools',
         path: '/shared-tools/findings',
         testId: 'tools-page',
-      },
-      {
-        label: 'Notifications',
-        path: '/notifications',
-        testId: 'notifications-page',
       },
       {
         label: 'Settings',

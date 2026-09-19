@@ -91,3 +91,4 @@ under `apps/web/e2e/fixtures/`, and a Playwright screenshot from the route spec.
 | `/runners` | `fleet` | `mocks.ts` (`mockFleetBootstrap`) | `11-fleet.spec.ts` |
 | `/work/shift*` | `shift-queue`, `shift-add`, `shift-workers` | `shiftMocks.ts` | `28-shift.spec.ts` |
 | `/unreleased` | `unreleased` | `unreleasedMocks.ts` | `28-unreleased.spec.ts` |
+| `/needs-you`, `/activity`, `/activity?wall=1` (and the live dock on every page) | `needs-you`, `activity`, `activity-wall` | `pipelineMocks.ts` | `29-pipeline.spec.ts` |

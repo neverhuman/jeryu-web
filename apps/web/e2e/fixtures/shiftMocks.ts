@@ -65,6 +65,10 @@ export const SHIFT_TODOS = [
     requested_by: 'jeryu',
     shift: NIGHT,
     commits: { 'jeryu-deploy': 'abcdef1234567890abcdef1234567890abcdef12' },
+    // Pipeline visibility contract v1: server-derived lifecycle fields.
+    pr: { repo: 'jeryu-deploy', number: 41, state: 'merged', url: '/repos/jeryu/jeryu/jeryu-deploy/pulls/41' },
+    merged: true,
+    released: false,
     note: 'landed clean',
     worked_by: [
       {
@@ -89,6 +93,29 @@ export const SHIFT_TODOS = [
     claim_by: 'bob@xbabe1/w2',
     lease_until: iso(30),
     lease_live: true,
+  }),
+  todo({
+    id: '20260919-0930-ddd',
+    title: 'Cut the core tag',
+    status: 'blocked',
+    attempts: 2,
+    priority: 4,
+    note: 'The jeryu-core tag split.7 does not exist.',
+    worked_by: [
+      {
+        by: 'alton',
+        host: 'xbabe0',
+        slot: 'w1',
+        model: 'opus',
+        session: 's-2',
+        started: iso(-90),
+        ended: iso(-80),
+        outcome: 'blocked',
+        cost_usd: 0.21,
+        note: 'tag must be cut first',
+        shift: null,
+      },
+    ],
   }),
 ];
 

@@ -9,6 +9,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { mockBootstrap } from './fixtures/mocks';
+import { DEPLOY_COMMAND, mockPipelineApi } from './fixtures/pipelineMocks';
 
 const sha = (c: string) => c.repeat(40);
 
@@ -115,6 +116,17 @@ test('environments show the live release, rollback target and unshipped PRs @act
     /#21 feat: runners page/,
     /#20 chore: jankurai pin/,
   ]);
+  // Unshipped PRs open the pull request; Releases links across to Unreleased.
+  await expect(behind.getByRole('link', { name: '#21 feat: runners page' })).toHaveAttribute(
+    'href',
+    '/repos/jeryu/jeryu/jeryu-deploy/pulls/21'
+  );
+  await expect(page.getByRole('link', { name: "See this repository's unreleased pull requests" })).toHaveAttribute(
+    'href',
+    '/unreleased?repo=jeryu%2Fjeryu-deploy'
+  );
+  // No attention feed for this viewer: no staged banner.
+  await expect(page.getByTestId('releases-staged')).toHaveCount(0);
 
   await expect(page.getByTestId('releases-env-canary')).toContainText('not configured');
   await expect(page.getByTestId('releases-empty')).toHaveCount(0);
@@ -129,4 +141,28 @@ test('a repository with no recorded deployment says so @action:releases.empty', 
     'No deployment of jeryu/jeryu-deploy has been recorded yet'
   );
   await expect(page.getByTestId('releases-env-production')).toContainText('not configured');
+});
+
+test('a staged release waits with its deploy command and a failed attempt links its log @action:releases.staged', async ({
+  page,
+}) => {
+  await mockBootstrap(page, { auth: { role: 'admin' } });
+  const failed = deployed(3, 'e', 'failure', 'rel-e');
+  const withLog = {
+    ...failed,
+    status: { ...failed.status, log_url: 'https://git.neverhuman.org/logs/rel-e.txt' },
+  };
+  await mockReleases(page, [
+    { name: 'production', latest: withLog, current: deployed(2, 'b', 'success', 'rel-b'), previous: null },
+  ]);
+  await mockPipelineApi(page);
+
+  await page.goto('/releases');
+  const staged = page.getByTestId('releases-staged');
+  await expect(staged).toContainText('Staged, awaiting deploy', { timeout: 15_000 });
+  await expect(staged).toContainText(DEPLOY_COMMAND);
+  await expect(staged.getByRole('button', { name: 'Copy deploy command' })).toBeVisible();
+  await expect(
+    page.getByTestId('releases-env-production').getByRole('link', { name: 'deploy log' })
+  ).toHaveAttribute('href', 'https://git.neverhuman.org/logs/rel-e.txt');
 });

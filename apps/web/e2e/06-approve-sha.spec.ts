@@ -25,6 +25,7 @@ import {
   mockPullRequestDetail,
   mockRepoList,
 } from './fixtures/mocks';
+import { mockPipelineApi } from './fixtures/pipelineMocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -43,7 +44,68 @@ function approveButton(page: import('@playwright/test').Page) {
 }
 
 test.describe('Approve at exact SHA (W-T-14)', () => {
-  test('clicking Approve on the cockpit succeeds and shows no recovery banner @action:pr.approve_success @action:pr.request_changes_visible', async ({
+  test('Request changes posts a review pinned to the head SHA; the Pipeline panel shows the gate log @action:pr.request_changes @action:pr.pipeline_events', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockRepoList(page, [{ id: REPO, default_branch: 'main' }]);
+    const detail = await mockPullRequestDetail(page, {
+      repoId: REPO_ID,
+      number: PR_NUMBER,
+      title: 'Needs a test',
+      head_sha: OLD_SHA,
+      passport: 'blocked',
+    });
+    await mockPipelineApi(page);
+    const reviews: unknown[] = [];
+    await page.route(/\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/reviews$/, async (route, req) => {
+      reviews.push(JSON.parse(req.postData() ?? '{}'));
+      const summary = detail.summary as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...detail,
+          summary: {
+            ...summary,
+            review: { ...(summary.review as object), changes_requested: 1, user_review_state: 'changes_requested' },
+          },
+        }),
+      });
+    });
+
+    await page.goto(PR_URL);
+    await expect(page.getByRole('heading', { name: /PR #99: Needs a test/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    const request = page.getByRole('button', { name: 'Request changes' });
+    await expect(request).toBeEnabled();
+    await request.click();
+    await page.getByLabel('Requested changes').fill('Please add a regression test.');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await expect(page.locator('.review-sidebar__changes')).toContainText('1 changes requested');
+    expect(reviews).toEqual([
+      {
+        verdict: 'request_changes',
+        expected_head_sha: OLD_SHA,
+        body_markdown: 'Please add a regression test.',
+        thread_comments: [],
+        evidence: null,
+      },
+    ]);
+
+    // The pipeline's record of this PR, with the failed gate's log one click away.
+    const panel = page.getByTestId('pull-pipeline-events');
+    await expect(panel).toContainText('Gate failed on neverhuman/jeryu#99');
+    await panel.getByRole('button', { name: 'Log for event 10' }).click();
+    await expect(panel.getByLabel('Log tail of event 10')).toContainText('gate: FAILED');
+    await expect(panel.getByRole('link', { name: 'All activity' })).toHaveAttribute(
+      'href',
+      '/activity?repo=neverhuman%2Fjeryu&pr=99'
+    );
+  });
+
+  test('clicking Approve on the cockpit succeeds and shows no recovery banner @action:pr.approve_success', async ({
     page,
   }) => {
     await mockBootstrap(page);
@@ -152,10 +214,6 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     ).toBeVisible({ timeout: 15_000 });
     const approve = approveButton(page);
     await expect(approve).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Request changes' })
-    ).toBeDisabled();
-
     await approve.click();
 
     // Success: the sidebar reflects the new approval posture and NO recovery
