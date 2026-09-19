@@ -254,7 +254,7 @@
   color: var(--color-fg-primary);
 }
 
-.global-header__logout {
+.global-header__settings {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -267,9 +267,10 @@
   cursor: pointer;
 }
 
-.global-header__logout:hover {
-  color: var(--color-accent-danger);
-  border-color: var(--color-accent-danger);
+.global-header__settings:hover,
+.global-header__settings.is-active {
+  color: var(--color-fg-primary);
+  border-color: var(--color-border-strong);
 }
 
 /* LeftNav ------------------------------------------------------------- */

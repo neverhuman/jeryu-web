@@ -3,7 +3,7 @@
 // Implements theme preferences plus account access controls wired
 // through typed HTTP endpoints.
 
-import { Moon, Monitor, Sun, ToggleRight } from 'lucide-react';
+import { LogOut, Moon, Monitor, Sun, ToggleRight } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -75,7 +75,33 @@ export function AdminSettingsPage(): JSX.Element {
       </section>
 
       {user?.role === 'admin' ? <AdminAccessPanel /> : null}
+
+      <SessionPanel login={user?.login ?? null} />
     </div>
+  );
+}
+
+/** The last thing on the page: who is logged in, and the way out. */
+function SessionPanel({ login }: { login: string | null }): JSX.Element {
+  const { logout } = useAuth();
+  return (
+    <section className="page__section" aria-labelledby="session-section">
+      <h2 className="page__section-title" id="session-section">
+        Session
+      </h2>
+      <div className="page__inline-actions">
+        <span className="page__pill">{login ? `Logged in as ${login}` : 'Logged in'}</span>
+        <ActionButton
+          actionId="auth.logout"
+          variant="danger"
+          icon={<LogOut size={14} aria-hidden="true" />}
+          disabled={logout.isPending}
+          onClick={() => logout.mutate()}
+        >
+          Log out
+        </ActionButton>
+      </div>
+    </section>
   );
 }
 

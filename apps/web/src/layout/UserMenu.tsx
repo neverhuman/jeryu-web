@@ -1,8 +1,11 @@
-// UserMenu.tsx — top-right identity status and logout control (W-FE-01).
+// UserMenu.tsx — top-right identity status and the way into Settings (W-FE-01).
+//
+// Settings lives here rather than in the left nav: it is about the account,
+// not about the forge's work. Log out is at the bottom of the Settings page,
+// so the header has no one-click destructive control.
 
-import { LogOut } from 'lucide-react';
-
-import { useAuth } from '../hooks/useAuth';
+import { Cog } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 
 interface UserMenuProps {
   login: string;
@@ -11,7 +14,8 @@ interface UserMenuProps {
 
 export function UserMenu({ login, displayName }: UserMenuProps): JSX.Element {
   const label = displayName ?? login;
-  const { logout } = useAuth();
+  const { pathname } = useLocation();
+  const active = pathname === '/settings';
   return (
     <div className="global-header__account">
       <span className="global-header__user" aria-label={`Logged in as ${label}`}>
@@ -19,15 +23,15 @@ export function UserMenu({ login, displayName }: UserMenuProps): JSX.Element {
         <span aria-hidden="true">·</span>
         <span className="global-header__user-name">{label}</span>
       </span>
-      <button
-        type="button"
-        className="global-header__logout"
-        aria-label="Log out"
-        title="Log out"
-        onClick={() => logout.mutate()}
+      <Link
+        to="/settings"
+        className={`global-header__settings${active ? ' is-active' : ''}`}
+        aria-label="Settings"
+        aria-current={active ? 'page' : undefined}
+        title="Settings and log out"
       >
-        <LogOut size={14} aria-hidden="true" />
-      </button>
+        <Cog size={14} aria-hidden="true" />
+      </Link>
     </div>
   );
 }

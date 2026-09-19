@@ -92,6 +92,12 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await page.getByRole('button', { name: 'Back to home' }).click();
   await expect(page).toHaveURL(/\/repos\/family\/jeryu-split$/);
 
+  // Settings is reached from the top-right account control, and Log out is
+  // the last thing on that page; neither is in the left nav or the header.
+  await expect(page.getByRole('navigation').getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
+  await page.getByRole('banner').getByRole('link', { name: 'Settings' }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByTestId('settings-page')).toBeVisible();
   await page.getByRole('button', { name: 'Log out' }).click();
   await expect(page.getByRole('heading', { name: 'Git for agents.' })).toBeVisible({
     timeout: 10_000,

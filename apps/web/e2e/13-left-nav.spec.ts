@@ -239,11 +239,6 @@ test.describe('Primary left navigation', () => {
         path: '/shared-tools/findings',
         testId: 'tools-page',
       },
-      {
-        label: 'Settings',
-        path: '/settings',
-        testId: 'settings-page',
-      },
     ] as const;
 
     for (const route of routes) {
@@ -259,5 +254,19 @@ test.describe('Primary left navigation', () => {
       }
       await expect(page.getByText(/Page not found/i)).toHaveCount(0);
     }
+
+    // Settings is not a left-nav destination: it opens from the top-right
+    // account control, and ends with the Session section that holds Log out.
+    await expect(
+      page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Settings', exact: true })
+    ).toHaveCount(0);
+    await Promise.all([
+      page.waitForURL(/\/settings$/),
+      page.getByRole('banner').getByRole('link', { name: 'Settings' }).click(),
+    ]);
+    await shell.assertShellLoaded();
+    await expect(page.getByTestId('settings-page')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Session' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
   });
 });

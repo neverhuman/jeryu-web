@@ -52,7 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
   { to: '/runners', label: 'Runners', icon: ServerCog },
   { to: '/shared-tools', label: 'Shared tools', icon: Layers },
-  { to: '/settings', label: 'Settings', icon: Cog },
+  // Settings is reached from the top-right account control (UserMenu).
 ];
 
 /** Extract the repo base path from the current pathname, if any.
