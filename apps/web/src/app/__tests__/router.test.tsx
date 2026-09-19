@@ -36,7 +36,7 @@ describe('router route table', () => {
     expect(familyIdx).toBeLessThan(catchAllIdx);
   });
 
-  it('registers the Shared tools pages and legacy redirects above the catch-all', () => {
+  it('registers the Shared tools pages and their redirects above the catch-all', () => {
     const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
     const notFoundIdx = paths.indexOf('*');
     expect(notFoundIdx).toBeGreaterThan(-1);

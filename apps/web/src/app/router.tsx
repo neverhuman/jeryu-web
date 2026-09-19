@@ -45,7 +45,7 @@ import {
 } from '../pages/sharedTools/SharedToolsTabs';
 
 /** `/tool-fleet/:tool` → `/shared-tools/adoption/:tool`. */
-function LegacyToolAdoptionRedirect(): JSX.Element {
+function ToolFleetToolRedirect(): JSX.Element {
   const { tool = '' } = useParams();
   return <Navigate to={`${ADOPTION_PATH}/${encodeURIComponent(tool)}`} replace />;
 }
@@ -81,11 +81,11 @@ export const router = createBrowserRouter([
       { path: 'shared-tools/proposals', element: <ProposalsPage /> },
       { path: 'shared-tools/adoption', element: <ToolFleetPage /> },
       { path: 'shared-tools/adoption/:tool', element: <ToolFleetToolPage /> },
-      // Pre-rename paths keep working.
+      // The earlier Shared Code and Tool Fleet paths redirect to their new homes.
       { path: 'shared-code', element: <Navigate to={FINDINGS_PATH} replace /> },
       { path: 'tools', element: <Navigate to={FINDINGS_PATH} replace /> },
       { path: 'tool-fleet', element: <Navigate to={ADOPTION_PATH} replace /> },
-      { path: 'tool-fleet/:tool', element: <LegacyToolAdoptionRedirect /> },
+      { path: 'tool-fleet/:tool', element: <ToolFleetToolRedirect /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'audit', element: <AuditPage /> },
       { path: 'search', element: <SearchResultsPage /> },
