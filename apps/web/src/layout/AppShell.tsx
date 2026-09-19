@@ -186,9 +186,7 @@ export function AppShell(): JSX.Element {
         <Outlet />
       </main>
       <LiveActivityDock />
-      <footer className="app-shell__status">
-        <StatusBar />
-      </footer>
+      <StatusBar />
       <CommandPalette />
       <KeyboardShortcutsOverlay />
     </div>

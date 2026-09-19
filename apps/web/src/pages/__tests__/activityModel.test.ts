@@ -1,18 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ACTIVITY_CHIPS,
+  activeChip,
   activityHref,
+  applyChip,
+  eventLabel,
   eventLinks,
   eventTone,
   filtersToQuery,
   formatClock,
   formatSeconds,
   hasActiveFilters,
+  hasMoreFilters,
   isWallMode,
   maxSeq,
   mergeEvents,
   minSeq,
   parseActivityFilters,
+  primaryLink,
+  summaryParts,
   wallCounters,
 } from '../activity/activityModel';
 import { EVENTS, pipelineEvent } from './pipelineTestData';
@@ -106,5 +113,66 @@ describe('activityModel', () => {
       spentUsd: 0.54,
       events: 6,
     });
+  });
+
+  it('says what happened in plain words, and shows an unknown kind as it came', () => {
+    const label = (kind: string, outcome: string | null = null): string => eventLabel({ kind, outcome });
+    expect(label('gate.log', 'success')).toBe('Gate passed');
+    expect(label('gate.log', 'failure')).toBe('Gate failed');
+    expect(label('gate.finished', 'timed_out')).toBe('Gate timed out');
+    expect(label('gate.log', 'inputs_changed')).toBe('Gate re-running');
+    expect(label('pr.review', 'approve')).toBe('Review: approved');
+    expect(label('review.finished', 'hold')).toBe('Review: changes requested');
+    expect(label('todo.attempt_finished', 'done')).toBe('Todo finished');
+    expect(label('todo.attempt_finished', 'blocked')).toBe('Todo blocked');
+    expect(label('deploy.status', 'success')).toBe('Deployed');
+    expect(label('deploy.status', 'failure')).toBe('Deploy failed');
+    expect(label('deploy.status', 'in_progress')).toBe('Deploying');
+    expect(label('release.staged')).toBe('Release staged');
+    expect(label('queue.landed')).toBe('Merged by the queue');
+    expect(label('pin.bump_opened')).toBe('Pin bump opened');
+    expect(label('something.new', 'success')).toBe('something.new');
+  });
+
+  it('maps chips to URL filters and back, keeping the other filters', () => {
+    const gates = ACTIVITY_CHIPS.find((chip) => chip.id === 'gates');
+    const human = ACTIVITY_CHIPS.find((chip) => chip.id === 'human');
+    const all = ACTIVITY_CHIPS.find((chip) => chip.id === 'all');
+    if (!gates || !human || !all) throw new Error('chips missing');
+    const start = new URLSearchParams('family=jeryu&needs_human=1');
+    expect(applyChip(start, gates).toString()).toBe('family=jeryu&kind=gate.');
+    expect(applyChip(new URLSearchParams('kind=gate.&repo=a%2Fb'), human).toString()).toBe('repo=a%2Fb&needs_human=1');
+    expect(applyChip(new URLSearchParams('kind=gate.&family=jain'), all).toString()).toBe('family=jain');
+
+    const filters = (qs: string) => parseActivityFilters(new URLSearchParams(qs));
+    expect(activeChip(filters(''))).toBe('all');
+    expect(activeChip(filters('kind=gate.'))).toBe('gates');
+    expect(activeChip(filters('needs_human=1'))).toBe('human');
+    expect(activeChip(filters('kind=gate.finished'))).toBeNull();
+    // A chip's kind is not a reason to open More filters; a hand-made one is.
+    expect(hasMoreFilters(filters('kind=gate.&family=jeryu'))).toBe(false);
+    expect(hasMoreFilters(filters('kind=gate.finished'))).toBe(true);
+    expect(hasMoreFilters(filters('repo=a%2Fb'))).toBe(true);
+  });
+
+  it('names an event\'s subject once, as the link inside its summary', () => {
+    const gate = pipelineEvent({
+      seq: 1,
+      kind: 'gate.log',
+      repo: 'jeryu/jeryu-deploy',
+      pr: 57,
+      summary: 'jeryu/jeryu-deploy#57 jeryu-deploy/required success in 176s',
+    });
+    expect(summaryParts(gate)).toEqual({
+      before: '',
+      link: { label: 'jeryu/jeryu-deploy#57', to: '/repos/jeryu/jeryu/jeryu-deploy/pulls/57' },
+      after: ' jeryu-deploy/required success in 176s',
+    });
+    const deploy = pipelineEvent({ seq: 2, kind: 'deploy.status', repo: 'jeryu/jeryu-deploy', summary: 'production deploy: success' });
+    expect(summaryParts(deploy).before).toBe('production deploy: success ');
+    expect(summaryParts(deploy).link?.label).toBe('jeryu/jeryu-deploy');
+    const bare = pipelineEvent({ seq: 3, kind: 'worker.error', summary: 'forge 502' });
+    expect(summaryParts(bare)).toEqual({ before: 'forge 502', link: null, after: '' });
+    expect(primaryLink(pipelineEvent({ seq: 4, kind: 'todo.claimed', family: 'jeryu', todo_id: 't1' }))?.label).toBe('todo t1');
   });
 });

@@ -1,36 +1,34 @@
 // StatusBar.tsx — bottom strip (W-FE-01).
+//
+// Silent while live updates work: the header's pill already says "Live", and a
+// strip of socket counters told an operator nothing. It appears only when the
+// page has stopped hearing from the server, because then what is on screen may
+// be stale, and says so in words.
 
 import { useRealtimeStore } from '../stores/realtimeStore';
 
-export function StatusBar(): JSX.Element {
+/** What to tell the reader, or null when there is nothing to tell. */
+export function statusMessage(status: string, errorCode: string | null): string | null {
+  if (status === 'reconnecting') return 'Live updates paused. Reconnecting…';
+  if (status === 'closed') return 'Live updates are off. What you see may be out of date; reload to reconnect.';
+  if (errorCode) return `Live updates reported a problem (${errorCode}).`;
+  return null;
+}
+
+export function StatusBar(): JSX.Element | null {
   const status = useRealtimeStore((s) => s.status);
-  const lastSeq = useRealtimeStore((s) => s.lastSeq);
-  const subs = useRealtimeStore((s) => s.subscriptions);
   const lastError = useRealtimeStore((s) => s.lastError);
+  const message = statusMessage(status, lastError?.code ?? null);
+  if (!message) return null;
 
   return (
-    <div className="status-bar" role="status" aria-live="polite">
-      <span className="status-bar__group">
+    <footer className="app-shell__status">
+      <div className="status-bar" role="status" aria-live="polite" title={lastError?.message}>
         <span className="status-bar__pill">
-          <span
-            className={`status-bar__dot status-bar__dot--${status}`}
-            aria-hidden="true"
-          />
-          WS: {status}
+          <span className={`status-bar__dot status-bar__dot--${status}`} aria-hidden="true" />
+          {message}
         </span>
-        <span className="status-bar__pill">
-          seq {lastSeq === null ? '—' : String(lastSeq)}
-        </span>
-        <span className="status-bar__pill">subs {subs.size}</span>
-      </span>
-      <span className="status-bar__group">
-        {lastError ? (
-          <span className="status-bar__pill" title={lastError.message}>
-            err: {lastError.code}
-          </span>
-        ) : null}
-        <span className="status-bar__pill">JeRyu Web Forge · Phase 1</span>
-      </span>
-    </div>
+      </div>
+    </footer>
   );
 }

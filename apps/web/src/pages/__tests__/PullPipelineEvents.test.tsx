@@ -33,7 +33,8 @@ describe('PullPipelineEvents', () => {
     renderPanel();
     const panel = await screen.findByTestId('pull-pipeline-events');
     expect(calls[0].search).toBe('?repo=jeryu%2Fjeryu-web&pr=35&limit=30');
-    expect(within(panel).getByText('Merged jeryu/jeryu-web#35')).toBeInTheDocument();
+    expect(within(panel).getByText('PR merged')).toBeInTheDocument();
+    expect(within(panel).getByTestId('activity-event-11')).toHaveTextContent('Merged jeryu/jeryu-web#35');
     fireEvent.click(within(panel).getByRole('button', { name: 'Log for event 10' }));
     expect(within(panel).getByLabelText('Log tail of event 10')).toHaveTextContent('gate: FAILED');
     expect(within(panel).getByRole('link', { name: 'All activity' })).toHaveAttribute(

@@ -47,27 +47,39 @@ describe('LiveActivityDock', () => {
     role = 'admin';
   });
 
-  it('lists the newest events, flags the ones that need a human, and remembers collapse', async () => {
+  it('is one quiet line until opened, then lists the newest events in plain words, and remembers', async () => {
     const calls = mockPipelineApi();
-    renderAt('/', '/', <LiveActivityDock />);
-    expect(await screen.findByText('Merged jeryu/jeryu-web#35')).toBeInTheDocument();
+    renderAt('/needs-you', '/needs-you', <LiveActivityDock />);
+    const toggle = await screen.findByRole('button', { name: 'Live activity' });
+    // Collapsed by default: the newest event on the header line, nothing listed.
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText(/Release staged · Staged prod-20260919T130210Z/)).toBeInTheDocument();
+    expect(screen.queryByText('Merged jeryu/jeryu-web#35')).toBeNull();
     expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?limit=8')).toBe(true);
     expect(screen.getByText('2 need you')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'All activity' })).toHaveAttribute('href', '/activity');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Live activity' }));
-    expect(screen.queryByText('Merged jeryu/jeryu-web#35')).toBeNull();
-    // Collapsed, the header still carries the newest event.
-    expect(screen.getByText(/Staged prod-20260919T130210Z/)).toBeInTheDocument();
-    expect(window.localStorage.getItem('jeryu.activityDock.collapsed.v1')).toBe('1');
+    fireEvent.click(toggle);
+    expect(screen.getByText('Merged jeryu/jeryu-web#35')).toBeInTheDocument();
+    // Plain words, not wire kinds.
+    expect(screen.getByText('Gate failed')).toBeInTheDocument();
+    expect(screen.queryByText('gate.log')).toBeNull();
+    expect(window.localStorage.getItem('jeryu.activityDock.expanded.v1')).toBe('1');
   });
 
-  it('starts collapsed when the preference says so', async () => {
-    window.localStorage.setItem('jeryu.activityDock.collapsed.v1', '1');
+  it('starts open when the reader left it open', async () => {
+    window.localStorage.setItem('jeryu.activityDock.expanded.v1', '1');
     mockPipelineApi();
-    renderAt('/', '/', <LiveActivityDock />);
+    renderAt('/needs-you', '/needs-you', <LiveActivityDock />);
     const toggle = await screen.findByRole('button', { name: 'Live activity' });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('stays off the Activity page, which is the same feed at full size', async () => {
+    const calls = mockPipelineApi();
+    renderAt('/activity', '/activity', <LiveActivityDock />);
+    await waitFor(() => expect(calls.length).toBeGreaterThan(0));
+    expect(screen.queryByTestId('activity-dock')).toBeNull();
   });
 
   it('renders nothing for non-admins or on a server without the feed', async () => {

@@ -7,7 +7,7 @@
     'leftnav main'
     'leftnav dock'
     'status status';
-  grid-template-rows: var(--app-header-height) 1fr auto var(--app-status-height);
+  grid-template-rows: var(--app-header-height) 1fr auto auto;
   grid-template-columns: var(--app-leftnav-width) minmax(0, 1fr);
   min-height: 100vh;
 }

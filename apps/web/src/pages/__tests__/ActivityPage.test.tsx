@@ -20,7 +20,11 @@ describe('ActivityPage', () => {
     mockPipelineApi();
     renderPage();
     const gate = await screen.findByTestId('activity-event-10');
-    expect(within(gate).getByText('gate.log')).toBeInTheDocument();
+    // Plain words on the row; the wire kind is a tooltip and sits in the opened row.
+    expect(within(gate).getByText('Gate failed')).toHaveAttribute('title', 'gate.log');
+    expect(within(gate).queryByText('gate.log')).toBeNull();
+    // The summary names its subject once, as the link.
+    expect(within(gate).getAllByText(/jeryu\/jeryu-web#35/)).toHaveLength(1);
     expect(within(gate).getByText('1m 54s')).toBeInTheDocument();
     expect(within(gate).getByRole('link', { name: 'jeryu/jeryu-web#35' })).toHaveAttribute(
       'href',
@@ -49,7 +53,15 @@ describe('ActivityPage', () => {
     expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?family=jeryu&needs_human=true&limit=100')).toBe(
       true
     );
-    expect(screen.getByLabelText('Needs a human only')).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Needs a human' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Family')).toHaveValue('jeryu');
+    // A chip is one click and keeps the family.
+    fireEvent.click(screen.getByRole('button', { name: 'Gates' }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.search.includes('kind=gate.') && c.search.includes('family=jeryu') && !c.search.includes('needs_human'))).toBe(true)
+    );
+    expect(screen.getByRole('button', { name: 'Gates' })).toHaveAttribute('aria-pressed', 'true');
+    // The free-text filters are still there, folded.
     const kind = screen.getByLabelText('Kind');
     fireEvent.change(kind, { target: { value: 'todo.' } });
     fireEvent.keyDown(kind, { key: 'Enter' });

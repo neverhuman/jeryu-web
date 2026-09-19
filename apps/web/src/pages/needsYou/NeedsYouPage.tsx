@@ -149,7 +149,14 @@ function AttentionRow({
       {action?.type === 'command' ? (
         <CopyCommand command={action.command} label={`${action.label} command for ${item.title}`} />
       ) : action?.type === 'link' ? (
-        <Link className="needs-you__open" to={action.to} aria-label={`${action.label}: ${item.title}`}>
+        // One link, stretched over the row (CSS): the whole row leads there,
+        // and there is still exactly one thing to activate.
+        <Link
+          className="needs-you__open"
+          to={action.to}
+          aria-label={`${action.label}: ${item.title}`}
+          title={item.reason ?? undefined}
+        >
           {action.label} →
         </Link>
       ) : null}

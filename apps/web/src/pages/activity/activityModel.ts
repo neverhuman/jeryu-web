@@ -180,3 +180,168 @@ export function wallCounters(events: PipelineEvent[], now: Date): WallCounters {
   counters.spentUsd = Math.round(counters.spentUsd * 100) / 100;
   return counters;
 }
+
+/**
+ * What happened, in words an operator reads at a glance. The wire kind
+ * (`gate.log`, `todo.attempt_finished`) is for machines; a kind this table
+ * does not know is shown as it came, never hidden.
+ */
+export function eventLabel(event: Pick<PipelineEvent, 'kind' | 'outcome'>): string {
+  const outcome = (event.outcome ?? '').toLowerCase();
+  const failed = outcome === 'failure' || outcome === 'error' || outcome === 'failed';
+  switch (event.kind) {
+    case 'gate.started':
+      return 'Gate started';
+    case 'gate.log':
+    case 'gate.finished':
+      if (outcome === 'success') return 'Gate passed';
+      if (outcome === 'timed_out') return 'Gate timed out';
+      if (outcome === 'inputs_changed') return 'Gate re-running';
+      return failed ? 'Gate failed' : 'Gate finished';
+    case 'review.started':
+      return 'Review started';
+    case 'review.finished':
+    case 'pr.review':
+      if (outcome === 'approve' || outcome === 'approved') return 'Review: approved';
+      if (outcome === 'request_changes' || outcome === 'hold') return 'Review: changes requested';
+      return failed ? 'Review failed' : 'Review finished';
+    case 'pr.opened':
+      return 'PR opened';
+    case 'pr.approved':
+      return 'PR approved';
+    case 'pr.merged':
+      return 'PR merged';
+    case 'queue.enqueued':
+      return 'Queued to merge';
+    case 'queue.building':
+      return 'Merge queue gating';
+    case 'queue.landed':
+      return 'Merged by the queue';
+    case 'queue.failed':
+      return 'Merge queue failed';
+    case 'queue.dequeued':
+      return 'Left the merge queue';
+    case 'queue.refused':
+      return 'Merge queue refused';
+    case 'todo.filed':
+      return 'Todo filed';
+    case 'todo.claimed':
+      return 'Todo claimed';
+    case 'todo.action':
+      return 'Todo changed';
+    case 'todo.merged':
+      return 'Todo merged';
+    case 'todo.waiting_on_unmerged':
+      return 'Todo waiting';
+    case 'todo.attempt_finished':
+      if (outcome === 'done') return 'Todo finished';
+      if (outcome === 'blocked') return 'Todo blocked';
+      if (outcome === 'retry') return 'Todo retrying';
+      if (outcome === 'ratelimit') return 'Rate limited';
+      return 'Attempt finished';
+    case 'worker.stage':
+      return 'Worker';
+    case 'worker.error':
+      return 'Worker error';
+    case 'shift.pr_opened':
+      return 'Shift PR opened';
+    case 'shift.exhausted':
+      return 'Shift budget spent';
+    case 'release.staged':
+      return 'Release staged';
+    case 'release.stage_failed':
+      return 'Staging failed';
+    case 'deploy.created':
+      return 'Deploy started';
+    case 'deploy.status':
+      if (outcome === 'success') return 'Deployed';
+      return failed ? 'Deploy failed' : 'Deploying';
+    case 'pin.bump_opened':
+      return 'Pin bump opened';
+    case 'pin.bump_failed':
+      return 'Pin bump failed';
+    default:
+      return event.kind;
+  }
+}
+
+/** One-click views of the feed. `kind` is a server-side prefix filter. */
+export interface ActivityChip {
+  id: string;
+  label: string;
+  kind?: string;
+  needsHuman?: boolean;
+}
+
+export const ACTIVITY_CHIPS: readonly ActivityChip[] = [
+  { id: 'all', label: 'All' },
+  { id: 'human', label: 'Needs a human', needsHuman: true },
+  { id: 'todos', label: 'Todos', kind: 'todo.' },
+  { id: 'gates', label: 'Gates', kind: 'gate.' },
+  { id: 'reviews', label: 'Reviews', kind: 'review.' },
+  { id: 'pulls', label: 'Pull requests', kind: 'pr.' },
+  { id: 'merges', label: 'Merges', kind: 'queue.' },
+  { id: 'releases', label: 'Releases', kind: 'release.' },
+  { id: 'deploys', label: 'Deploys', kind: 'deploy.' },
+];
+
+/** The chip the URL's filters amount to, or null for a hand-made filter. */
+export function activeChip(filters: Pick<ActivityFilters, 'kind' | 'needs_human'>): string | null {
+  if (filters.needs_human) return filters.kind === '' ? 'human' : null;
+  if (filters.kind === '') return 'all';
+  return ACTIVITY_CHIPS.find((chip) => chip.kind === filters.kind)?.id ?? null;
+}
+
+/** The URL params a chip sets, keeping the family and the other filters. */
+export function applyChip(params: URLSearchParams, chip: ActivityChip): URLSearchParams {
+  const next = new URLSearchParams(params);
+  next.delete('kind');
+  next.delete('needs_human');
+  if (chip.kind) next.set('kind', chip.kind);
+  if (chip.needsHuman) next.set('needs_human', '1');
+  return next;
+}
+
+/** Filters that live behind "More filters": open it when one of them is set. */
+export const MORE_FILTER_KEYS = ['repo', 'source', 'kind', 'todo_id', 'pr'] as const;
+
+export function hasMoreFilters(filters: ActivityFilters): boolean {
+  const chipKind = ACTIVITY_CHIPS.some((chip) => chip.kind === filters.kind);
+  return MORE_FILTER_KEYS.some((key) => filters[key] !== '' && !(key === 'kind' && chipKind));
+}
+
+/** The event's main subject as one link: its pull request, else its todo, else its repo. */
+export function primaryLink(event: PipelineEvent): EventLink | null {
+  if (event.repo && event.pr) {
+    return { label: `${event.repo}#${event.pr}`, to: pullHref(event.repo, event.pr) };
+  }
+  if (event.todo_id && event.family) {
+    return { label: `todo ${event.todo_id}`, to: queueHref(event.family, [event.todo_id]) };
+  }
+  if (event.repo) return { label: event.repo, to: repoHref(event.repo) };
+  return null;
+}
+
+/**
+ * The summary with its subject turned into the link. A gate summary already
+ * says `jeryu/jeryu-deploy#57`; printing that again beside it was noise. When
+ * the summary does not name the subject, the link follows it.
+ */
+export interface SummaryParts {
+  before: string;
+  link: EventLink | null;
+  after: string;
+}
+
+export function summaryParts(event: PipelineEvent): SummaryParts {
+  const link = primaryLink(event);
+  if (!link) return { before: event.summary, link: null, after: '' };
+  const at = event.summary.indexOf(link.label);
+  if (at < 0) return { before: `${event.summary} `, link, after: '' };
+  return {
+    before: event.summary.slice(0, at),
+    link,
+    after: event.summary.slice(at + link.label.length),
+  };
+}
+

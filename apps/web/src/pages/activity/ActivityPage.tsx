@@ -12,10 +12,15 @@ import { EmptyState, LoadingState, PipelineQueryState } from '../../components/s
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { usePipelineNudge } from '../../hooks/usePipeline';
 import { formatCost } from '../shift/shiftModel';
+import { useShiftFamilies } from '../../hooks/useShift';
 import {
-  FILTER_KEYS,
+  ACTIVITY_CHIPS,
+  MORE_FILTER_KEYS,
+  activeChip,
+  applyChip,
   filtersToQuery,
   hasActiveFilters,
+  hasMoreFilters,
   isWallMode,
   parseActivityFilters,
   wallCounters,
@@ -26,8 +31,7 @@ import { EventRow } from './EventRow';
 import '../page.css';
 import './Activity.css';
 
-const FILTER_LABEL: Record<(typeof FILTER_KEYS)[number], string> = {
-  family: 'Family',
+const FILTER_LABEL: Record<(typeof MORE_FILTER_KEYS)[number], string> = {
   repo: 'Repo',
   source: 'Source',
   kind: 'Kind',
@@ -35,7 +39,7 @@ const FILTER_LABEL: Record<(typeof FILTER_KEYS)[number], string> = {
   pr: 'PR',
 };
 
-const FILTER_HINT: Partial<Record<(typeof FILTER_KEYS)[number], string>> = {
+const FILTER_HINT: Partial<Record<(typeof MORE_FILTER_KEYS)[number], string>> = {
   repo: 'owner/name',
   kind: 'todo. or gate.finished',
 };
@@ -97,7 +101,15 @@ export function ActivityPage(): JSX.Element {
         )}
       </header>
 
-      {wall ? <WallCounters events={events} /> : <Filters filters={filters} onChange={update} />}
+      {wall ? (
+        <WallCounters events={events} />
+      ) : (
+        <Filters
+          filters={filters}
+          onChange={update}
+          onChip={(chip) => setParams(applyChip(params, chip), { replace: true })}
+        />
+      )}
 
       {feed.base.isPending ? (
         <LoadingState title="Loading activity…" variant="message" />
@@ -148,32 +160,60 @@ function wallHref(params: URLSearchParams, wall: boolean): string {
 function Filters({
   filters,
   onChange,
+  onChip,
 }: {
   filters: ActivityFilters;
   onChange: (key: string, value: string) => void;
+  onChip: (chip: (typeof ACTIVITY_CHIPS)[number]) => void;
 }): JSX.Element {
+  const families = useShiftFamilies();
+  const names = families.data?.families.map((family) => family.name) ?? [];
+  const current = activeChip(filters);
   return (
     <section className="activity__filters" aria-label="Activity filters">
-      {FILTER_KEYS.map((key) => (
-        <label key={key}>
-          {FILTER_LABEL[key]}
-          <FilterInput
-            // Re-mount when the URL value changes from elsewhere (a deep link).
-            key={filters[key]}
-            initial={filters[key]}
-            placeholder={FILTER_HINT[key]}
-            onCommit={(value) => onChange(key, value)}
-          />
+      <div className="activity__chips" role="group" aria-label="Show">
+        {ACTIVITY_CHIPS.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            className={`activity__chip${current === chip.id ? ' is-active' : ''}`}
+            aria-pressed={current === chip.id}
+            onClick={() => onChip(chip)}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+      {names.length > 1 || filters.family ? (
+        <label className="activity__family">
+          Family
+          <select value={filters.family} onChange={(event) => onChange('family', event.target.value)}>
+            <option value="">All</option>
+            {[...new Set([...names, filters.family].filter(Boolean))].map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         </label>
-      ))}
-      <label className="activity__check">
-        <input
-          type="checkbox"
-          checked={filters.needs_human}
-          onChange={(event) => onChange('needs_human', event.target.checked ? '1' : '')}
-        />
-        Needs a human only
-      </label>
+      ) : null}
+      <details className="activity__more" open={hasMoreFilters(filters) || undefined}>
+        <summary>More filters</summary>
+        <div className="activity__more-fields">
+          {MORE_FILTER_KEYS.map((key) => (
+            <label key={key}>
+              {FILTER_LABEL[key]}
+              <FilterInput
+                // Re-mount when the URL value changes from elsewhere (a deep link).
+                key={filters[key]}
+                initial={filters[key]}
+                placeholder={FILTER_HINT[key]}
+                onCommit={(value) => onChange(key, value)}
+              />
+            </label>
+          ))}
+        </div>
+      </details>
     </section>
   );
 }

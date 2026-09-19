@@ -52,16 +52,34 @@
   color: var(--color-accent-danger);
 }
 
-/* One line; the full text is the tooltip and lives where the link leads. */
+/* The reason is often the only explanation, so it gets two lines before it is
+   cut; the full text is the tooltip and lives where the link leads. */
 .needs-you__reason {
   margin: 0;
   max-width: 100%;
   color: var(--color-fg-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+/* A row with a link is the link: one target, one tab stop, the whole row. */
+.needs-you__row {
+  position: relative;
+}
+
+.needs-you__open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.needs-you__row:has(.needs-you__open):hover .needs-you__title {
+  text-decoration: underline;
 }
 
 .needs-you__title-line {

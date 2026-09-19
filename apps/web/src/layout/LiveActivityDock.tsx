@@ -8,22 +8,26 @@
 
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../hooks/useAuth';
 import { PIPELINE_KEY, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
-import { ACTIVITY_PATH, eventTone, formatClock } from '../pages/activity/activityModel';
+import { ACTIVITY_PATH, eventLabel, eventTone, formatClock } from '../pages/activity/activityModel';
 import type { PipelineEventsQuery } from '../api/types/pipeline';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 
-const COLLAPSED_KEY = 'jeryu.activityDock.collapsed.v1';
+// Collapsed unless the reader opened it: one line that says the pipeline is
+// alive costs nothing; eight lines take a third of a page that is about
+// something else. The key is new so the old default (open) is not remembered.
+const EXPANDED_KEY = 'jeryu.activityDock.expanded.v1';
 const DOCK_EVENTS = 8;
 const DOCK_QUERY: PipelineEventsQuery = { limit: DOCK_EVENTS };
 
 export function LiveActivityDock(): JSX.Element | null {
   const { user } = useAuth();
+  const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(
-    () => readBrowserText('durable', COLLAPSED_KEY) === '1'
+    () => readBrowserText('durable', EXPANDED_KEY) !== '1'
   );
   const feed = usePipelineEvents(DOCK_QUERY, {
     enabled: user?.role === 'admin',
@@ -31,13 +35,15 @@ export function LiveActivityDock(): JSX.Element | null {
   });
   usePipelineNudge(feed.isSuccess, [...PIPELINE_KEY, 'events', DOCK_QUERY]);
 
+  // The Activity page (and its wall) is this feed at full size.
+  if (pathname === ACTIVITY_PATH) return null;
   if (!feed.isSuccess) return null;
   const events = feed.data.events.slice(0, DOCK_EVENTS);
   const waiting = events.filter((event) => event.needs_human).length;
 
   const toggle = (): void => {
     setCollapsed((prev) => {
-      writeBrowserText('durable', COLLAPSED_KEY, prev ? '0' : '1');
+      writeBrowserText('durable', EXPANDED_KEY, prev ? '1' : '0');
       return !prev;
     });
   };
@@ -57,7 +63,7 @@ export function LiveActivityDock(): JSX.Element | null {
         </button>
         {collapsed && events[0] ? (
           <span className="activity-dock__latest">
-            {formatClock(events[0].ts)} · {events[0].summary}
+            {formatClock(events[0].ts)} · {eventLabel(events[0])} · {events[0].summary}
           </span>
         ) : null}
         {waiting > 0 ? (
@@ -81,7 +87,9 @@ export function LiveActivityDock(): JSX.Element | null {
                   <time className="activity-dock__meta" dateTime={event.ts}>
                     {formatClock(event.ts)}
                   </time>
-                  <span className="activity-dock__scope">{event.kind}</span>
+                  <span className="activity-dock__scope" title={event.kind}>
+                    {eventLabel(event)}
+                  </span>
                   <span className="activity-dock__summary">{event.summary}</span>
                 </li>
               ))
