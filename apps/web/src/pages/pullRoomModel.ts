@@ -334,6 +334,15 @@ export function isBoardView(view: string | null): boolean {
   return view === 'board' || view === 'queue';
 }
 
+/**
+ * What a reader calls a family: the repositories list says `jeryu-split`, the
+ * shift queue and Needs you say `jeryu`. One name on every page; the URL keeps
+ * the forge's own key so existing `?family=jeryu-split` links still work.
+ */
+export function familyLabel(family: string): string {
+  return family.replace(/-split$/, '');
+}
+
 /** Family of repos the forge assigns no family to. */
 export const OTHER_FAMILY = 'other';
 

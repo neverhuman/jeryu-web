@@ -9,6 +9,7 @@ import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
 import {
   DEFAULT_PULL_ROOM_FILTERS,
+  familyLabel,
   familyPills,
   filterPullRequests,
   filterPullSummaries,
@@ -180,7 +181,8 @@ export function PullRoomPage(): JSX.Element {
             aria-pressed={family === pill.family}
             onClick={() => setFamily(pill.family)}
           >
-            {pill.family} <span className="pull-room__family-count">{pill.count}</span>
+            {familyLabel(pill.family)}{' '}
+            <span className="pull-room__family-count">{pill.count}</span>
           </button>
         ))}
         {family && !pills.some((pill) => pill.family === family) ? (

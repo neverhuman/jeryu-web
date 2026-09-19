@@ -7,6 +7,7 @@ import {
   fromControlPullRequest,
   groupPullRequests,
   cardFacts,
+  familyLabel,
   familyOfRepo,
   familyPills,
   filterPullSummaries,
@@ -24,6 +25,12 @@ import {
 } from '../pullRoomModel';
 
 describe('pullRoomModel', () => {
+  it('calls a family what Needs you calls it', () => {
+    expect(familyLabel('jeryu-split')).toBe('jeryu');
+    expect(familyLabel('veox-ai')).toBe('veox-ai');
+    expect(familyLabel('other')).toBe('other');
+  });
+
   it('carries the control-plane author login onto the card item', () => {
     expect(fromControlPullRequest(pr({ author: 'bob' })).author).toBe('bob');
     expect(fromControlPullRequest(pr({ author: '' })).author).toBeNull();
