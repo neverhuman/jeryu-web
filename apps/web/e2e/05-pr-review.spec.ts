@@ -59,6 +59,48 @@ test.describe('PR cockpit (W-T-13)', () => {
     await expect(heading.or(errorState)).toBeVisible({ timeout: 15_000 });
   });
 
+  test('a merged pull request is settled: a state badge, one calm line, no approve or merge controls @action:pr.settled', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
+    // The server still reports the passport of a merged PR as blocked ("merged").
+    await mockPullRequestDetail(page, {
+      repoId: `${REPO.host}:${REPO.owner}/${REPO.name}`,
+      number: PR_NUMBER,
+      title: 'Ready to pin',
+      state: 'merged',
+      head_sha: PR_SHA,
+      approvals: 1,
+      required_approvals: 1,
+      passport: 'blocked',
+      can_merge: false,
+    });
+    await page.route(/\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/diff$/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ head_sha: PR_SHA, base_sha: PR_SHA, files: [], truncated: false }),
+      })
+    );
+
+    await page.goto(`/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}`);
+    await expect(page.getByTestId('pr-state-badge')).toHaveText('Merged', { timeout: 15_000 });
+    await expect(page.getByText(/Merged into main\. Nothing is waiting/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Approve exact SHA/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Request changes' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Merge', exact: true })).toHaveCount(0);
+    await expect(page.getByText(/Merge blocked/)).toHaveCount(0);
+    await expect(page.getByText(/Passport: BLOCKED/)).toHaveCount(0);
+    // A pull request that changes no files says so instead of spinning.
+    await expect(page.getByTestId('pr-diff-note')).toHaveText('This pull request changes no files.');
+    // The repository is a link back to where the pull request lives.
+    await expect(page.getByRole('link', { name: `${REPO.owner}/${REPO.name}` }).first()).toHaveAttribute(
+      'href',
+      `/repos/${REPO.host}/${REPO.owner}/${REPO.name}`
+    );
+  });
+
   test('deep PR route returns 200 (SPA fallback) @bff', async ({ request }) => {
     const res = await request.get(
       `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/pulls/${PR_NUMBER}`,

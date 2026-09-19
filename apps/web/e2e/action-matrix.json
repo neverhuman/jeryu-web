@@ -129,6 +129,7 @@
     { "id": "shift.needs_human", "surface": "Work", "route": "/work/shift", "action": "Sort todos that wait on a person first and filter to them from a red count", "testTag": "@action:shift.needs_human", "owner": "e2e/28-shift.spec.ts" },
     { "id": "shift.lifecycle", "surface": "Work", "route": "/work/shift", "action": "Trace a todo from queued to released and link it to the PR that carries it", "testTag": "@action:shift.lifecycle", "owner": "e2e/28-shift.spec.ts" },
     { "id": "pr.request_changes", "surface": "Pull Request", "route": "/repos/:host/:owner/:repo/pulls/:number", "action": "Submit a request-changes review pinned to the head SHA", "testTag": "@action:pr.request_changes", "owner": "e2e/06-approve-sha.spec.ts" },
+    { "id": "pr.settled", "surface": "Pull Request", "route": "/repos/:host/:owner/:repo/pulls/:number", "action": "Show a merged or closed pull request as settled: state badge, no approve/merge/passport controls, empty-diff note", "testTag": "@action:pr.settled", "owner": "e2e/05-pr-review.spec.ts" },
     { "id": "pr.pipeline_events", "surface": "Pull Request", "route": "/repos/:host/:owner/:repo/pulls/:number", "action": "Show the pipeline events of the pull request with gate log tails", "testTag": "@action:pr.pipeline_events", "owner": "e2e/06-approve-sha.spec.ts" },
     { "id": "releases.staged", "surface": "Releases", "route": "/releases", "action": "Show a staged release with its deploy command, and the log link of a deploy attempt", "testTag": "@action:releases.staged", "owner": "e2e/26-releases.spec.ts" }
   ]
