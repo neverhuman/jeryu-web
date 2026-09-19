@@ -96,8 +96,8 @@ export function RepositoryBrowserPage({
   // listing is the same query the panel uses, so this costs no second request.
   const rootTree = useRepoTree(repoId, activeRef, '');
   const treeMissing = rootTree.error instanceof ApiError && rootTree.error.status === 404;
-  // Same query as the README panel (one request). No tree AND no README is a
-  // repository with no code here; a README without a tree is still shown.
+  // The README panel reads this too, so it costs one request. No tree AND no
+  // README: a repository with no code here. A README alone is still shown.
   const readme = useMarkdown(repoId, activeRef);
   const noCodeHere = treeMissing && !onFile && readme.isError;
 
