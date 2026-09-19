@@ -110,7 +110,7 @@ export function fromControlPullRequest(pr: ControlPullRequest): PullListItem {
     repoId: null,
     number: pr.number,
     title: pr.title,
-    author: null,
+    author: pr.author ?? null,
     draft: pr.draft,
     state: pr.state,
     headRef: pr.headRef,

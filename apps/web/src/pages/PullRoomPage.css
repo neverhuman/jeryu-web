@@ -561,3 +561,11 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.pull-card__author {
+  color: var(--color-fg-secondary);
+  font-size: 0.85em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

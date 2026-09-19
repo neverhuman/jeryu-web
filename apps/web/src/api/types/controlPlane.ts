@@ -55,6 +55,7 @@ export interface ControlPullRequest {
   repo: string;
   number: number;
   title: string;
+  author?: string | null;
   draft: boolean;
   state: string;
   headRef: string;

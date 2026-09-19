@@ -99,6 +99,7 @@ test('Pull Room renders filters, queue lanes, PR cards, tooling rail, and cockpi
   await expect(page.getByTestId('pull-lane-missing_checks')).toBeVisible();
   await expect(page.getByTestId('pull-lane-failing_checks')).toBeVisible();
   await expect(page.getByText('Fix BFF PR list')).toBeVisible();
+  await expect(page.getByTestId('pull-card-alice/jeryu-7').getByTestId('pull-card-author')).toHaveText('by alice');
   await expect(page.getByText('Tooling opportunities')).toBeVisible();
   await expect(page.getByText('normalized retry loop repeated across API clients')).toBeVisible();
 
@@ -195,6 +196,7 @@ function controlPlane() {
         repo: 'alice/jeryu',
         number: 7,
         title: 'Fix BFF PR list',
+        author: 'alice',
         draft: false,
         state: 'open',
         headRef: 'feature/pulls',

@@ -28,6 +28,11 @@ export function PullRequestCard({
         <span className="pull-card__repo">{item.repo}</span>
         <span className="pull-card__number">#{item.number}</span>
       </div>
+      {item.author ? (
+        <div className="pull-card__author" data-testid="pull-card-author">
+          by {item.author}
+        </div>
+      ) : null}
       <h3 className="pull-card__title">
         <Link to={item.url}>{item.title}</Link>
       </h3>
