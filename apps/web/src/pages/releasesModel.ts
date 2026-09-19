@@ -133,7 +133,7 @@ export function behindLabel(row: EnvironmentRow): string | null {
     : `${prs} PR${prs === 1 ? '' : 's'} (${commits}) behind`;
 }
 
-/** `repo:owner/name` or `family:name`: the value of one option in the scope select. */
+/** `repo:owner/name` or `family:name`: the value of one option in the scope picker. */
 export type ReleaseScopeValue = `repo:${string}` | `family:${string}`;
 
 export interface ReleaseScopeOption {
@@ -142,9 +142,9 @@ export interface ReleaseScopeOption {
 }
 
 /**
- * What the scope select offers: the deploy repos the forge knows (from the
- * pins API), their families, and whatever the URL currently names, so the
- * current scope is always selectable.
+ * What the scope picker offers: the deploy repos the forge knows (the pins
+ * API lists them), their families, and whatever the URL currently names, so
+ * the current scope is always one of the options.
  */
 export function releaseScopeOptions(
   current: { repo: string | null; family: string | null },
@@ -167,7 +167,7 @@ export function releaseScopeOptions(
   return options;
 }
 
-/** The query a scope option stands for, or null for a value the select never offers. */
+/** The query a scope option stands for, or null for a value the picker never offers. */
 export function scopeParams(value: string): { repo: string } | { family: string } | null {
   if (value.startsWith('repo:') && value.slice(5).includes('/')) return { repo: value.slice(5) };
   if (value.startsWith('family:') && value.length > 7) return { family: value.slice(7) };
