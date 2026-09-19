@@ -40,20 +40,26 @@ export function isPipelineForbidden(error: unknown): boolean {
 }
 
 /**
- * Refetch every pipeline query when the server pushes on the `pipeline` scope.
- * The WebSocket is a nudge only; polling keeps the page right without it.
+ * Refetch `queryKey` (default: every pipeline query) when the server pushes on
+ * the `pipeline` scope. The WebSocket is a nudge only; polling keeps the page
+ * right without it. Enable it only once a pipeline read has succeeded, so an
+ * older server or a non-admin session never subscribes to an unknown scope.
  */
-export function usePipelineNudge(enabled = true): void {
+export function usePipelineNudge(
+  enabled = true,
+  queryKey: readonly unknown[] = PIPELINE_KEY
+): void {
   const queryClient = useQueryClient();
+  const keyId = JSON.stringify(queryKey);
   useRealtime(enabled ? [PIPELINE_SCOPE] : []);
   useEffect(() => {
     if (!enabled) return () => {};
     return useRealtimeStore.getState().addInvalidator((event) => {
       if (event.scope === PIPELINE_SCOPE) {
-        void queryClient.invalidateQueries({ queryKey: PIPELINE_KEY });
+        void queryClient.invalidateQueries({ queryKey: JSON.parse(keyId) as unknown[] });
       }
     });
-  }, [enabled, queryClient]);
+  }, [enabled, keyId, queryClient]);
 }
 
 /** What needs a human right now. Polls every 15 s; stops once known-unavailable. */

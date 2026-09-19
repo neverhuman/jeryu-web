@@ -1,0 +1,234 @@
+/* Activity.css — the pipeline event feed, its wall mode, and event rows. */
+
+.activity__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.activity__filters label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.activity__filters input[type='text'] {
+  min-width: 9rem;
+  padding: var(--space-1) var(--space-2);
+  background-color: var(--color-bg-1);
+  color: var(--color-fg-primary);
+  border: 1px solid var(--color-border-strong);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.activity__filters .activity__check {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1);
+}
+
+.activity__wall-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.activity__live,
+.activity__counter-note {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.activity__error {
+  margin: 0;
+  color: var(--color-accent-danger);
+  font-size: var(--font-size-sm);
+}
+
+.activity__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-1);
+}
+
+.activity-row {
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-left: 3px solid transparent;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.activity-row:last-child {
+  border-bottom: 0;
+}
+
+.activity-row--danger {
+  border-left-color: var(--color-accent-danger);
+}
+
+.activity-row--warning {
+  border-left-color: var(--color-accent-warning);
+}
+
+.activity-row--success {
+  border-left-color: var(--color-accent-success);
+}
+
+.activity-row.is-needs-human {
+  background-color: var(--color-accent-danger-bg);
+}
+
+.activity-row.is-needs-human .activity-row__summary {
+  color: var(--color-accent-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
+.activity-row__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+
+.activity-row__time,
+.activity-row__source,
+.activity-row__meta {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.activity-row__source {
+  color: var(--color-accent-info);
+}
+
+.activity-row__summary {
+  color: var(--color-fg-primary);
+  overflow-wrap: anywhere;
+}
+
+.activity-row__link {
+  font-size: var(--font-size-xs);
+}
+
+.activity-row__toggle {
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  background: transparent;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.activity-row__toggle:hover {
+  color: var(--color-accent-primary);
+}
+
+.activity-row__toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.activity-row__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.activity-row__reason {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.activity-row__log {
+  margin: 0;
+  max-height: 24rem;
+  overflow: auto;
+  padding: var(--space-3);
+  background-color: var(--color-bg-3);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-fg-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Wall mode ----------------------------------------------------------- */
+
+.activity--wall {
+  min-height: 100%;
+  gap: var(--space-4);
+}
+
+.activity--wall .activity-row {
+  font-size: var(--font-size-lg);
+  padding: var(--space-3) var(--space-4);
+}
+
+.activity--wall .activity-row__time,
+.activity--wall .activity-row__source,
+.activity--wall .activity-row__meta {
+  font-size: var(--font-size-sm);
+}
+
+.activity__counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-base);
+  padding-bottom: var(--space-2);
+  background-color: var(--color-bg-0);
+}
+
+.activity__counter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.activity__counter-value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-primary);
+  line-height: var(--line-height-tight);
+}
+
+.activity__counter--danger .activity__counter-value {
+  color: var(--color-accent-danger);
+}
+
+.activity__counter-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.activity__counter-note {
+  grid-column: 1 / -1;
+}

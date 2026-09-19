@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import type { AttentionItem } from '../../api/types';
 import { CopyCommand } from '../../components/copy/CopyCommand';
 import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
-import { useAttention, usePipelineNudge } from '../../hooks/usePipeline';
+import { ATTENTION_QUERY_KEY, useAttention, usePipelineNudge } from '../../hooks/usePipeline';
 import { formatAgo } from '../shift/shiftModel';
 import {
   groupAttention,
@@ -27,7 +27,7 @@ import './NeedsYou.css';
 
 export function NeedsYouPage(): JSX.Element {
   const attention = useAttention();
-  usePipelineNudge(attention.isSuccess);
+  usePipelineNudge(attention.isSuccess, ATTENTION_QUERY_KEY);
   const items = attention.data?.items ?? [];
   const groups = groupAttention(items);
   const now = new Date();

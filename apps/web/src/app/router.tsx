@@ -13,6 +13,7 @@ import { Navigate, createBrowserRouter, useParams } from 'react-router-dom';
 
 import { AppShell } from '../layout/AppShell';
 import { HomeRedirect } from '../layout/HomeRedirect';
+import { ActivityPage } from '../pages/activity';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { AuditPage } from '../pages/AuditPage';
 import { FleetPage } from '../pages/FleetPage';
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
       { path: 'login', element: <HomeRedirect /> },
       { path: 'signup', element: <HomeRedirect /> },
       { path: 'needs-you', element: <NeedsYouPage /> },
+      { path: 'activity', element: <ActivityPage /> },
       { path: 'repos', element: <RepositoriesPage /> },
       { path: 'repos/new', element: <RepositoriesPage mode="create" /> },
       // Family drill-down. Declared before the `repos/:provider/*` catch-all

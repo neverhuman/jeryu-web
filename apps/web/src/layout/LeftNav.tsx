@@ -8,6 +8,7 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import {
+  Activity,
   Bell,
   Bot,
   Code2,
@@ -40,6 +41,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: NEEDS_YOU_PATH, label: 'Needs you', icon: Siren, badge: 'attention' },
+  { to: '/activity', label: 'Activity', icon: Activity },
   { to: '/repos', label: 'Repositories', icon: FolderGit2 },
   { to: '/work', label: 'Work', icon: ClipboardList },
   // Reconciled: the route map (router.tsx) and command palette both use

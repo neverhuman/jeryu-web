@@ -4,7 +4,8 @@
 //   │ <GlobalHeader />                                    │
 //   ├──────────┬─────────────────────────────────────────┤
 //   │ <LeftNav  │ <Outlet />                              │
-//   │   />      │                                         │
+//   │   />      ├─────────────────────────────────────────┤
+//   │           │ <LiveActivityDock /> (collapsible)      │
 //   ├──────────┴─────────────────────────────────────────┤
 //   │ <StatusBar />                                       │
 //   └────────────────────────────────────────────────────┘
@@ -18,6 +19,7 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { CommandPalette } from './CommandPalette';
 import { GlobalHeader } from './GlobalHeader';
 import { LeftNav } from './LeftNav';
+import { LiveActivityDock } from './LiveActivityDock';
 import { StatusBar } from './StatusBar';
 import { useCommandStore } from '../stores/commandStore';
 import { useKeyboardShortcut } from '../hooks/useKeyboard';
@@ -94,6 +96,21 @@ export function AppShell(): JSX.Element {
   });
   useKeyboardShortcut('g f', () => navigate('/runners'), {
     label: 'Go to Runners',
+    group: 'Navigation',
+    enabled: !!auth.user,
+  });
+  useKeyboardShortcut('g a', () => navigate('/activity'), {
+    label: 'Go to Activity',
+    group: 'Navigation',
+    enabled: !!auth.user,
+  });
+  useKeyboardShortcut('g l', () => navigate('/releases'), {
+    label: 'Go to Releases',
+    group: 'Navigation',
+    enabled: !!auth.user,
+  });
+  useKeyboardShortcut('g u', () => navigate('/unreleased'), {
+    label: 'Go to Unreleased',
     group: 'Navigation',
     enabled: !!auth.user,
   });
@@ -178,6 +195,7 @@ export function AppShell(): JSX.Element {
       <main className="app-shell__main" id="main-content">
         <Outlet />
       </main>
+      <LiveActivityDock />
       <footer className="app-shell__status">
         <StatusBar />
       </footer>
