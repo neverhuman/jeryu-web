@@ -14,20 +14,17 @@ test.describe('Work shift tabs', () => {
     await page.context().route('**/api/v1/ws', (route) => route.abort());
   });
 
-  test('tabs from Tracker into Queue, filter and expand a todo @action:shift.tabs @action:shift.queue_filter', async ({
+  test('opens Work on the Queue, filter and expand a todo @action:shift.tabs @action:shift.queue_filter', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'user' } });
-    await page.route('**/api/v1/work', (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], total: 0 }) })
-    );
     await mockShiftApi(page);
 
     await page.goto('/work');
     const tabs = page.getByRole('navigation', { name: 'Work' });
-    await expect(tabs.getByRole('link', { name: 'Tracker' })).toHaveAttribute('aria-current', 'page');
-    await tabs.getByRole('link', { name: 'Queue' }).click();
     await expect(page).toHaveURL(/\/work\/shift$/);
+    await expect(tabs.getByRole('link', { name: 'Queue' })).toHaveAttribute('aria-current', 'page');
+    await expect(tabs.getByRole('link', { name: 'Tracker' })).toHaveCount(0);
     await expect(page.getByTestId('shift-queue-page')).toBeVisible();
     await expect(page.getByTestId(`shift-branch-${NIGHT}`)).toContainText('last night');
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();

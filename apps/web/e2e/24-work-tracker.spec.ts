@@ -1,6 +1,7 @@
 // 24-work-tracker.spec.ts — Work Tracker route smoke.
 //
-// The Work pages are routed through both split-wide and repo-scoped URLs.
+// Work items are routed through repo-scoped URLs and the split-wide /work/:key
+// detail; the split-wide /work board itself now redirects to the shift Queue.
 // This spec mocks the Work REST payloads at the browser boundary so it locks
 // the SPA route/render contract without depending on a seeded local forge.
 
@@ -25,14 +26,10 @@ test.describe('Work Tracker routes', () => {
   }) => {
     const shell = new AppShellPage(page);
 
+    // The split-wide Tracker is retired: /work opens the shift Queue.
     await page.goto('/work');
     await shell.assertShellLoaded();
-    await expect(page.getByRole('heading', { level: 1, name: 'Work' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Fix cache key' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '#42' })).toHaveAttribute(
-      'href',
-      '/repos/jeryu/alice/jeryu/issues#42'
-    );
+    await expect(page).toHaveURL(/\/work\/shift$/);
 
     await page.goto('/work/JRY-1');
     await expect(page.getByTestId('work-detail-page')).toBeVisible();
@@ -62,7 +59,7 @@ test.describe('Work Tracker routes', () => {
     const commentBodies: unknown[] = [];
     const linkBodies: unknown[] = [];
 
-    await page.route('**/api/v1/work', async (route: Route, request) => {
+    await page.route(/\/api\/v1\/(repos\/[^/]+\/)?work$/, async (route: Route, request) => {
       if (request.method() !== 'POST') {
         await route.fallback();
         return;
@@ -141,7 +138,7 @@ test.describe('Work Tracker routes', () => {
     );
 
     const shell = new AppShellPage(page);
-    await page.goto('/work');
+    await page.goto('/repos/jeryu/alice/jeryu/work');
     await shell.assertShellLoaded();
 
     const createRegion = page.getByRole('region', { name: 'Create work item' });
@@ -151,8 +148,8 @@ test.describe('Work Tracker routes', () => {
     const filters = page.locator('section[aria-label="Work filters"]');
     await filters.getByLabel('Status').selectOption('ready');
     await filters.getByLabel('Priority').selectOption('p1');
-    await page.getByLabel('Search work').fill('cache');
-    await expect(page.getByRole('link', { name: 'Fix cache key' })).toBeVisible();
+    await page.getByLabel('Search work').fill('follow-up');
+    await expect(page.getByRole('link', { name: 'Repo scoped follow-up' })).toBeVisible();
 
     await titleInput.fill('New tracked action');
     await createButton.click();

@@ -18,6 +18,7 @@ import {
   slotLabel,
   sortShifts,
   splitParagraphs,
+  todoCost,
   todoWorkers,
 } from '../shift/shiftModel';
 import { SHIFTS, TODOS, attempt, todo } from './shiftTestData';
@@ -132,5 +133,11 @@ describe('slotLabel', () => {
     expect(slotLabel('alton@xbabe0', 'xbabe0', 'w1')).toBe('alton@xbabe0/w1');
     expect(slotLabel('alton', 'xbabe0', 'w1')).toBe('alton@xbabe0/w1');
     expect(slotLabel('alton', '', 'w1')).toBe('alton/w1');
+  });
+
+  it('totals a todo cost across attempts, null when none reported one', () => {
+    expect(todoCost(todo())).toBeNull();
+    expect(todoCost(todo({ worked_by: [attempt({ cost_usd: null })] }))).toBeNull();
+    expect(todoCost(todo({ worked_by: [attempt({ cost_usd: 1.25 }), attempt({ cost_usd: null }), attempt({ cost_usd: 0.5 })] }))).toBe(1.75);
   });
 });

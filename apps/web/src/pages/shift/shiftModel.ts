@@ -192,6 +192,12 @@ export function formatAgo(iso: string | null | undefined, now: Date): string {
   return future ? `in ${text}` : `${text} ago`;
 }
 
+/** What a todo has cost so far: the sum of its attempts' costs, or null when none reported one. */
+export function todoCost(todo: Pick<ShiftTodo, 'worked_by'>): number | null {
+  const costs = todo.worked_by.map((a) => a.cost_usd).filter((c): c is number => typeof c === 'number');
+  return costs.length === 0 ? null : costs.reduce((sum, c) => sum + c, 0);
+}
+
 export function formatCost(cost: number | null | undefined): string {
   return cost === null || cost === undefined ? '—' : `$${cost.toFixed(2)}`;
 }

@@ -38,7 +38,6 @@ import { ToolFleetToolPage } from '../pages/ToolFleetToolPage';
 import { ToolsPage } from '../pages/ToolsPage';
 import { RepoRouter } from '../pages/RepoRouter';
 import { WorkDetailPage } from '../pages/WorkDetailPage';
-import { WorkPage } from '../pages/WorkPage';
 import { ShiftAddPage, ShiftQueuePage, ShiftWorkersPage } from '../pages/shift';
 
 import {
@@ -71,7 +70,8 @@ export const router = createBrowserRouter([
         path: 'repos/:provider/*',
         element: <RepoRouter />,
       },
-      { path: 'work', element: <WorkPage /> },
+      // The split-wide Tracker is retired; Work opens on the shift Queue.
+      { path: 'work', element: <Navigate to="/work/shift" replace /> },
       // Static `shift` segments outrank the dynamic `:key` detail route.
       { path: 'work/shift', element: <ShiftQueuePage /> },
       { path: 'work/shift/new', element: <ShiftAddPage /> },

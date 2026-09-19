@@ -30,6 +30,7 @@ import {
   filterShiftTodos,
   formatAgo,
   formatCost,
+  todoCost,
   isLastNight,
   latestWorker,
   ownerOf,
@@ -164,6 +165,7 @@ function FamilyQueue({
                   <th scope="col">Requested by</th>
                   <th scope="col">Worker</th>
                   <th scope="col">Lease / attempts</th>
+                  <th scope="col">Cost</th>
                   <th scope="col">Commits</th>
                   {isAdmin ? <th scope="col">Actions</th> : null}
                 </tr>
@@ -262,6 +264,7 @@ function TodoRow({
             ? `lease ${formatAgo(todo.lease_until, now)}`
             : `${todo.attempts} attempt${todo.attempts === 1 ? '' : 's'}`}
         </td>
+        <td className="shift__cost">{formatCost(todoCost(todo))}</td>
         <td>
           {commits.length === 0 ? (
             '—'
@@ -283,7 +286,7 @@ function TodoRow({
       </tr>
       {open ? (
         <tr className="shift__detail" id={detailId}>
-          <td colSpan={isAdmin ? 9 : 8}>
+          <td colSpan={isAdmin ? 10 : 9}>
             <TodoDetail todo={todo} />
           </td>
         </tr>

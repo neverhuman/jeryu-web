@@ -44,6 +44,9 @@ describe('ShiftQueuePage', () => {
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy/code'
     );
+    expect(screen.getByRole('columnheader', { name: 'Cost' })).toBeInTheDocument();
+    expect(within(done).getByText('$1.25')).toBeInTheDocument();
+    expect(within(screen.getByTestId('shift-todo-20260918-1832-k3f')).getByText('—', { selector: '.shift__cost' })).toBeInTheDocument();
     expect(calls.some((c) => c.pathname === '/api/v1/shift/todos' && c.search === '?family=jeryu')).toBe(true);
     expect(calls.some((c) => c.pathname === '/api/v1/shift/shifts' && c.search === '?family=jeryu')).toBe(true);
   });
