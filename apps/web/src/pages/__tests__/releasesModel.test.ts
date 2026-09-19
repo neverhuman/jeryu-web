@@ -12,7 +12,11 @@ import {
   buildEnvironmentRows,
   EXPECTED_ENVIRONMENTS,
   releasePullHref,
+  releaseScopeOptions,
   safeLogUrl,
+  scopeParams,
+  splitEnvironments,
+  unreleasedHref,
   unshippedPulls,
 } from '../releasesModel';
 
@@ -153,5 +157,48 @@ it('does not present a partial compare as an exact PR count', () => {
     expect(safeLogUrl('javascript:alert(1)')).toBeNull();
     expect(safeLogUrl(null)).toBeNull();
     expect(releasePullHref('jeryu/jeryu-deploy', 48)).toBe('/repos/jeryu/jeryu/jeryu-deploy/pulls/48');
+  });
+});
+
+describe('one Releases page', () => {
+  it('offers known deploy repos, their families and the current scope', () => {
+    const options = releaseScopeOptions(
+      { repo: 'veox/jain-web', family: null },
+      [
+        { repo: 'jeryu/jeryu-deploy', family: 'jeryu' },
+        { repo: 'veox/jain-deploy', family: null },
+        { repo: 'not-a-repo', family: 'jain' },
+      ],
+      'jeryu/jeryu-deploy'
+    );
+    expect(options.map((o) => o.value)).toEqual([
+      'repo:jeryu/jeryu-deploy',
+      'repo:veox/jain-deploy',
+      'repo:veox/jain-web',
+      'family:jain',
+      'family:jeryu',
+    ]);
+    expect(options[3].label).toBe('jain family (every repository)');
+  });
+
+  it('turns a scope option back into its query, and refuses anything else', () => {
+    expect(scopeParams('repo:jeryu/jeryu-deploy')).toEqual({ repo: 'jeryu/jeryu-deploy' });
+    expect(scopeParams('family:jeryu')).toEqual({ family: 'jeryu' });
+    expect(scopeParams('repo:nope')).toBeNull();
+    expect(scopeParams('family:')).toBeNull();
+    expect(scopeParams('jeryu')).toBeNull();
+  });
+
+  it('shows only environments with something live or in flight; the rest fold away', () => {
+    const rows = buildEnvironmentRows([production], new Map([[sha('b'), compare('b', [])]]), []);
+    const { live, other } = splitEnvironments(rows);
+    expect(live.map((row) => row.name)).toEqual(['production']);
+    expect(other.map((row) => row.name)).toEqual(['stable', 'canary', 'dev']);
+  });
+
+  it('links to the unreleased section of the same page', () => {
+    expect(unreleasedHref({ repo: 'jeryu/jeryu-web' })).toBe('/releases?repo=jeryu%2Fjeryu-web#unreleased');
+    expect(unreleasedHref({ family: 'jeryu' })).toBe('/releases?family=jeryu#unreleased');
+    expect(unreleasedHref({})).toBe('/releases#unreleased');
   });
 });

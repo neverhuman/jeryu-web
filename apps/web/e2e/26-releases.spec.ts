@@ -116,18 +116,19 @@ test('environments show the live release, rollback target and unshipped PRs @act
     /#21 feat: runners page/,
     /#20 chore: jankurai pin/,
   ]);
-  // Unshipped PRs open the pull request; Releases links across to Unreleased.
+  // Unshipped PRs open the pull request; the unreleased list is a section of this page.
   await expect(behind.getByRole('link', { name: '#21 feat: runners page' })).toHaveAttribute(
     'href',
     '/repos/jeryu/jeryu/jeryu-deploy/pulls/21'
   );
-  await expect(page.getByRole('link', { name: "See this repository's unreleased pull requests" })).toHaveAttribute(
-    'href',
-    '/unreleased?repo=jeryu%2Fjeryu-deploy'
-  );
+  await expect(page.getByRole('heading', { name: 'Merged, not yet released' })).toBeVisible();
+  await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
   // No attention feed for this viewer: no staged banner.
   await expect(page.getByTestId('releases-staged')).toHaveCount(0);
 
+  // Environments with nothing live fold away until asked for.
+  await expect(page.getByTestId('releases-env-canary')).toBeHidden();
+  await page.getByTestId('releases-other-environments').locator('summary').click();
   await expect(page.getByTestId('releases-env-canary')).toContainText('not configured');
   await expect(page.getByTestId('releases-empty')).toHaveCount(0);
 });
@@ -140,6 +141,9 @@ test('a repository with no recorded deployment says so @action:releases.empty', 
   await expect(page.getByTestId('releases-empty')).toContainText(
     'No deployment of jeryu/jeryu-deploy has been recorded yet'
   );
+  // Nothing is live anywhere, so no environment row competes with that sentence.
+  await expect(page.getByTestId('releases-env-production')).toBeHidden();
+  await page.getByTestId('releases-other-environments').locator('summary').click();
   await expect(page.getByTestId('releases-env-production')).toContainText('not configured');
 });
 

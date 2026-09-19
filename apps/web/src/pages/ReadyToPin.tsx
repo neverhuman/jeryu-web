@@ -22,12 +22,8 @@ import {
   type ConsumerPins,
   type PinScope,
 } from './pinsModel';
+import { unreleasedHref } from './releasesModel';
 
-const TONE_PILL: Record<ReturnType<typeof pinTone>, string> = {
-  neutral: '',
-  warning: 'page__pill--warning',
-  danger: 'page__pill--danger',
-};
 
 export function ReadyToPin({ scope }: { scope: PinScope }): JSX.Element | null {
   const { user } = useAuth();
@@ -98,10 +94,14 @@ function PinRow({ pin }: { pin: Pin }): JSX.Element {
   return (
     <li className="pins__row" data-testid={`pin-${pin.dependency}`} data-state={pinStateOf(pin)}>
       <p className="pins__line">
-        <Link to={`/unreleased?repo=${encodeURIComponent(pin.dependency)}`}>
-          {shortRepo(pin.dependency)}
-        </Link>{' '}
-        <span className={`page__pill ${TONE_PILL[pinTone(pin)]}`}>{pinLabel(pin)}</span>{' '}
+        <Link to={unreleasedHref({ repo: pin.dependency })}>{shortRepo(pin.dependency)}</Link>
+        {': '}
+        {pinTone(pin) === 'danger' ? (
+          <span className="page__pill page__pill--danger">{pinLabel(pin)}</span>
+        ) : (
+          <span className="pins__label">{pinLabel(pin)}</span>
+        )}
+        {' · '}
         <span className="pins__step">
           {step.to ? <Link to={step.to}>{step.text}</Link> : step.text}
         </span>

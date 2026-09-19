@@ -109,11 +109,6 @@ export function AppShell(): JSX.Element {
     group: 'Navigation',
     enabled: !!auth.user,
   });
-  useKeyboardShortcut('g u', () => navigate('/unreleased'), {
-    label: 'Go to Unreleased',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
   useKeyboardShortcut('g i', () => navigate('/intelligence'), {
     label: 'Go to Intelligence',
     group: 'Navigation',

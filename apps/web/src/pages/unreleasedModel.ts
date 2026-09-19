@@ -112,7 +112,7 @@ export function classifyPulls(
   const committedAt = new Map(compare?.commits.map((c) => [c.sha, c.committed_at]) ?? []);
   const rows: UnreleasedRow[] = [];
   for (const pr of pulls) {
-    if (pr.state === 'closed') continue;
+    if (pr.state === 'closed' || !hasPosture(pr)) continue;
     let status: UnreleasedStatus;
     if (pr.state === 'open') {
       status = openStatus(pr);
@@ -190,3 +190,14 @@ export function unreleasedHref(scope: { repo: string } | { family: string }): st
     ? `/unreleased?repo=${encodeURIComponent(scope.repo)}`
     : `/unreleased?family=${encodeURIComponent(scope.family)}`;
 }
+
+/**
+ * A pull request this list can describe. An older or partial payload may omit
+ * the repository or the check and review posture; such an item is left out
+ * rather than taking the page down.
+ */
+function hasPosture(pr: PullRequestSummary): boolean {
+  const loose: Partial<PullRequestSummary> = pr;
+  return Boolean(loose.repo && loose.checks && loose.review);
+}
+

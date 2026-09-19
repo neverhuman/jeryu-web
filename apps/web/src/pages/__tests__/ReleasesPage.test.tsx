@@ -1,5 +1,5 @@
 // ReleasesPage.test.tsx — the staged-release banner, the deploy log link,
-// linked unshipped PRs, and the link across to Unreleased.
+// linked unshipped PRs, the folded environments and the unreleased section.
 
 import { screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -108,12 +108,17 @@ describe('ReleasesPage', () => {
     expect(unpinned).not.toHaveTextContent('jeryu-core');
     expect(within(unpinned).getByRole('link', { name: 'See what a bump would ship' })).toHaveAttribute(
       'href',
-      '/unreleased?repo=jeryu%2Fjeryu-deploy'
+      '/releases?repo=jeryu%2Fjeryu-deploy#unreleased'
     );
-    expect(screen.getByRole('link', { name: "See this repository's unreleased pull requests" })).toHaveAttribute(
-      'href',
-      '/unreleased?repo=jeryu%2Fjeryu-deploy'
-    );
+    // One page: the unreleased list is a section here, not a second page.
+    expect(screen.getByRole('heading', { name: 'Merged, not yet released' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Also show released pull requests')).not.toBeChecked();
+    // The scope is a real select that always offers the current repository.
+    expect(screen.getByLabelText('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
+    // Environments with nothing live fold away; production is the only row shown.
+    const other = screen.getByTestId('releases-other-environments');
+    expect(other).not.toHaveAttribute('open');
+    expect(within(other).getByText(/3 other environments with nothing\s+live \(stable, canary, dev\)/)).toBeInTheDocument();
   });
 
   it('shows no staged banner to non-admins and never asks for attention', async () => {

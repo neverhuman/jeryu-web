@@ -39,10 +39,10 @@ describe('pinsModel', () => {
     expect(splitPins({ repo: 'a/b', family: null, branch: 'main', pins: [odd] }).open).toHaveLength(1);
   });
 
-  it('is red only where a person is the next step', () => {
+  it('is red only where something is wrong: a trailing tag is a standing fact, not an alarm', () => {
     expect(pinTone(pin({ dependency: 'a/web', behind: 9, state: 'behind' }))).toBe('neutral');
     expect(pinTone(pin({ dependency: 'a/web', behind: 9, state: 'behind_not_green' }))).toBe('neutral');
-    expect(pinTone(pin({ dependency: 'a/core', kind: 'tag', behind: 3, state: 'behind' }))).toBe('warning');
+    expect(pinTone(pin({ dependency: 'a/core', kind: 'tag', behind: 3, state: 'behind' }))).toBe('neutral');
     expect(pinTone(pin({ dependency: 'a/web', state: 'diverged' }))).toBe('danger');
   });
 

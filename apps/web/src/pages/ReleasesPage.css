@@ -82,3 +82,32 @@
   margin: 0;
   font-weight: var(--font-weight-semibold);
 }
+
+/* Scope select, folded environments, plain pin sentences. */
+.releases__repo select {
+  min-width: 18rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-1);
+  color: var(--color-fg-primary);
+  font: inherit;
+}
+
+.releases__other {
+  margin-top: var(--space-2);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.releases__other > summary {
+  cursor: pointer;
+}
+
+.pins__label {
+  color: var(--color-fg-secondary);
+}
+
+.unreleased__repo {
+  margin-top: var(--space-3);
+}

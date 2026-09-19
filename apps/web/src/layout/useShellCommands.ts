@@ -75,18 +75,10 @@ export function useShellCommands(): void {
       {
         id: 'nav.releases',
         title: 'Go to Releases',
-        keywords: ['release', 'deploy', 'production', 'environment', 'rollback', 'staged'],
+        keywords: ['release', 'deploy', 'production', 'environment', 'rollback', 'staged', 'unreleased', 'unshipped', 'pin'],
         icon: 'rocket',
         target: { kind: 'route', path: '/releases' },
         shortcut: 'g l',
-      },
-      {
-        id: 'nav.unreleased',
-        title: 'Go to Unreleased',
-        keywords: ['unreleased', 'unshipped', 'merged', 'pending release'],
-        icon: 'package-open',
-        target: { kind: 'route', path: '/unreleased' },
-        shortcut: 'g u',
       },
       {
         id: 'nav.pull-room',

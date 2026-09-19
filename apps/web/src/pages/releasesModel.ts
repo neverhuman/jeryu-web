@@ -132,3 +132,69 @@ export function behindLabel(row: EnvironmentRow): string | null {
     ? `${commits} behind`
     : `${prs} PR${prs === 1 ? '' : 's'} (${commits}) behind`;
 }
+
+/** `repo:owner/name` or `family:name`: the value of one option in the scope select. */
+export type ReleaseScopeValue = `repo:${string}` | `family:${string}`;
+
+export interface ReleaseScopeOption {
+  value: ReleaseScopeValue;
+  label: string;
+}
+
+/**
+ * What the scope select offers: the deploy repos the forge knows (from the
+ * pins API), their families, and whatever the URL currently names, so the
+ * current scope is always selectable.
+ */
+export function releaseScopeOptions(
+  current: { repo: string | null; family: string | null },
+  known: ReadonlyArray<{ repo: string; family?: string | null }>,
+  fallbackRepo: string
+): ReleaseScopeOption[] {
+  const repos = new Set<string>([fallbackRepo]);
+  const families = new Set<string>();
+  for (const entry of known) {
+    if (entry.repo.includes('/')) repos.add(entry.repo);
+    if (entry.family) families.add(entry.family);
+  }
+  if (current.repo) repos.add(current.repo);
+  if (current.family) families.add(current.family);
+  const options: ReleaseScopeOption[] = [];
+  for (const repo of Array.from(repos).sort()) options.push({ value: `repo:${repo}`, label: repo });
+  for (const family of Array.from(families).sort()) {
+    options.push({ value: `family:${family}`, label: `${family} family (every repository)` });
+  }
+  return options;
+}
+
+/** The query a scope option stands for, or null for a value the select never offers. */
+export function scopeParams(value: string): { repo: string } | { family: string } | null {
+  if (value.startsWith('repo:') && value.slice(5).includes('/')) return { repo: value.slice(5) };
+  if (value.startsWith('family:') && value.length > 7) return { family: value.slice(7) };
+  return null;
+}
+
+/**
+ * Environments worth a row: configured ones. "stable / canary / dev: not
+ * configured" and an environment with nothing live say nothing a person can
+ * act on, so they fold away.
+ */
+export function splitEnvironments(rows: EnvironmentRow[]): {
+  live: EnvironmentRow[];
+  other: EnvironmentRow[];
+} {
+  const live = rows.filter((row) => row.current !== null || row.pendingAttempt !== null);
+  const other = rows.filter((row) => !live.includes(row));
+  return { live, other };
+}
+
+/** Where the merged-not-released list lives, for one repository or family. */
+export function unreleasedHref(scope: { repo?: string | null; family?: string | null }): string {
+  const query = scope.family
+    ? `?family=${encodeURIComponent(scope.family)}`
+    : scope.repo
+      ? `?repo=${encodeURIComponent(scope.repo)}`
+      : '';
+  return `/releases${query}#unreleased`;
+}
+

@@ -1,4 +1,4 @@
-// 28-unreleased.spec.ts — Unreleased page: one row per pull request, grouped
+// 28-unreleased.spec.ts — the unreleased section of Releases (once its own page): one row per pull request, grouped
 // by repository, classified against each repository's newest release.
 //
 // The family view lists members from `/api/v1/repos?family=`, then per repo
@@ -23,8 +23,12 @@ test('family view groups PRs by repo and classifies them per release source @act
 }) => {
   await mockBootstrap(page);
   await mockUnreleasedFamily(page);
+  // The old page's URL still works: it lands on the last section of Releases.
   await page.goto('/unreleased?family=jeryu');
+  await expect(page).toHaveURL(/\/releases\?family=jeryu#unreleased$/);
   await expect(page.getByTestId('unreleased-page')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: 'Merged, not yet released' })).toBeVisible();
+  await expect(page.getByLabel('Repository or family')).toHaveValue('family:jeryu');
   await expect(page.getByTestId('unreleased-repo-jeryu/elsewhere')).toHaveCount(0);
 
   // Deployment-based: production runs rel-a.
@@ -70,7 +74,7 @@ test('family view groups PRs by repo and classifies them per release source @act
   );
 });
 
-test('the nav links to the unreleased page for one repository @action:unreleased.repo', async ({ page }) => {
+test('Releases carries the unreleased list for one repository; there is no second nav item @action:unreleased.repo', async ({ page }) => {
   await mockBootstrap(page);
   await mockRepo(page, 'jeryu-deploy', {
     environments: [production],
@@ -79,8 +83,8 @@ test('the nav links to the unreleased page for one repository @action:unreleased
   });
 
   await page.goto('/releases');
-  await page.getByRole('link', { name: 'Unreleased', exact: true }).click();
-  await expect(page).toHaveURL(/\/unreleased$/);
+  await expect(page.getByRole('link', { name: 'Unreleased', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
   await expect(page.getByTestId('unreleased-summary-jeryu/jeryu-deploy')).toHaveText(
     'main matches rel-a — nothing to release'
   );

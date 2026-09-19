@@ -79,7 +79,7 @@ async function mockPullRoom(page: Page, snapshot = controlPlane()): Promise<void
   });
 }
 
-test('Pull Room renders filters, queue lanes, PR cards, tooling rail, and cockpit links @action:pull_room.filters @action:pull_room.search @action:pull_room.cockpit_link', async ({
+test('Pull Room renders filters, queue lanes, PR cards and cockpit links @action:pull_room.filters @action:pull_room.search @action:pull_room.cockpit_link', async ({
   page,
 }) => {
   await blockWebSocket(page);

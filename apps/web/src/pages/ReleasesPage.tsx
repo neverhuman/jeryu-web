@@ -1,22 +1,38 @@
-// ReleasesPage.tsx — what each environment runs, and what it is missing.
+// ReleasesPage.tsx — one page for "what is released, and what could be".
 //
-// One row per environment (production, stable, canary, dev, then any other
-// the forge has recorded): the live commit and release, who deployed it and
-// when, the rollback target, a failed or running newer attempt, the live URL,
-// and how many merged pull requests the default branch has that the
-// environment does not. Environments with no recorded deployment render as
-// "not configured" rather than disappearing, so the pipeline's shape shows.
+//   1. What runs: one row per CONFIGURED environment (the live commit and
+//      release, who deployed it and when, the rollback target, a failed or
+//      running newer attempt, and how many merged pull requests main has that
+//      the environment does not). Environments with nothing recorded fold
+//      behind "other environments".
+//   2. Ready to pin: merged in a dependency, not yet in the deploy repo's pin.
+//   3. Merged, not yet released: the pull requests no release carries yet.
+//
+// Scope comes from `?repo=owner/name` (default the jeryu deploy repo) or
+// `?family=<family>`. `/unreleased` redirects here (see UnreleasedRedirect).
 
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { useAuth } from '../hooks/useAuth';
 import { useAttention, usePins } from '../hooks/usePipeline';
 
 import { useReleaseOverview } from '../hooks/useReleaseOverview';
+import { useRepositories } from '../hooks/useRepositories';
 import { findAttention } from './needsYou/needsYouModel';
 import { behindPinLines } from './pinsModel';
-import { behindLabel, releasePullHref, type DeployedRef, type EnvironmentRow } from './releasesModel';
+import { ReadyToPin } from './ReadyToPin';
+import { UnreleasedSection, type RepoScope } from './ReleasesUnreleased';
+import {
+  behindLabel,
+  releasePullHref,
+  releaseScopeOptions,
+  scopeParams,
+  splitEnvironments,
+  unreleasedHref,
+  type DeployedRef,
+  type EnvironmentRow,
+} from './releasesModel';
 
 import './page.css';
 import './ReleasesPage.css';
@@ -35,89 +51,168 @@ const STATE_PILL: Record<string, string> = {
 
 export function ReleasesPage(): JSX.Element {
   const [params, setParams] = useSearchParams();
-  const repoId = params.get('repo') ?? DEFAULT_RELEASE_REPO;
+  const { user } = useAuth();
+  const family = params.get('family');
+  const repoId = family ? null : (params.get('repo') ?? DEFAULT_RELEASE_REPO);
   const branch = params.get('branch') ?? 'main';
-  const { rows, isLoading, error } = useReleaseOverview(repoId, branch);
-  const anyDeployed = rows.some((row) => row.configured);
+  const showReleased = params.get('released') === '1';
+
+  const members = useRepositories(
+    { family: family ?? undefined, sort: 'name' },
+    { enabled: family !== null }
+  );
+  let repos: RepoScope[] = [];
+  if (repoId) {
+    repos = [{ id: repoId, branch }];
+  } else if (members.data) {
+    repos = members.data.repositories.map((r) => ({
+      id: `${r.id.owner}/${r.id.name}`,
+      branch: r.default_branch || 'main',
+    }));
+  }
+
+  // The deploy repos and families the forge knows feed the scope select.
+  const pins = usePins(user?.role === 'admin');
+  const options = releaseScopeOptions(
+    { repo: repoId, family },
+    pins.data?.consumers ?? [],
+    DEFAULT_RELEASE_REPO
+  );
+  const scopeValue = family ? `family:${family}` : `repo:${repoId ?? DEFAULT_RELEASE_REPO}`;
+
+  const setScope = (value: string): void => {
+    const next = scopeParams(value);
+    if (!next) return;
+    setParams(showReleased ? { ...next, released: '1' } : next);
+  };
+  const toggleReleased = (next: boolean): void => {
+    const updated = new URLSearchParams(params);
+    if (next) updated.set('released', '1');
+    else updated.delete('released');
+    setParams(updated);
+  };
 
   return (
     <div className="page page--wide" data-testid="releases-page">
       <header className="page__header">
         <h1 className="page__title">Releases</h1>
         <p className="page__subtitle">
-          What each environment runs, and which merged pull requests on{' '}
-          <code>{branch}</code> it does not have yet.
+          What runs now, what is merged but not pinned, and what no release carries yet.
         </p>
-        <form
-          className="releases__repo"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const value = new FormData(event.currentTarget).get('repo');
-            if (typeof value === 'string' && value.includes('/')) {
-              setParams({ repo: value.trim() });
-            }
-          }}
-        >
-          <label htmlFor="releases-repo">Repository</label>
-          <input
-            id="releases-repo"
-            name="repo"
-            defaultValue={repoId}
-            key={repoId}
-            spellCheck={false}
-            data-testid="releases-repo-input"
-          />
-          <button type="submit">Show</button>
-        </form>
-        <p className="releases__muted">
-          <Link to={`/unreleased?repo=${encodeURIComponent(repoId)}`}>
-            See this repository&apos;s unreleased pull requests
-          </Link>
+        <p className="releases__repo">
+          <label htmlFor="releases-scope">Repository or family</label>
+          <select
+            id="releases-scope"
+            value={scopeValue}
+            onChange={(event) => setScope(event.currentTarget.value)}
+            data-testid="releases-scope"
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </p>
       </header>
 
       <StagedRelease />
-      <UnpinnedLine repoId={repoId} />
 
-      <section className="page__section" aria-labelledby="releases-environments">
-        <h2 className="page__section-title" id="releases-environments">
-          Environments
-        </h2>
-        {error ? (
-          <p className="page__roadmap-note" role="alert" data-testid="releases-error">
-            Deployment history is unavailable for {repoId}: {error.message}
-          </p>
-        ) : isLoading ? (
-          <p className="page__roadmap-note">Loading environments…</p>
-        ) : (
-          <>
-            {!anyDeployed ? (
-              <p className="page__roadmap-note" data-testid="releases-empty">
-                No deployment of {repoId} has been recorded yet. Deploys record themselves
-                here from the next release onward.
-              </p>
-            ) : null}
-            <div className="releases__table-wrap">
-              <table className="releases__table" data-testid="releases-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Environment</th>
-                    <th scope="col">Running</th>
-                    <th scope="col">Deployed</th>
-                    <th scope="col">Behind {branch}</th>
-                    <th scope="col">Rollback target</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <EnvironmentRowView key={row.name} row={row} repoId={repoId} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </section>
+      {repoId ? <Environments repoId={repoId} branch={branch} /> : null}
+
+      <ReadyToPin
+        scope={{
+          repo: repoId,
+          family,
+          familyRepos: family ? repos.map((repo) => repo.id) : [],
+        }}
+      />
+
+      <UnreleasedSection
+        repos={repos}
+        family={family}
+        familyState={{ isLoading: members.isLoading, error: members.error }}
+        showReleased={showReleased}
+        onToggleReleased={toggleReleased}
+        linkRepos={family !== null}
+      />
+    </div>
+  );
+}
+
+/** `/unreleased[?…]` was its own page; it is the last section of Releases now. */
+export function UnreleasedRedirect(): JSX.Element {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: '/releases', search, hash: '#unreleased' }} replace />;
+}
+
+function Environments({ repoId, branch }: { repoId: string; branch: string }): JSX.Element {
+  const { rows, isLoading, error } = useReleaseOverview(repoId, branch);
+  const anyDeployed = rows.some((row) => row.configured);
+  const { live, other } = splitEnvironments(rows);
+  return (
+    <section className="page__section" aria-labelledby="releases-environments">
+      <h2 className="page__section-title" id="releases-environments">
+        What runs
+      </h2>
+      <UnpinnedLine repoId={repoId} />
+      {error ? (
+        <p className="page__roadmap-note" role="alert" data-testid="releases-error">
+          Deployment history is unavailable for {repoId}: {error.message}
+        </p>
+      ) : isLoading ? (
+        <p className="page__roadmap-note">Loading environments…</p>
+      ) : (
+        <>
+          {!anyDeployed ? (
+            <p className="page__roadmap-note" data-testid="releases-empty">
+              No deployment of {repoId} has been recorded yet. Deploys record themselves
+              here from the next release onward.
+            </p>
+          ) : null}
+          {live.length > 0 ? <EnvironmentTable rows={live} repoId={repoId} branch={branch} /> : null}
+          {other.length > 0 ? (
+            <details className="releases__other" data-testid="releases-other-environments">
+              <summary>
+                {other.length} other environment{other.length === 1 ? '' : 's'} with nothing
+                live ({other.map((row) => row.name).join(', ')})
+              </summary>
+              <EnvironmentTable rows={other} repoId={repoId} branch={branch} />
+            </details>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+}
+
+function EnvironmentTable({
+  rows,
+  repoId,
+  branch,
+}: {
+  rows: EnvironmentRow[];
+  repoId: string;
+  branch: string;
+}): JSX.Element {
+  return (
+    <div className="releases__table-wrap">
+      <table className="releases__table" data-testid="releases-table">
+        <thead>
+          <tr>
+            <th scope="col">Environment</th>
+            <th scope="col">Running</th>
+            <th scope="col">Deployed</th>
+            <th scope="col">Behind {branch}</th>
+            <th scope="col">Rollback target</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <EnvironmentRowView key={row.name} row={row} repoId={repoId} />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -264,7 +359,7 @@ function UnpinnedLine({ repoId }: { repoId: string }): JSX.Element | null {
   return (
     <p className="releases__muted" role="status" data-testid="releases-unpinned">
       {lines.join('; ')}.{' '}
-      <Link to={`/unreleased?repo=${encodeURIComponent(repoId)}`}>See what a bump would ship</Link>
+      <Link to={unreleasedHref({ repo: repoId })}>See what a bump would ship</Link>
     </p>
   );
 }

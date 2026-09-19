@@ -40,14 +40,12 @@ export function pinLabel(pin: Pin): string {
 }
 
 /**
- * Red only where a person is the next step. A commit pin bumps itself, so it
- * stays neutral; a tag needs someone to cut it; a diverged pin needs a look.
+ * Red only where something is wrong. A commit pin bumps itself and a tag that
+ * trails main is a standing fact worth a look, not an alarm: both are neutral.
+ * A diverged pin needs a person.
  */
-export function pinTone(pin: Pin): 'neutral' | 'warning' | 'danger' {
-  const state = pinStateOf(pin);
-  if (state === 'diverged') return 'danger';
-  if (state === 'behind' && pin.kind === 'tag') return 'warning';
-  return 'neutral';
+export function pinTone(pin: Pin): 'neutral' | 'danger' {
+  return pinStateOf(pin) === 'diverged' ? 'danger' : 'neutral';
 }
 
 export interface PinNextStep {

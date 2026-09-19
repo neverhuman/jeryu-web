@@ -129,7 +129,7 @@ test.describe('Pipeline visibility', () => {
     await page.getByTestId('activity-dock').getByRole('link', { name: 'All activity' }).click();
     await expect(page).toHaveURL(/\/activity$/);
   });
-  test('Unreleased and Releases say what is merged but not pinned, with one next step @action:unreleased.ready_to_pin', async ({
+  test('Releases says what is merged but not pinned, with one next step @action:unreleased.ready_to_pin', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
@@ -160,7 +160,7 @@ test.describe('Pipeline visibility', () => {
     const unpinned = page.getByTestId('releases-unpinned');
     await expect(unpinned).toContainText("jeryu-web has 9 merged commits not in this repo's pin");
     await unpinned.getByRole('link', { name: 'See what a bump would ship' }).click();
-    await expect(page).toHaveURL(/\/unreleased\?repo=jeryu%2Fjeryu-deploy$/);
+    await expect(page).toHaveURL(/\/releases\?repo=jeryu%2Fjeryu-deploy#unreleased$/);
   });
 
   test('an open bump PR is the next step, and an older server stays quiet @action:unreleased.ready_to_pin', async ({

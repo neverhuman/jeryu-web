@@ -42,7 +42,7 @@ describe('ReadyToPin', () => {
     expect(within(web).getByText('9 merged commits not pinned yet')).not.toHaveClass('page__pill--danger');
     expect(within(web).getByRole('link', { name: 'jeryu-web' })).toHaveAttribute(
       'href',
-      '/unreleased?repo=jeryu%2Fjeryu-web'
+      '/releases?repo=jeryu%2Fjeryu-web#unreleased'
     );
     const ships = within(web).getByText('What a bump would ship (2 of 9)');
     expect(ships.closest('details')).not.toHaveAttribute('open');
@@ -51,7 +51,9 @@ describe('ReadyToPin', () => {
     const core = within(consumer).getByTestId('pin-jeryu/jeryu-core');
     expect(
       within(core).getByText('3 commits since tag jeryu-core-v5.0.0-split.6, needs a new tag')
-    ).toHaveClass('page__pill--warning');
+    ).toHaveClass('pins__label');
+    // A trailing tag is a watch item: a plain sentence, no pill.
+    expect(core.querySelector('.page__pill')).toBeNull();
 
     expect(within(consumer).getByTestId('pins-current-jeryu/jeryu-deploy')).toHaveTextContent('2 pins current');
     expect(within(consumer).queryByTestId('pin-jeryu/jeryu-cache')).toBeNull();
