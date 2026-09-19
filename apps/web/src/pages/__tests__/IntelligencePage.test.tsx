@@ -30,13 +30,16 @@ function renderIntelligence(snapshot: ControlPlaneSnapshot): void {
 }
 
 describe('IntelligencePage', () => {
-  it('renders priorities, absence evidence, graph clusters, and tool dossiers', () => {
+  it('renders absence evidence, graph clusters and tool dossiers, and leaves priorities to Needs you', () => {
     renderIntelligence(sampleSnapshot());
 
     expect(screen.getByTestId('intelligence-page')).toBeInTheDocument();
-    expect(screen.getByTestId('priority-pr-1-checks-missing')).toHaveTextContent(
-      'PR #1 has no head checks'
-    );
+    // One list of what needs a person, in one place: this page links to it and
+    // no longer ranks its own "priorities" from an older rule set.
+    expect(screen.queryByTestId('priority-pr-1-checks-missing')).toBeNull();
+    expect(screen.queryByText('Top priorities')).toBeNull();
+    expect(screen.queryByText('Priorities')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Needs you' })).toHaveAttribute('href', '/needs-you');
     // Plain words in the header: no protocol strings, schema ids or rule versions.
     expect(screen.getByText('none recorded yet')).toBeInTheDocument();
     expect(screen.queryByText('absence=evidence')).toBeNull();

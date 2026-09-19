@@ -3,13 +3,13 @@
 import { useMemo, useState } from 'react';
 import {
   Activity,
-  AlertTriangle,
   GitPullRequest,
   Network,
   Package,
   ServerCog,
   Terminal,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { useControlPlane } from '../hooks/useControlPlane';
 import { useEcosystem, useToolBuildClusters } from '../hooks/useToolingEvidence';
@@ -19,7 +19,6 @@ import {
   EvidencePanel,
   MetricCard,
   OperatorGraphConsole,
-  PriorityRow,
   StatePill,
   ToolBuildDossiers,
 } from './intelligence';
@@ -70,7 +69,6 @@ function IntelligenceSnapshot({
     query: '',
   });
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const topPriorities = snapshot.priorities.slice(0, 8);
   const operatorGraph = useMemo(
     () =>
       buildOperatorGraph(
@@ -91,7 +89,7 @@ function IntelligenceSnapshot({
           <StatePill state={snapshot.localAuthority.state} label="snapshot" />
         </div>
         <p className="page__roadmap-note intelligence__header-note">
-          Operational snapshot of priorities, graph state, and evidence.
+          Operational snapshot of the repository graph and its evidence.
         </p>
         <div className="intelligence__status-strip">
           <MetricCard
@@ -102,15 +100,6 @@ function IntelligenceSnapshot({
             detail={`${snapshot.summary.missingCheckPrCount} missing checks`}
             state={
               snapshot.summary.missingCheckPrCount > 0 ? 'missing' : 'fresh'
-            }
-          />
-          <MetricCard
-            icon={<AlertTriangle size={18} aria-hidden="true" />}
-            label="Priorities"
-            value={snapshot.summary.priorityCount}
-            detail={`${snapshot.summary.highPriorityCount} high`}
-            state={
-              snapshot.summary.highPriorityCount > 0 ? 'failed' : 'fresh'
             }
           />
           <MetricCard
@@ -146,22 +135,12 @@ function IntelligenceSnapshot({
         </div>
       </header>
 
-      <section className="page__section" aria-labelledby="intelligence-priority">
-        <div className="intelligence__section-head">
-          <h2 className="page__section-title" id="intelligence-priority">
-            Top priorities
-          </h2>
-        </div>
-        {topPriorities.length === 0 ? (
-          <p className="page__roadmap-note">No ranked priorities.</p>
-        ) : (
-          <div className="intelligence__priority-table">
-            {topPriorities.map((priority) => (
-              <PriorityRow key={priority.id} priority={priority} />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* What needs a person is one list, in one place. This page used to rank its
+          own "priorities" from an older rule set (generic items such as "latest
+          artifacts are absent"), and its count never matched Needs you. */}
+      <p className="page__roadmap-note" data-testid="intelligence-needs-you">
+        Looking for what is waiting on you? That is <Link to="/needs-you">Needs you</Link>.
+      </p>
 
       <section className="page__section" aria-labelledby="intelligence-graph">
         <div className="intelligence__section-head">

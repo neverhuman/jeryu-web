@@ -31,7 +31,9 @@ describe('NeedsYouPage', () => {
     expect(staged).toHaveClass('needs-you__row--danger');
     expect(within(staged).getByText(DEPLOY_COMMAND)).toBeInTheDocument();
     expect(within(staged).queryByRole('link')).toBeNull();
-    expect(within(staged).getAllByRole('button')).toHaveLength(1);
+    // One act (the copy control) plus the family pill, which filters and never acts.
+    expect(within(staged).getAllByRole('button')).toHaveLength(2);
+    expect(within(staged).getByRole('button', { name: /^Show only / })).toBeInTheDocument();
     fireEvent.click(within(staged).getByRole('button', { name: /^Copy Deploy command for Release/ }));
     expect(writeText).toHaveBeenCalledWith(DEPLOY_COMMAND);
     expect(await within(staged).findByText('Copied')).toBeInTheDocument();
@@ -46,7 +48,9 @@ describe('NeedsYouPage', () => {
       'href',
       '/work/shift?family=jeryu&todo=20260919-130515-f8cc66'
     );
-    expect(within(blocked).queryByRole('button')).toBeNull();
+    // The only button on a link row is its family pill, which filters and never acts.
+    expect(within(blocked).getAllByRole('button')).toHaveLength(1);
+    expect(within(blocked).getByRole('button', { name: 'Show only jeryu' })).toBeInTheDocument();
 
     // Watch rows are neutral and collapsed behind a count.
     const watch = screen.getByTestId('needs-you-watch');
@@ -97,7 +101,7 @@ describe('NeedsYouPage', () => {
     expect(within(stale).queryByText(/pin_behind/)).toBeNull();
     expect(within(stale).getByText(BUMP)).toBeInTheDocument();
     expect(within(stale).queryByRole('link')).toBeNull();
-    expect(within(stale).getAllByRole('button')).toHaveLength(1);
+    expect(within(stale).getAllByRole('button')).toHaveLength(2);
 
     const watch = screen.getByTestId('needs-you-watch');
     expect(watch).not.toHaveAttribute('open');
@@ -107,6 +111,39 @@ describe('NeedsYouPage', () => {
       'href',
       '/repos/jeryu/veox/jain-deploy/pulls/80'
     );
+  });
+
+  it('filters to one family from the pill on a row, and back from the strip', async () => {
+    mockPipelineApi();
+    renderPage();
+    const blocked = await screen.findByTestId(
+      'needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66'
+    );
+    // Every row wears its family at the far left; the strip counts what waits on a person.
+    const strip = screen.getByRole('group', { name: 'Filter by family' });
+    expect(within(strip).getByRole('button', { name: /^All 3$/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(within(strip).getByRole('button', { name: /^jeryu 1$/ })).toBeInTheDocument();
+    expect(within(strip).getByRole('button', { name: /^jain 1$/ })).toBeInTheDocument();
+    // No family and no known repository family: the forge itself, listed last.
+    expect(within(strip).getAllByRole('button').at(-1)).toHaveTextContent(/^forge 1$/);
+
+    fireEvent.click(within(blocked).getByRole('button', { name: 'Show only jeryu' }));
+    expect(screen.queryByTestId('needs-you-item-workers_down:jain')).toBeNull();
+    expect(screen.queryByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy')).toBeNull();
+    expect(
+      screen.getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66')
+    ).toBeInTheDocument();
+    expect(within(strip).getByRole('button', { name: /^jeryu 1$/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+
+    // Pressing the same pill again, or All, shows every family.
+    fireEvent.click(within(strip).getByRole('button', { name: /^All 3$/ }));
+    expect(screen.getByTestId('needs-you-item-workers_down:jain')).toBeInTheDocument();
   });
 
   it('says nothing needs you in one sentence, with a line about what the system is doing', async () => {

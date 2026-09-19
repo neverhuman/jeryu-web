@@ -136,3 +136,47 @@
   }
 }
 
+/* Family pills: one strip above the list, one at the far left of every row.
+   A pill filters the page to that family; pressing it again shows everything. */
+.needs-you__families {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.needs-you__family {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 24px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.needs-you__family:hover,
+.needs-you__family[aria-pressed='true'] {
+  color: var(--color-fg-primary);
+  border-color: var(--color-accent-primary);
+}
+
+.needs-you__family-count {
+  color: var(--color-fg-muted);
+}
+
+/* The row's link is stretched over the whole row; the pill sits above it. */
+.needs-you__family--row {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  min-width: 72px;
+  justify-content: center;
+}
+

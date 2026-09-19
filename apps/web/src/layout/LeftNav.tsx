@@ -110,10 +110,13 @@ export function LeftNav(): JSX.Element {
     writeBrowserText('durable', SYSTEM_OPEN_KEY, next ? '1' : '0');
   };
 
+  // A router link, never a plain anchor: a plain anchor reloads the whole app on
+  // every click (it did), which re-authenticates, reconnects the live socket
+  // ("Connecting…" on each navigation), refetches every query and shifts the page.
   const renderItem = (item: NavItem): JSX.Element => (
-    <a
+    <Link
       key={item.to}
-      href={item.to}
+      to={item.to}
       className={`left-nav__item${
         isActivePath(pathname, item.to, item.end) ? ' is-active' : ''
       }`}
@@ -130,7 +133,7 @@ export function LeftNav(): JSX.Element {
           {needsYou > 99 ? '99+' : needsYou}
         </span>
       ) : null}
-    </a>
+    </Link>
   );
 
   return (

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  FORGE_FAMILY,
+  familyCounts,
+  familyName,
+  familyOf,
+  filterByFamily,
   attentionBadgeCount,
   attentionContext,
   primaryAction,
@@ -100,5 +105,40 @@ describe('needsYouModel', () => {
     expect(safeHref('//evil.example')).toBeNull();
     expect(safeHref('https://evil.example')).toBeNull();
     expect(safeHref(null)).toBeNull();
+  });
+
+  it('finds the family of an item: what the server says, else its repository, else the forge', () => {
+    const repoFamilies = new Map([
+      ['veox-ai/ai-veox-app', 'veox-ai'],
+      ['jeryu/jeryu-deploy', 'jeryu-split'],
+    ]);
+    expect(familyName('jeryu-split')).toBe('jeryu');
+    expect(familyName('  ')).toBeNull();
+    expect(familyOf({ family: 'jain', repo: null }, repoFamilies)).toBe('jain');
+    expect(familyOf({ family: null, repo: 'veox-ai/ai-veox-app' }, repoFamilies)).toBe('veox-ai');
+    // The repositories list calls it jeryu-split, the shift queue calls it jeryu: one family.
+    expect(familyOf({ family: null, repo: 'jeryu/jeryu-deploy' }, repoFamilies)).toBe('jeryu');
+    expect(familyOf({ family: null, repo: 'nobody/knows' }, repoFamilies)).toBe(FORGE_FAMILY);
+    expect(familyOf({ family: null, repo: null }, repoFamilies)).toBe(FORGE_FAMILY);
+  });
+
+  it('counts families busiest first with the forge last, and filters to one', () => {
+    const repoFamilies = new Map([['veox-ai/ai-veox-app', 'veox-ai']]);
+    const items = [
+      { family: 'jeryu', repo: null },
+      { family: 'jeryu', repo: null },
+      { family: null, repo: 'veox-ai/ai-veox-app' },
+      { family: null, repo: null },
+      { family: null, repo: null },
+      { family: null, repo: null },
+    ];
+    expect(familyCounts(items, repoFamilies)).toEqual([
+      { family: 'jeryu', count: 2 },
+      { family: 'veox-ai', count: 1 },
+      { family: FORGE_FAMILY, count: 3 },
+    ]);
+    expect(filterByFamily(items, 'jeryu', repoFamilies)).toHaveLength(2);
+    expect(filterByFamily(items, FORGE_FAMILY, repoFamilies)).toHaveLength(3);
+    expect(filterByFamily(items, '', repoFamilies)).toHaveLength(6);
   });
 });

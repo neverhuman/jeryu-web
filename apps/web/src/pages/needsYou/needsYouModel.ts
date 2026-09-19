@@ -146,3 +146,61 @@ export function findAttention(
 ): AttentionItem | undefined {
   return data?.items?.find((item) => item.kind === kind);
 }
+
+/** Items no family owns: the forge itself (a staged release, the mirror). */
+export const FORGE_FAMILY = 'forge';
+
+/** `jeryu-split` and `jeryu` are one family to a reader. */
+export function familyName(name: string | null | undefined): string | null {
+  const trimmed = (name ?? '').trim();
+  return trimmed ? trimmed.replace(/-split$/, '') : null;
+}
+
+/**
+ * The family an item belongs to: what the server says, else the family of its
+ * repository (`owner/name` looked up in `repoFamilies`), else the forge.
+ */
+export function familyOf(
+  item: Pick<AttentionItem, 'family' | 'repo'>,
+  repoFamilies: ReadonlyMap<string, string>
+): string {
+  return (
+    familyName(item.family) ??
+    familyName(item.repo ? repoFamilies.get(item.repo) : null) ??
+    FORGE_FAMILY
+  );
+}
+
+export interface FamilyCount {
+  family: string;
+  count: number;
+}
+
+/** Families with something waiting, busiest first, the forge last. */
+export function familyCounts(
+  items: Pick<AttentionItem, 'family' | 'repo'>[],
+  repoFamilies: ReadonlyMap<string, string>
+): FamilyCount[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const family = familyOf(item, repoFamilies);
+    counts.set(family, (counts.get(family) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([family, count]) => ({ family, count }))
+    .sort(
+      (a, b) =>
+        Number(a.family === FORGE_FAMILY) - Number(b.family === FORGE_FAMILY) ||
+        b.count - a.count ||
+        a.family.localeCompare(b.family)
+    );
+}
+
+/** Keep one family's items; an empty filter keeps everything. */
+export function filterByFamily<T extends Pick<AttentionItem, 'family' | 'repo'>>(
+  items: T[],
+  family: string,
+  repoFamilies: ReadonlyMap<string, string>
+): T[] {
+  return family ? items.filter((item) => familyOf(item, repoFamilies) === family) : items;
+}

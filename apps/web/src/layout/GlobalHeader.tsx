@@ -44,19 +44,24 @@ export function GlobalHeader(): JSX.Element {
           {platformHint}
         </span>
       </button>
-      <span
+      {/* The pill is the way to the live feed; the words inside stay a status
+          so a screen reader hears the connection change, not a link change. */}
+      <Link
+        to="/activity"
         className={`global-header__live global-header__live--${status}`}
-        role="status"
-        aria-atomic="true"
-        aria-label={liveNameFor(status)}
-        title={liveNameFor(status)}
+        title={`${liveNameFor(status)}. Open Activity`}
+        data-testid="live-pill"
       >
+        <span className="global-header__live-dot" aria-hidden="true" />
         <span
-          className="global-header__live-dot"
-          aria-hidden="true"
-        />
-        <span className="global-header__live-text">{liveLabel}</span>
-      </span>
+          className="global-header__live-text"
+          role="status"
+          aria-atomic="true"
+          aria-label={liveNameFor(status)}
+        >
+          {liveLabel}
+        </span>
+      </Link>
       <UserMenu
         login={bootstrap.data?.viewer.login ?? 'Loading…'}
         displayName={bootstrap.data?.viewer.display_name ?? null}

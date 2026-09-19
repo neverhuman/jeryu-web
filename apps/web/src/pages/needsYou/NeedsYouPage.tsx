@@ -10,7 +10,8 @@
 // system is doing, so calm reads as alive rather than broken.
 
 import { CircleCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import type { AttentionItem } from '../../api/types';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
@@ -22,11 +23,15 @@ import {
   usePipelineEvents,
   usePipelineNudge,
 } from '../../hooks/usePipeline';
+import { useRepositories } from '../../hooks/useRepositories';
 import { useShiftWorkers } from '../../hooks/useShift';
 import { formatAgo } from '../shift/shiftModel';
 import {
   attentionContext,
   groupAttention,
+  familyCounts,
+  familyOf,
+  filterByFamily,
   primaryAction,
   severityTone,
   systemPulse,
@@ -39,7 +44,30 @@ import './NeedsYou.css';
 export function NeedsYouPage(): JSX.Element {
   const attention = useAttention();
   usePipelineNudge(attention.isSuccess, ATTENTION_QUERY_KEY);
-  const groups = groupAttention(attention.data?.items ?? []);
+  // `?family=` keeps one family's rows: a pill on any row, or in the strip above,
+  // sets it, so "everything waiting on me for jeryu" is one click and a link.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const family = searchParams.get('family') ?? '';
+  const repositories = useRepositories({});
+  const repoFamilies = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const repo of repositories.data?.repositories ?? []) {
+      if (repo.family) map.set(`${repo.id.owner}/${repo.id.name}`, repo.family);
+    }
+    return map;
+  }, [repositories.data]);
+  const setFamily = (next: string): void => {
+    const params = new URLSearchParams(searchParams);
+    if (next && next !== family) params.set('family', next);
+    else params.delete('family');
+    setSearchParams(params, { replace: true });
+  };
+  const allItems = attention.data?.items ?? [];
+  const counts = familyCounts(
+    allItems.filter((item) => item.severity !== 'watch'),
+    repoFamilies
+  );
+  const groups = groupAttention(filterByFamily(allItems, family, repoFamilies));
   const urgent = groups.filter((group) => group.severity !== 'watch');
   const watch = groups.find((group) => group.severity === 'watch');
   const now = new Date();
@@ -60,6 +88,9 @@ export function NeedsYouPage(): JSX.Element {
         <PipelineQueryState what="the Needs you list" error={attention.error} />
       ) : (
         <>
+          {counts.length > 1 || family ? (
+            <FamilyStrip counts={counts} family={family} onPick={setFamily} />
+          ) : null}
           {urgent.length === 0 ? (
             <>
               <EmptyState
@@ -70,7 +101,16 @@ export function NeedsYouPage(): JSX.Element {
               <SystemPulse now={now} />
             </>
           ) : (
-            urgent.map((group) => <AttentionSection key={group.severity} group={group} now={now} />)
+            urgent.map((group) => (
+              <AttentionSection
+                key={group.severity}
+                group={group}
+                now={now}
+                familyFor={(item) => familyOf(item, repoFamilies)}
+                onPick={setFamily}
+                picked={family}
+              />
+            ))
           )}
           {watch ? (
             <details className="needs-you__watch" data-testid="needs-you-watch">
@@ -78,7 +118,13 @@ export function NeedsYouPage(): JSX.Element {
                 {watch.items.length} thing{watch.items.length === 1 ? '' : 's'} worth a look, none
                 waiting on you
               </summary>
-              <AttentionList group={watch} now={now} />
+              <AttentionList
+                group={watch}
+                now={now}
+                familyFor={(item) => familyOf(item, repoFamilies)}
+                onPick={setFamily}
+                picked={family}
+              />
             </details>
           ) : null}
         </>
@@ -87,7 +133,53 @@ export function NeedsYouPage(): JSX.Element {
   );
 }
 
-function AttentionSection({ group, now }: { group: AttentionGroup; now: Date }): JSX.Element {
+interface FamilyProps {
+  familyFor: (item: AttentionItem) => string;
+  onPick: (family: string) => void;
+  picked: string;
+}
+
+/** "All" plus one pill per family with something waiting. */
+function FamilyStrip({
+  counts,
+  family,
+  onPick,
+}: {
+  counts: { family: string; count: number }[];
+  family: string;
+  onPick: (family: string) => void;
+}): JSX.Element {
+  const total = counts.reduce((sum, entry) => sum + entry.count, 0);
+  return (
+    <div className="needs-you__families" role="group" aria-label="Filter by family">
+      <button
+        type="button"
+        className="needs-you__family"
+        aria-pressed={family === ''}
+        onClick={() => onPick('')}
+      >
+        All <span className="needs-you__family-count">{total}</span>
+      </button>
+      {counts.map((entry) => (
+        <button
+          key={entry.family}
+          type="button"
+          className="needs-you__family"
+          aria-pressed={family === entry.family}
+          onClick={() => onPick(entry.family)}
+        >
+          {entry.family} <span className="needs-you__family-count">{entry.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AttentionSection({
+  group,
+  now,
+  ...familyProps
+}: { group: AttentionGroup; now: Date } & FamilyProps): JSX.Element {
   return (
     <section
       className="needs-you__group"
@@ -97,17 +189,21 @@ function AttentionSection({ group, now }: { group: AttentionGroup; now: Date }):
       <h2 className="page__section-title">
         <span className="page__pill page__pill--danger">{group.items.length}</span> {group.label}
       </h2>
-      <AttentionList group={group} now={now} />
+      <AttentionList group={group} now={now} {...familyProps} />
     </section>
   );
 }
 
-function AttentionList({ group, now }: { group: AttentionGroup; now: Date }): JSX.Element {
+function AttentionList({
+  group,
+  now,
+  ...familyProps
+}: { group: AttentionGroup; now: Date } & FamilyProps): JSX.Element {
   const tone = severityTone(group.severity);
   return (
     <ul className="needs-you__list">
       {group.items.map((item) => (
-        <AttentionRow key={item.id} item={item} tone={tone} now={now} />
+        <AttentionRow key={item.id} item={item} tone={tone} now={now} {...familyProps} />
       ))}
     </ul>
   );
@@ -117,14 +213,30 @@ function AttentionRow({
   item,
   tone,
   now,
+  familyFor,
+  onPick,
+  picked,
 }: {
   item: AttentionItem;
   tone: 'danger' | 'neutral';
   now: Date;
-}): JSX.Element {
+} & FamilyProps): JSX.Element {
   const action = primaryAction(item);
+  const family = familyFor(item);
   return (
     <li className={`needs-you__row needs-you__row--${tone}`} data-testid={`needs-you-item-${item.id}`}>
+      <button
+        type="button"
+        className="needs-you__family needs-you__family--row"
+        aria-pressed={picked === family}
+        aria-label={
+          picked === family ? `Showing only ${family}: show every family` : `Show only ${family}`
+        }
+        title={picked === family ? 'Show every family' : `Show only ${family}`}
+        onClick={() => onPick(family)}
+      >
+        {family}
+      </button>
       <div className="needs-you__main">
         <p className="needs-you__title-line">
           <span className="needs-you__title">{item.title}</span>
