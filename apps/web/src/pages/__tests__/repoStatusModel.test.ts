@@ -9,6 +9,7 @@ import {
   mirrorFailing,
   summaryLines,
   whatToDo,
+  newerCopies,
 } from '../repoStatusModel';
 
 describe('repoStatusModel', () => {
@@ -99,5 +100,40 @@ describe('repoStatusModel', () => {
       failing: false,
       lastAttempt: 'success',
     });
+  });
+});
+
+describe('newerCopies', () => {
+  const repo = (owner: string, name: string, updated_at: string | null) => ({
+    id: { owner, name },
+    updated_at,
+  });
+
+  it('points the older of two same-named repositories at the newer one', () => {
+    const copies = newerCopies([
+      repo('jeryu', 'jain', '2026-07-08T00:00:00Z'),
+      repo('veox', 'jain', '2026-09-19T00:00:00Z'),
+      repo('veox', 'jain-deploy', '2026-09-19T00:00:00Z'),
+    ]);
+    expect([...copies]).toEqual([['jeryu/jain', { owner: 'veox', name: 'jain' }]]);
+  });
+
+  it('leaves copies updated within a week of each other alone, and unique names', () => {
+    expect(
+      newerCopies([
+        repo('veox', 'ai-veox-app', '2026-09-19T10:00:00Z'),
+        repo('veox-ai', 'ai-veox-app', '2026-09-19T12:00:00Z'),
+        repo('jeryu', 'jeryu-web', null),
+      ]).size
+    ).toBe(0);
+  });
+
+  it('treats a missing or bad date as oldest, never as newest', () => {
+    const copies = newerCopies([
+      repo('a', 'x', 'not a date'),
+      repo('b', 'x', '2026-09-19T00:00:00Z'),
+    ]);
+    expect(copies.get('a/x')).toEqual({ owner: 'b', name: 'x' });
+    expect(copies.has('b/x')).toBe(false);
   });
 });

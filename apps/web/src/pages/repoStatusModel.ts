@@ -157,3 +157,41 @@ export function mirrorFacts(
     failing
   };
 }
+
+/** A repository another owner holds a more recently updated copy of. */
+export interface NewerCopy {
+  owner: string;
+  name: string;
+}
+
+const COPY_AGE_GAP_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Repositories whose NAME also exists under another owner that was updated at
+ * least a week later: `owner/name` of the older copy -> the newer one. The
+ * forge has stale snapshots beside live repositories (jeryu/jain next to
+ * veox/jain) and nothing told a reader, or an agent, which one is current.
+ * Copies updated within a week of each other are left alone: no clear winner.
+ */
+export function newerCopies(
+  repos: { id: { owner: string; name: string }; updated_at?: string | null }[]
+): Map<string, NewerCopy> {
+  const newestByName = new Map<string, { owner: string; at: number }>();
+  const stamp = (value: string | null | undefined): number => {
+    const at = Date.parse(value ?? '');
+    return Number.isNaN(at) ? 0 : at;
+  };
+  for (const repo of repos) {
+    const at = stamp(repo.updated_at);
+    const held = newestByName.get(repo.id.name);
+    if (!held || at > held.at) newestByName.set(repo.id.name, { owner: repo.id.owner, at });
+  }
+  const older = new Map<string, NewerCopy>();
+  for (const repo of repos) {
+    const newest = newestByName.get(repo.id.name);
+    if (!newest || newest.owner === repo.id.owner) continue;
+    if (newest.at - stamp(repo.updated_at) < COPY_AGE_GAP_MS) continue;
+    older.set(`${repo.id.owner}/${repo.id.name}`, { owner: newest.owner, name: repo.id.name });
+  }
+  return older;
+}

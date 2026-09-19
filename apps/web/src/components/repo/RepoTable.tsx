@@ -30,7 +30,9 @@ import {
   attentionRank,
   failingLabel,
   mirrorFailing,
-  MIRROR_OPERATOR_SENTENCE
+  MIRROR_OPERATOR_SENTENCE,
+  newerCopies,
+  type NewerCopy
 } from '../../pages/repoStatusModel';
 
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
@@ -118,7 +120,31 @@ function detailId(repo: RepositorySummary): string {
   return `repo-status-${repo.id.id}`;
 }
 
+/** "newer copy: owner/name" on the older of two repositories that share a name. */
+function NewerCopyChip({
+  repo,
+  copies,
+}: {
+  repo: RepositorySummary;
+  copies: ReadonlyMap<string, NewerCopy>;
+}): JSX.Element | null {
+  const newer = copies.get(`${repo.id.owner}/${repo.id.name}`);
+  if (!newer) return null;
+  return (
+    <Link
+      to={repoHref({ ...repo, id: { ...repo.id, owner: newer.owner } })}
+      className="repo-table__newer-copy"
+      onClick={(e) => e.stopPropagation()}
+      title={`${newer.owner}/${newer.name} was updated more recently; this copy may be a stale snapshot`}
+      data-testid={`newer-copy-${repo.id.owner}/${repo.id.name}`}
+    >
+      newer copy: {newer.owner}/{newer.name}
+    </Link>
+  );
+}
+
 export function RepoTable({ repos }: RepoTableProps): JSX.Element {
+  const copies = useMemo(() => newerCopies(repos), [repos]);
   const navigate = useNavigate();
   // Repositories whose failing checks are shown under their row.
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -175,6 +201,7 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
               <strong>{row.original.id.name}</strong>
             </Link>
             <RepoRoleBadge role={row.original.repo_role} />
+            <NewerCopyChip repo={row.original} copies={copies} />
           </span>
         )
       },
