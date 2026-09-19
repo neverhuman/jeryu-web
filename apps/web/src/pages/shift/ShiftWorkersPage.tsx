@@ -14,6 +14,7 @@ import { useShiftWorkers, useShiftWorkersHistory } from '../../hooks/useShift';
 import { ShiftError } from './shiftCommon';
 import { ShiftCapacityChart, ShiftTimeline } from './ShiftCharts';
 import { formatAgo, splitWorkers } from './shiftModel';
+import { splitSupervisors } from './workersModel';
 import { WorkTabs, queueHref } from './WorkTabs';
 
 import '../page.css';
@@ -32,8 +33,11 @@ export function ShiftWorkersPage(): JSX.Element {
   const [showStale, setShowStale] = useState(false);
   // Slots unseen for over an hour are ghosts of old runs: hidden until asked for.
   const { shown, hidden } = splitWorkers(all, new Date());
-  const list = showStale ? all : shown;
-  const healthy = all.filter((w) => w.healthy).length;
+  const [showSupervisors, setShowSupervisors] = useState(false);
+  // A supervisor starts and stops workers and never carries a todo: folded away.
+  const current = splitSupervisors(showStale ? all : shown);
+  const list = showSupervisors ? [...current.workers, ...current.supervisors] : current.workers;
+  const healthy = list.filter((w) => w.healthy).length;
 
   return (
     <div className="page page--wide" data-testid="shift-workers-page">
@@ -50,6 +54,17 @@ export function ShiftWorkersPage(): JSX.Element {
           <h2 className="page__section-title">
             Live · {healthy} of {list.length} healthy
           </h2>
+          {current.supervisors.length > 0 ? (
+            <button
+              type="button"
+              className="action-button action-button--ghost"
+              aria-pressed={showSupervisors}
+              onClick={() => setShowSupervisors((v) => !v)}
+            >
+              {showSupervisors ? 'Hide' : 'Show'} {current.supervisors.length} supervisor
+              {current.supervisors.length === 1 ? '' : 's'}
+            </button>
+          ) : null}
           {hidden.length > 0 ? (
             <button
               type="button"
@@ -107,7 +122,13 @@ export function ShiftWorkersPage(): JSX.Element {
         ) : history.data.slots.length === 0 ? (
           <EmptyState icon={Activity} title="No worker activity in this window." />
         ) : (
-          <ShiftTimeline from={history.data.from} to={history.data.to} slots={history.data.slots} />
+          <ShiftTimeline
+            from={history.data.from}
+            to={history.data.to}
+            slots={
+              showSupervisors ? history.data.slots : splitSupervisors(history.data.slots).workers
+            }
+          />
         )}
       </section>
 

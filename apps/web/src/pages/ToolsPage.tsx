@@ -28,10 +28,11 @@ import { SharedToolsTabs } from './sharedTools/SharedToolsTabs';
 export function ToolsPage(): JSX.Element {
   const dashboard = useToolFinderDashboard();
   const scan = useToolFinderScan();
+  // A failed scan is an error with a reason, not an empty result: it gets one
+  // clear state, and the "0 clusters in 0 families" statistics stay out of it.
+  const scanFailed = !scan.isRunning && scan.status?.phase === 'failed';
   const showProgress =
-    scan.isRunning ||
-    scan.status?.phase === 'failed' ||
-    (scan.status?.phase === 'completed' && scan.feed.length > 0);
+    scan.isRunning || (scan.status?.phase === 'completed' && scan.feed.length > 0);
 
   return (
     <div className="page page--wide" data-testid="tools-page">
@@ -39,7 +40,7 @@ export function ToolsPage(): JSX.Element {
         <div className="tools-header__row">
           <h1 className="page__title">Shared tools</h1>
           <div className="tools-header__scan">
-            {dashboard.data ? (
+            {dashboard.data && !scanFailed ? (
               <span className="tools-header__meta">
                 last scan: {formatScannedAt(dashboard.data.scan.scanned_at)} ·{' '}
                 {formatCount(dashboard.data.cluster_count)} clusters in{' '}
@@ -73,6 +74,18 @@ export function ToolsPage(): JSX.Element {
       {showProgress && scan.status ? (
         <ScanProgressPanel status={scan.status} feed={scan.feed} />
       ) : null}
+      {scanFailed ? (
+        <div data-testid="tools-scan-failed">
+          <ErrorState
+            title="The last scan failed."
+            description={
+              scan.status?.error
+                ? `${scan.status.error}. Nothing below reflects that scan; run it again once the cause is fixed.`
+                : 'The scan did not finish. Run it again; if it keeps failing, check the server log.'
+            }
+          />
+        </div>
+      ) : null}
 
       <section className="tools-dashboard" aria-label="Pattern families">
         {dashboard.isPending ? (
@@ -83,11 +96,13 @@ export function ToolsPage(): JSX.Element {
             error={dashboard.error}
           />
         ) : dashboard.data.families.length === 0 ? (
+          scanFailed ? null : (
           <EmptyState
             icon={Sparkles}
             title="No cross-repo clusters yet."
             description="Run a live scan to mine every split family for duplicated code worth extracting into shared tools."
           />
+          )
         ) : (
           <div className="tools-dashboard__families">
             {dashboard.data.families.map((family) => (

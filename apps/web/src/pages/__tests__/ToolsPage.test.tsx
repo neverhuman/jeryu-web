@@ -247,4 +247,32 @@ describe('ToolsPage', () => {
       expect(post).toBeTruthy();
     });
   });
+
+  it('shows a failed scan as one clear error, not as an empty result with zero statistics', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const rawUrl = input instanceof Request ? input.url : String(input);
+      const { pathname } = new URL(rawUrl, 'http://localhost');
+      const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
+      if (pathname === '/api/v1/tool-finder/dashboard') {
+        return jsonResponse({ ...DASHBOARD, families: [], cluster_count: 0, family_count: 0 });
+      }
+      if (pathname === '/api/v1/tool-finder/scan' && method === 'GET') {
+        return jsonResponse({
+          ...IDLE_SCAN,
+          phase: 'failed',
+          error: 'tool-finder scan failed: no split-family repos discovered',
+        });
+      }
+      return jsonResponse(REGISTRY);
+    });
+    renderPage();
+    const failed = await screen.findByTestId('tools-scan-failed');
+    expect(failed).toHaveTextContent('The last scan failed.');
+    expect(failed).toHaveTextContent('no split-family repos discovered');
+    expect(screen.queryByText(/last scan:/)).toBeNull();
+    expect(screen.queryByText('No cross-repo clusters yet.')).toBeNull();
+    // The one action stays: run it again.
+    expect(screen.getByTestId('run-scan-button')).toBeEnabled();
+  });
 });
+

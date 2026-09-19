@@ -737,3 +737,18 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* The repository name is the link; the owner disambiguates equal names. */
+.repo-table__repo-link {
+  color: var(--color-accent-primary, var(--color-fg-primary));
+  text-decoration: none;
+}
+
+.repo-table__repo-link:hover,
+.repo-table__repo-link:focus-visible {
+  text-decoration: underline;
+}
+
+.repo-table__repo-owner {
+  color: var(--color-fg-muted);
+}

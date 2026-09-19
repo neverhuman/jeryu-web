@@ -6,6 +6,7 @@ import {
   lastTtyLine,
   reviewVerdict,
   runnerNetworkFromResponse,
+  runnerTags,
 } from '../runnerNetworkModel';
 import type { RunnerFabricResponse } from '../../api/types';
 
@@ -267,3 +268,13 @@ describe('runnerNetworkModel', () => {
     expect(state.nodes).toEqual([]);
   });
 });
+
+describe('runnerTags', () => {
+  it('says each fact once, whatever case and whichever list it came from', () => {
+    expect(
+      runnerTags({ labels: ['xbabe2', 'slot 0', 'pr-gate'], classes: ['PR-GATE', ' ', 'linux'] })
+    ).toEqual(['xbabe2', 'slot 0', 'pr-gate', 'linux']);
+    expect(runnerTags({ labels: [], classes: [] })).toEqual([]);
+  });
+});
+

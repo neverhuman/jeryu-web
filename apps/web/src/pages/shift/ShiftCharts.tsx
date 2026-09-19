@@ -5,7 +5,8 @@
 // role="img" with a text summary, and <title> tooltips on each mark.
 
 import type { ShiftCapacityPoint, ShiftSlotHistory } from '../../api/types';
-import { capacityGeometry, layoutSegments, slotLabel, timeTicks } from './shiftModel';
+import { capacityGeometry, layoutSegments, timeTicks } from './shiftModel';
+import { laneLabel, spansManyHosts } from './workersModel';
 
 const WIDTH = 960;
 const LABEL = 170;
@@ -31,6 +32,7 @@ export function ShiftTimeline({
   const height = slots.length * LANE + AXIS;
   const spanHours = (Date.parse(to) - Date.parse(from)) / 3_600_000;
   const ticks = timeTicks(from, to, 6);
+  const manyHosts = spansManyHosts(slots);
   return (
     <div className="shift-chart" data-testid="shift-timeline">
       <svg
@@ -63,7 +65,7 @@ export function ShiftTimeline({
           return (
             <g key={`${slot.operator}/${slot.host}/${slot.slot}/${slot.family}`}>
               <text className="shift-chart__lane-label" x={0} y={y + LANE * 0.65}>
-                {slotLabel(slot.operator, slot.host, slot.slot)}
+                {laneLabel(slot, manyHosts)}
               </text>
               {bars.map((bar, i) => (
                 <g key={i}>

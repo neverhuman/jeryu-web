@@ -373,9 +373,10 @@ describe('FleetPage render', () => {
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/43',
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/43',
     ]);
-    expect(screen.getByTestId('fleet-reviewer-last-pass-xbabe0_redteam')).toHaveTextContent(
-      '2026-09-19T05:21:43Z'
-    );
+    // A relative time for a person; the exact stamp stays on hover.
+    const lastPass = screen.getByTestId('fleet-reviewer-last-pass-xbabe0_redteam');
+    expect(lastPass).not.toHaveTextContent('2026-09-19T05:21:43Z');
+    expect(lastPass.getAttribute('title')).toContain('2026-09-19T05:21:43Z');
     expect(screen.getByTestId('fleet-reviewer-verdict-xbabe1_redteam')).toHaveTextContent(
       'hold'
     );

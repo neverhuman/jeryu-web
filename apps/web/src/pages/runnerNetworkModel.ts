@@ -330,3 +330,20 @@ export function runnerNetworkFromResponse(
     lastUpdated,
   };
 }
+
+/**
+ * A runner's labels and classes as one list with each fact once. Reporters
+ * send the role both as a label and as a class ("pr-gate", "pr-gate").
+ */
+export function runnerTags(node: { labels: readonly string[]; classes: readonly string[] }): string[] {
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  for (const tag of [...node.labels, ...node.classes]) {
+    const key = tag.trim().toLowerCase();
+    if (key === '' || seen.has(key)) continue;
+    seen.add(key);
+    tags.push(tag.trim());
+  }
+  return tags;
+}
+

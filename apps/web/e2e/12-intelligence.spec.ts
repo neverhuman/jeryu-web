@@ -320,7 +320,8 @@ test.describe('Intelligence control-plane page', () => {
       timeout: 10_000,
     });
     await expect(page.getByTestId('priority-pr-63-checks-missing')).toBeVisible();
-    await expect(page.getByText('absence=evidence')).toBeVisible();
+    await expect(page.getByText('none recorded yet')).toBeVisible();
+    await expect(page.getByText('absence=evidence')).toHaveCount(0);
     await expect(page.getByTestId('operator-graph-console')).toBeVisible();
     await page.getByLabel('Search graph').fill('ci');
     await expect(page.getByTestId('repo-graph-preview')).toBeVisible();

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ShiftWorkersPage } from '../shift/ShiftWorkersPage';
 import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
+import { HISTORY, WORKERS } from './shiftTestData';
 
 function renderWorkers(): void {
   renderAt('/work/shift/workers', '/work/shift/workers', <ShiftWorkersPage />);
@@ -36,7 +37,8 @@ describe('ShiftWorkersPage', () => {
     const timeline = await screen.findByTestId('shift-timeline');
     expect(within(timeline).getByRole('img', { name: /Worker timeline: 1 slot/ })).toBeInTheDocument();
     expect(timeline.querySelectorAll('rect.shift-chart__seg')).toHaveLength(2);
-    expect(within(timeline).getByText('alton@xbabe0/w1')).toBeInTheDocument();
+    // Lanes are named by family and slot: the operator is the same on every line.
+    expect(within(timeline).getByText('jeryu · w1')).toBeInTheDocument();
     const capacity = screen.getByTestId('shift-capacity');
     expect(within(capacity).getByRole('img', { name: /peak 2 busy of 6 planned/ })).toBeInTheDocument();
     expect(capacity.querySelector('path.shift-chart__planned')).not.toBeNull();
@@ -47,6 +49,30 @@ describe('ShiftWorkersPage', () => {
       expect(calls.some((c) => c.pathname === '/api/v1/shift/workers/history' && c.search === '?hours=168')).toBe(true)
     );
     expect(screen.getByRole('button', { name: '7d' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('folds supervisor slots out of the table and the timeline until asked for', async () => {
+    const supervisor = { ...WORKERS.workers[0], slot: 'supervisor', state: 'idle', stage: null, todo_id: null };
+    mockShiftApi((req) => {
+      if (req.pathname === '/api/v1/shift/workers') {
+        return json({ ...WORKERS, workers: [WORKERS.workers[0], supervisor] });
+      }
+      if (req.pathname === '/api/v1/shift/workers/history') {
+        return json({ ...HISTORY, slots: [...HISTORY.slots, { ...HISTORY.slots[0], slot: 'supervisor' }] });
+      }
+      return undefined;
+    });
+    renderWorkers();
+    await screen.findByTestId('shift-worker-xbabe0-w1');
+    expect(screen.queryByTestId('shift-worker-xbabe0-supervisor')).toBeNull();
+    expect(screen.getByText('Live · 1 of 1 healthy')).toBeInTheDocument();
+    const timeline = await screen.findByTestId('shift-timeline');
+    expect(within(timeline).getByRole('img', { name: /Worker timeline: 1 slot/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show 1 supervisor' }));
+    expect(screen.getByTestId('shift-worker-xbabe0-supervisor')).toBeInTheDocument();
+    expect(within(timeline).getByRole('img', { name: /Worker timeline: 2 slots/ })).toBeInTheDocument();
+    expect(within(timeline).getByText('jeryu · supervisor')).toBeInTheDocument();
   });
 
   it('renders empty and error states', async () => {

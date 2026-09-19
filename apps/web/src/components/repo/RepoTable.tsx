@@ -77,7 +77,17 @@ export function RepoTable({
         accessorFn: (row) => row.id.name,
         cell: ({ row }) => (
           <span className="repo-table__repo-cell">
-            <strong>{row.original.id.name}</strong>
+            {/* owner/name: three repositories can share a name. The name is
+                the link; the row stays clickable as well. */}
+            <Link
+              to={repoHref(row.original)}
+              className="repo-table__repo-link"
+              onClick={(e) => e.stopPropagation()}
+              data-testid={`repo-link-${row.original.id.owner}/${row.original.id.name}`}
+            >
+              <span className="repo-table__repo-owner">{row.original.id.owner}/</span>
+              <strong>{row.original.id.name}</strong>
+            </Link>
             <RepoRoleBadge role={row.original.repo_role} />
           </span>
         ),
@@ -283,7 +293,7 @@ export function RepoTable({
               key={repo.id.id}
               tabIndex={0}
               role="row"
-              aria-label={`Open ${repo.id.name}`}
+              aria-label={`Open ${repo.id.owner}/${repo.id.name}`}
               onClick={() => navigate(repoHref(repo))}
               onKeyDown={(e) => {
                 if (e.target !== e.currentTarget) return;

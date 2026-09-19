@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 
 import { pullHref } from '../activity/activityModel';
-import { reviewVerdict, type RunnerNetworkNode } from '../runnerNetworkModel';
+import { relativeTime } from '../../components/repo/relativeTime';
+import { reviewVerdict, runnerTags, type RunnerNetworkNode } from '../runnerNetworkModel';
 
 export function RunnerNodeList({
   nodes,
@@ -53,7 +54,7 @@ function RunnerNodeRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
   );
   const usedPct =
     node.capacity > 0 ? Math.round((usedSlots / node.capacity) * 100) : 0;
-  const tags = [...node.labels, ...node.classes];
+  const tags = runnerTags(node);
   return (
     <article
       className={`fleet__node-item is-${node.availability} is-${node.activityState}`}
@@ -126,12 +127,7 @@ function RunnerNodeRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
             <span className="page__pill page__pill--warning">no labels</span>
           )}
         </div>
-        <span
-          className="fleet__node-muted fleet__node-mono"
-          title={node.lastUpdated ?? undefined}
-        >
-          {node.lastUpdated ?? 'unknown'}
-        </span>
+        <When iso={node.lastUpdated} missing="unknown" />
       </div>
 
     </article>
@@ -224,16 +220,11 @@ function ReviewerRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
         <span
           className="fleet__node-muted fleet__node-mono"
           data-testid={`fleet-reviewer-last-pass-${nodeId}`}
-          title={last ? `${last.seconds}s` : undefined}
+          title={last ? `${last.finishedAt} · ${last.seconds}s` : undefined}
         >
-          {last?.finishedAt ?? 'none yet'}
+          {last?.finishedAt ? relativeTime(last.finishedAt) : 'none yet'}
         </span>
-        <span
-          className="fleet__node-muted fleet__node-mono"
-          title={node.lastUpdated ?? undefined}
-        >
-          {node.lastUpdated ?? 'unknown'}
-        </span>
+        <When iso={node.lastUpdated} missing="unknown" />
       </div>
     </article>
   );
@@ -331,3 +322,14 @@ function PullLink({ repo, pr }: { repo: string; pr: number }): JSX.Element {
     </Link>
   );
 }
+
+/** A relative time a person can read, with the exact stamp on hover. */
+function When({ iso, missing }: { iso: string | null; missing: string }): JSX.Element {
+  if (!iso) return <span className="fleet__node-muted">{missing}</span>;
+  return (
+    <time className="fleet__node-muted" dateTime={iso} title={iso}>
+      {relativeTime(iso)}
+    </time>
+  );
+}
+

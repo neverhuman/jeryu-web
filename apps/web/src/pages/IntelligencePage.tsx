@@ -88,8 +88,7 @@ function IntelligenceSnapshot({
       <header className="page__header intelligence__header">
         <div className="intelligence__title-line">
           <h1 className="page__title">Intelligence</h1>
-          <StatePill state={snapshot.localAuthority.state} label="local" />
-          <span className="page__pill">{snapshot.schemaVersion}</span>
+          <StatePill state={snapshot.localAuthority.state} label="snapshot" />
         </div>
         <p className="page__roadmap-note intelligence__header-note">
           Operational snapshot of priorities, graph state, and evidence.
@@ -128,7 +127,13 @@ function IntelligenceSnapshot({
             icon={<Package size={18} aria-hidden="true" />}
             label="Artifacts"
             value={snapshot.artifacts.latestRelease.artifactCount}
-            detail={`absence=${snapshot.artifacts.absenceIsSuccess ? 'success' : 'evidence'}`}
+            detail={
+              snapshot.artifacts.latestRelease.artifactCount > 0
+                ? 'in the latest release'
+                : snapshot.artifacts.absenceIsSuccess
+                  ? 'none expected'
+                  : 'none recorded yet'
+            }
             state={snapshot.artifacts.state}
           />
           <MetricCard
@@ -146,7 +151,6 @@ function IntelligenceSnapshot({
           <h2 className="page__section-title" id="intelligence-priority">
             Top priorities
           </h2>
-          <span className="page__pill">{snapshot.priorities[0]?.rulesVersion ?? 'rules-v1'}</span>
         </div>
         {topPriorities.length === 0 ? (
           <p className="page__roadmap-note">No ranked priorities.</p>

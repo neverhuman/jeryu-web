@@ -63,6 +63,25 @@ describe('RepoTable', () => {
     expect(screen.getByText('Split member')).toBeInTheDocument();
   });
 
+  it('names a repository owner/name as a link, so equal names stay distinguishable', () => {
+    const twin: RepositorySummary = {
+      ...REPO,
+      id: { ...REPO.id, id: 'repo-uuid-2', owner: 'veox-ai' },
+    };
+    render(
+      <MemoryRouter>
+        <RepoTable repos={[REPO, twin]} />
+      </MemoryRouter>
+    );
+    const first = screen.getByTestId('repo-link-neverhuman/jeryu-core');
+    const second = screen.getByTestId('repo-link-veox-ai/jeryu-core');
+    expect(first).toHaveTextContent('neverhuman/jeryu-core');
+    expect(second).toHaveTextContent('veox-ai/jeryu-core');
+    expect(first.tagName).toBe('A');
+    expect(first.getAttribute('href')).not.toBe(second.getAttribute('href'));
+    expect(screen.getByRole('row', { name: 'Open veox-ai/jeryu-core' })).toBeInTheDocument();
+  });
+
   it('labels the column Failing CI and shows a muted dash when nothing fails', () => {
     render(
       <MemoryRouter>

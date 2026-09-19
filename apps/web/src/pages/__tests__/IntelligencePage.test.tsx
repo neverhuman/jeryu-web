@@ -37,7 +37,11 @@ describe('IntelligencePage', () => {
     expect(screen.getByTestId('priority-pr-1-checks-missing')).toHaveTextContent(
       'PR #1 has no head checks'
     );
-    expect(screen.getByText('absence=evidence')).toBeInTheDocument();
+    // Plain words in the header: no protocol strings, schema ids or rule versions.
+    expect(screen.getByText('none recorded yet')).toBeInTheDocument();
+    expect(screen.queryByText('absence=evidence')).toBeNull();
+    expect(screen.queryByText('jeryu.control_plane/v1')).toBeNull();
+    expect(screen.queryByText('rules-v1')).toBeNull();
     expect(screen.getByRole('link', { name: /^Runners: 4/ })).toHaveAttribute('href', '/runners');
     expect(screen.getByRole('link', { name: /^Open PRs: 1/ })).toHaveAttribute('href', '/pull-room');
     expect(screen.getByTestId('repo-graph-preview')).toBeInTheDocument();
