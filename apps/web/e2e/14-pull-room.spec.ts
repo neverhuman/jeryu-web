@@ -221,6 +221,7 @@ function controlPlane() {
         repo: 'alice/jeryu',
         number: 8,
         title: 'Repair check posture',
+        author: 'bob',
         draft: false,
         state: 'open',
         headRef: 'feature/checks',

@@ -100,6 +100,7 @@ function sampleSnapshot(): ControlPlaneSnapshot {
         repo: 'jeryu/demo',
         number: 1,
         title: 'feature',
+        author: 'alice',
         draft: true,
         state: 'draft',
         headRef: 'feature',

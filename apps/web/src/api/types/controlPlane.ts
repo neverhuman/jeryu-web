@@ -55,7 +55,8 @@ export interface ControlPullRequest {
   repo: string;
   number: number;
   title: string;
-  author?: string | null;
+  /** Login of the pull request's author. */
+  author: string;
   draft: boolean;
   state: string;
   headRef: string;

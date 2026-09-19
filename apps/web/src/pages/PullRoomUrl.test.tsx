@@ -9,7 +9,7 @@ vi.mock('../hooks/useControlPlane', () => ({ useControlPlane: () => ({
   isLoading: false, isError: false,
   data: {
     pullRequests: ['owner/a', 'owner/b'].map((repo) => ({
-      repo, number: 1, title: `Change in ${repo}`, draft: false, state: 'open',
+      repo, number: 1, title: `Change in ${repo}`, author: 'alice', draft: false, state: 'open',
       headRef: 'feature', headSha: 'abc12345', baseRef: 'main', baseSha: 'def12345',
       mergeable: true, mergeableState: 'clean', changedFiles: [], stateEvidence: 'fresh',
       checks: { total: 1, queued: 0, running: 0, failing: 0, successful: 1, missing: false },

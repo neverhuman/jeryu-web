@@ -11,6 +11,11 @@ import {
 } from '../pullRoomModel';
 
 describe('pullRoomModel', () => {
+  it('carries the control-plane author login onto the card item', () => {
+    expect(fromControlPullRequest(pr({ author: 'bob' })).author).toBe('bob');
+    expect(fromControlPullRequest(pr({ author: '' })).author).toBeNull();
+  });
+
   it('groups PRs into check posture lanes', () => {
     const items = [
       pr({ number: 1, checks: { total: 0, missing: true } }),
@@ -100,6 +105,7 @@ function pr(overrides: PrOverrides = {}): ControlPullRequest {
     repo: overrides.repo ?? 'alice/jeryu',
     number: overrides.number ?? 1,
     title: overrides.title ?? `PR ${overrides.number ?? 1}`,
+    author: overrides.author ?? 'alice',
     draft: overrides.draft ?? false,
     state: overrides.state ?? 'open',
     headRef: overrides.headRef ?? 'feature',
