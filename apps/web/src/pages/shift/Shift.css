@@ -1,28 +1,4 @@
-/* Shift.css — Work tab strip + Queue / Add / Workers pages. */
-
-.work-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--color-border-subtle);
-  margin-bottom: 16px;
-}
-
-.work-tabs__tab {
-  padding: 6px 12px;
-  color: var(--color-fg-secondary);
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-}
-
-.work-tabs__tab:hover {
-  color: var(--color-fg-primary);
-}
-
-.work-tabs__tab.is-active {
-  color: var(--color-fg-primary);
-  border-bottom-color: var(--color-accent-info);
-}
+/* Shift.css — the Work page: composer, workers strip, queue, shifts. */
 
 .shift__toolbar {
   display: flex;
@@ -165,16 +141,99 @@
 
 /* Add */
 
-.shift-add {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 760px;
+.work-composer {
+  margin-bottom: 12px;
 }
 
-.shift-add textarea {
-  min-height: 160px;
+.work-composer__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* One row: family, Now/Night, the line of text, the one filled button, More. */
+.work-composer__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.work-composer__family select {
+  height: 32px;
+}
+
+.work-composer__line {
+  flex: 1 1 320px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
   font: inherit;
+  color: var(--color-fg-primary);
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.work-composer textarea {
+  width: 100%;
+  max-width: 900px;
+  min-height: 140px;
+  font: inherit;
+}
+
+/* Workers: one line that opens to the whole panel. */
+.work-workers {
+  margin-bottom: 16px;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.work-workers__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 6px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+.work-workers__line.is-warning .work-workers__summary {
+  color: var(--color-accent-warning);
+}
+
+.work-workers__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.work-workers__summary {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.work-workers__spark {
+  flex: none;
+  color: var(--color-accent-info);
+}
+
+.work-workers__panel {
+  padding: 8px 0 16px;
+}
+
+.shift__family-cell {
+  width: 1%;
+  white-space: nowrap;
+  vertical-align: top;
 }
 
 .shift-add__row {

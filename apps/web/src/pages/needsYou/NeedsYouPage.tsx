@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type { AttentionItem } from '../../api/types';
+import { FamilyPill, FamilyStrip } from '../../components/family/FamilyPills';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
 import { useControlPlaneRunners } from '../../hooks/useControlPlaneRunners';
@@ -139,42 +140,6 @@ interface FamilyProps {
   picked: string;
 }
 
-/** "All" plus one pill per family with something waiting. */
-function FamilyStrip({
-  counts,
-  family,
-  onPick,
-}: {
-  counts: { family: string; count: number }[];
-  family: string;
-  onPick: (family: string) => void;
-}): JSX.Element {
-  const total = counts.reduce((sum, entry) => sum + entry.count, 0);
-  return (
-    <div className="needs-you__families" role="group" aria-label="Filter by family">
-      <button
-        type="button"
-        className="needs-you__family"
-        aria-pressed={family === ''}
-        onClick={() => onPick('')}
-      >
-        All <span className="needs-you__family-count">{total}</span>
-      </button>
-      {counts.map((entry) => (
-        <button
-          key={entry.family}
-          type="button"
-          className="needs-you__family"
-          aria-pressed={family === entry.family}
-          onClick={() => onPick(entry.family)}
-        >
-          {entry.family} <span className="needs-you__family-count">{entry.count}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function AttentionSection({
   group,
   now,
@@ -225,18 +190,7 @@ function AttentionRow({
   const family = familyFor(item);
   return (
     <li className={`needs-you__row needs-you__row--${tone}`} data-testid={`needs-you-item-${item.id}`}>
-      <button
-        type="button"
-        className="needs-you__family needs-you__family--row"
-        aria-pressed={picked === family}
-        aria-label={
-          picked === family ? `Showing only ${family}: show every family` : `Show only ${family}`
-        }
-        title={picked === family ? 'Show every family' : `Show only ${family}`}
-        onClick={() => onPick(family)}
-      >
-        {family}
-      </button>
+      <FamilyPill family={family} picked={picked} onPick={onPick} />
       <div className="needs-you__main">
         <p className="needs-you__title-line">
           <span className="needs-you__title">{item.title}</span>

@@ -1,5 +1,6 @@
-// ShiftQueuePage.test.tsx — Work → Queue: shifts panel, filters, row expansion,
-// admin-only row actions and "Open review PR", and the UX states.
+// ShiftQueuePage.test.tsx — the Work page's queue: every family with family
+// pills, the shifts panel, filters, row expansion, admin-only row actions and
+// "Open review PR", and the UX states.
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,8 +14,8 @@ vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: { login: 'alton', role } }),
 }));
 
-function renderQueue(path = '/work/shift'): void {
-  renderAt(path, '/work/shift', <ShiftQueuePage />);
+function renderQueue(path = '/work'): void {
+  renderAt(path, '/work', <ShiftQueuePage />);
 }
 
 describe('ShiftQueuePage', () => {
@@ -50,7 +51,8 @@ describe('ShiftQueuePage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Requested by' })).toBeNull();
     expect(within(done).getByText('$1.25')).toBeInTheDocument();
     expect(within(screen.getByTestId('shift-todo-20260918-1832-k3f')).getByText('—', { selector: '.shift__cost' })).toBeInTheDocument();
-    expect(calls.some((c) => c.pathname === '/api/v1/shift/todos' && c.search === '?family=jeryu')).toBe(true);
+    // One request for every family's todos; shift branches carry no family, so one per family.
+    expect(calls.some((c) => c.pathname === '/api/v1/shift/todos' && c.search === '')).toBe(true);
     expect(calls.some((c) => c.pathname === '/api/v1/shift/shifts' && c.search === '?family=jeryu')).toBe(true);
   });
 
@@ -70,7 +72,7 @@ describe('ShiftQueuePage', () => {
 
   it('focuses filed todos from ?todo=', async () => {
     mockShiftApi();
-    renderQueue('/work/shift?family=jeryu&todo=20260918-1832-k3f');
+    renderQueue('/work?family=jeryu&todo=20260918-1832-k3f');
     expect(await screen.findByTestId('shift-todo-detail-20260918-1832-k3f')).toBeInTheDocument();
     expect(screen.queryByTestId('shift-todo-20260918-2201-a9z')).toBeNull();
   });
@@ -246,7 +248,7 @@ describe('ShiftQueuePage', () => {
             ? json({ generated_at: '2026-09-19T09:00:00Z', todos: [] })
             : undefined
     );
-    renderQueue('/work/shift?family=jain');
+    renderQueue('/work?family=jain');
     const live = await screen.findByTestId('shift-branch-nightshift/2026-09-18');
     // Work landed after the PR merged: a review PR would carry it.
     expect(within(live).getByText(/1 todo not on the base branch/)).toBeInTheDocument();
@@ -268,4 +270,70 @@ describe('ShiftQueuePage', () => {
     expect(within(done).queryByRole('link', { name: 'jain-gone' })).toBeNull();
     expect(within(done).getByText('jain-gone')).toBeInTheDocument();
   });
+
+  it('shows every family, wears the family on each row, and filters from a pill', async () => {
+    const families = {
+      families: [
+        { name: 'jeryu', queue_repo: 'jeryu/jeryu-todo', repos: [{ name: 'jeryu-web', order: 1 }], shift_tz: 'America/Los_Angeles', landing: 'shifts' },
+        { name: 'jain', queue_repo: 'jain-split/jain-todo', repos: [{ name: 'jain-deploy', order: 1, owner: 'veox' }], shift_tz: 'America/Los_Angeles', landing: 'shifts' },
+      ],
+    };
+    const todos = [
+      todo({ id: 'j-1', family: 'jeryu', title: 'Jeryu open one', status: 'open' }),
+      todo({ id: 'j-2', family: 'jeryu', title: 'Jeryu open two', status: 'open' }),
+      todo({ id: 'n-1', family: 'jain', title: 'Jain blocked one', status: 'blocked', note: 'needs a tag' }),
+    ];
+    const calls = mockShiftApi((req) => {
+      if (req.pathname === '/api/v1/shift/families') return json(families);
+      if (req.pathname === '/api/v1/shift/todos') {
+        return json({ generated_at: '2026-09-19T09:00:00Z', todos });
+      }
+      if (req.pathname === '/api/v1/shift/shifts') {
+        const family = new URLSearchParams(req.search).get('family') ?? '';
+        return json({
+          shifts: [
+            {
+              branch: 'nightshift/2026-09-18',
+              kind: 'nightshift',
+              date: '2026-09-18',
+              repos: [{ repo: `${family}-repo`, head: 'abc1234', ahead: 1, behind: 0, unmerged_todos: ['x'] }],
+              todo_ids: ['x'],
+            },
+          ],
+        });
+      }
+      return undefined;
+    });
+    renderQueue();
+
+    // All families by default: three live rows, each led by its family pill.
+    const jain = await screen.findByTestId('shift-todo-n-1');
+    expect(screen.getByTestId('shift-todo-j-1')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'In progress · 3' })).toBeInTheDocument();
+    const strip = screen.getByRole('group', { name: 'Filter by family' });
+    expect(within(strip).getByRole('button', { name: /^All 3$/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(strip).getByRole('button', { name: /^jeryu 2$/ })).toBeInTheDocument();
+    expect(within(strip).getByRole('button', { name: /^jain 1$/ })).toBeInTheDocument();
+    // The same branch name under two families is two cards, each wearing its family.
+    await waitFor(() =>
+      expect(screen.getAllByTestId('shift-branch-nightshift/2026-09-18')).toHaveLength(2)
+    );
+    expect(calls.some((c) => c.pathname === '/api/v1/shift/shifts' && c.search === '?family=jain')).toBe(true);
+
+    // The pill at the far left of a row filters the whole page to that family.
+    fireEvent.click(within(jain).getByRole('button', { name: 'Show only jain' }));
+    expect(screen.queryByTestId('shift-todo-j-1')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'In progress · 1' })).toBeInTheDocument();
+    expect(within(strip).getByRole('button', { name: /^jain 1$/ })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() =>
+      expect(screen.getAllByTestId('shift-branch-nightshift/2026-09-18')).toHaveLength(1)
+    );
+    // The composer follows the filter.
+    expect(within(screen.getByRole('region', { name: 'Add work' })).getByLabelText('Family')).toHaveValue('jain');
+
+    // Pressing the pill again shows every family.
+    fireEvent.click(within(screen.getByTestId('shift-todo-n-1')).getByRole('button', { name: /^Showing only jain/ }));
+    expect(screen.getByTestId('shift-todo-j-1')).toBeInTheDocument();
+  });
 });
+

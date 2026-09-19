@@ -6,6 +6,7 @@
 
 import {
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
   type UseMutationResult,
@@ -65,6 +66,42 @@ export function useShiftShifts(
     refetchInterval: 30_000,
     retry: false,
   });
+}
+
+/** One family's shift branches, tagged with the family they belong to. */
+export interface FamilyShifts {
+  family: string;
+  shifts: ShiftShiftsResponse['shifts'];
+}
+
+/**
+ * Shift branches of several families at once. A branch carries no family of
+ * its own, and two families share branch names (`nightshift/2026-09-18`), so
+ * "every family" is one request per family, in parallel, each kept apart.
+ */
+export function useShiftShiftsByFamily(families: string[]): {
+  data: FamilyShifts[];
+  isPending: boolean;
+  error: Error | null;
+} {
+  const results = useQueries({
+    queries: families.map((family) => ({
+      queryKey: [...SHIFT_KEY, 'shifts', family],
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        apiGet<ShiftShiftsResponse>(endpoints.shiftShifts(family), { signal }),
+      staleTime: 10_000,
+      // A review PR opened by a worker or by `todoq shift pr` shows up on its own.
+      refetchInterval: 30_000,
+      retry: false,
+    })),
+  });
+  return {
+    data: results.flatMap((result, index) =>
+      result.data ? [{ family: families[index] ?? '', shifts: result.data.shifts }] : []
+    ),
+    isPending: results.some((result) => result.isPending),
+    error: results.find((result) => result.error)?.error ?? null,
+  };
 }
 
 export function useShiftWorkers(): UseQueryResult<ShiftWorkersResponse, Error> {

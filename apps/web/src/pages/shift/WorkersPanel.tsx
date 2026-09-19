@@ -1,4 +1,5 @@
-// ShiftWorkersPage.tsx — Work → Workers (`/work/shift/workers`).
+// WorkersPanel.tsx — everything about the worker slots, shown when the
+// workers strip on the Work page is opened.
 //
 // Live table of worker-slot heartbeats (healthy = seen within 120 s), a
 // 24h / 7d swim-lane timeline per slot, and an hourly capacity chart of
@@ -15,7 +16,7 @@ import { ShiftError } from './shiftCommon';
 import { ShiftCapacityChart, ShiftTimeline } from './ShiftCharts';
 import { formatAgo, splitWorkers } from './shiftModel';
 import { splitSupervisors } from './workersModel';
-import { WorkTabs, queueHref } from './WorkTabs';
+import { queueHref } from './workPaths';
 
 import '../page.css';
 import './Shift.css';
@@ -25,7 +26,7 @@ const RANGES = [
   { hours: 168, label: '7d' },
 ] as const;
 
-export function ShiftWorkersPage(): JSX.Element {
+export function WorkersPanel(): JSX.Element {
   const workers = useShiftWorkers();
   const [hours, setHours] = useState<number>(24);
   const history = useShiftWorkersHistory(hours);
@@ -40,15 +41,7 @@ export function ShiftWorkersPage(): JSX.Element {
   const healthy = list.filter((w) => w.healthy).length;
 
   return (
-    <div className="page page--wide" data-testid="shift-workers-page">
-      <header className="page__header">
-        <h1 className="page__title">Work</h1>
-        <p className="page__subtitle">
-          Worker slots across operators and machines, from their heartbeats.
-        </p>
-      </header>
-      <WorkTabs />
-
+    <div className="work-workers__panel" data-testid="shift-workers-panel">
       <section className="shift__section" aria-label="Live workers">
         <div className="shift__toolbar">
           <h2 className="page__section-title">

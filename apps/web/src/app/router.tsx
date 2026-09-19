@@ -9,7 +9,7 @@
 //
 // The repoRouteParser utility centralizes this parsing.
 
-import { Navigate, createBrowserRouter, useParams } from 'react-router-dom';
+import { Navigate, createBrowserRouter, useLocation, useParams } from 'react-router-dom';
 
 import { AppShell } from '../layout/AppShell';
 import { HomeRedirect } from '../layout/HomeRedirect';
@@ -32,7 +32,7 @@ import { ToolFleetPage } from '../pages/ToolFleetPage';
 import { ToolFleetToolPage } from '../pages/ToolFleetToolPage';
 import { ToolsPage } from '../pages/ToolsPage';
 import { RepoRouter } from '../pages/RepoRouter';
-import { ShiftAddPage, ShiftQueuePage, ShiftWorkersPage } from '../pages/shift';
+import { ShiftQueuePage, WORK_PATH } from '../pages/shift';
 
 import {
   ADOPTION_PATH,
@@ -43,6 +43,17 @@ import {
 function ToolFleetToolRedirect(): JSX.Element {
   const { tool = '' } = useParams();
   return <Navigate to={`${ADOPTION_PATH}/${encodeURIComponent(tool)}`} replace />;
+}
+
+/** An old Work URL -> `/work`, keeping its query string; `hash` names a place on the page. */
+function WorkRedirect({ hash }: { hash?: string }): JSX.Element {
+  const { search, hash: current } = useLocation();
+  return (
+    <Navigate
+      to={{ pathname: WORK_PATH, search, hash: hash ? `#${hash}` : current }}
+      replace
+    />
+  );
 }
 
 export const router = createBrowserRouter([
@@ -67,14 +78,15 @@ export const router = createBrowserRouter([
         path: 'repos/:provider/*',
         element: <RepoRouter />,
       },
-      // The split-wide Tracker is retired; Work opens on the shift Queue.
-      { path: 'work', element: <Navigate to="/work/shift" replace /> },
-      // Static `shift` segments outrank the dynamic `:key` detail route.
-      { path: 'work/shift', element: <ShiftQueuePage /> },
-      { path: 'work/shift/new', element: <ShiftAddPage /> },
-      { path: 'work/shift/workers', element: <ShiftWorkersPage /> },
-      // The item tracker is retired; its detail links land on the shift queue.
-      { path: 'work/:key', element: <Navigate to="/work/shift" replace /> },
+      // Work is one page: add work, who is working, the queue of every family.
+      { path: 'work', element: <ShiftQueuePage /> },
+      // The three tabs it replaced keep working: the queue is the page, Add and
+      // Workers are places on it. Query strings (`?family=`, `?todo=`) carry over.
+      { path: 'work/shift', element: <WorkRedirect /> },
+      { path: 'work/shift/new', element: <WorkRedirect hash="add" /> },
+      { path: 'work/shift/workers', element: <WorkRedirect hash="workers" /> },
+      // The item tracker is retired; its detail links land on Work.
+      { path: 'work/:key', element: <Navigate to={WORK_PATH} replace /> },
       { path: 'pull-room', element: <PullRoomPage /> },
       { path: 'releases', element: <ReleasesPage /> },
       // Unreleased is the last section of Releases; old links keep working.

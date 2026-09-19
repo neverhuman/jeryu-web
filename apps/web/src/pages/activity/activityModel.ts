@@ -2,7 +2,7 @@
 // live dock, and the per-PR events panel. Deterministic given `now`.
 
 import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
-import { queueHref } from '../shift/WorkTabs';
+import { queueHref } from '../shift/workPaths';
 
 export const ACTIVITY_PATH = '/activity';
 export const ACTIVITY_PAGE_SIZE = 100;

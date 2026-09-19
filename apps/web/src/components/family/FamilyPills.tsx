@@ -1,0 +1,76 @@
+// FamilyPills.tsx — the family a row belongs to, as a pill that filters.
+//
+// Needs you and Work list things from every family on one page. Each row wears
+// its family at the far left; pressing the pill keeps that family's rows, and
+// pressing it again (or "All" in the strip above the list) shows every family.
+// One look and one behaviour on both pages.
+
+import './FamilyPills.css';
+
+export interface FamilyCountEntry {
+  family: string;
+  count: number;
+}
+
+/** The pill at the far left of a row. `picked` is the active filter ('' = all). */
+export function FamilyPill({
+  family,
+  picked,
+  onPick,
+  className,
+}: {
+  family: string;
+  picked: string;
+  onPick: (family: string) => void;
+  className?: string;
+}): JSX.Element {
+  const active = picked === family;
+  return (
+    <button
+      type="button"
+      className={`family-pill family-pill--row${className ? ` ${className}` : ''}`}
+      aria-pressed={active}
+      aria-label={active ? `Showing only ${family}: show every family` : `Show only ${family}`}
+      title={active ? 'Show every family' : `Show only ${family}`}
+      onClick={() => onPick(family)}
+    >
+      {family}
+    </button>
+  );
+}
+
+/** "All" plus one pill per family, each with its count. */
+export function FamilyStrip({
+  counts,
+  family,
+  onPick,
+}: {
+  counts: FamilyCountEntry[];
+  family: string;
+  onPick: (family: string) => void;
+}): JSX.Element {
+  const total = counts.reduce((sum, entry) => sum + entry.count, 0);
+  return (
+    <div className="family-strip" role="group" aria-label="Filter by family">
+      <button
+        type="button"
+        className="family-pill"
+        aria-pressed={family === ''}
+        onClick={() => onPick('')}
+      >
+        All <span className="family-pill__count">{total}</span>
+      </button>
+      {counts.map((entry) => (
+        <button
+          key={entry.family}
+          type="button"
+          className="family-pill"
+          aria-pressed={family === entry.family}
+          onClick={() => onPick(entry.family)}
+        >
+          {entry.family} <span className="family-pill__count">{entry.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}

@@ -78,7 +78,7 @@ describe('activityModel', () => {
   it('links an event to its todo, its PR, or its repo', () => {
     const todo = EVENTS.find((e) => e.seq === 9)!;
     expect(eventLinks(todo)).toEqual([
-      { label: 'todo 20260919-121041-9d0b27', to: '/work/shift?family=jeryu&todo=20260919-121041-9d0b27' },
+      { label: 'todo 20260919-121041-9d0b27', to: '/work?family=jeryu&todo=20260919-121041-9d0b27' },
     ]);
     const merged = EVENTS.find((e) => e.seq === 11)!;
     expect(eventLinks(merged)).toEqual([

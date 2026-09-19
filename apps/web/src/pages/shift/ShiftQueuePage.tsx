@@ -1,10 +1,13 @@
-// ShiftQueuePage.tsx — Work → Queue (`/work/shift`).
+// ShiftQueuePage.tsx — Work (`/work`): one page for the todoq shift queue.
 //
-// The todoq queue of one family: a Shifts panel (each bulletshift/nightshift
-// branch with its repos, ahead/behind, todo count and review PR) above a
-// filterable table of todos. A row expands to the body, note and attempt
-// history. Admins get release / block / priority / now-night row actions and
-// "Open review PR" on each shift.
+// Top to bottom, in the order the work flows: add work (a one-row composer that
+// opens to the full form), who is working (one line that opens to the workers
+// panel), then the queue of EVERY family: live todos first, what needs a human
+// on top, finished todos and finished shifts folded away. Each row wears its
+// family at the far left; the pill filters the whole page to that family
+// (`?family=`), and pressing it again, or All, shows every family. A row expands
+// to the body, note and attempt history. Admins get release / block / priority /
+// now-night row actions and "Open review PR" on each shift.
 
 import { GitBranch, Inbox } from 'lucide-react';
 import { Fragment, useMemo, useState, type FormEvent, type ReactNode } from 'react';
@@ -12,16 +15,17 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import type { ShiftBranch, ShiftFamily, ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
+import { FamilyPill, FamilyStrip } from '../../components/family/FamilyPills';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import {
   useOpenShiftPr,
   useShiftFamilies,
-  useShiftShifts,
+  useShiftShiftsByFamily,
   useShiftTodoAction,
   useShiftTodos,
 } from '../../hooks/useShift';
-import { FamilyPicker, ShiftError, useSelectedFamily } from './shiftCommon';
+import { ShiftError } from './shiftCommon';
 import {
   DEFAULT_QUEUE_FILTERS,
   SHIFT_MODES,
@@ -44,7 +48,6 @@ import {
   canOpenReviewPr,
   type RepoOwners,
   queueOptions,
-  repoPath,
   shortSha,
   slotLabel,
   sortShifts,
@@ -54,75 +57,124 @@ import {
   traceSummary,
   type QueueFilters,
 } from './shiftModel';
-import { SHIFT_ADD_PATH, WorkTabs } from './WorkTabs';
+import { WorkComposer } from './WorkComposer';
+import { WorkersStrip } from './WorkersStrip';
+import { liveFamilyCounts, todoFamily, todosOfFamily } from './workPageModel';
 
 import '../page.css';
 import './Shift.css';
 
+type OwnersFor = (family: string) => RepoOwners;
+
+const NO_OWNER: RepoOwners = () => null;
+
 export function ShiftQueuePage(): JSX.Element {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const families = useShiftFamilies();
-  const list = families.data?.families ?? [];
-  const { family, setFamily } = useSelectedFamily(list);
+  const list = useMemo(() => families.data?.families ?? [], [families.data]);
+  const [params, setParams] = useSearchParams();
+  // `?family=` filters the whole page; anything that is not a family means all.
+  const wanted = params.get('family') ?? '';
+  const family = list.some((f) => f.name === wanted) ? wanted : '';
+  const setFamily = (name: string): void => {
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (name && name !== family) next.set('family', name);
+        else next.delete('family');
+        next.delete('todo');
+        return next;
+      },
+      { replace: true }
+    );
+  };
+  const onFiled = (filedFamily: string, todos: ShiftTodo[]): void => {
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        // Keep a family filter pointed at where the new todos went.
+        if (family && family !== filedFamily) next.set('family', filedFamily);
+        next.set('todo', todos.map((todo) => todo.id).join(','));
+        return next;
+      },
+      { replace: true }
+    );
+  };
+  const todos = useShiftTodos(undefined);
+  const all = useMemo(() => todos.data?.todos ?? [], [todos.data]);
 
   return (
     <div className="page page--wide" data-testid="shift-queue-page">
       <header className="page__header">
         <h1 className="page__title">Work</h1>
         <p className="page__subtitle">
-          Todos queued for worker slots. <code>now</code> todos land on today&apos;s
-          bulletshift, <code>night</code> todos on tonight&apos;s nightshift; each
-          shift reaches main as one review PR per repo.
+          Add work, see who is working, and follow every family&apos;s queue to main.
         </p>
       </header>
-      <WorkTabs />
 
       {families.isPending ? (
         <LoadingState title="Loading shift families…" variant="message" />
       ) : families.isError ? (
         <ShiftError title="Could not load shift families." error={families.error} />
-      ) : !family ? (
+      ) : list.length === 0 ? (
         <EmptyState
           icon={Inbox}
           title="No shift queues yet."
           description="A family appears here once its <family>-todo repo has a queue branch with a family.toml."
         />
       ) : (
-        <FamilyQueue
-          family={family}
-          families={list}
-          onFamily={setFamily}
-        />
+        <>
+          <WorkComposer families={list} family={family} isAdmin={isAdmin} onFiled={onFiled} />
+          <WorkersStrip todos={all} />
+          <FamilyQueue
+            families={list}
+            family={family}
+            onFamily={setFamily}
+            todos={todos}
+            all={all}
+            isAdmin={isAdmin}
+          />
+        </>
       )}
     </div>
   );
 }
 
 function FamilyQueue({
-  family,
   families,
+  family,
   onFamily,
+  todos,
+  all,
+  isAdmin,
 }: {
-  family: ShiftFamily;
   families: ShiftFamily[];
+  /** The family filter; '' shows every family. */
+  family: string;
   onFamily: (name: string) => void;
+  todos: ReturnType<typeof useShiftTodos>;
+  all: ShiftTodo[];
+  isAdmin: boolean;
 }): JSX.Element {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
   const [params] = useSearchParams();
   const focusIds = useMemo(
     () => (params.get('todo') ?? '').split(',').filter(Boolean),
     [params]
   );
   const [filters, setFilters] = useState<QueueFilters>(DEFAULT_QUEUE_FILTERS);
-  const todos = useShiftTodos(family.name);
-  const all = useMemo(() => todos.data?.todos ?? [], [todos.data]);
-  const options = useMemo(() => queueOptions(all), [all]);
+  const scoped = useMemo(() => todosOfFamily(all, family), [all, family]);
+  const counts = useMemo(() => liveFamilyCounts(all), [all]);
+  const options = useMemo(() => queueOptions(scoped), [scoped]);
   const filtered = useMemo(() => {
-    const shown = filterShiftTodos(all, filters);
+    const shown = filterShiftTodos(scoped, filters);
     return focusIds.length > 0 ? shown.filter((t) => focusIds.includes(t.id)) : shown;
-  }, [all, filters, focusIds]);
-  const owners = useMemo(() => repoOwners(family), [family]);
-  const waiting = useMemo(() => countNeedsHuman(all), [all]);
+  }, [scoped, filters, focusIds]);
+  const ownersFor = useMemo<OwnersFor>(() => {
+    const byFamily = new Map(families.map((f) => [f.name, repoOwners(f)]));
+    return (name) => byFamily.get(name) ?? NO_OWNER;
+  }, [families]);
+  const waiting = useMemo(() => countNeedsHuman(scoped), [scoped]);
   const humanOnly = filters.attention === 'human';
   // What is live or waits on someone is the page; what is finished folds away.
   // A todo someone asked for by id, or a status filter, is shown as asked.
@@ -135,47 +187,52 @@ function FamilyQueue({
   const filtersInUse = Object.entries(filters).some(
     ([key, value]) => key !== 'attention' && value !== 'all'
   );
+  const inScope = family ? families.filter((f) => f.name === family) : families;
 
   const set = (key: keyof QueueFilters) => (value: string) =>
     setFilters((current) => ({ ...current, [key]: value }));
+  const tableProps = { ownersFor, isAdmin, focusIds, picked: family, onPick: onFamily };
 
   return (
     <>
-      <section className="shift__toolbar" aria-label="Queue filters">
-        {families.length > 1 ? (
-          <FamilyPicker families={families} value={family.name} onChange={onFamily} />
+      <section className="shift__section" aria-label="Queue">
+        {families.length > 1 || family ? (
+          <FamilyStrip counts={counts} family={family} onPick={onFamily} />
         ) : null}
-        {waiting > 0 || humanOnly ? (
-          <button
-            type="button"
-            className={`shift__needs-human${humanOnly ? ' is-active' : ''}`}
-            aria-pressed={humanOnly}
-            onClick={() => set('attention')(humanOnly ? 'all' : 'human')}
-            data-testid="shift-needs-human"
-          >
-            <span className="page__pill page__pill--danger">{waiting}</span> need
-            {waiting === 1 ? 's' : ''} a human
-          </button>
-        ) : null}
-        <details className="shift__more-filters" open={filtersInUse || undefined}>
-          <summary>More filters</summary>
-          <div className="shift__toolbar">
-            <FilterSelect label="Status" value={filters.status} options={[...SHIFT_STATUSES]} onChange={set('status')} />
-            <FilterSelect label="Mode" value={filters.mode} options={[...SHIFT_MODES]} onChange={set('mode')} />
-            <FilterSelect label="Repo" value={filters.repo} options={options.repos} onChange={set('repo')} />
-            <FilterSelect label="Requested by" value={filters.requested_by} options={options.requesters} onChange={set('requested_by')} />
-            <FilterSelect label="Worked by" value={filters.worked_by} options={options.workers} onChange={set('worked_by')} />
-            <FilterSelect label="Shift" value={filters.shift} options={options.shifts} onChange={set('shift')} />
-          </div>
-        </details>
-        {focusIds.length > 0 ? (
-          <Link to={`?family=${encodeURIComponent(family.name)}`} className="shift__muted">
-            Showing {focusIds.length} filed todo{focusIds.length === 1 ? '' : 's'} · show all
-          </Link>
-        ) : null}
-      </section>
+        <div className="shift__toolbar" role="group" aria-label="Queue filters">
+          {waiting > 0 || humanOnly ? (
+            <button
+              type="button"
+              className={`shift__needs-human${humanOnly ? ' is-active' : ''}`}
+              aria-pressed={humanOnly}
+              onClick={() => set('attention')(humanOnly ? 'all' : 'human')}
+              data-testid="shift-needs-human"
+            >
+              <span className="page__pill page__pill--danger">{waiting}</span> need
+              {waiting === 1 ? 's' : ''} a human
+            </button>
+          ) : null}
+          <details className="shift__more-filters" open={filtersInUse || undefined}>
+            <summary>More filters</summary>
+            <div className="shift__toolbar">
+              <FilterSelect label="Status" value={filters.status} options={[...SHIFT_STATUSES]} onChange={set('status')} />
+              <FilterSelect label="Mode" value={filters.mode} options={[...SHIFT_MODES]} onChange={set('mode')} />
+              <FilterSelect label="Repo" value={filters.repo} options={options.repos} onChange={set('repo')} />
+              <FilterSelect label="Requested by" value={filters.requested_by} options={options.requesters} onChange={set('requested_by')} />
+              <FilterSelect label="Worked by" value={filters.worked_by} options={options.workers} onChange={set('worked_by')} />
+              <FilterSelect label="Shift" value={filters.shift} options={options.shifts} onChange={set('shift')} />
+            </div>
+          </details>
+          {focusIds.length > 0 ? (
+            <Link
+              to={family ? `?family=${encodeURIComponent(family)}` : '?'}
+              className="shift__muted"
+            >
+              Showing {focusIds.length} filed todo{focusIds.length === 1 ? '' : 's'} · show all
+            </Link>
+          ) : null}
+        </div>
 
-      <section className="shift__section" aria-label="Todos">
         <h2 className="page__section-title">
           {asked ? 'Todos' : 'In progress'} · {live.length}
         </h2>
@@ -183,12 +240,11 @@ function FamilyQueue({
           <LoadingState title="Loading todos…" variant="message" />
         ) : todos.isError ? (
           <ShiftError title="Could not load the queue." error={todos.error} />
-        ) : all.length === 0 ? (
+        ) : scoped.length === 0 ? (
           <EmptyState
             icon={Inbox}
-            title="The queue is empty."
-            description="File a todo from the Add tab or with todoq add."
-            action={isAdmin ? <Link to={`${SHIFT_ADD_PATH}?family=${encodeURIComponent(family.name)}`}>Add todos</Link> : undefined}
+            title={family ? `The ${family} queue is empty.` : 'The queue is empty.'}
+            description="File a todo with the box at the top of this page, or with todoq add."
           />
         ) : filtered.length === 0 ? (
           <EmptyState icon={Inbox} title="No todos match the current filters." />
@@ -199,41 +255,56 @@ function FamilyQueue({
                 Nothing is queued, being worked or waiting on anyone.
               </p>
             ) : (
-              <TodoTable todos={live} owners={owners} isAdmin={isAdmin} focusIds={focusIds} />
+              <TodoTable todos={live} {...tableProps} />
             )}
             {finished.length > 0 ? (
               <details className="shift__finished" open={showFinished || undefined} data-testid="shift-finished-todos">
                 <summary>
                   {finished.length} finished todo{finished.length === 1 ? '' : 's'}
                 </summary>
-                <TodoTable todos={finished} owners={owners} isAdmin={isAdmin} focusIds={focusIds} />
+                <TodoTable todos={finished} {...tableProps} />
               </details>
             ) : null}
           </>
         )}
       </section>
 
-      <ShiftsPanel family={family} owners={owners} isAdmin={isAdmin} showFinished={showFinished} />
+      <ShiftsPanel
+        families={inScope}
+        ownersFor={ownersFor}
+        isAdmin={isAdmin}
+        showFinished={showFinished}
+        picked={family}
+        onPick={onFamily}
+      />
     </>
   );
 }
 
+interface RowFamilyProps {
+  ownersFor: OwnersFor;
+  picked: string;
+  onPick: (family: string) => void;
+}
+
 function TodoTable({
   todos,
-  owners,
+  ownersFor,
   isAdmin,
   focusIds,
+  picked,
+  onPick,
 }: {
   todos: ShiftTodo[];
-  owners: RepoOwners;
   isAdmin: boolean;
   focusIds: string[];
-}): JSX.Element {
+} & RowFamilyProps): JSX.Element {
   return (
     <div className="shift__table-wrap">
       <table className="shift__table">
         <thead>
           <tr>
+            <th scope="col">Family</th>
             <th scope="col">Todo</th>
             <th scope="col">Status</th>
             <th scope="col">Repos</th>
@@ -246,11 +317,13 @@ function TodoTable({
         <tbody>
           {todos.map((todo) => (
             <TodoRow
-              key={todo.id}
+              key={`${todo.family}/${todo.id}`}
               todo={todo}
-              owners={owners}
+              owners={ownersFor(todo.family)}
               isAdmin={isAdmin}
               initiallyOpen={focusIds.includes(todo.id)}
+              picked={picked}
+              onPick={onPick}
             />
           ))}
         </tbody>
@@ -290,11 +363,15 @@ function TodoRow({
   owners,
   isAdmin,
   initiallyOpen,
+  picked,
+  onPick,
 }: {
   todo: ShiftTodo;
   owners: RepoOwners;
   isAdmin: boolean;
   initiallyOpen: boolean;
+  picked: string;
+  onPick: (family: string) => void;
 }): JSX.Element {
   const [open, setOpen] = useState(initiallyOpen);
   const now = new Date();
@@ -306,6 +383,9 @@ function TodoRow({
   return (
     <Fragment>
       <tr data-testid={`shift-todo-${todo.id}`}>
+        <td className="shift__family-cell">
+          <FamilyPill family={todoFamily(todo)} picked={picked} onPick={onPick} />
+        </td>
         <td>
           <button
             type="button"
@@ -380,7 +460,7 @@ function TodoRow({
       </tr>
       {open ? (
         <tr className="shift__detail" id={detailId}>
-          <td colSpan={isAdmin ? 7 : 6}>
+          <td colSpan={isAdmin ? 8 : 7}>
             <TodoDetail todo={todo} isAdmin={isAdmin} />
           </td>
         </tr>
@@ -605,32 +685,52 @@ function TodoAdjust({ todo }: { todo: ShiftTodo }): JSX.Element | null {
 }
 
 function ShiftsPanel({
-  family,
-  owners,
+  families,
+  ownersFor,
   isAdmin,
   showFinished,
+  picked,
+  onPick,
 }: {
-  family: ShiftFamily;
-  owners: RepoOwners;
+  /** The families on the page: one when filtered, else every family. */
+  families: ShiftFamily[];
   isAdmin: boolean;
   showFinished: boolean;
-}): JSX.Element {
-  const shifts = useShiftShifts(family.name);
-  const { live, finished } = useMemo(
-    () => splitShifts(sortShifts(shifts.data?.shifts ?? [])),
-    [shifts.data]
-  );
+} & RowFamilyProps): JSX.Element {
+  const names = useMemo(() => families.map((f) => f.name), [families]);
+  const shifts = useShiftShiftsByFamily(names);
+  const { live, finished } = useMemo(() => {
+    // A branch carries no family, and families share branch names: split each
+    // family's branches on their own, then list them together, newest first.
+    const tagged = shifts.data.map((entry) => {
+      const split = splitShifts(sortShifts(entry.shifts));
+      const tag = (shift: ShiftBranch): FamilyShift => ({ family: entry.family, shift });
+      return { live: split.live.map(tag), finished: split.finished.map(tag) };
+    });
+    const newestFirst = (a: FamilyShift, b: FamilyShift): number =>
+      b.shift.date.localeCompare(a.shift.date) ||
+      a.family.localeCompare(b.family) ||
+      a.shift.branch.localeCompare(b.shift.branch);
+    return {
+      live: tagged.flatMap((t) => t.live).sort(newestFirst),
+      finished: tagged.flatMap((t) => t.finished).sort(newestFirst),
+    };
+  }, [shifts.data]);
   const now = new Date();
-  const cards = (list: ShiftBranch[]): JSX.Element => (
+  const tzOf = (name: string): string =>
+    families.find((f) => f.name === name)?.shift_tz ?? 'UTC';
+  const cards = (list: FamilyShift[]): JSX.Element => (
     <ul className="shift-branches">
-      {list.map((shift) => (
+      {list.map(({ family, shift }) => (
         <ShiftCard
-          key={shift.branch}
+          key={`${family}:${shift.branch}`}
           shift={shift}
-          family={family.name}
-          owners={owners}
+          family={family}
+          owners={ownersFor(family)}
           isAdmin={isAdmin}
-          lastNight={isLastNight(shift, now, family.shift_tz)}
+          lastNight={isLastNight(shift, now, tzOf(family))}
+          picked={picked}
+          onPick={onPick}
         />
       ))}
     </ul>
@@ -638,9 +738,9 @@ function ShiftsPanel({
   return (
     <section className="shift__section" aria-label="Shifts">
       <h2 className="page__section-title">Shifts in review · {live.length}</h2>
-      {shifts.isPending ? (
+      {shifts.isPending && shifts.data.length === 0 ? (
         <LoadingState title="Loading shifts…" variant="message" />
-      ) : shifts.isError ? (
+      ) : shifts.error && shifts.data.length === 0 ? (
         <ShiftError title="Could not load shift branches." error={shifts.error} />
       ) : live.length + finished.length === 0 ? (
         <EmptyState
@@ -650,8 +750,13 @@ function ShiftsPanel({
         />
       ) : (
         <>
+          {shifts.error ? (
+            <p className="shift__muted" role="status">
+              One family&apos;s shift branches could not be loaded: {shifts.error.message}
+            </p>
+          ) : null}
           {live.length === 0 ? (
-            <p className="shift__muted">Every shift's work has reached the base branch.</p>
+            <p className="shift__muted">Every shift&apos;s work has reached the base branch.</p>
           ) : (
             cards(live)
           )}
@@ -669,18 +774,27 @@ function ShiftsPanel({
   );
 }
 
+interface FamilyShift {
+  family: string;
+  shift: ShiftBranch;
+}
+
 function ShiftCard({
   shift,
   family,
   owners,
   isAdmin,
   lastNight,
+  picked,
+  onPick,
 }: {
   shift: ShiftBranch;
   family: string;
   owners: RepoOwners;
   isAdmin: boolean;
   lastNight: boolean;
+  picked: string;
+  onPick: (family: string) => void;
 }): JSX.Element {
   const openPr = useOpenShiftPr();
   // Only when a review PR would carry something: a branch level with its base,
@@ -690,9 +804,10 @@ function ShiftCard({
     <li
       className={`shift-branch${lastNight ? ' is-last-night' : ''}`}
       data-testid={`shift-branch-${shift.branch}`}
-      aria-label={`${shift.branch}${lastNight ? ' (last night)' : ''}`}
+      aria-label={`${family} ${shift.branch}${lastNight ? ' (last night)' : ''}`}
     >
       <span>
+        <FamilyPill family={family} picked={picked} onPick={onPick} />{' '}
         <span className="shift-branch__name">{shift.branch}</span>{' '}
         {lastNight ? <span className="page__pill page__pill--success">last night</span> : null}
       </span>

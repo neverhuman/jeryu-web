@@ -1,18 +1,18 @@
-// ShiftWorkersPage.test.tsx — Work → Workers: live table, timeline range
+// WorkersPanel.test.tsx — the opened workers strip: live table, timeline range
 // toggle, capacity chart, and empty / error states.
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ShiftWorkersPage } from '../shift/ShiftWorkersPage';
+import { WorkersPanel } from '../shift/WorkersPanel';
 import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
 import { HISTORY, WORKERS } from './shiftTestData';
 
 function renderWorkers(): void {
-  renderAt('/work/shift/workers', '/work/shift/workers', <ShiftWorkersPage />);
+  renderAt('/work', '/work', <WorkersPanel />);
 }
 
-describe('ShiftWorkersPage', () => {
+describe('WorkersPanel', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('renders the live table, timeline and capacity chart', async () => {
@@ -23,7 +23,7 @@ describe('ShiftWorkersPage', () => {
     expect(within(row).getByText('working · agent')).toBeInTheDocument();
     expect(within(row).getByRole('link', { name: '20260919-0900-q1q' })).toHaveAttribute(
       'href',
-      '/work/shift?family=jeryu&todo=20260919-0900-q1q'
+      '/work?family=jeryu&todo=20260919-0900-q1q'
     );
     // xbabe1/w2 was last seen long ago: a ghost, hidden until asked for.
     expect(screen.queryByTestId('shift-worker-xbabe1-w2')).toBeNull();
