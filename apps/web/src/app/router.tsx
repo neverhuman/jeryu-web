@@ -15,7 +15,6 @@ import { AppShell } from '../layout/AppShell';
 import { HomeRedirect } from '../layout/HomeRedirect';
 import { ActivityPage } from '../pages/activity';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
-import { AuditPage } from '../pages/AuditPage';
 import { FleetPage } from '../pages/FleetPage';
 import { ReleasesPage, UnreleasedRedirect } from '../pages/ReleasesPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
@@ -100,7 +99,7 @@ export const router = createBrowserRouter([
       // The in-memory notifications inbox is gone: Needs you says what waits on
       // a person and Activity is the event feed. Old links land on the feed.
       { path: 'notifications', element: <Navigate to="/activity" replace /> },
-      { path: 'audit', element: <AuditPage /> },
+      // `/audit` had a placeholder page; until there is a real one it is NotFound.
       { path: 'settings', element: <AdminSettingsPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

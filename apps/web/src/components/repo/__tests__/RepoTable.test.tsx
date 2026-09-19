@@ -38,11 +38,11 @@ describe('RepoTable', () => {
     const user = userEvent.setup();
     const router = createMemoryRouter([
       { path: '/', element: <RepoTable repos={[REPO]} /> },
-      { path: '/pull-room', element: <h1>Pull Room</h1> },
+      { path: '/pull-room', element: <h1>Pull requests</h1> },
       { path: '/repos/*', element: <h1>Repository</h1> },
     ]);
     render(<RouterProvider router={router} />);
-    const link = screen.getByRole('link', { name: '0 open pull requests in Pull Room' });
+    const link = screen.getByRole('link', { name: '0 open pull requests, see them' });
     if (input === 'mouse') await user.click(link);
     else {
       link.focus();
@@ -50,7 +50,7 @@ describe('RepoTable', () => {
     }
     expect(router.state.location.pathname).toBe('/pull-room');
     expect(new URLSearchParams(router.state.location.search).get('repo')).toBe('neverhuman/jeryu-core');
-    expect(screen.getByRole('heading', { name: 'Pull Room' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pull requests' })).toBeInTheDocument();
   });
 
   it('renders split-member role badges in rows', () => {

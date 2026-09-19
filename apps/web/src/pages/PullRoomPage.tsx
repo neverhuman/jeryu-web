@@ -80,7 +80,7 @@ export function PullRoomPage(): JSX.Element {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
         <header className="page__header">
-          <h1 className="page__title">Pull Room</h1>
+          <h1 className="page__title">Pull requests</h1>
         </header>
         <p className="page__roadmap-note">Loading pull requests.</p>
       </div>
@@ -91,7 +91,7 @@ export function PullRoomPage(): JSX.Element {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
         <header className="page__header">
-          <h1 className="page__title">Pull Room</h1>
+          <h1 className="page__title">Pull requests</h1>
         </header>
         <p className="page__roadmap-note">
           {snapshot.error?.message ?? 'Pull requests are unavailable right now.'}
@@ -104,7 +104,7 @@ export function PullRoomPage(): JSX.Element {
     <div className="page page--full pull-room" data-testid="pull-room-page">
       <header className="page__header pull-room__header">
         <div>
-          <h1 className="page__title">Pull Room</h1>
+          <h1 className="page__title">Pull requests</h1>
           <p className="page__subtitle">
             Open pull requests across every repository.
           </p>
@@ -127,7 +127,7 @@ export function PullRoomPage(): JSX.Element {
         </div>
       </header>
 
-      <section className="pull-room__filters" aria-label="Pull Room filters">
+      <section className="pull-room__filters" aria-label="Pull request filters">
         <label>
           Repo
           <select

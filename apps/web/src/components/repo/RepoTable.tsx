@@ -135,7 +135,7 @@ export function RepoTable({
           <Link
             to={pullRoomHref(`${row.original.id.owner}/${row.original.id.name}`)}
             onClick={(e) => e.stopPropagation()}
-            aria-label={`${row.original.open_pull_requests} open pull requests in Pull Room`}
+            aria-label={`${row.original.open_pull_requests} open pull requests, see them`}
           >
             {row.original.open_pull_requests}
           </Link>

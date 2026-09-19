@@ -156,7 +156,7 @@ describe('RepositoryFamilyPage', () => {
       within(strip).getByRole('status', { name: /Health: failing/ })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: '7 open pull requests, open in Pull Room' })
+      screen.getByRole('link', { name: '7 open pull requests, see them' })
     ).toHaveAttribute('href', '/pull-room?family=veox-split');
     expect(screen.getByLabelText('4 failing checks')).toBeInTheDocument();
     expect(screen.getByLabelText('3 running jobs')).toBeInTheDocument();

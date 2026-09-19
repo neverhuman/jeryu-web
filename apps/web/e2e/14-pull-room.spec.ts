@@ -93,7 +93,7 @@ test('Pull Room renders filters, queue lanes, PR cards and cockpit links @action
   await expect(page.getByTestId('pull-room-page')).toBeVisible();
   await page.getByLabel('Search pull requests').fill('Fix');
   await page
-    .locator('section[aria-label="Pull Room filters"]')
+    .locator('section[aria-label="Pull request filters"]')
     .getByLabel('Checks')
     .selectOption('missing');
   await expect(page.getByTestId('pull-lane-missing_checks')).toBeVisible();

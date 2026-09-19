@@ -214,24 +214,25 @@ test.describe('Primary left navigation', () => {
         testId: 'activity-page',
       },
       {
+        label: 'Pull requests',
+        path: '/pull-room',
+        testId: 'pull-room-page',
+      },
+      {
         label: 'Repositories',
         path: '/repos',
         testId: 'repositories-page',
       },
+      // The three below live in the System group, opened just before the loop.
       {
-        label: 'Pull Room',
-        path: '/pull-room',
-        testId: 'pull-room-page',
+        label: 'Runners',
+        path: '/runners',
+        testId: 'fleet-page',
       },
       {
         label: 'Intelligence',
         path: '/intelligence',
         testId: 'intelligence-page',
-      },
-      {
-        label: 'Runners',
-        path: '/runners',
-        testId: 'fleet-page',
       },
       {
         // Lands on the first tab (Findings) through the section redirect.
@@ -240,6 +241,14 @@ test.describe('Primary left navigation', () => {
         testId: 'tools-page',
       },
     ] as const;
+
+    // Six daily destinations; the machinery sits behind one closed disclosure.
+    const nav = page.getByRole('navigation', { name: 'Primary' });
+    const system = nav.getByRole('button', { name: 'System' });
+    await expect(system).toHaveAttribute('aria-expanded', 'false');
+    await expect(nav.getByRole('link', { name: 'Runners', exact: true })).toHaveCount(0);
+    await system.click();
+    await expect(system).toHaveAttribute('aria-expanded', 'true');
 
     for (const route of routes) {
       const expectedUrl = new RegExp(`${route.path.replace(/\//g, '\\/')}$`);
@@ -254,6 +263,10 @@ test.describe('Primary left navigation', () => {
       }
       await expect(page.getByText(/Page not found/i)).toHaveCount(0);
     }
+
+    // On a System page the group is open and cannot be closed over the current page.
+    await expect(nav.getByRole('button', { name: 'System' })).toBeDisabled();
+    await expect(nav.getByRole('link', { name: 'Shared tools', exact: true })).toHaveAttribute('aria-current', 'page');
 
     // Settings is not a left-nav destination: it opens from the top-right
     // account control, and ends with the Session section that holds Log out.

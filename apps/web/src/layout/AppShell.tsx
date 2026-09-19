@@ -92,7 +92,7 @@ export function AppShell(): JSX.Element {
     enabled: !!auth.user,
   });
   useKeyboardShortcut('g m', () => navigate('/pull-room'), {
-    label: 'Go to Pull Room',
+    label: 'Go to Pull requests',
     group: 'Navigation',
     enabled: !!auth.user,
   });

@@ -1,15 +1,21 @@
 // LeftNav.tsx — primary navigation (W-FE-01).
 //
-// Shows workspace-level nav items. When the current URL is inside a
+// Six destinations an operator uses daily, then a "System" disclosure for the
+// three that explain the machinery (Runners, Intelligence, Shared tools). The
+// disclosure is closed by default, remembers what the operator chose, and is
+// open whenever the current page is inside it. When the current URL is inside a
 // repository route (`/repos/:provider/:fullName/*`), a contextual
 // sub-navigation appears below the workspace links so the operator can
 // jump directly to Code / Pulls / Agents / Settings without going through
 // the overview page first.
 
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Activity,
   Bot,
+  ChevronDown,
+  ChevronRight,
   Code2,
   Cog,
   ClipboardList,
@@ -26,6 +32,7 @@ import {
 import { useAttention } from '../hooks/usePipeline';
 import { useAuth } from '../hooks/useAuth';
 import { attentionBadgeCount } from '../pages/needsYou/needsYouModel';
+import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
 
 interface NavItem {
@@ -37,21 +44,32 @@ interface NavItem {
   badge?: 'attention';
 }
 
-const NAV_ITEMS: NavItem[] = [
+/** What an operator opens every day, in the order the work flows. */
+export const PRIMARY_NAV: NavItem[] = [
   { to: NEEDS_YOU_PATH, label: 'Needs you', icon: Siren, badge: 'attention' },
   { to: '/activity', label: 'Activity', icon: Activity },
-  { to: '/repos', label: 'Repositories', icon: FolderGit2 },
   { to: '/work', label: 'Work', icon: ClipboardList },
-  // Reconciled: the route map (router.tsx) and command palette both use
-  // `/pull-room` / "Pull Room"; the nav previously pointed at a dead
-  // `/merge-room` path that fell through to NotFound.
-  { to: '/pull-room', label: 'Pull Room', icon: GitMerge },
+  // The route stays `/pull-room`; the page lists pull requests, so it says so.
+  { to: '/pull-room', label: 'Pull requests', icon: GitMerge },
   { to: '/releases', label: 'Releases', icon: Rocket },
-  { to: '/intelligence', label: 'Intelligence', icon: Brain },
-  { to: '/runners', label: 'Runners', icon: ServerCog },
-  { to: '/shared-tools', label: 'Shared tools', icon: Layers },
+  { to: '/repos', label: 'Repositories', icon: FolderGit2 },
   // Settings is reached from the top-right account control (UserMenu).
 ];
+
+/** How the machinery is doing: looked at when something is off, not daily. */
+export const SYSTEM_NAV: NavItem[] = [
+  { to: '/runners', label: 'Runners', icon: ServerCog },
+  { to: '/intelligence', label: 'Intelligence', icon: Brain },
+  { to: '/shared-tools', label: 'Shared tools', icon: Layers },
+];
+
+const SYSTEM_OPEN_KEY = 'jeryu.leftNav.systemOpen.v1';
+const SYSTEM_LIST_ID = 'left-nav-system';
+
+/** True when `pathname` is one of the System destinations or inside one. */
+export function isSystemPath(pathname: string): boolean {
+  return SYSTEM_NAV.some((item) => isActivePath(pathname, item.to));
+}
 
 /** Extract the repo base path from the current pathname, if any.
  *  Matches `/repos/:provider/:fullName` (where fullName may include slashes). */
@@ -79,31 +97,65 @@ export function LeftNav(): JSX.Element {
   const attention = useAttention(user?.role === 'admin');
   const needsYou = attentionBadgeCount(attention.data);
 
+  // Closed unless the operator opened it; always open on a System page, so
+  // the current page is never hidden inside a closed group.
+  const [systemChosen, setSystemChosen] = useState<boolean>(
+    () => readBrowserText('durable', SYSTEM_OPEN_KEY) === '1'
+  );
+  const onSystemPage = isSystemPath(pathname);
+  const systemOpen = systemChosen || onSystemPage;
+  const toggleSystem = (): void => {
+    const next = !systemOpen;
+    setSystemChosen(next);
+    writeBrowserText('durable', SYSTEM_OPEN_KEY, next ? '1' : '0');
+  };
+
+  const renderItem = (item: NavItem): JSX.Element => (
+    <a
+      key={item.to}
+      href={item.to}
+      className={`left-nav__item${
+        isActivePath(pathname, item.to, item.end) ? ' is-active' : ''
+      }`}
+      aria-current={isActivePath(pathname, item.to, item.end) ? 'page' : undefined}
+    >
+      <item.icon aria-hidden="true" size={16} />
+      {item.label}
+      {item.badge === 'attention' && needsYou > 0 ? (
+        <span
+          className="left-nav__badge"
+          data-testid="needs-you-badge"
+          aria-label={`${needsYou} item${needsYou === 1 ? '' : 's'} need you`}
+        >
+          {needsYou > 99 ? '99+' : needsYou}
+        </span>
+      ) : null}
+    </a>
+  );
+
   return (
     <nav className="left-nav" aria-label="Primary">
-      <span className="left-nav__group">Workspace</span>
-      {NAV_ITEMS.map((item) => (
-        <a
-          key={item.to}
-          href={item.to}
-          className={`left-nav__item${
-            isActivePath(pathname, item.to, item.end) ? ' is-active' : ''
-          }`}
-          aria-current={isActivePath(pathname, item.to, item.end) ? 'page' : undefined}
-        >
-          <item.icon aria-hidden="true" size={16} />
-          {item.label}
-          {item.badge === 'attention' && needsYou > 0 ? (
-            <span
-              className="left-nav__badge"
-              data-testid="needs-you-badge"
-              aria-label={`${needsYou} item${needsYou === 1 ? '' : 's'} need you`}
-            >
-              {needsYou > 99 ? '99+' : needsYou}
-            </span>
-          ) : null}
-        </a>
-      ))}
+      {PRIMARY_NAV.map(renderItem)}
+
+      <button
+        type="button"
+        className="left-nav__disclosure"
+        aria-expanded={systemOpen}
+        aria-controls={SYSTEM_LIST_ID}
+        onClick={toggleSystem}
+        // On a System page the group stays open: closing it would hide where you are.
+        disabled={onSystemPage}
+      >
+        {systemOpen ? (
+          <ChevronDown aria-hidden="true" size={14} />
+        ) : (
+          <ChevronRight aria-hidden="true" size={14} />
+        )}
+        System
+      </button>
+      <div id={SYSTEM_LIST_ID} className="left-nav__sublist" hidden={!systemOpen}>
+        {systemOpen ? SYSTEM_NAV.map(renderItem) : null}
+      </div>
 
       {repo ? (
         <>
@@ -130,6 +182,8 @@ export function LeftNav(): JSX.Element {
           <Link
             to={`${repo.base}/pulls`}
             className={`left-nav__item${isActivePath(pathname, `${repo.base}/pulls`) ? ' is-active' : ''}`}
+            // "Pull requests" is also a primary destination: say whose these are.
+            aria-label={`Pull requests in ${repo.repoName}`}
           >
             <GitMerge aria-hidden="true" size={16} />
             Pull requests

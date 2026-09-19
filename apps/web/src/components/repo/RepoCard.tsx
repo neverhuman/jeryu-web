@@ -102,7 +102,7 @@ export function RepoCard({ repo }: RepoCardProps): JSX.Element {
           className="repo-card__agents-link"
           data-testid={`repo-pulls-link-${repo.id.owner}-${repo.id.name}`}
           onClick={(e) => e.stopPropagation()}
-          aria-label={`Open ${repo.open_pull_requests} pull requests for ${repo.id.name} in Pull Room`}
+          aria-label={`Open ${repo.open_pull_requests} pull requests for ${repo.id.name}`}
         >
           <GitMerge size={14} aria-hidden="true" />
           <span className="repo-card__agents-count">{repo.open_pull_requests}</span>

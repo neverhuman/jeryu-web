@@ -114,8 +114,8 @@ export function RepositoryFamilyPage(): JSX.Element {
             <Link
               to={pullRoomFamilyHref(family)}
               className="repo-family-strip__item repo-family-strip__link"
-              title="Open pull requests in Pull Room"
-              aria-label={`${rollup.openPullRequests} open pull requests, open in Pull Room`}
+              title="See these open pull requests"
+              aria-label={`${rollup.openPullRequests} open pull requests, see them`}
             >
               <GitMerge size={12} aria-hidden="true" />{' '}
               {rollup.openPullRequests} open

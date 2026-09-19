@@ -82,8 +82,8 @@ export function useShellCommands(): void {
       },
       {
         id: 'nav.pull-room',
-        title: 'Go to Pull Room',
-        keywords: ['pr', 'pull', 'merge', 'review'],
+        title: 'Go to Pull requests',
+        keywords: ['pr', 'pull', 'merge', 'review', 'pull room'],
         icon: 'git-merge',
         target: { kind: 'route', path: '/pull-room' },
         shortcut: 'g m',
