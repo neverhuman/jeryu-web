@@ -13,6 +13,7 @@ export type * from './types/generated';
 export type * from './types/pullRequests';
 export type * from './types/controlPlane';
 export type * from './types/toolBuild';
+export type * from './types/shift';
 
 // Live agent terminal types (defined in ./agentTerminal).
 export type { AgentTtyFrame, AgentControl, AgentControlClientMessage, RepoAgentSummary, RepoAgentRunsResponse, CreateSessionResponse } from './agentTerminal';

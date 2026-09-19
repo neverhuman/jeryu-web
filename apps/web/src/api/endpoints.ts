@@ -184,6 +184,26 @@ export const endpoints = {
   repoAgentRuns: (id: string): string => `/api/v1/repos/${encodeURIComponent(id)}/agent-runs`,
   repoSessions: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/sessions`,
+  shiftFamilies: (): string => '/api/v1/shift/families',
+  shiftTodos: (params?: Record<string, string | undefined>): string => {
+    const qs = new URLSearchParams();
+    for (const [key, value] of Object.entries(params ?? {})) {
+      if (value) qs.set(key, value);
+    }
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/shift/todos?${suffix}` : '/api/v1/shift/todos';
+  },
+  shiftTodoAction: (family: string, id: string): string =>
+    `/api/v1/shift/todos/${encodeURIComponent(family)}/${encodeURIComponent(id)}/action`,
+  shiftWorkers: (): string => '/api/v1/shift/workers',
+  shiftWorkersHistory: (hours: number): string =>
+    `/api/v1/shift/workers/history?hours=${hours}`,
+  shiftShifts: (family?: string): string =>
+    family
+      ? `/api/v1/shift/shifts?family=${encodeURIComponent(family)}`
+      : '/api/v1/shift/shifts',
+  shiftOpenPr: (family: string): string =>
+    `/api/v1/shift/shifts/${encodeURIComponent(family)}/pr`,
 } as const;
 
 export type Endpoints = typeof endpoints;

@@ -38,6 +38,7 @@ import { ToolsPage } from '../pages/ToolsPage';
 import { RepoRouter } from '../pages/RepoRouter';
 import { WorkDetailPage } from '../pages/WorkDetailPage';
 import { WorkPage } from '../pages/WorkPage';
+import { ShiftAddPage, ShiftQueuePage, ShiftWorkersPage } from '../pages/shift';
 
 import {
   ADOPTION_PATH,
@@ -70,6 +71,10 @@ export const router = createBrowserRouter([
         element: <RepoRouter />,
       },
       { path: 'work', element: <WorkPage /> },
+      // Static `shift` segments outrank the dynamic `:key` detail route.
+      { path: 'work/shift', element: <ShiftQueuePage /> },
+      { path: 'work/shift/new', element: <ShiftAddPage /> },
+      { path: 'work/shift/workers', element: <ShiftWorkersPage /> },
       { path: 'work/:key', element: <WorkDetailPage /> },
       { path: 'pull-room', element: <PullRoomPage /> },
       { path: 'releases', element: <ReleasesPage /> },

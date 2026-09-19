@@ -20,6 +20,7 @@ import {
   WorkLanes,
   WorkSummary,
 } from './work';
+import { WorkTabs } from './shift/WorkTabs';
 
 import './page.css';
 import './WorkPage.css';
@@ -140,6 +141,8 @@ function WorkBoard({
           inReview={inReview}
         />
       </header>
+
+      {repoScoped ? null : <WorkTabs />}
 
       <WorkFilterBar
         filters={filters}

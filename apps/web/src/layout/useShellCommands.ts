@@ -37,6 +37,27 @@ export function useShellCommands(): void {
         shortcut: 'g w',
       },
       {
+        id: 'nav.shift-queue',
+        title: 'Go to Shift queue',
+        keywords: ['shift', 'queue', 'todo', 'todoq', 'nightshift', 'bulletshift'],
+        icon: 'clipboard-list',
+        target: { kind: 'route', path: '/work/shift' },
+      },
+      {
+        id: 'nav.shift-add',
+        title: 'Add shift todos',
+        keywords: ['shift', 'todo', 'file', 'add', 'nightshift', 'bulletshift'],
+        icon: 'clipboard-list',
+        target: { kind: 'route', path: '/work/shift/new' },
+      },
+      {
+        id: 'nav.shift-workers',
+        title: 'Go to Shift workers',
+        keywords: ['shift', 'workers', 'slots', 'heartbeat', 'capacity', 'timeline'],
+        icon: 'server-cog',
+        target: { kind: 'route', path: '/work/shift/workers' },
+      },
+      {
         id: 'nav.pull-room',
         title: 'Go to Pull Room',
         keywords: ['pr', 'pull', 'merge', 'review'],
