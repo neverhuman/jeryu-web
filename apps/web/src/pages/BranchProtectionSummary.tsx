@@ -1,7 +1,7 @@
 // BranchProtectionSummary.tsx — read-only: what protects the default branch today.
 
 import { ErrorState, LoadingState } from '../components/state';
-import { useBranchProtection } from '../hooks/useBranchProtection';
+import { isUnprotected, useBranchProtection } from '../hooks/useBranchProtection';
 
 import { protectionFacts, protectionHeadline } from './branchProtectionModel';
 
@@ -28,23 +28,23 @@ export function BranchProtectionSummary({
       </h2>
       {rule.isPending ? (
         <LoadingState title="Loading the branch rule…" variant="message" />
+      ) : isUnprotected(rule.error) ? (
+        <p>{protectionHeadline(branch, null)}</p>
       ) : rule.error ? (
         <ErrorState title="Could not load the branch rule" error={rule.error} />
       ) : (
         <>
           <p>{protectionHeadline(branch, rule.data)}</p>
-          {rule.data ? (
-            <ul className="page__fact-list">
-              {protectionFacts(rule.data).map((fact) => (
-                <li key={fact.id} className={`page__fact page__fact--${fact.state}`}>
-                  <span className="page__fact-mark" aria-hidden="true">
-                    {fact.state === 'on' ? '✓' : '–'}
-                  </span>
-                  {fact.text}
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <ul className="page__fact-list">
+            {protectionFacts(rule.data).map((fact) => (
+              <li key={fact.id} className={`page__fact page__fact--${fact.state}`}>
+                <span className="page__fact-mark" aria-hidden="true">
+                  {fact.state === 'on' ? '✓' : '–'}
+                </span>
+                {fact.text}
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </section>
