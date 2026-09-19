@@ -51,6 +51,31 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('needs-you-badge')).toHaveText('3');
   });
 
+  test('narrow screens: the header never overflows and a Needs-you title keeps its width @action:chrome.narrow_header', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    for (const width of [900, 480]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('/needs-you');
+      await expect(page.getByTestId('needs-you-page')).toBeVisible({ timeout: 15_000 });
+      const header = page.locator('.global-header');
+      const overflow = await header.evaluate((el) => el.scrollWidth - el.clientWidth);
+      expect(overflow, `header overflows at ${width}px`).toBeLessThanOrEqual(0);
+      // Every header control is still there, by name, however small it got.
+      await expect(page.getByRole('button', { name: /^Search or jump to/ })).toBeVisible();
+      await expect(page.getByRole('banner').getByRole('link', { name: 'Settings' })).toBeVisible();
+      await expect(page.getByRole('banner').getByRole('status')).toHaveAccessibleName(/^Live updates /);
+      // The action stacks under the text instead of squeezing the title to a word per line.
+      const title = page
+        .getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66')
+        .locator('.needs-you__title');
+      const box = await title.boundingBox();
+      expect(box?.width ?? 0, `title width at ${width}px`).toBeGreaterThan(200);
+    }
+  });
+
   test('other roles keep the family browser as home; an older server degrades plainly @action:needs_you.unavailable', async ({
     page,
   }) => {

@@ -20,7 +20,9 @@ export function UserMenu({ login, displayName }: UserMenuProps): JSX.Element {
     <div className="global-header__account">
       <span className="global-header__user" aria-label={`Logged in as ${label}`}>
         <span className="global-header__user-prefix">Logged in</span>
-        <span aria-hidden="true">·</span>
+        <span className="global-header__user-prefix" aria-hidden="true">
+          ·
+        </span>
         <span className="global-header__user-name">{label}</span>
       </span>
       <Link

@@ -123,6 +123,30 @@
 
 /* GlobalHeader -------------------------------------------------------- */
 
+/* Skip link: off-screen until it has focus, then the first thing on the page. */
+.skip-link {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1000;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-accent-primary);
+  background-color: var(--color-bg-1);
+  color: var(--color-accent-primary);
+  font-size: var(--font-size-sm);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+.app-shell__main:focus {
+  outline: none;
+}
+
 .global-header {
   display: flex;
   align-items: center;
@@ -134,6 +158,8 @@
 }
 
 .global-header__brand {
+  text-decoration: none;
+  border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -271,6 +297,64 @@
 .global-header__settings.is-active {
   color: var(--color-fg-primary);
   border-color: var(--color-border-strong);
+}
+
+/* Narrow header: drop words before anything overlaps or clips. Every control
+   keeps its accessible name; only decoration goes. */
+.global-header {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .global-header__user-prefix {
+    display: none;
+  }
+
+  .global-header__cmdk {
+    min-width: 0;
+    flex: 0 1 240px;
+  }
+
+  .global-header__cmdk-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .global-header {
+    gap: var(--space-2);
+    padding: 0 var(--space-2);
+  }
+
+  .global-header__cmdk {
+    flex: none;
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .global-header__cmdk-text,
+  .global-header__cmdk-hint,
+  .global-header__live-text {
+    display: none;
+  }
+
+  .global-header__live {
+    padding: 0 var(--space-2);
+  }
+
+  .global-header__user-name {
+    max-width: 72px;
+  }
+
+  .repo-switcher__label {
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* LeftNav ------------------------------------------------------------- */

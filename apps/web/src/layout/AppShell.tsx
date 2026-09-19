@@ -149,10 +149,22 @@ export function AppShell(): JSX.Element {
 
   return (
     <div className={`app-shell${sidebarCollapsed ? ' app-shell--sidebar-collapsed' : ''}`}>
+      {/* First tab stop: thirteen controls precede the content otherwise. */}
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById('main-content')?.focus();
+        }}
+      >
+        Skip to content
+      </a>
       <header className="app-shell__header">
         <GlobalHeader />
       </header>
-      <aside className="app-shell__leftnav" aria-label="Primary navigation">
+      {/* The nav inside names the landmark; a second label announced it twice. */}
+      <div className="app-shell__leftnav">
         <LeftNav />
         <button
           type="button"
@@ -178,8 +190,8 @@ export function AppShell(): JSX.Element {
             />
           </svg>
         </button>
-      </aside>
-      <main className="app-shell__main" id="main-content">
+      </div>
+      <main className="app-shell__main" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
       <LiveActivityDock />

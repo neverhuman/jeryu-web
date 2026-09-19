@@ -1,9 +1,11 @@
 // GlobalHeader.tsx — top bar (W-FE-01).
 //
-// Owns: brand mark, command palette trigger, repo switcher, live status pill,
-// user menu. Each child is its own file so the shell layout stays scannable.
+// Owns, left to right: the brand (the way home), where you are (inside a
+// repository only), one search-or-jump control, the live pill and the account.
+// Each child is its own file so the shell layout stays scannable.
 
 import { Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { JeryuLogo } from '../components/brand/JeryuLogo';
 import { useBootstrap } from '../hooks/useBootstrap';
@@ -22,33 +24,38 @@ export function GlobalHeader(): JSX.Element {
 
   return (
     <div className="global-header">
-      <span className="global-header__brand">
+      <Link to="/" className="global-header__brand" aria-label="JeRyu home">
         <JeryuLogo variant="header" />
-      </span>
+      </Link>
       <RepoSwitcher />
       <span className="global-header__spacer" aria-hidden="true" />
       <button
         type="button"
         className="global-header__cmdk"
         onClick={() => openPalette()}
-        aria-label="Open command palette"
+        // The name starts with the words on the button (WCAG 2.5.3).
+        aria-label="Search or jump to: open the command palette"
+        aria-keyshortcuts="Control+K Meta+K"
+        aria-haspopup="dialog"
       >
         <Search size={14} aria-hidden="true" />
-        Quick actions, commands…
+        <span className="global-header__cmdk-text">Search or jump to…</span>
         <span className="global-header__cmdk-hint" aria-hidden="true">
           {platformHint}
         </span>
       </button>
       <span
         className={`global-header__live global-header__live--${status}`}
-        aria-live="polite"
+        role="status"
         aria-atomic="true"
+        aria-label={liveNameFor(status)}
+        title={liveNameFor(status)}
       >
         <span
           className="global-header__live-dot"
           aria-hidden="true"
         />
-        {liveLabel}
+        <span className="global-header__live-text">{liveLabel}</span>
       </span>
       <UserMenu
         login={bootstrap.data?.viewer.login ?? 'Loading…'}
@@ -56,6 +63,22 @@ export function GlobalHeader(): JSX.Element {
       />
     </div>
   );
+}
+
+/** The pill in words, for a reader who cannot see a green dot. */
+export function liveNameFor(status: string): string {
+  switch (status) {
+    case 'open':
+      return 'Live updates connected';
+    case 'connecting':
+      return 'Live updates connecting';
+    case 'reconnecting':
+      return 'Live updates reconnecting';
+    case 'closed':
+      return 'Live updates offline: pages refresh on their own timers';
+    default:
+      return 'Live updates idle';
+  }
 }
 
 function liveLabelFor(status: string): string {

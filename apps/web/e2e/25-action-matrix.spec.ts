@@ -64,10 +64,40 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await page.goto('/');
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 10_000 });
 
-  await page.getByRole('button', { name: 'Open command palette' }).click();
-  await page.getByRole('combobox', { name: 'Command palette' }).fill('Repositories');
+  // The first tab stop skips the chrome; the logo is the way home.
+  await page.keyboard.press('Tab');
+  const skip = page.getByRole('link', { name: 'Skip to content' });
+  await expect(skip).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#main-content')).toBeFocused();
+  await expect(page.getByRole('banner').getByRole('link', { name: 'JeRyu home' })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('banner').getByRole('status')).toHaveAccessibleName(/^Live updates /);
+
+  // One search-or-jump control: pages, repositories by name, a pull request by name#n.
+  const jump = page.getByRole('button', { name: /^Search or jump to/ });
+  await jump.click();
+  const search = page.getByRole('combobox', { name: 'Command palette' });
+  await search.fill('Repositories');
   await page.getByText('Go to Repositories').click();
   await expect(page).toHaveURL(/\/repos$/);
+
+  await jump.click();
+  await search.fill('alice/je');
+  await page.getByRole('option', { name: 'alice/jeryu' }).click();
+  await expect(page).toHaveURL(/\/repos\/jeryu\/alice\/jeryu$/);
+
+  await jump.click();
+  await search.fill('jeryu#12');
+  await expect(page.getByRole('option', { name: 'Open pull request #12 in alice/jeryu' })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/repos\/jeryu\/alice\/jeryu\/pulls\/12$/);
+
+  // Escape closes it and hands focus back to the control that opened it.
+  await jump.click();
+  await expect(search).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(search).toHaveCount(0);
+  await expect(jump).toBeFocused();
 
   // Outside a repository the header has no repository control (the left nav
   // has Repositories); it no longer opens the palette a second way. Inside one
