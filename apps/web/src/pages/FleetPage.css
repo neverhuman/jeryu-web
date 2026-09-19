@@ -224,8 +224,18 @@
   gap: var(--space-2);
 }
 
-.fleet__node-row > * {
+.fleet__node-row > *,
+.fleet__reviewer-row > * {
   min-width: 0;
+}
+
+/* PR reviewers hold no gate slot: no slot, in-flight or task columns. */
+.fleet__reviewer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px minmax(0, 1.5fr) minmax(0, 1.5fr) 190px 110px;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
 }
 
 .fleet__node-row {
@@ -485,6 +495,7 @@
   }
 
   .fleet__node-row,
+  .fleet__reviewer-row,
   .fleet__pool-card {
     grid-template-columns: 1fr;
     gap: var(--space-2);

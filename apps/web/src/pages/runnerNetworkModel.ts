@@ -1,5 +1,8 @@
 // runnerNetworkModel.ts — pure selectors for the /fleet runner-network drilldown.
 //
+// Nodes labelled `redteam` are PR reviewers (pr-redteam), not gate slots: they
+// are split into `reviewers` and kept out of the slot totals.
+//
 // The Fleet page consumes the shared runner-fabric response directly and keeps
 // the node/task/TTY projection isolated from React. That lets the page show the
 // authoritative local node snapshot first, while still deriving a concise view
@@ -22,6 +25,25 @@ export type RunnerAvailability =
 
 export type RunnerActivityState = 'active' | 'idle' | 'unknown';
 
+/** A gate runner slot, or a PR reviewer (pr-redteam) that holds no gate slot. */
+export type RunnerKind = 'gate' | 'reviewer';
+
+/** Heartbeat label that marks a PR reviewer rather than a gate slot. */
+export const REVIEWER_LABEL = 'redteam';
+
+/** What a reviewer's last pass concluded, as shown on /runners. */
+export type ReviewVerdict = 'approve' | 'hold' | 'no usable verdict';
+
+/**
+ * pr-redteam records `approve` or `hold` for a review that reached a verdict;
+ * every other outcome (failed, interrupted, too_large, publication_rejected)
+ * left no usable verdict.
+ */
+export function reviewVerdict(conclusion: string): ReviewVerdict {
+  if (conclusion === 'approve' || conclusion === 'hold') return conclusion;
+  return 'no usable verdict';
+}
+
 export interface RunnerNetworkTask {
   taskId: string;
   jobId: string;
@@ -39,6 +61,7 @@ export interface RunnerNetworkTask {
 
 export interface RunnerNetworkNode {
   runnerId: string;
+  kind: RunnerKind;
   source: string;
   state: string;
   availability: RunnerAvailability;
@@ -67,7 +90,10 @@ export interface RunnerNetworkTotals {
 
 export interface RunnerNetworkState {
   state: EvidenceState;
+  /** Gate runners and other slot-holding nodes; totals cover only these. */
   nodes: RunnerNetworkNode[];
+  /** PR reviewers, listed apart from the gate slots. */
+  reviewers: RunnerNetworkNode[];
   totals: RunnerNetworkTotals;
   lastUpdated: string | null;
 }
@@ -163,6 +189,7 @@ function nodeFromRaw(raw: RunnerNodeSummary): RunnerNetworkNode {
     null;
   return {
     runnerId: raw.runnerId,
+    kind: raw.labels.includes(REVIEWER_LABEL) ? 'reviewer' : 'gate',
     source: raw.source,
     state: raw.state,
     availability,
@@ -229,7 +256,7 @@ export function runnerNetworkFromResponse(
   const raw = asRecord(response);
   const local = asRecord(raw?.local);
   const nodeDetails = Array.isArray(local?.nodeDetails) ? local.nodeDetails : [];
-  const nodes = nodeDetails
+  const allNodes = nodeDetails
     .map((node) => {
       const record = asRecord(node);
       if (!record) return;
@@ -279,11 +306,13 @@ export function runnerNetworkFromResponse(
     })
     .filter((node): node is RunnerNetworkNode => node !== undefined)
     .sort((a, b) => a.runnerId.localeCompare(b.runnerId));
+  const nodes = allNodes.filter((node) => node.kind !== 'reviewer');
+  const reviewers = allNodes.filter((node) => node.kind === 'reviewer');
 
   const totals = totalsFromNodes(nodes);
   const lastUpdated =
     (typeof local?.lastUpdated === 'string' ? local.lastUpdated : null) ??
-    nodes
+    allNodes
       .map((node) => node.lastUpdated)
       .filter((value): value is string => typeof value === 'string' && value.length > 0)
       .sort()
@@ -296,6 +325,7 @@ export function runnerNetworkFromResponse(
         ? (local.state as EvidenceState)
         : 'unknown',
     nodes,
+    reviewers,
     totals,
     lastUpdated,
   };

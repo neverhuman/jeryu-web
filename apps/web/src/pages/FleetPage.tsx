@@ -1,7 +1,8 @@
 // FleetPage.tsx — the /runners page: live runner network across the fabric.
 //
 // Everything here comes from `GET /api/v1/control-plane/runners`, which is
-// fed by real runner heartbeats (the PR-gate slots today). The page polls it
+// fed by real runner heartbeats: the PR-gate slots, and the pr-redteam PR
+// reviewer, which is listed in its own section because it holds no gate slot. The page polls it
 // so the header metrics and node list stay current without a reload.
 //
 // It used to also render "Runner pools" and "System health" from the
@@ -13,7 +14,7 @@ import { useMemo } from 'react';
 
 import { useControlPlaneRunners } from '../hooks/useControlPlaneRunners';
 import { runnerNetworkFromResponse } from './runnerNetworkModel';
-import { RunnerNodeList } from './fleet';
+import { ReviewerList, RunnerNodeList } from './fleet';
 
 import './page.css';
 import './FleetPage.css';
@@ -99,6 +100,22 @@ export function FleetPage(): JSX.Element {
           </div>
         )}
       </section>
+
+      {runnerNetwork.reviewers.length > 0 ? (
+        <section
+          className="page__section"
+          aria-labelledby="fleet-reviewers"
+          data-testid="fleet-reviewers"
+        >
+          <div className="fleet__section-head">
+            <h2 className="page__section-title" id="fleet-reviewers">
+              PR reviewers
+            </h2>
+            <span className="page__pill">{runnerNetwork.reviewers.length} reviewer(s)</span>
+          </div>
+          <ReviewerList reviewers={runnerNetwork.reviewers} />
+        </section>
+      ) : null}
     </div>
   );
 }

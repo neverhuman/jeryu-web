@@ -252,4 +252,46 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     expect(tagName).toBe('p');
   });
 
+  test('lists the pr-redteam reviewer apart from the gate slots @action:fleet.reviewer', async ({
+    page,
+  }) => {
+    await blockFleetWebSocket(page);
+    await mockBootstrap(page);
+    await mockFleetBootstrap(page, []);
+    const fabric = runnerFabric(false);
+    fabric.local.nodeDetails.push({
+      runnerId: 'xbabe0/redteam',
+      source: 'pr-redteam',
+      state: 'active',
+      capacity: 0,
+      inFlight: 0,
+      labels: ['xbabe0', 'slot 0', 'redteam'],
+      classes: ['reviewer'],
+      activeTaskCount: 0,
+      lastUpdated: '2026-06-05T00:05:00Z',
+      activeTasks: [],
+      lastActivity: {
+        repo: 'jeryu/jeryu-deploy',
+        pr: 43,
+        sha: '55ee4dd0efe046dc716f77fa73536d35b760fe4e',
+        recipe: 'redteam-review',
+        conclusion: 'hold',
+        seconds: 22,
+        finishedAt: '2026-06-05T00:04:30Z',
+      },
+    });
+    await mockControlPlaneRunners(page, fabric);
+
+    const shell = new AppShellPage(page);
+    await shell.goto('/runners');
+    await shell.assertShellLoaded();
+
+    await expect(page.getByTestId('fleet-reviewers')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('fleet-reviewer-xbabe0_redteam')).toContainText('idle');
+    await expect(page.getByTestId('fleet-reviewer-verdict-xbabe0_redteam')).toContainText(
+      'jeryu/jeryu-deploy#43 hold'
+    );
+    await expect(page.getByTestId('fleet-node-xbabe0_redteam')).toHaveCount(0);
+  });
+
 });

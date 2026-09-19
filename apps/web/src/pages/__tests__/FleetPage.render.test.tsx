@@ -279,4 +279,102 @@ describe('FleetPage render', () => {
     expect(screen.queryByText('Runner pools')).not.toBeInTheDocument();
     expect(screen.queryByText('System health')).not.toBeInTheDocument();
   });
+
+  it('lists pr-redteam as a PR reviewer apart from the gate slots', () => {
+    useRealtimeStore.setState({ events: [], status: 'open' });
+    const gate = {
+      runnerId: 'xbabe2/slot0',
+      source: 'pr-gate-runner',
+      state: 'active',
+      capacity: 1,
+      inFlight: 0,
+      labels: ['xbabe2', 'slot 0'],
+      classes: ['pr-gate'],
+      activeTaskCount: 0,
+      lastUpdated: '2026-09-19T05:22:00Z',
+      activeTasks: [],
+    };
+    const reviewer = (
+      runnerId: string,
+      conclusion: string,
+      reviewing: boolean
+    ): RunnerFabricResponse['local']['nodeDetails'][number] => ({
+      runnerId,
+      source: 'pr-redteam',
+      state: 'active',
+      capacity: 0,
+      inFlight: reviewing ? 1 : 0,
+      labels: ['xbabe0', 'slot 0', 'redteam'],
+      classes: ['reviewer'],
+      activeTaskCount: reviewing ? 1 : 0,
+      lastUpdated: '2026-09-19T05:22:00Z',
+      activeTasks: reviewing
+        ? [
+            {
+              taskId: `${runnerId}@abc30d78`,
+              jobId: 'jeryu/jeryu-web#44',
+              agentRunId: null,
+              workcellId: null,
+              repo: 'jeryu/jeryu-web',
+              label: 'jeryu/jeryu-web#44',
+              program: 'redteam-review',
+              state: 'running',
+              startedAt: '2026-09-19T05:20:00Z',
+              updatedAt: '2026-09-19T05:22:00Z',
+              ttyPreview: { state: 'missing', lines: [] },
+            },
+          ]
+        : [],
+      lastActivity: {
+        repo: 'jeryu/jeryu-deploy',
+        pr: 43,
+        sha: '55ee4dd0efe046dc716f77fa73536d35b760fe4e',
+        recipe: 'redteam-review',
+        conclusion,
+        seconds: 22,
+        finishedAt: '2026-09-19T05:21:43Z',
+      },
+    });
+    renderFleet(
+      {
+        generated_at: new Date().toISOString(),
+        pool_activity: { repos: [], pools: [], unplaceable: [] },
+        system: {},
+      },
+      {
+        ...EMPTY_RUNNERS,
+        local: {
+          ...EMPTY_RUNNERS.local,
+          state: 'fresh',
+          lastUpdated: '2026-09-19T05:22:00Z',
+          nodeDetails: [
+            gate,
+            reviewer('xbabe0/redteam', 'approve', true),
+            reviewer('xbabe1/redteam', 'hold', false),
+            reviewer('xbabe3/redteam', 'failed', false),
+          ],
+        },
+      }
+    );
+    // Reviewers are not gate slots: the gate list and its totals skip them.
+    expect(screen.getByTestId('fleet-metrics')).toHaveTextContent('1 runner(s)');
+    expect(screen.queryByTestId('fleet-node-xbabe0_redteam')).not.toBeInTheDocument();
+    const reviewers = screen.getByTestId('fleet-reviewers');
+    expect(reviewers).toHaveTextContent('PR reviewers');
+    expect(screen.getByTestId('fleet-reviewer-current-xbabe0_redteam')).toHaveTextContent(
+      'jeryu/jeryu-web#44 reviewing'
+    );
+    expect(screen.getByTestId('fleet-reviewer-verdict-xbabe0_redteam')).toHaveTextContent(
+      'jeryu/jeryu-deploy#43 approve'
+    );
+    expect(screen.getByTestId('fleet-reviewer-last-pass-xbabe0_redteam')).toHaveTextContent(
+      '2026-09-19T05:21:43Z'
+    );
+    expect(screen.getByTestId('fleet-reviewer-verdict-xbabe1_redteam')).toHaveTextContent(
+      'hold'
+    );
+    expect(screen.getByTestId('fleet-reviewer-verdict-xbabe3_redteam')).toHaveTextContent(
+      'no usable verdict'
+    );
+  });
 });

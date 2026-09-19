@@ -1,7 +1,8 @@
 // fleet/RunnerNetwork.tsx — the runner-network drilldown view for the /fleet
 // dashboard: one list row per runner node (status, slot usage, last gate,
 // labels). While a node is busy its running task takes the last-gate cell,
-// labelled running, so the row never grows and the list never shifts.
+// labelled running, so the row never grows and the list never shifts. PR
+// reviewers get their own list (ReviewerList) apart from the gate slots.
 
 import { Link } from 'react-router-dom';
 import {
@@ -12,7 +13,7 @@ import {
   CircleSlash,
 } from 'lucide-react';
 
-import type { RunnerNetworkNode } from '../runnerNetworkModel';
+import { reviewVerdict, type RunnerNetworkNode } from '../runnerNetworkModel';
 
 export function RunnerNodeList({
   nodes,
@@ -132,6 +133,103 @@ function RunnerNodeRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
         </span>
       </div>
 
+    </article>
+  );
+}
+
+/**
+ * PR reviewers (pr-redteam): one row each with the PR under review, the last
+ * verdict and when the last pass finished. Reviewers hold no gate slot, so the
+ * slot columns of the gate list do not apply.
+ */
+export function ReviewerList({
+  reviewers,
+}: {
+  reviewers: RunnerNetworkNode[];
+}): JSX.Element {
+  return (
+    <div
+      className="fleet__node-list"
+      data-testid="fleet-reviewer-list"
+      role="list"
+      aria-label="PR reviewers"
+    >
+      <div className="fleet__reviewer-row fleet__node-row--header" aria-hidden="true">
+        <span>Reviewer</span>
+        <span>Status</span>
+        <span>Reviewing</span>
+        <span>Last verdict</span>
+        <span>Last pass</span>
+        <span>Updated</span>
+      </div>
+      {reviewers.map((node) => (
+        <ReviewerRow key={node.runnerId} node={node} />
+      ))}
+    </div>
+  );
+}
+
+function ReviewerRow({ node }: { node: RunnerNetworkNode }): JSX.Element {
+  const nodeId = testIdSegment(node.runnerId);
+  const reviewing = node.tasks[0];
+  const last = node.lastActivity;
+  const verdict = last ? reviewVerdict(last.conclusion) : null;
+  const verdictVariant =
+    verdict === 'approve' ? 'success' : verdict === 'hold' ? 'danger' : 'warning';
+  return (
+    <article
+      className={`fleet__node-item is-${node.availability} is-${node.activityState}`}
+      data-testid={`fleet-reviewer-${nodeId}`}
+      role="listitem"
+      aria-label={`PR reviewer ${node.runnerId}: ${node.availability}`}
+    >
+      <div className="fleet__reviewer-row">
+        <div className="fleet__node-titleblock">
+          <h3 className="fleet__node-title">{node.runnerId}</h3>
+          <p className="fleet__node-source">{node.source}</p>
+        </div>
+        <div className="fleet__node-pills">
+          <AvailabilityPill availability={node.availability} />
+        </div>
+        {reviewing ? (
+          <p
+            className="fleet__node-last fleet__node-last--running"
+            data-testid={`fleet-reviewer-current-${nodeId}`}
+            title={reviewing.startedAt ?? undefined}
+          >
+            <strong>{reviewing.label}</strong>{' '}
+            <span className="page__pill page__pill--warning">reviewing</span>
+          </p>
+        ) : (
+          <span className="fleet__node-muted">idle</span>
+        )}
+        {last && verdict ? (
+          <p className="fleet__node-last" data-testid={`fleet-reviewer-verdict-${nodeId}`}>
+            <strong>
+              {last.repo}#{last.pr}
+            </strong>{' '}
+            <span className={`page__pill page__pill--${verdictVariant}`} title={last.conclusion}>
+              {verdict}
+            </span>{' '}
+            <span className="fleet__node-muted">{last.sha.slice(0, 7)}</span>
+          </p>
+        ) : (
+          <span className="fleet__node-muted">—</span>
+        )}
+        <span
+          className="fleet__node-muted fleet__node-mono"
+          data-testid={`fleet-reviewer-last-pass-${nodeId}`}
+          title={last ? `${last.seconds}s` : undefined}
+        >
+          {last?.finishedAt ?? 'none yet'}
+        </span>
+        <span
+          className="fleet__node-muted fleet__node-mono"
+          title={node.lastUpdated ?? undefined}
+        >
+          {node.lastUpdated ?? 'unknown'}
+        </span>
+      </div>
     </article>
   );
 }

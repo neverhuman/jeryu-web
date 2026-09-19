@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   lastTtyLine,
+  reviewVerdict,
   runnerNetworkFromResponse,
 } from '../runnerNetworkModel';
 import type { RunnerFabricResponse } from '../../api/types';
@@ -32,6 +33,44 @@ const EMPTY_RUNNERS: RunnerFabricResponse = {
 };
 
 describe('runnerNetworkModel', () => {
+  it('splits redteam-labelled reviewers from the gate slots', () => {
+    const node = (runnerId: string, labels: string[], capacity: number) => ({
+      runnerId,
+      source: capacity ? 'pr-gate-runner' : 'pr-redteam',
+      state: 'active',
+      capacity,
+      inFlight: 0,
+      labels,
+      classes: [],
+      activeTaskCount: 0,
+      lastUpdated: '2026-09-19T05:22:00Z',
+      activeTasks: [],
+    });
+    const state = runnerNetworkFromResponse({
+      ...EMPTY_RUNNERS,
+      local: {
+        ...EMPTY_RUNNERS.local,
+        nodeDetails: [
+          node('xbabe2/slot0', ['pr-gate'], 1),
+          node('xbabe0/redteam', ['xbabe0', 'redteam'], 0),
+        ],
+      },
+    });
+    expect(state.nodes.map((n) => n.runnerId)).toEqual(['xbabe2/slot0']);
+    expect(state.reviewers.map((n) => [n.runnerId, n.kind])).toEqual([
+      ['xbabe0/redteam', 'reviewer'],
+    ]);
+    expect(state.totals.nodes).toBe(1);
+  });
+
+  it('maps review conclusions to approve, hold or no usable verdict', () => {
+    expect(reviewVerdict('approve')).toBe('approve');
+    expect(reviewVerdict('hold')).toBe('hold');
+    for (const outcome of ['failed', 'interrupted', 'too_large', 'publication_rejected', '']) {
+      expect(reviewVerdict(outcome)).toBe('no usable verdict');
+    }
+  });
+
   it('returns an empty network when the runners payload is empty', () => {
     const state = runnerNetworkFromResponse(EMPTY_RUNNERS);
     expect(state.state).toBe('unknown');
