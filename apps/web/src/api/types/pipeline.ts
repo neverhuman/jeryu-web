@@ -39,6 +39,8 @@ export interface AttentionCounts {
 }
 
 export interface AttentionResponse {
+  /** Contract version. Unknown fields anywhere in these payloads are ignored. */
+  schema_version?: string | number;
   generated_at: string;
   items: AttentionItem[];
   counts: AttentionCounts;
@@ -46,6 +48,8 @@ export interface AttentionResponse {
 
 export interface PipelineEvent {
   seq: number;
+  /** Optional stable id a reporter may attach; `seq` stays the list key. */
+  event_id?: string | null;
   ts: string;
   source: string;
   kind: string;
@@ -69,6 +73,7 @@ export interface PipelineEvent {
 }
 
 export interface PipelineEventsResponse {
+  schema_version?: string | number;
   events: PipelineEvent[];
   latest_seq: number;
 }
