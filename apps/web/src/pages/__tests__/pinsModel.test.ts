@@ -9,6 +9,7 @@ import {
   scopeConsumers,
   shortRepo,
   splitPins,
+  taggedSummary,
 } from '../pinsModel';
 import { PINS, pin } from './pipelineTestData';
 
@@ -37,6 +38,27 @@ describe('pinsModel', () => {
     expect(pinStateOf(odd)).toBe('unknown');
     expect(pinLabel(odd)).toBe('could not be compared with main');
     expect(splitPins({ repo: 'a/b', family: null, branch: 'main', pins: [odd] }).open).toHaveLength(1);
+  });
+
+  it('puts what can be acted on first and folds trailing tags behind one line', () => {
+    const split = splitPins({
+      repo: 'jeryu/jeryu-deploy',
+      family: 'jeryu',
+      branch: 'main',
+      pins: [
+        pin({ dependency: 'jeryu/jeryu-core', kind: 'tag', pinned_ref: 'core-v6', behind: 3, state: 'behind' }),
+        pin({ dependency: 'jeryu/jeryu-ci-runner', kind: 'tag', pinned_ref: 'ci-v0', behind: 43, state: 'behind' }),
+        pin({ dependency: 'jeryu/jeryu-web', behind: 9, state: 'behind' }),
+        pin({ dependency: 'jeryu/jeryu-jira', kind: 'tag', pinned_ref: 'jira-v0', state: 'diverged' }),
+        pin({ dependency: 'jeryu/jeryu-cache', kind: 'tag', pinned_ref: 'cache-v0' }),
+      ],
+    });
+    // A diverged tag is something wrong, so it stays in sight; the commit pin is the actionable row.
+    expect(split.open.map((p) => p.dependency)).toEqual(['jeryu/jeryu-jira', 'jeryu/jeryu-web']);
+    expect(split.tagged.map((p) => p.dependency)).toEqual(['jeryu/jeryu-ci-runner', 'jeryu/jeryu-core']);
+    expect(split.currentCount).toBe(1);
+    expect(taggedSummary(2)).toBe('2 dependencies have commits since their pinned tag');
+    expect(taggedSummary(1)).toBe('1 dependency has commits since its pinned tag');
   });
 
   it('is red only where something is wrong: a trailing tag is a standing fact, not an alarm', () => {
@@ -77,10 +99,12 @@ describe('pinsModel', () => {
 
   it('splits a consumer into pins to look at and a count of current ones', () => {
     const split = splitPins(PINS.consumers[0]);
-    expect(split.open.map((p) => p.dependency)).toEqual(['jeryu/jeryu-core', 'jeryu/jeryu-web']);
+    expect(split.open.map((p) => p.dependency)).toEqual(['jeryu/jeryu-web']);
+    expect(split.tagged.map((p) => p.dependency)).toEqual(['jeryu/jeryu-core']);
     expect(split.currentCount).toBe(2);
     expect(splitPins({ repo: 'a/b', family: null, branch: 'main', pins: [] })).toMatchObject({
       open: [],
+      tagged: [],
       currentCount: 0,
     });
   });

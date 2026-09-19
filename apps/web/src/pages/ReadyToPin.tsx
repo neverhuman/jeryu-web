@@ -19,6 +19,7 @@ import {
   scopeConsumers,
   shortRepo,
   splitPins,
+  taggedSummary,
   type ConsumerPins,
   type PinScope,
 } from './pinsModel';
@@ -66,7 +67,7 @@ export function ReadyToPin({ scope }: { scope: PinScope }): JSX.Element | null {
 }
 
 function ConsumerBlock({ entry }: { entry: ConsumerPins }): JSX.Element {
-  const { consumer, open, currentCount } = entry;
+  const { consumer, open, tagged, currentCount } = entry;
   return (
     <div className="pins__consumer" data-testid={`pins-consumer-${consumer.repo}`}>
       <h3 className="pins__consumer-title">
@@ -79,8 +80,18 @@ function ConsumerBlock({ entry }: { entry: ConsumerPins }): JSX.Element {
           ))}
         </ul>
       ) : null}
+      {tagged.length > 0 ? (
+        <details className="pins__tagged" data-testid={`pins-tagged-${consumer.repo}`}>
+          <summary>{taggedSummary(tagged.length)}</summary>
+          <ul className="pins__list">
+            {tagged.map((pin) => (
+              <PinRow key={`${pin.source}:${pin.dependency}:${pin.pinned_ref}`} pin={pin} />
+            ))}
+          </ul>
+        </details>
+      ) : null}
       <p className="releases__muted" data-testid={`pins-current-${consumer.repo}`}>
-        {open.length === 0
+        {open.length === 0 && tagged.length === 0
           ? `All ${currentCount} pin${currentCount === 1 ? '' : 's'} current: nothing merged is waiting for a pin.`
           : `${currentCount} pin${currentCount === 1 ? '' : 's'} current`}
       </p>

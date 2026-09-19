@@ -73,23 +73,46 @@ export function pinNextStep(pin: Pin): PinNextStep {
 
 export interface ConsumerPins {
   consumer: PinConsumer;
-  /** Pins that are not current, the ones a person may care about first. */
+  /**
+   * Pins a person can act on or must see: commit pins that are not current
+   * (the bump is one click or opens by itself) and anything diverged.
+   */
   open: Pin[];
+  /**
+   * Tag pins with commits since the tag. Nothing automatic or urgent can be
+   * done about them (someone cuts a tag, then bumps the manifest), so they
+   * fold behind one line instead of burying the actionable row.
+   */
+  tagged: Pin[];
   currentCount: number;
 }
 
 const OPEN_ORDER: readonly PinState[] = ['diverged', 'behind', 'behind_not_green', 'unknown'];
 
+function byStateThenName(a: Pin, b: Pin): number {
+  return (
+    OPEN_ORDER.indexOf(pinStateOf(a)) - OPEN_ORDER.indexOf(pinStateOf(b)) ||
+    a.dependency.localeCompare(b.dependency)
+  );
+}
+
 export function splitPins(consumer: PinConsumer): ConsumerPins {
   const pins = consumer.pins ?? [];
-  const open = pins
-    .filter((pin) => pinStateOf(pin) !== 'current')
-    .sort(
-      (a, b) =>
-        OPEN_ORDER.indexOf(pinStateOf(a)) - OPEN_ORDER.indexOf(pinStateOf(b)) ||
-        a.dependency.localeCompare(b.dependency)
-    );
-  return { consumer, open, currentCount: pins.length - open.length };
+  const notCurrent = pins.filter((pin) => pinStateOf(pin) !== 'current');
+  const folds = (pin: Pin): boolean => pin.kind === 'tag' && pinStateOf(pin) !== 'diverged';
+  return {
+    consumer,
+    open: notCurrent.filter((pin) => !folds(pin)).sort(byStateThenName),
+    tagged: notCurrent.filter(folds).sort(byStateThenName),
+    currentCount: pins.length - notCurrent.length,
+  };
+}
+
+/** The one line the folded tag pins show while closed. */
+export function taggedSummary(count: number): string {
+  return count === 1
+    ? '1 dependency has commits since its pinned tag'
+    : `${count} dependencies have commits since their pinned tag`;
 }
 
 export interface PinScope {

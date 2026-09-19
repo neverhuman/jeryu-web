@@ -48,7 +48,12 @@ describe('ReadyToPin', () => {
     expect(ships.closest('details')).not.toHaveAttribute('open');
     expect(within(web).getByText('test: the dock test brings its own Storage')).toBeInTheDocument();
 
-    const core = within(consumer).getByTestId('pin-jeryu/jeryu-core');
+    // The trailing tag sits inside the folded line, after the commit pin.
+    const tagged = within(consumer).getByTestId('pins-tagged-jeryu/jeryu-deploy');
+    expect(tagged).not.toHaveAttribute('open');
+    expect(within(tagged).getByText('1 dependency has commits since its pinned tag')).toBeInTheDocument();
+    expect(web.compareDocumentPosition(tagged) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const core = within(tagged).getByTestId('pin-jeryu/jeryu-core');
     expect(
       within(core).getByText('3 commits since tag jeryu-core-v5.0.0-split.6, needs a new tag')
     ).toHaveClass('pins__label');

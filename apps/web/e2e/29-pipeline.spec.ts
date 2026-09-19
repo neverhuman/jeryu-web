@@ -168,9 +168,15 @@ test.describe('Pipeline visibility', () => {
     await expect(web.getByText('test: the dock test brings its own Storage')).toBeHidden();
     await web.locator('summary').click();
     await expect(web.getByText('test: the dock test brings its own Storage')).toBeVisible();
-    await expect(ready.getByTestId('pin-jeryu/jeryu-core')).toContainText(
-      '3 commits since tag jeryu-core-v5.0.0-split.6, needs a new tag'
-    );
+    // Trailing tags cannot be acted on from here: they fold behind one line,
+    // below the commit pin that can.
+    const core = ready.getByTestId('pin-jeryu/jeryu-core');
+    await expect(core).toBeHidden();
+    const tagged = ready.getByTestId('pins-tagged-jeryu/jeryu-deploy');
+    await expect(tagged.locator('> summary')).toHaveText('1 dependency has commits since its pinned tag');
+    await tagged.locator('> summary').click();
+    await expect(core).toBeVisible();
+    await expect(core).toContainText('3 commits since tag jeryu-core-v5.0.0-split.6, needs a new tag');
     await expect(ready.getByTestId('pins-current-jeryu/jeryu-deploy')).toHaveText('1 pin current');
     // The existing content stays below it.
     await expect(page.getByTestId('unreleased-summary-jeryu/jeryu-deploy')).toBeVisible();
