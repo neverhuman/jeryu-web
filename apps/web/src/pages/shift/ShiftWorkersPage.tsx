@@ -13,7 +13,7 @@ import { EmptyState, LoadingState } from '../../components/state';
 import { useShiftWorkers, useShiftWorkersHistory } from '../../hooks/useShift';
 import { ShiftError } from './shiftCommon';
 import { ShiftCapacityChart, ShiftTimeline } from './ShiftCharts';
-import { formatAgo } from './shiftModel';
+import { formatAgo, splitWorkers } from './shiftModel';
 import { WorkTabs, queueHref } from './WorkTabs';
 
 import '../page.css';
@@ -28,8 +28,12 @@ export function ShiftWorkersPage(): JSX.Element {
   const workers = useShiftWorkers();
   const [hours, setHours] = useState<number>(24);
   const history = useShiftWorkersHistory(hours);
-  const list = workers.data?.workers ?? [];
-  const healthy = list.filter((w) => w.healthy).length;
+  const all = workers.data?.workers ?? [];
+  const [showStale, setShowStale] = useState(false);
+  // Slots unseen for over an hour are ghosts of old runs: hidden until asked for.
+  const { shown, hidden } = splitWorkers(all, new Date());
+  const list = showStale ? all : shown;
+  const healthy = all.filter((w) => w.healthy).length;
 
   return (
     <div className="page page--wide" data-testid="shift-workers-page">
@@ -42,18 +46,37 @@ export function ShiftWorkersPage(): JSX.Element {
       <WorkTabs />
 
       <section className="shift__section" aria-label="Live workers">
-        <h2 className="page__section-title">
-          Live · {healthy} of {list.length} healthy
-        </h2>
+        <div className="shift__toolbar">
+          <h2 className="page__section-title">
+            Live · {healthy} of {list.length} healthy
+          </h2>
+          {hidden.length > 0 ? (
+            <button
+              type="button"
+              className="action-button action-button--ghost"
+              aria-pressed={showStale}
+              onClick={() => setShowStale((v) => !v)}
+            >
+              {showStale ? 'Hide' : 'Show'} {hidden.length} stale slot{hidden.length === 1 ? '' : 's'} (unseen
+              over 1 h)
+            </button>
+          ) : null}
+        </div>
         {workers.isPending ? (
           <LoadingState title="Loading workers…" variant="message" />
         ) : workers.isError ? (
           <ShiftError title="Could not load workers." error={workers.error} />
-        ) : list.length === 0 ? (
+        ) : all.length === 0 ? (
           <EmptyState
             icon={ServerCog}
             title="No worker has sent a heartbeat."
             description="Start todoq supervisor on a machine; its slots appear here within 30 seconds."
+          />
+        ) : list.length === 0 ? (
+          <EmptyState
+            icon={ServerCog}
+            title="No worker slot has been seen in the last hour."
+            description="Every known slot is stale. Check the todoq supervisors, or show the stale slots."
           />
         ) : (
           <WorkersTable workers={list} />
@@ -134,7 +157,7 @@ function WorkersTable({ workers }: { workers: ShiftWorker[] }): JSX.Element {
             >
               <td>
                 <span className={`shift-health${w.healthy ? ' is-healthy' : ''}`} aria-hidden="true" />
-                {w.healthy ? 'healthy' : 'stale'}
+                {w.healthy ? 'healthy' : <span className="page__pill page__pill--warning">stale</span>}
               </td>
               <td>{w.operator}</td>
               <td>{w.host}</td>

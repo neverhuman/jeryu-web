@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ShiftQueuePage } from '../shift/ShiftQueuePage';
 import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
-import { TODOS } from './shiftTestData';
+import { TODOS, attempt, todo } from './shiftTestData';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
@@ -73,7 +73,7 @@ describe('ShiftQueuePage', () => {
   });
 
   it('posts admin row actions and opens a review PR', async () => {
-    vi.spyOn(window, 'prompt').mockReturnValue('waiting on design');
+    const prompt = vi.spyOn(window, 'prompt');
     const calls = mockShiftApi((req) => {
       if (req.method !== 'POST') return undefined;
       if (req.pathname.endsWith('/pr')) {
@@ -83,7 +83,14 @@ describe('ShiftQueuePage', () => {
     });
     renderQueue();
     await screen.findByTestId('shift-todo-20260918-1832-k3f');
+    // Block asks for its reason inline, never through a browser prompt.
     fireEvent.click(screen.getByRole('button', { name: 'Block 20260918-1832-k3f' }));
+    fireEvent.change(screen.getByLabelText('Reason for blocking 20260918-1832-k3f'), {
+      target: { value: ' waiting on design ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm block' }));
+    expect(prompt).not.toHaveBeenCalled();
+    await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1));
     fireEvent.change(screen.getByLabelText('Priority for 20260918-1832-k3f'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Move 20260918-1832-k3f to night' }));
     fireEvent.click(screen.getByRole('button', { name: 'Release 20260919-0900-q1q' }));
@@ -139,5 +146,47 @@ describe('ShiftQueuePage', () => {
     );
     renderQueue();
     expect(await screen.findByText("You don't have access to the shift queue.")).toBeInTheDocument();
+  });
+  it('shows the needs-a-human count, the lifecycle trace, the PR link and failed attempts on the row', async () => {
+    const pr = { repo: 'jeryu-deploy', number: 48, state: 'merged', url: '/repos/jeryu/jeryu/jeryu-deploy/pulls/48' };
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/todos'
+        ? json({
+            generated_at: '2026-09-19T09:00:00Z',
+            todos: [
+              { ...TODOS[1], pr, merged: true, released: false, cost_usd: 2.5 },
+              todo({
+                id: 'blk-1',
+                title: 'Cut the core tag',
+                status: 'blocked',
+                attempts: 2,
+                note: 'tag split.7 does not exist',
+                worked_by: [attempt({ outcome: 'retry' }), attempt({ outcome: 'blocked' })],
+              }),
+              TODOS[2],
+            ],
+          })
+        : undefined
+    );
+    renderQueue();
+    const blocked = await screen.findByTestId('shift-todo-blk-1');
+    // Blocked sorts above live work.
+    const ids = screen.getAllByTestId(/^shift-todo-(?!detail)/).map((el) => el.getAttribute('data-testid'));
+    expect(ids[0]).toBe('shift-todo-blk-1');
+    expect(within(blocked).getByText('2 attempts · last: blocked')).toHaveClass('is-failing');
+    expect(within(blocked).getByRole('list', { name: /blocked — needs a human/ })).toBeInTheDocument();
+
+    const done = screen.getByTestId('shift-todo-20260918-2201-a9z');
+    expect(within(done).getByRole('link', { name: 'PR #48' })).toHaveAttribute('href', pr.url);
+    expect(within(done).getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute('href', pr.url);
+    expect(within(done).getByRole('list', { name: /PR #48, Merged, Released not yet/ })).toBeInTheDocument();
+    expect(within(done).getByText('$2.50')).toBeInTheDocument();
+
+    const toggle = screen.getByTestId('shift-needs-human');
+    expect(toggle).toHaveTextContent('1 needs a human');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByTestId('shift-todo-20260918-2201-a9z')).toBeNull();
+    expect(screen.getByTestId('shift-todo-blk-1')).toBeInTheDocument();
   });
 });

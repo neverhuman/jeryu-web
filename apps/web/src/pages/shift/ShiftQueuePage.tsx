@@ -7,7 +7,7 @@
 // "Open review PR" on each shift.
 
 import { GitBranch, Inbox } from 'lucide-react';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type { ShiftBranch, ShiftFamily, ShiftTodo } from '../../api/types';
@@ -27,6 +27,9 @@ import {
   SHIFT_MODES,
   SHIFT_PRIORITIES,
   SHIFT_STATUSES,
+  attemptSummary,
+  commitHref,
+  countNeedsHuman,
   filterShiftTodos,
   formatAgo,
   formatCost,
@@ -40,6 +43,9 @@ import {
   slotLabel,
   sortShifts,
   statusTone,
+  todoPrHref,
+  todoTrace,
+  traceSummary,
   type QueueFilters,
 } from './shiftModel';
 import { SHIFT_ADD_PATH, WorkTabs } from './WorkTabs';
@@ -110,6 +116,8 @@ function FamilyQueue({
     return focusIds.length > 0 ? shown.filter((t) => focusIds.includes(t.id)) : shown;
   }, [all, filters, focusIds]);
   const owner = ownerOf(family.queue_repo);
+  const waiting = useMemo(() => countNeedsHuman(all), [all]);
+  const humanOnly = filters.attention === 'human';
 
   const set = (key: keyof QueueFilters) => (value: string) =>
     setFilters((current) => ({ ...current, [key]: value }));
@@ -126,6 +134,18 @@ function FamilyQueue({
         <FilterSelect label="Requested by" value={filters.requested_by} options={options.requesters} onChange={set('requested_by')} />
         <FilterSelect label="Worked by" value={filters.worked_by} options={options.workers} onChange={set('worked_by')} />
         <FilterSelect label="Shift" value={filters.shift} options={options.shifts} onChange={set('shift')} />
+        {waiting > 0 || humanOnly ? (
+          <button
+            type="button"
+            className={`shift__needs-human${humanOnly ? ' is-active' : ''}`}
+            aria-pressed={humanOnly}
+            onClick={() => set('attention')(humanOnly ? 'all' : 'human')}
+            data-testid="shift-needs-human"
+          >
+            <span className="page__pill page__pill--danger">{waiting}</span> need
+            {waiting === 1 ? 's' : ''} a human
+          </button>
+        ) : null}
         {focusIds.length > 0 ? (
           <Link to={`?family=${encodeURIComponent(family.name)}`} className="shift__muted">
             Showing {focusIds.length} filed todo{focusIds.length === 1 ? '' : 's'} · show all
@@ -231,6 +251,7 @@ function TodoRow({
   const detailId = `shift-todo-detail-${todo.id}`;
   const commits = Object.entries(todo.commits);
   const worker = latestWorker(todo);
+  const attempts = attemptSummary(todo);
 
   return (
     <Fragment>
@@ -249,6 +270,7 @@ function TodoRow({
             {todo.id} · P{todo.priority}
             {todo.triaged ? '' : ' · untriaged'}
           </span>
+          <TodoTrace todo={todo} owner={owner} />
         </td>
         <td>
           <span className={`page__pill page__pill--${statusTone(todo.status)}`}>
@@ -260,9 +282,14 @@ function TodoRow({
         <td>{todo.requested_by || '—'}</td>
         <td>{worker ?? '—'}</td>
         <td>
-          {todo.lease_live && todo.lease_until
-            ? `lease ${formatAgo(todo.lease_until, now)}`
-            : `${todo.attempts} attempt${todo.attempts === 1 ? '' : 's'}`}
+          {todo.lease_live && todo.lease_until ? `lease ${formatAgo(todo.lease_until, now)}` : null}
+          {attempts ? (
+            <span className={attempts.failing ? 'shift__attempts is-failing' : 'shift__attempts'}>
+              {attempts.text}
+            </span>
+          ) : todo.lease_live ? null : (
+            '0 attempts'
+          )}
         </td>
         <td className="shift__cost">{formatCost(todoCost(todo))}</td>
         <td>
@@ -271,7 +298,7 @@ function TodoRow({
           ) : (
             <span className="shift__commits">
               {commits.map(([repo, sha]) => (
-                <Link key={repo} to={`${repoPath(owner, repo)}/code`} title={`${repo}@${sha}`}>
+                <Link key={repo} to={commitHref(todo, owner, repo)} title={`${repo}@${sha}`}>
                   {repo}@{shortSha(sha)}
                 </Link>
               ))}
@@ -292,6 +319,22 @@ function TodoRow({
         </tr>
       ) : null}
     </Fragment>
+  );
+}
+
+/** Queued > Claimed > Done > PR > Merged > Released, with the PR step linked. */
+function TodoTrace({ todo, owner }: { todo: ShiftTodo; owner: string }): JSX.Element {
+  const steps = todoTrace(todo);
+  const prHref = todoPrHref(todo, owner);
+  return (
+    <ol className="shift-trace" aria-label={`Lifecycle of ${todo.id}: ${traceSummary(steps)}`}>
+      {steps.map((step) => (
+        <li key={step.key} className={`shift-trace__step is-${step.state}`}>
+          {step.key === 'pr' && prHref ? <Link to={prHref}>{step.label}</Link> : step.label}
+          {step.state === 'unknown' ? '?' : ''}
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -345,10 +388,19 @@ function TodoDetail({ todo }: { todo: ShiftTodo }): JSX.Element {
 function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element {
   const action = useShiftTodoAction();
   const base = { family: todo.family, id: todo.id };
-  const block = (): void => {
-    const note = window.prompt(`Why block ${todo.id}?`, '');
-    if (note === null) return;
-    action.mutate({ ...base, action: 'block', note });
+  const [blocking, setBlocking] = useState(false);
+  const [note, setNote] = useState('');
+  const submitBlock = (event: FormEvent): void => {
+    event.preventDefault();
+    action.mutate(
+      { ...base, action: 'block', note: note.trim() },
+      {
+        onSuccess: () => {
+          setBlocking(false);
+          setNote('');
+        },
+      }
+    );
   };
   const otherMode = todo.mode === 'now' ? 'night' : 'now';
   return (
@@ -367,11 +419,29 @@ function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element {
         <ActionButton
           variant="ghost"
           disabled={action.isPending}
-          onClick={block}
+          onClick={() => setBlocking((v) => !v)}
+          aria-expanded={blocking}
           aria-label={`Block ${todo.id}`}
         >
           Block
         </ActionButton>
+      ) : null}
+      {blocking ? (
+        <form className="shift__block-form" onSubmit={submitBlock} aria-label={`Why block ${todo.id}?`}>
+          <input
+            type="text"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Why? (shown on the todo)"
+            aria-label={`Reason for blocking ${todo.id}`}
+          />
+          <ActionButton variant="danger" type="submit" disabled={action.isPending}>
+            Confirm block
+          </ActionButton>
+          <ActionButton variant="ghost" type="button" onClick={() => setBlocking(false)}>
+            Cancel
+          </ActionButton>
+        </form>
       ) : null}
       <select
         aria-label={`Priority for ${todo.id}`}

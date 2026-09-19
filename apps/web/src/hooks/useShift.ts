@@ -60,7 +60,9 @@ export function useShiftShifts(
     queryKey: [...SHIFT_KEY, 'shifts', family ?? ''],
     queryFn: ({ signal }) =>
       apiGet<ShiftShiftsResponse>(endpoints.shiftShifts(family), { signal }),
-    staleTime: 30_000,
+    staleTime: 10_000,
+    // A review PR opened by a worker or by `todoq shift pr` shows up on its own.
+    refetchInterval: 30_000,
     retry: false,
   });
 }

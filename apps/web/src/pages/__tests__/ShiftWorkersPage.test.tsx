@@ -24,8 +24,14 @@ describe('ShiftWorkersPage', () => {
       'href',
       '/work/shift?family=jeryu&todo=20260919-0900-q1q'
     );
-    expect(within(screen.getByTestId('shift-worker-xbabe1-w2')).getByText('stale')).toBeInTheDocument();
+    // xbabe1/w2 was last seen long ago: a ghost, hidden until asked for.
+    expect(screen.queryByTestId('shift-worker-xbabe1-w2')).toBeNull();
+    expect(screen.getByText('Live · 1 of 1 healthy')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Show 1 stale slot/ }));
+    const stale = within(screen.getByTestId('shift-worker-xbabe1-w2')).getByText('stale');
+    expect(stale).toHaveClass('page__pill--warning');
     expect(screen.getByText('Live · 1 of 2 healthy')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Hide 1 stale slot/ })).toHaveAttribute('aria-pressed', 'true');
 
     const timeline = await screen.findByTestId('shift-timeline');
     expect(within(timeline).getByRole('img', { name: /Worker timeline: 1 slot/ })).toBeInTheDocument();

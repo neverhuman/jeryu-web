@@ -8,6 +8,7 @@ import type {
   ShiftCapacityPoint,
   ShiftSegment,
   ShiftTodo,
+  ShiftWorker,
 } from '../../api/types';
 
 export const SHIFT_STATUSES = ['open', 'claimed', 'done', 'blocked', 'handoff'] as const;
@@ -21,6 +22,8 @@ export interface QueueFilters {
   requested_by: string;
   worked_by: string;
   shift: string;
+  /** `human`: only todos where a person is the next step (see `needsHuman`). */
+  attention: string;
 }
 
 export const DEFAULT_QUEUE_FILTERS: QueueFilters = {
@@ -30,6 +33,7 @@ export const DEFAULT_QUEUE_FILTERS: QueueFilters = {
   requested_by: 'all',
   worked_by: 'all',
   shift: 'all',
+  attention: 'all',
 };
 
 /** Every operator that attempted the todo, plus a live claimant. */
@@ -62,6 +66,7 @@ export function filterShiftTodos(todos: ShiftTodo[], filters: QueueFilters): Shi
         keep(todo.mode, filters.mode) &&
         keep(todo.requested_by, filters.requested_by) &&
         keep(todo.shift ?? '', filters.shift) &&
+        (filters.attention !== 'human' || needsHuman(todo)) &&
         (filters.repo === 'all' || todo.repos.includes(filters.repo)) &&
         (filters.worked_by === 'all' || todoWorkers(todo).includes(filters.worked_by))
     )
@@ -69,14 +74,31 @@ export function filterShiftTodos(todos: ShiftTodo[], filters: QueueFilters): Shi
 }
 
 const STATUS_RANK: Record<string, number> = {
-  claimed: 0,
-  open: 1,
-  blocked: 2,
-  handoff: 3,
+  blocked: 0,
+  handoff: 1,
+  claimed: 2,
+  open: 3,
   done: 4,
 };
 
-/** Live work first, then by priority (1 is highest), then oldest filed. */
+/**
+ * A person is the next step: the todo is blocked or handed off, or it is
+ * still waiting for triage. Matches the attention kinds `todo_blocked`,
+ * `todo_handoff` and `todo_untriaged`.
+ */
+export function needsHuman(todo: Pick<ShiftTodo, 'status' | 'triaged'>): boolean {
+  if (todo.status === 'blocked' || todo.status === 'handoff') return true;
+  return !todo.triaged && todo.status !== 'done';
+}
+
+export function countNeedsHuman(todos: ShiftTodo[]): number {
+  return todos.filter(needsHuman).length;
+}
+
+/**
+ * Todos waiting on a person first (blocked, then handoff), then live work,
+ * then by priority (1 is highest), then oldest filed.
+ */
 export function compareTodos(a: ShiftTodo, b: ShiftTodo): number {
   return (
     (STATUS_RANK[a.status] ?? 5) - (STATUS_RANK[b.status] ?? 5) ||
@@ -192,14 +214,128 @@ export function formatAgo(iso: string | null | undefined, now: Date): string {
   return future ? `in ${text}` : `${text} ago`;
 }
 
-/** What a todo has cost so far: the sum of its attempts' costs, or null when none reported one. */
-export function todoCost(todo: Pick<ShiftTodo, 'worked_by'>): number | null {
+/**
+ * What a todo has cost so far: the server's `cost_usd` when it sends one,
+ * else the sum of its attempts' costs, or null when none reported one.
+ */
+export function todoCost(todo: Pick<ShiftTodo, 'worked_by' | 'cost_usd'>): number | null {
+  if (typeof todo.cost_usd === 'number') return todo.cost_usd;
   const costs = todo.worked_by.map((a) => a.cost_usd).filter((c): c is number => typeof c === 'number');
   return costs.length === 0 ? null : costs.reduce((sum, c) => sum + c, 0);
 }
 
 export function formatCost(cost: number | null | undefined): string {
   return cost === null || cost === undefined ? '—' : `$${cost.toFixed(2)}`;
+}
+
+// ------------------------------------------------------------- lifecycle
+
+export type TraceState = 'done' | 'current' | 'failed' | 'pending' | 'unknown';
+
+export interface TraceStep {
+  key: 'queued' | 'claimed' | 'done' | 'pr' | 'merged' | 'released';
+  label: string;
+  state: TraceState;
+}
+
+/**
+ * Queued > Claimed > Done > PR > Merged > Released for one todo. `pr` and
+ * `released` come from the pipeline visibility contract; on a server that does
+ * not send them those steps read `unknown` rather than "not yet".
+ */
+export function todoTrace(todo: ShiftTodo): TraceStep[] {
+  const stuck = todo.status === 'blocked' || todo.status === 'handoff';
+  const done = todo.status === 'done';
+  const claimed = done || todo.status === 'claimed' || todo.worked_by.length > 0 || todo.attempts > 0;
+  const merged = todo.merged || todo.pr?.state === 'merged';
+  const hasPr = Boolean(todo.pr) || merged;
+  const landed = done && Object.keys(todo.commits).length > 0;
+  const step = (key: TraceStep['key'], label: string, state: TraceState): TraceStep => ({ key, label, state });
+  // An older server sends neither `pr` nor `released`: say "unknown", not "not yet".
+  const prState: TraceState = hasPr ? 'done' : landed && todo.pr === undefined ? 'unknown' : 'pending';
+  const releasedState: TraceState =
+    todo.released === true ? 'done' : merged && (todo.released === null || todo.released === undefined) ? 'unknown' : 'pending';
+  return [
+    step('queued', 'Queued', 'done'),
+    step('claimed', 'Claimed', todo.status === 'claimed' ? 'current' : claimed ? 'done' : 'pending'),
+    step('done', stuck ? todo.status : 'Done', stuck ? 'failed' : done ? 'done' : 'pending'),
+    step('pr', todo.pr ? `PR #${todo.pr.number}` : 'PR', prState),
+    step('merged', 'Merged', merged ? 'done' : 'pending'),
+    step('released', 'Released', releasedState),
+  ];
+}
+
+/** One line for the trace's accessible name, e.g. "Queued, Claimed, Done, PR #35, Merged; Released not yet". */
+export function traceSummary(steps: TraceStep[]): string {
+  const word: Record<TraceState, string> = {
+    done: '',
+    current: ' in progress',
+    failed: ' — needs a human',
+    pending: ' not yet',
+    unknown: ' unknown',
+  };
+  return steps.map((s) => `${s.label}${word[s.state]}`).join(', ');
+}
+
+export interface AttemptSummary {
+  text: string;
+  /** True when the last attempt did not finish the todo. */
+  failing: boolean;
+}
+
+/**
+ * "2 attempts · last: retry" — failed attempts are visible on the row, not only
+ * inside the expanded history. Null when nothing has been attempted.
+ */
+export function attemptSummary(todo: Pick<ShiftTodo, 'attempts' | 'worked_by'>): AttemptSummary | null {
+  const count = Math.max(todo.attempts, todo.worked_by.length);
+  if (count === 0) return null;
+  const last = todo.worked_by[todo.worked_by.length - 1];
+  const outcome = last?.outcome ?? '';
+  const text = `${count} attempt${count === 1 ? '' : 's'}${outcome ? ` · last: ${outcome}` : ''}`;
+  return { text, failing: outcome !== '' && outcome !== 'done' };
+}
+
+/** Where a commit chip leads: the PR that carries it, else the repo's code. */
+export function commitHref(todo: Pick<ShiftTodo, 'pr'>, owner: string, repo: string): string {
+  const pr = todo.pr;
+  if (pr && bareRepo(pr.repo) === bareRepo(repo)) {
+    return `${repoPath(owner, pr.repo)}/pulls/${pr.number}`;
+  }
+  return `${repoPath(owner, repo)}/code`;
+}
+
+/** SPA path of the todo's shift PR (the server's `url` is already an app path). */
+export function todoPrHref(todo: Pick<ShiftTodo, 'pr'>, owner: string): string | null {
+  const pr = todo.pr;
+  if (!pr) return null;
+  if (pr.url && pr.url.startsWith('/') && !pr.url.startsWith('//')) return pr.url;
+  return `${repoPath(owner, pr.repo)}/pulls/${pr.number}`;
+}
+
+function bareRepo(repo: string): string {
+  return repo.split('/').pop() ?? repo;
+}
+
+// --------------------------------------------------------------- workers
+
+export const STALE_HIDE_MS = 60 * 60 * 1000;
+
+/** A slot that has not been seen for over an hour: a ghost, hidden by default. */
+export function isLongStale(worker: Pick<ShiftWorker, 'healthy' | 'last_seen'>, now: Date): boolean {
+  if (worker.healthy) return false;
+  const seen = Date.parse(worker.last_seen);
+  return Number.isNaN(seen) ? false : now.getTime() - seen > STALE_HIDE_MS;
+}
+
+export function splitWorkers(
+  workers: ShiftWorker[],
+  now: Date
+): { shown: ShiftWorker[]; hidden: ShiftWorker[] } {
+  return {
+    shown: workers.filter((w) => !isLongStale(w, now)),
+    hidden: workers.filter((w) => isLongStale(w, now)),
+  };
 }
 
 // ---------------------------------------------------------------- charts

@@ -4,12 +4,17 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_QUEUE_FILTERS,
+  attemptSummary,
   capacityGeometry,
+  commitHref,
+  countNeedsHuman,
   dateInTz,
   filterShiftTodos,
   formatAgo,
   isLastNight,
+  isLongStale,
   lastNightDate,
+  needsHuman,
   latestWorker,
   layoutSegments,
   parseList,
@@ -18,10 +23,14 @@ import {
   slotLabel,
   sortShifts,
   splitParagraphs,
+  splitWorkers,
   todoCost,
+  todoPrHref,
+  todoTrace,
+  traceSummary,
   todoWorkers,
 } from '../shift/shiftModel';
-import { SHIFTS, TODOS, attempt, todo } from './shiftTestData';
+import { SHIFTS, TODOS, WORKERS, attempt, todo } from './shiftTestData';
 
 describe('shiftModel', () => {
   it('filters by status, mode, repo, requester, worker and shift', () => {
@@ -139,5 +148,85 @@ describe('slotLabel', () => {
     expect(todoCost(todo())).toBeNull();
     expect(todoCost(todo({ worked_by: [attempt({ cost_usd: null })] }))).toBeNull();
     expect(todoCost(todo({ worked_by: [attempt({ cost_usd: 1.25 }), attempt({ cost_usd: null }), attempt({ cost_usd: 0.5 })] }))).toBe(1.75);
+  });
+  it('puts todos that wait on a person first and can filter to them', () => {
+    const blocked = todo({ id: 'blk', status: 'blocked', priority: 4 });
+    const handoff = todo({ id: 'hand', status: 'handoff' });
+    const untriaged = todo({ id: 'new', triaged: false });
+    const doneUntriaged = todo({ id: 'old', triaged: false, status: 'done' });
+    const all = [...TODOS, doneUntriaged, untriaged, handoff, blocked];
+    expect(filterShiftTodos(all, DEFAULT_QUEUE_FILTERS).map((t) => t.status).slice(0, 3)).toEqual([
+      'blocked',
+      'handoff',
+      'claimed',
+    ]);
+    expect(needsHuman(blocked)).toBe(true);
+    expect(needsHuman(untriaged)).toBe(true);
+    expect(needsHuman(doneUntriaged)).toBe(false);
+    expect(needsHuman(TODOS[0])).toBe(false);
+    expect(countNeedsHuman(all)).toBe(3);
+    expect(
+      filterShiftTodos(all, { ...DEFAULT_QUEUE_FILTERS, attention: 'human' }).map((t) => t.id)
+    ).toEqual(['blk', 'hand', 'new']);
+  });
+
+  it('traces a todo from queued to released, saying unknown on an older server', () => {
+    const states = (t: Parameters<typeof todoTrace>[0]): string =>
+      todoTrace(t)
+        .map((s) => `${s.key}:${s.state}`)
+        .join(' ');
+    expect(states(todo())).toBe('queued:done claimed:pending done:pending pr:pending merged:pending released:pending');
+    expect(states(todo({ status: 'claimed' }))).toContain('claimed:current');
+    expect(states(todo({ status: 'blocked', attempts: 2 }))).toContain('claimed:done done:failed');
+    // An older server sends no `pr` / `released`: those steps are unknown, not "not yet".
+    const landed = todo({ status: 'done', commits: { 'jeryu-web': 'abc' }, worked_by: [attempt()] });
+    expect(states(landed)).toBe('queued:done claimed:done done:done pr:unknown merged:pending released:pending');
+    expect(states({ ...landed, merged: true })).toContain('pr:done merged:done released:unknown');
+    const pr = { repo: 'jeryu-web', number: 35, state: 'open', url: '/repos/jeryu/jeryu/jeryu-web/pulls/35' };
+    expect(states({ ...landed, pr, released: null })).toContain('pr:done merged:pending released:pending');
+    const shipped = { ...landed, pr: { ...pr, state: 'merged' }, merged: true, released: true };
+    expect(states(shipped)).toBe('queued:done claimed:done done:done pr:done merged:done released:done');
+    expect(states({ ...shipped, released: false })).toContain('released:pending');
+    expect(todoTrace(shipped)[3].label).toBe('PR #35');
+    expect(traceSummary(todoTrace(todo({ status: 'blocked' })))).toBe(
+      'Queued, Claimed not yet, blocked — needs a human, PR not yet, Merged not yet, Released not yet'
+    );
+  });
+
+  it('summarises attempts on the row and flags a failing last attempt', () => {
+    expect(attemptSummary(todo())).toBeNull();
+    expect(attemptSummary(todo({ attempts: 1, worked_by: [attempt()] }))).toEqual({
+      text: '1 attempt · last: done',
+      failing: false,
+    });
+    expect(
+      attemptSummary(todo({ attempts: 2, worked_by: [attempt({ outcome: 'retry' }), attempt({ outcome: 'retry' })] }))
+    ).toEqual({ text: '2 attempts · last: retry', failing: true });
+    expect(attemptSummary(todo({ attempts: 2 }))).toEqual({ text: '2 attempts', failing: false });
+  });
+
+  it('links a commit to the PR that carries it, else to the code', () => {
+    const pr = { repo: 'jeryu-web', number: 35, state: 'open', url: '/repos/jeryu/jeryu/jeryu-web/pulls/35' };
+    expect(commitHref({ pr }, 'jeryu', 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/pulls/35');
+    expect(commitHref({ pr: { ...pr, repo: 'jeryu/jeryu-web' } }, 'jeryu', 'jeryu-web')).toBe(
+      '/repos/jeryu/jeryu/jeryu-web/pulls/35'
+    );
+    expect(commitHref({ pr }, 'jeryu', 'jeryu-deploy')).toBe('/repos/jeryu/jeryu/jeryu-deploy/code');
+    expect(commitHref({}, 'jeryu', 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/code');
+    expect(todoPrHref({ pr }, 'jeryu')).toBe(pr.url);
+    expect(todoPrHref({ pr: { ...pr, url: 'https://elsewhere.example/x' } }, 'jeryu')).toBe(
+      '/repos/jeryu/jeryu/jeryu-web/pulls/35'
+    );
+    expect(todoPrHref({ pr: null }, 'jeryu')).toBeNull();
+  });
+
+  it('prefers the server cost and hides slots unseen for over an hour', () => {
+    expect(todoCost({ worked_by: [attempt()], cost_usd: 3 })).toBe(3);
+    const now = new Date('2026-09-19T09:00:00Z');
+    expect(WORKERS.workers.map((w) => isLongStale(w, now))).toEqual([false, false]);
+    const later = new Date('2026-09-19T09:30:00Z');
+    const split = splitWorkers(WORKERS.workers, later);
+    expect(split.hidden.map((w) => w.slot)).toEqual(['w2']);
+    expect(split.shown.map((w) => w.slot)).toEqual(['w1']);
   });
 });
