@@ -89,7 +89,8 @@ export const SAME_HAPPENING_MS = 5 * 60 * 1000;
 const PLAIN_GATE_OUTCOMES = new Set(['success', 'failure']);
 
 /** The forge's heartbeat schema knows success, failure and error; the runner's
- *  own report also says timed_out and inputs_changed, which arrive as error. */
+ *  own report also says timed_out and inputs_changed, and the heartbeat
+ *  flattens both of those to error. */
 function sameGateOutcome(log: string | null, finished: string | null): boolean {
   if (log === finished) return true;
   return finished === 'error' && log !== null && !PLAIN_GATE_OUTCOMES.has(log);
