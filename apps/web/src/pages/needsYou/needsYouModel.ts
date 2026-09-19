@@ -76,6 +76,7 @@ const KIND_LABEL: Record<string, string> = {
   release_staged: 'Release ready to deploy',
   release_stage_failed: 'Release staging failed',
   deploy_failed: 'Deploy failed',
+  pin_behind: 'Merged, not pinned for release',
 };
 
 /** A plain-language label; an unknown kind reads as a sentence, never raw. */

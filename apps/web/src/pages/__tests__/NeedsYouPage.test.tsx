@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { NeedsYouPage } from '../needsYou';
 import { htmlShell, mockPipelineApi } from './pipelinePageHelpers';
-import { ATTENTION, DEPLOY_COMMAND } from './pipelineTestData';
+import { ATTENTION, DEPLOY_COMMAND, attentionItem } from './pipelineTestData';
 import { errorResponse, json, renderAt } from './shiftPageHelpers';
 
 function renderPage(): void {
@@ -55,6 +55,58 @@ describe('NeedsYouPage', () => {
     expect(watch.querySelector('.needs-you__row--neutral')).not.toBeNull();
     expect(watch.querySelector('.needs-you__row--danger')).toBeNull();
     expect(screen.queryByTestId('needs-you-pulse')).toBeNull();
+  });
+
+  it('shows a stale pin as one action with its bump command, and as a folded watch row once a bump PR is open', async () => {
+    const BUMP = 'scripts/release/build-web-dist.sh --commit 427bebecb848d7b7bb37ecc71521d7461072694d /tmp/web-dist';
+    mockPipelineApi((req) => {
+      if (req.pathname !== '/api/v1/attention') return undefined;
+      return json({
+        schema_version: 1,
+        generated_at: '2026-09-19T15:00:00Z',
+        counts: { critical: 0, action: 1, watch: 1 },
+        items: [
+          attentionItem({
+            id: 'pin-behind:jeryu/jeryu-deploy:jeryu/jeryu-web',
+            kind: 'pin_behind',
+            severity: 'action',
+            title: "9 merged commits of jeryu-web are not in jeryu-deploy's pin",
+            reason: 'A release ships what is pinned; jeryu-web main is green.',
+            repo: 'jeryu/jeryu-deploy',
+            href: '/unreleased?repo=jeryu%2Fjeryu-deploy',
+            action: { label: 'Bump the pin', command: BUMP },
+          }),
+          attentionItem({
+            id: 'pin-behind:veox/jain-deploy:veox/jain-web',
+            kind: 'pin_behind',
+            severity: 'watch',
+            title: "2 merged commits of jain-web are not in jain-deploy's pin",
+            reason: 'Bump PR #80 is open.',
+            repo: 'veox/jain-deploy',
+            href: '/repos/jeryu/veox/jain-deploy/pulls/80',
+            action: { label: 'Open the bump PR', command: null },
+          }),
+        ],
+      });
+    });
+    renderPage();
+
+    const action = await screen.findByTestId('needs-you-action');
+    const stale = within(action).getByTestId('needs-you-item-pin-behind:jeryu/jeryu-deploy:jeryu/jeryu-web');
+    expect(within(stale).getByText(/^Merged, not pinned for release · jeryu\/jeryu-deploy/)).toBeInTheDocument();
+    expect(within(stale).queryByText(/pin_behind/)).toBeNull();
+    expect(within(stale).getByText(BUMP)).toBeInTheDocument();
+    expect(within(stale).queryByRole('link')).toBeNull();
+    expect(within(stale).getAllByRole('button')).toHaveLength(1);
+
+    const watch = screen.getByTestId('needs-you-watch');
+    expect(watch).not.toHaveAttribute('open');
+    const bumping = within(watch).getByTestId('needs-you-item-pin-behind:veox/jain-deploy:veox/jain-web');
+    expect(bumping).toHaveClass('needs-you__row--neutral');
+    expect(within(bumping).getByRole('link', { name: /^Open the bump PR/ })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/veox/jain-deploy/pulls/80'
+    );
   });
 
   it('says nothing needs you in one sentence, with a line about what the system is doing', async () => {
