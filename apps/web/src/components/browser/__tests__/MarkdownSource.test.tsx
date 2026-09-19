@@ -35,6 +35,32 @@ describe('MarkdownSource', () => {
     expect(container.querySelector('script')).toBeNull();
   });
 
+  it('parses HTML written in a README and sanitizes it: a badge renders, nothing executes', () => {
+    const hostile = [
+      '<img alt="Jankurai" src="https://img.shields.io/badge/jankurai-audit-blue.svg">',
+      '<img alt="boom" src="x" onerror="alert(1)">',
+      '<a href="javascript:alert(1)">click</a>',
+      '<iframe src="https://evil.example"></iframe>',
+      '<div onclick="alert(1)" style="position:fixed">overlay</div>',
+      '<form action="https://evil.example"><input name="pw"></form>',
+      '<script>alert(1)</script>',
+    ].join('\n\n');
+    const { container } = render(
+      <MemoryRouter>
+        <MarkdownSource markdown={hostile} linkBase="/repos/jeryu/root/r/blob/main/" />
+      </MemoryRouter>
+    );
+    // The badge the owner asked about is an image again (or its alt chip once it fails to load).
+    expect(container.innerHTML).toContain('Jankurai');
+    // Nothing that can run or phone home with credentials survives.
+    expect(container.querySelector('script')).toBeNull();
+    expect(container.querySelector('iframe')).toBeNull();
+    expect(container.querySelector('form')).toBeNull();
+    expect(container.querySelector('input[name="pw"]')).toBeNull();
+    expect(container.innerHTML).not.toMatch(/onerror|onclick|javascript:/i);
+    expect(container.innerHTML).not.toMatch(/position:\s*fixed/i);
+  });
+
   it('resolves only relative links', () => {
     const base = '/repos/jeryu/root/r/blob/main/';
     expect(resolveMarkdownHref('docs/testing.md', base)).toBe('/repos/jeryu/root/r/blob/main/docs/testing.md');
