@@ -34,6 +34,7 @@ import {
   mockRepoList,
   mockRepoLookup,
 } from './fixtures/mocks';
+import { mockShiftApi } from './fixtures/shiftMocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -224,4 +225,25 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
     await expect(page.getByTestId('agent-terminal')).toBeVisible();
     await scanAndAssert(page, 'repo-agents');
   });
+});
+
+test.describe('Accessibility scans — Work shift tabs', () => {
+  for (const target of [
+    { scope: 'shift-queue', path: '/work/shift', testId: 'shift-todo-20260919-0800-aaa' },
+    { scope: 'shift-add', path: '/work/shift/new', testId: 'shift-add-page' },
+    { scope: 'shift-workers', path: '/work/shift/workers', testId: 'shift-capacity' },
+  ]) {
+    test(`axe scan: ${target.scope}`, async ({ page }) => {
+      await page.context().route('**/api/v1/ws', (route) => route.abort());
+      await mockBootstrap(page, { auth: { role: 'admin' } });
+      await mockShiftApi(page);
+      await page.goto(target.path);
+      await expect(page.getByTestId(target.testId)).toBeVisible({ timeout: 15_000 });
+      await scanAndAssert(page, target.scope);
+      const blockers = blockingViolations(
+        await runAxe(page, { disableRules: ['color-contrast'] })
+      );
+      expect(blockers.map((v) => v.id)).toEqual([]);
+    });
+  }
 });
