@@ -56,6 +56,7 @@ import {
 } from './repositorySettingsPanels';
 
 import { BranchProtectionSummary } from './BranchProtectionSummary';
+import { GithubMirrorSummary } from './GithubMirrorSummary';
 
 import './page.css';
 
@@ -178,6 +179,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
             repo={name}
             branch={resolved.data.summary.default_branch ?? 'main'}
           />
+          <GithubMirrorSummary mirror={resolved.data.summary.mirror} />
           <RepoDangerZone repo={resolved.data.summary} />
         </div>
       );

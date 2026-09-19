@@ -250,3 +250,9 @@
   color: var(--color-fg-muted);
 }
 
+/* What an operator must do about a failing mirror: a sentence, not an alarm. */
+.page__mirror-todo {
+  margin-top: var(--space-3);
+  color: var(--color-fg-secondary);
+}
+
