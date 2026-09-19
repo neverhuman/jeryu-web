@@ -54,6 +54,11 @@ export const endpoints = {
     const qs = new URLSearchParams({ base, head });
     return `/api/v1/repos/${encodeURIComponent(id)}/compare?${qs.toString()}`;
   },
+  /** Newest tag reachable from `branch` (default branch when omitted). */
+  releaseTag: (id: string, branch?: string): string => {
+    const base = `/api/v1/repos/${encodeURIComponent(id)}/release-tag`;
+    return branch ? `${base}?branch=${encodeURIComponent(branch)}` : base;
+  },
   pulls: (id: string, state?: string): string => {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/pulls`;
     return state ? `${base}?state=${encodeURIComponent(state)}` : base;

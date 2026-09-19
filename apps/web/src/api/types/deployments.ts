@@ -101,3 +101,11 @@ export interface CompareResponse {
   commits: CompareCommit[];
   truncated: boolean;
 }
+
+/** `GET /api/v1/repos/{id}/release-tag`: newest tag on a branch; null = none. */
+export interface ReleaseTagResponse {
+  branch: string;
+  tag: string | null;
+  sha: string | null;
+  tagged_at: string | null;
+}

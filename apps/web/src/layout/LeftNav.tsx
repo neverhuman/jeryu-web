@@ -19,6 +19,7 @@ import {
   Layers,
   LayoutDashboard,
   Rocket,
+  PackageOpen,
   ServerCog,
   type LucideIcon,
 } from 'lucide-react';
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   // `/merge-room` path that fell through to NotFound.
   { to: '/pull-room', label: 'Pull Room', icon: GitMerge },
   { to: '/releases', label: 'Releases', icon: Rocket },
+  { to: '/unreleased', label: 'Unreleased', icon: PackageOpen },
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
   { to: '/runners', label: 'Runners', icon: ServerCog },
   { to: '/shared-tools', label: 'Shared tools', icon: Layers },

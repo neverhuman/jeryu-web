@@ -1,0 +1,19 @@
+.unreleased__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-3);
+}
+
+.unreleased__summary {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.unreleased__summary--current,
+.unreleased__summary--none,
+.unreleased__summary--unknown {
+  font-weight: normal;
+  color: var(--color-text-muted, inherit);
+}
