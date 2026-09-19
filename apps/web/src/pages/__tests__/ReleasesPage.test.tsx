@@ -102,6 +102,14 @@ describe('ReleasesPage', () => {
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/48'
     );
+    // A dependency merged work this repo's pin does not carry: one line, one link.
+    const unpinned = await screen.findByTestId('releases-unpinned');
+    expect(unpinned).toHaveTextContent("jeryu-web has 9 merged commits not in this repo's pin.");
+    expect(unpinned).not.toHaveTextContent('jeryu-core');
+    expect(within(unpinned).getByRole('link', { name: 'See what a bump would ship' })).toHaveAttribute(
+      'href',
+      '/unreleased?repo=jeryu%2Fjeryu-deploy'
+    );
     expect(screen.getByRole('link', { name: "See this repository's unreleased pull requests" })).toHaveAttribute(
       'href',
       '/unreleased?repo=jeryu%2Fjeryu-deploy'
@@ -116,5 +124,7 @@ describe('ReleasesPage', () => {
     await screen.findByTestId('releases-env-production');
     expect(screen.queryByTestId('releases-staged')).toBeNull();
     expect(fetchSpy.mock.calls.some(([input]) => String(input).includes('/api/v1/attention'))).toBe(false);
+    expect(screen.queryByTestId('releases-unpinned')).toBeNull();
+    expect(fetchSpy.mock.calls.some(([input]) => String(input).includes('/api/v1/pins'))).toBe(false);
   });
 });

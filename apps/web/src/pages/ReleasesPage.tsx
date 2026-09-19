@@ -11,10 +11,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { useAuth } from '../hooks/useAuth';
-import { useAttention } from '../hooks/usePipeline';
+import { useAttention, usePins } from '../hooks/usePipeline';
 
 import { useReleaseOverview } from '../hooks/useReleaseOverview';
 import { findAttention } from './needsYou/needsYouModel';
+import { behindPinLines } from './pinsModel';
 import { behindLabel, releasePullHref, type DeployedRef, type EnvironmentRow } from './releasesModel';
 
 import './page.css';
@@ -76,6 +77,7 @@ export function ReleasesPage(): JSX.Element {
       </header>
 
       <StagedRelease />
+      <UnpinnedLine repoId={repoId} />
 
       <section className="page__section" aria-labelledby="releases-environments">
         <h2 className="page__section-title" id="releases-environments">
@@ -248,4 +250,21 @@ function relative(iso: string): string {
   const hours = Math.round(minutes / 60);
   if (hours < 36) return `${hours} h ago`;
   return `${Math.round(hours / 24)} days ago`;
+}
+
+/**
+ * What this repo's release cannot carry yet: a dependency merged work that the
+ * pin does not reach. One line, linking to where the commits are listed.
+ */
+function UnpinnedLine({ repoId }: { repoId: string }): JSX.Element | null {
+  const { user } = useAuth();
+  const pins = usePins(user?.role === 'admin');
+  const lines = behindPinLines(pins.data?.consumers ?? [], repoId);
+  if (lines.length === 0) return null;
+  return (
+    <p className="releases__muted" role="status" data-testid="releases-unpinned">
+      {lines.join('; ')}.{' '}
+      <Link to={`/unreleased?repo=${encodeURIComponent(repoId)}`}>See what a bump would ship</Link>
+    </p>
+  );
 }
