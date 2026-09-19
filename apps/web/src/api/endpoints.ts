@@ -85,12 +85,12 @@ export const endpoints = {
   ws: (): string => '/api/v1/ws',
   controlPlaneStatus: (): string => '/api/v1/control-plane/status',
   controlPlaneRunners: (): string => '/api/v1/control-plane/runners',
-  /** Every readable repository's live deployment in an environment, with its lag. */
-  deployedRepositories: (environment = 'production'): string =>
-    `/api/v1/deployments?environment=${encodeURIComponent(environment)}`,
   /** GitHub-shaped per-environment summary (latest, current, previous). */
   repoEnvironments: (owner: string, repo: string): string =>
     `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/environments`,
+  /** GitHub-shaped check runs of one commit-ish (a branch name works). */
+  commitCheckRuns: (owner: string, repo: string, ref: string): string =>
+    `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(ref)}/check-runs`,
   /** GitHub-shaped branch protection rule; 404 when the branch is unprotected. */
   branchProtection: (owner: string, repo: string, branch: string): string =>
     `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches/${encodeURIComponent(branch)}/protection`,

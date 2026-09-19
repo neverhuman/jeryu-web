@@ -26,7 +26,6 @@ import {
   type RepoSort,
   type RepositoriesQuery,
 } from '../hooks/useRepositories';
-import { useDeployedRepositories } from '../hooks/useDeployedRepositories';
 import {
   DEFAULT_FILTER,
   FilterChips,
@@ -85,7 +84,6 @@ export function RepositoriesPage({
     [filter]
   );
   const list = useRepositories(query);
-  const deployed = useDeployedRepositories();
 
   const closeDialog = (): void => {
     setDialogOpen(false);
@@ -197,7 +195,7 @@ export function RepositoriesPage({
             <option value="recent_activity">Recent activity</option>
             <option value="name">Name</option>
             <option value="open_prs">Open PRs</option>
-            <option value="failing_checks">Failing checks</option>
+            <option value="failing_checks">Needs attention first</option>
           </select>
 
         </div>
@@ -207,7 +205,6 @@ export function RepositoriesPage({
         loading={list.isPending}
         error={list.error}
         repos={repos}
-        deployed={deployed}
         onClearFilters={() => {
           setFilter(DEFAULT_FILTER);
           setSearchInput('');

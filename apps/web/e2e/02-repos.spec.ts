@@ -95,9 +95,13 @@ test.describe('Repositories list (W-T-10)', () => {
     //    changes AND the overview outlet renders (regression net for the
     //    keyboard-registry re-render loop that kept interrupting router
     //    transitions, leaving the old route on screen after pushState).
+    //    The row is clicked on its description: this repository has a failing
+    //    check, and the middle of its row is the red Status chip, a button that
+    //    opens the failing checks in place instead of leaving the page.
     await rows
       .filter({ hasText: 'jeryu' })
       .first()
+      .getByText('JeRyu mission-control hub.')
       .click();
 
     await expect(page).toHaveURL(/\/repos\/jeryu\/neverhuman\/jeryu/, {

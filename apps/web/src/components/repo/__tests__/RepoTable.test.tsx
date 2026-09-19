@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { RepositorySummary } from '../../../api/types';
 import { RepoTable } from '../RepoTable';
@@ -33,7 +35,20 @@ const REPO: RepositorySummary = {
   available_actions: [],
 };
 
+function withQueries(node: ReactElement): ReactElement {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{node}</QueryClientProvider>;
+}
+
+function renderTable(repos: RepositorySummary[]): void {
+  render(withQueries(<MemoryRouter><RepoTable repos={repos} /></MemoryRouter>));
+}
+
 describe('RepoTable', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.each(['mouse', 'keyboard'])('opens the PR count link with the %s without opening the row', async (input) => {
     const user = userEvent.setup();
     const router = createMemoryRouter([
@@ -82,33 +97,83 @@ describe('RepoTable', () => {
     expect(screen.getByRole('row', { name: 'Open veox-ai/jeryu-core' })).toBeInTheDocument();
   });
 
-  it('labels the column Failing CI and shows a muted dash when nothing fails', () => {
-    render(
-      <MemoryRouter>
-        <RepoTable repos={[{ ...REPO, running_jobs: 2 }]} />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByRole('columnheader', { name: /Failing CI/ })).toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: /^Checks/ })).not.toBeInTheDocument();
-    const cell = screen.getByTestId('repo-failing-ci-jeryu-core');
-    expect(cell).toHaveTextContent('—');
-    expect(cell).toHaveClass('text-muted');
-    expect(cell.tagName).not.toBe('A');
+  it('has one column about trouble, Status, and says healthy quietly', () => {
+    renderTable([{ ...REPO, running_jobs: 2 }]);
+    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent);
+    expect(headers).toEqual([
+      'Family',
+      'Repository',
+      'Description',
+      'Status',
+      'Score',
+      'Open PRs',
+      'Updated',
+    ]);
+    const status = screen.getByTestId('repo-status-jeryu-core');
+    expect(status).toHaveTextContent('healthy');
+    expect(status).toHaveClass('text-muted');
+    expect(status.tagName).not.toBe('BUTTON');
     expect(screen.getByLabelText('2 running jobs')).toBeInTheDocument();
+    expect(screen.queryByTestId('repo-mirror-failing-jeryu-core')).toBeNull();
   });
 
-  it('links a non-zero failing CI count to the repo overview without opening the row', async () => {
+  it('opens what is failing and what to do under the row, without leaving the page', async () => {
     const user = userEvent.setup();
+    const calls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      calls.push(url);
+      return new Response(
+        JSON.stringify({
+          check_runs: [
+            {
+              name: 'jankurai/proof',
+              conclusion: 'failure',
+              completed_at: '2026-09-19T17:00:00Z',
+              output: { title: 'score 84 < floor 85', summary: '- score: 84\n- floor: 85' },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
+    });
+    const failing: RepositorySummary = {
+      ...REPO,
+      health: 'warning',
+      failing_checks: 1,
+      mirror: {
+        configured: true,
+        last_attempt_at: '2026-09-19T17:35:49Z',
+        last_attempt_ok: false,
+        last_attempt_conclusion: 'failure',
+        last_success_at: null,
+      },
+    };
     const router = createMemoryRouter([
-      { path: '/', element: <RepoTable repos={[{ ...REPO, failing_checks: 3 }]} /> },
+      { path: '/', element: withQueries(<RepoTable repos={[failing]} />) },
       { path: '/repos/*', element: <h1>Repository</h1> },
     ]);
     render(<RouterProvider router={router} />);
-    const link = screen.getByRole('link', { name: '3 failing CI checks' });
-    expect(link).toHaveTextContent('3');
-    await user.click(link);
-    expect(router.state.location.pathname.startsWith('/repos/')).toBe(true);
-    expect(screen.getByRole('heading', { name: 'Repository' })).toBeInTheDocument();
+
+    const chip = screen.getByRole('button', { name: '1 failing check' });
+    expect(chip).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('repo-mirror-failing-jeryu-core')).toHaveTextContent('mirror failing');
+    expect(calls).toEqual([]);
+
+    await user.click(chip);
+    expect(router.state.location.pathname).toBe('/');
+    expect(chip).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById(chip.getAttribute('aria-controls') ?? '')).not.toBeNull();
+    expect(await screen.findByText('jankurai/proof')).toBeInTheDocument();
+    expect(screen.getByText(/score 84 < floor 85/)).toBeInTheDocument();
+    expect(screen.getByText(/^Raise the audit score to the floor/)).toBeInTheDocument();
+    expect(calls[0]).toContain('/api/v3/repos/neverhuman/jeryu-core/commits/main/check-runs');
+    expect(
+      screen.getByRole('link', { name: 'Pull requests of neverhuman/jeryu-core' })
+    ).toHaveAttribute('href', '/pull-room?repo=neverhuman%2Fjeryu-core');
+
+    await user.click(chip);
+    expect(chip).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('jankurai/proof')).toBeNull();
   });
 });

@@ -1,7 +1,8 @@
 // RepoTable.tsx — TanStack Table view of repositories (W-FE-08).
 //
 // Renders one row per `RepositorySummary` with a click target that navigates
-// to the overview page. The header carries `aria-sort` so screen readers can
+// to the overview page. Status is the one column about trouble: a red chip
+// that opens, under the row, what is failing and what to do about it. The header carries `aria-sort` so screen readers can
 // announce the current sort direction; the sort itself runs against the
 // table's data so it stays in sync with column clicks.
 
@@ -11,19 +12,29 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type SortingState,
+  type SortingState
 } from '@tanstack/react-table';
-import { Play } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight, Play } from 'lucide-react';
+import {
+  createContext,
+  Fragment,
+  useCallback,
+  useContext,
+  useMemo,
+  useState
+} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import type { RepositorySummary } from '../../api/types';
-import type { DeployedRepository } from '../../api/types/deployments';
+import {
+  attentionRank,
+  failingLabel,
+  mirrorFailing,
+  MIRROR_OPERATOR_SENTENCE
+} from '../../pages/repoStatusModel';
 
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
-import { unshippedCell, unshippedSortValue, unshippedTitle } from './unshipped';
-import { MirrorStatusBadge } from './MirrorStatusBadge';
-import { RepoHealthPill } from './RepoHealthPill';
+import { RepoFailingChecks } from './RepoFailingChecks';
 import { RepoRoleBadge } from './RepoRoleBadge';
 import { relativeTime } from './relativeTime';
 import { pullRoomHref } from '../../pages/pullRoomModel';
@@ -35,19 +46,92 @@ import './repo.css';
 
 export interface RepoTableProps {
   repos: RepositorySummary[];
-  /** Live production deployments keyed by `owner/name`; absent = nothing deployed. */
-  deployed?: ReadonlyMap<string, DeployedRepository>;
 }
 
-const NOTHING_DEPLOYED: ReadonlyMap<string, DeployedRepository> = new Map();
+/**
+ * Which repositories show their failing checks. It travels by context so the
+ * column definitions stay stable: a cell that changed identity on every toggle
+ * would remount, and the chip would lose focus the moment it was pressed.
+ */
+const OpenRows = createContext<{
+  open: ReadonlySet<string>;
+  toggle: (id: string) => void;
+}>({ open: new Set(), toggle: () => {} });
 
-export function RepoTable({
-  repos,
-  deployed = NOTHING_DEPLOYED,
-}: RepoTableProps): JSX.Element {
+function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
+  const { open, toggle } = useContext(OpenRows);
+  const expanded = open.has(repo.id.id);
+  return (
+    <span className="repo-table__status">
+      {repo.failing_checks > 0 ? (
+        <button
+          type="button"
+          className="repo-status-chip repo-status-chip--danger"
+          aria-expanded={expanded}
+          aria-controls={detailId(repo)}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggle(repo.id.id);
+          }}
+          data-testid={`repo-status-${repo.id.name}`}
+        >
+          {expanded ? (
+            <ChevronDown size={12} aria-hidden="true" />
+          ) : (
+            <ChevronRight size={12} aria-hidden="true" />
+          )}
+          {failingLabel(repo.failing_checks)}
+        </button>
+      ) : (
+        <span
+          className="text-muted"
+          data-testid={`repo-status-${repo.id.name}`}
+        >
+          healthy
+        </span>
+      )}
+      {mirrorFailing(repo.mirror) ? (
+        <span
+          className="repo-status-chip repo-status-chip--warning"
+          title={MIRROR_OPERATOR_SENTENCE}
+          data-testid={`repo-mirror-failing-${repo.id.name}`}
+        >
+          mirror failing
+        </span>
+      ) : null}
+      {repo.running_jobs > 0 ? (
+        <span
+          className="repo-table__running"
+          title="Running jobs"
+          aria-label={`${repo.running_jobs} running jobs`}
+        >
+          <Play size={12} aria-hidden="true" />
+          {repo.running_jobs}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** DOM id of the detail row a repository's status chip opens. */
+function detailId(repo: RepositorySummary): string {
+  return `repo-status-${repo.id.id}`;
+}
+
+export function RepoTable({ repos }: RepoTableProps): JSX.Element {
   const navigate = useNavigate();
+  // Repositories whose failing checks are shown under their row.
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const toggle = useCallback((id: string): void => {
+    setOpen((held) => {
+      const next = new Set(held);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }, []);
+  const rows = useMemo(() => ({ open, toggle }), [open, toggle]);
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'name', desc: false },
+    { id: 'name', desc: false }
   ]);
 
   const columns = useMemo<ColumnDef<RepositorySummary>[]>(
@@ -69,7 +153,7 @@ export function RepoTable({
               {family}
             </Link>
           );
-        },
+        }
       },
       {
         id: 'name',
@@ -85,12 +169,14 @@ export function RepoTable({
               onClick={(e) => e.stopPropagation()}
               data-testid={`repo-link-${row.original.id.owner}/${row.original.id.name}`}
             >
-              <span className="repo-table__repo-owner">{row.original.id.owner}/</span>
+              <span className="repo-table__repo-owner">
+                {row.original.id.owner}/
+              </span>
               <strong>{row.original.id.name}</strong>
             </Link>
             <RepoRoleBadge role={row.original.repo_role} />
           </span>
-        ),
+        )
       },
       {
         id: 'description',
@@ -99,13 +185,15 @@ export function RepoTable({
         cell: ({ row }) =>
           row.original.description ?? (
             <span className="text-muted">No description</span>
-          ),
+          )
       },
       {
-        id: 'posture',
-        header: 'Posture',
-        accessorFn: (row) => row.health,
-        cell: ({ row }) => <RepoHealthPill health={row.original.health} />,
+        id: 'status',
+        header: 'Status',
+        // What needs a person sorts first.
+        accessorFn: (row) => attentionRank(row),
+        sortDescFirst: true,
+        cell: ({ row }) => <StatusCell repo={row.original} />
       },
       {
         id: 'score',
@@ -119,13 +207,7 @@ export function RepoTable({
             decision={row.original.jankurai_decision}
             scoredAt={row.original.jankurai_scored_at}
           />
-        ),
-      },
-      {
-        id: 'mirror',
-        header: 'Mirror',
-        enableSorting: false,
-        cell: ({ row }) => <MirrorStatusBadge mirror={row.original.mirror} />,
+        )
       },
       {
         id: 'open_prs',
@@ -133,93 +215,15 @@ export function RepoTable({
         accessorFn: (row) => row.open_pull_requests,
         cell: ({ row }) => (
           <Link
-            to={pullRoomHref(`${row.original.id.owner}/${row.original.id.name}`)}
+            to={pullRoomHref(
+              `${row.original.id.owner}/${row.original.id.name}`
+            )}
             onClick={(e) => e.stopPropagation()}
             aria-label={`${row.original.open_pull_requests} open pull requests, see them`}
           >
             {row.original.open_pull_requests}
           </Link>
-        ),
-      },
-      {
-        id: 'unshipped',
-        header: 'Unshipped',
-        // Commits on the default branch that production does not run yet.
-        accessorFn: (row) =>
-          unshippedSortValue(
-            unshippedCell(deployed.get(`${row.id.owner}/${row.id.name}`))
-          ),
-        cell: ({ row }) => {
-          const repo = `${row.original.id.owner}/${row.original.id.name}`;
-          const cell = unshippedCell(deployed.get(repo));
-          const title = unshippedTitle(cell);
-          if (cell.kind === 'behind') {
-            return (
-              <Link
-                to={`/releases?repo=${encodeURIComponent(repo)}`}
-                className="repo-table__unshipped"
-                onClick={(e) => e.stopPropagation()}
-                title={title}
-                aria-label={title}
-                data-testid={`repo-unshipped-${row.original.id.name}`}
-              >
-                {cell.commits}
-              </Link>
-            );
-          }
-          return (
-            <span
-              className="text-muted"
-              title={title}
-              aria-label={title}
-              data-testid={`repo-unshipped-${row.original.id.name}`}
-            >
-              {cell.kind === 'up_to_date' ? '0' : cell.kind === 'unknown' ? '?' : '—'}
-            </span>
-          );
-        },
-      },
-      {
-        id: 'failing_checks',
-        header: 'Failing CI',
-        // Failing check runs on the default-branch head plus open PR heads.
-        // There is no per-commit checks view, so a non-zero count links to the
-        // repo overview, which lists them.
-        accessorFn: (row) => row.failing_checks,
-        cell: ({ row }) => (
-          <span className="repo-table__checks">
-            {row.original.failing_checks > 0 ? (
-              <Link
-                to={repoHref(row.original)}
-                onClick={(e) => e.stopPropagation()}
-                title="Failing CI checks on the default branch and open pull requests"
-                aria-label={`${row.original.failing_checks} failing CI checks`}
-                data-testid={`repo-failing-ci-${row.original.id.name}`}
-              >
-                {row.original.failing_checks}
-              </Link>
-            ) : (
-              <span
-                className="text-muted"
-                title="No failing CI checks"
-                aria-label="No failing CI checks"
-                data-testid={`repo-failing-ci-${row.original.id.name}`}
-              >
-                —
-              </span>
-            )}
-            {row.original.running_jobs > 0 ? (
-              <span
-                className="repo-table__running"
-                title="Running jobs"
-                aria-label={`${row.original.running_jobs} running jobs`}
-              >
-                <Play size={12} aria-hidden="true" />
-                {row.original.running_jobs}
-              </span>
-            ) : null}
-          </span>
-        ),
+        )
       },
       {
         id: 'updated_at',
@@ -227,13 +231,16 @@ export function RepoTable({
         accessorFn: (row) => row.updated_at,
         // Sort on the raw timestamp; show it abbreviated, full on hover.
         cell: ({ row }) => (
-          <time dateTime={row.original.updated_at} title={row.original.updated_at}>
+          <time
+            dateTime={row.original.updated_at}
+            title={row.original.updated_at}
+          >
             {relativeTime(row.original.updated_at)}
           </time>
-        ),
-      },
+        )
+      }
     ],
-    [deployed]
+    []
   );
 
   const table = useReactTable({
@@ -242,76 +249,90 @@ export function RepoTable({
     state: { sorting },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    getSortedRowModel: getSortedRowModel()
   });
 
   return (
-    <table
-      className="repo-table"
-      role="grid"
-      aria-label="Repositories"
-    >
-      <thead>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id}>
-            {headerGroup.headers.map((header) => {
-              const canSort = header.column.getCanSort();
-              const direction = header.column.getIsSorted();
-              const ariaSort: 'none' | 'ascending' | 'descending' =
-                direction === 'asc'
-                  ? 'ascending'
-                  : direction === 'desc'
-                    ? 'descending'
-                    : 'none';
-              return (
-                <th
-                  key={header.id}
-                  scope="col"
-                  aria-sort={ariaSort}
-                  className={canSort ? 'repo-table__th--sortable' : undefined}
-                  onClick={
-                    canSort
-                      ? header.column.getToggleSortingHandler()
-                      : undefined
-                  }
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </th>
-              );
-            })}
-          </tr>
-        ))}
-      </thead>
-      <tbody>
-        {table.getRowModel().rows.map((row) => {
-          const repo = row.original;
-          return (
-            <tr
-              key={repo.id.id}
-              tabIndex={0}
-              role="row"
-              aria-label={`Open ${repo.id.owner}/${repo.id.name}`}
-              onClick={() => navigate(repoHref(repo))}
-              onKeyDown={(e) => {
-                if (e.target !== e.currentTarget) return;
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  navigate(repoHref(repo));
-                }
-              }}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
+    <OpenRows.Provider value={rows}>
+      <table className="repo-table" role="grid" aria-label="Repositories">
+        <thead>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                const canSort = header.column.getCanSort();
+                const direction = header.column.getIsSorted();
+                const ariaSort: 'none' | 'ascending' | 'descending' =
+                  direction === 'asc'
+                    ? 'ascending'
+                    : direction === 'desc'
+                      ? 'descending'
+                      : 'none';
+                return (
+                  <th
+                    key={header.id}
+                    scope="col"
+                    aria-sort={ariaSort}
+                    className={canSort ? 'repo-table__th--sortable' : undefined}
+                    onClick={
+                      canSort
+                        ? header.column.getToggleSortingHandler()
+                        : undefined
+                    }
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </th>
+                );
+              })}
             </tr>
-          );
-        })}
-      </tbody>
-    </table>
+          ))}
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map((row) => {
+            const repo = row.original;
+            const cells = row.getVisibleCells();
+            return (
+              <Fragment key={repo.id.id}>
+                <tr
+                  tabIndex={0}
+                  role="row"
+                  aria-label={`Open ${repo.id.owner}/${repo.id.name}`}
+                  onClick={() => navigate(repoHref(repo))}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(repoHref(repo));
+                    }
+                  }}
+                >
+                  {cells.map((cell) => (
+                    <td key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </td>
+                  ))}
+                </tr>
+                {open.has(repo.id.id) ? (
+                  <tr
+                    className="repo-table__detail-row"
+                    role="row"
+                    id={detailId(repo)}
+                  >
+                    <td colSpan={cells.length} role="gridcell">
+                      <RepoFailingChecks repo={repo} />
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </OpenRows.Provider>
   );
 }

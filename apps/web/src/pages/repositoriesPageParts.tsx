@@ -21,7 +21,6 @@ import {
   PermissionDeniedState,
 } from '../components/state';
 import type { RepoSort } from '../hooks/useRepositories';
-import type { DeployedRepository } from '../api/types/deployments';
 import type { RepositorySummary } from '../api/types';
 
 export interface FilterState {
@@ -128,8 +127,6 @@ interface RepositoriesBodyProps {
   error: Error | null;
   repos: RepositorySummary[];
   onClearFilters: () => void;
-  /** Live production deployments keyed by `owner/name`. */
-  deployed?: ReadonlyMap<string, DeployedRepository>;
 }
 
 export function RepositoriesBody({
@@ -137,7 +134,6 @@ export function RepositoriesBody({
   error,
   repos,
   onClearFilters,
-  deployed,
 }: RepositoriesBodyProps): JSX.Element {
   if (loading) {
     return <LoadingState title="Loading repositories…" rows={6} />;
@@ -181,5 +177,5 @@ export function RepositoriesBody({
     );
   }
 
-  return <RepoTable repos={repos} deployed={deployed} />;
+  return <RepoTable repos={repos} />;
 }

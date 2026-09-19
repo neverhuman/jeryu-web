@@ -627,10 +627,82 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.repo-table__checks {
+.repo-table__status {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* Status chips. The red one is a button: it opens what is failing and what to
+   do about it, under the row. */
+.repo-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.repo-status-chip--danger {
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+  border-color: var(--color-accent-danger);
+  cursor: pointer;
+}
+
+.repo-status-chip--danger:hover,
+.repo-status-chip--danger[aria-expanded='true'] {
+  background-color: var(--color-accent-danger);
+  color: var(--color-bg-0, #05070a);
+}
+
+.repo-status-chip--warning {
+  background-color: var(--color-accent-warning-bg);
+  color: var(--color-accent-warning);
+}
+
+.repo-table__detail-row > td {
+  background-color: var(--color-bg-1, transparent);
+  border-left: 3px solid var(--color-accent-danger);
+  cursor: default;
+}
+
+.repo-status-detail {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.repo-status-detail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.repo-status-detail__check {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.repo-status-detail__check p {
+  margin: 0;
+}
+
+.repo-status-detail__summary {
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.repo-status-detail__todo {
+  color: var(--color-fg-primary);
 }
 
 .repo-table__running {
@@ -722,11 +794,6 @@
 .delete-repo-dialog__confirm-input:focus-visible {
   outline: 2px solid var(--color-accent-danger);
   outline-offset: 1px;
-}
-
-.repo-table__unshipped {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* The repository name is the link; the owner disambiguates equal names. */
