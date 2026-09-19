@@ -100,3 +100,18 @@ export function timelineOrder(a: PullRequestSummary, b: PullRequestSummary): num
   const rank = (pr: PullRequestSummary) => (pr.state === 'open' ? 0 : 1);
   return rank(a) - rank(b) || b.updated_at.localeCompare(a.updated_at) || b.number - a.number;
 }
+
+/**
+ * The page in one line: how many are open, how many wait on checks, how many
+ * are stopped by a red check. A red check that does not stop the merge (the
+ * forge says the pull request can merge) is not counted as blocking.
+ */
+export function timelineSentence(pulls: PullRequestSummary[]): string {
+  const open = pulls.filter((pr) => pr.state !== 'merged' && pr.state !== 'closed');
+  const waiting = open.filter(
+    (pr) => pr.checks.failing === 0 && (pr.checks.total === 0 || pr.checks.pending > 0)
+  ).length;
+  const blocked = open.filter((pr) => pr.checks.failing > 0 && !pr.mergeable.can_merge).length;
+  return `${open.length} open · ${waiting} waiting on checks · ${blocked} stopped by a failing check`;
+}
+

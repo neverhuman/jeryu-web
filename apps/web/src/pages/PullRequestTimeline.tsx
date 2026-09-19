@@ -13,9 +13,12 @@ import './PullRoomPage.css';
 export function PullRequestTimeline({
   pulls,
   emptyMessage,
+  showRepo = false,
 }: {
   pulls: PullRequestSummary[];
   emptyMessage: string;
+  /** Rows from several repositories: lead each with `owner/name#n`. */
+  showRepo?: boolean;
 }): JSX.Element {
   if (pulls.length === 0) {
     return <p className="pull-list__empty">{emptyMessage}</p>;
@@ -32,26 +35,34 @@ export function PullRequestTimeline({
       <ol className="pull-timeline__rows">
         {rows.map((pr) => {
           const repo = `${pr.repo.owner}/${pr.repo.name}`;
+          // Numbers repeat across repositories; a row is one repo's number.
+          const rowId = showRepo ? `${repo}-${pr.number}` : String(pr.number);
           return (
             <li
-              key={pr.number}
+              key={rowId}
               className={`pull-timeline__row is-${pr.state}`}
-              data-testid={`pull-timeline-${pr.number}`}
+              data-testid={`pull-timeline-${rowId}`}
             >
               <div className="pull-timeline__pr">
                 <Link to={pullRequestPath(pr.repo.host, repo, pr.number)}>
-                  <span className="pull-timeline__number">#{pr.number}</span> {pr.title}
+                  <span className="pull-timeline__number">
+                    {showRepo ? repo : ''}#{pr.number}
+                  </span>{' '}
+                  {pr.title}
                 </Link>
                 <span className="pull-timeline__meta">
                   <code>{pr.head_ref}</code> → <code>{pr.base_ref}</code> · {pr.author}
                 </span>
               </div>
-              <ol className="pull-timeline__track" aria-label={`Status of #${pr.number}`}>
+              <ol
+                className="pull-timeline__track"
+                aria-label={`Status of ${showRepo ? repo : ''}#${pr.number}`}
+              >
                 {pullStages(pr).map((stage) => (
                   <li
                     key={stage.id}
                     className={`pull-stage is-${stage.status}`}
-                    data-testid={`pull-stage-${pr.number}-${stage.id}`}
+                    data-testid={`pull-stage-${rowId}-${stage.id}`}
                     data-status={stage.status}
                   >
                     <span className="pull-stage__dot" aria-hidden="true" />

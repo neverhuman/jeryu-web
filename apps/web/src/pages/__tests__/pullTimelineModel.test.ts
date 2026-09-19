@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { PullRequestSummary } from '../../api/types';
-import { pullStages, timelineOrder } from '../pullTimelineModel';
+import { pullStages, timelineOrder, timelineSentence } from '../pullTimelineModel';
 
 describe('pullTimelineModel', () => {
   const statuses = (p: PullRequestSummary) => pullStages(p).map((s) => s.status);
@@ -56,6 +56,19 @@ describe('pullTimelineModel', () => {
       pr({ number: 3, updated: '2026-09-10T00:00:00Z' }),
     ].sort(timelineOrder);
     expect(rows.map((r) => r.number)).toEqual([3, 2, 1]);
+  });
+  it('says the page in one line, and a red check that does not stop the merge is not "stopped"', () => {
+    const pulls = [
+      pr({ number: 1 }),
+      pr({ number: 2, checks: { total: 2, passing: 1, failing: 0, pending: 1, skipped: 0 } }),
+      pr({ number: 3, checks: { total: 0, passing: 0, failing: 0, pending: 0, skipped: 0 } }),
+      pr({ number: 4, checks: { total: 1, passing: 0, failing: 1, pending: 0, skipped: 0 }, canMerge: false }),
+      // jankurai/proof red but not required: the forge says it can merge.
+      pr({ number: 5, checks: { total: 2, passing: 1, failing: 1, pending: 0, skipped: 0 }, canMerge: true }),
+      pr({ number: 6, state: 'merged' }),
+    ];
+    expect(timelineSentence(pulls)).toBe('5 open · 2 waiting on checks · 1 stopped by a failing check');
+    expect(timelineSentence([])).toBe('0 open · 0 waiting on checks · 0 stopped by a failing check');
   });
 });
 

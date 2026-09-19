@@ -1,23 +1,33 @@
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 import type { EvidenceState } from '../api/types';
 import { useControlPlane } from '../hooks/useControlPlane';
+import { useRepoPullLists } from '../hooks/useRepoPullLists';
 import { useRepositories } from '../hooks/useRepositories';
 import { PullRequestListView } from './PullRequestListView';
+import { PullRequestTimeline } from './PullRequestTimeline';
 import {
   DEFAULT_PULL_ROOM_FILTERS,
+  familyPills,
   filterPullRequests,
+  filterPullSummaries,
   fromControlPullRequest,
   groupPullRequests,
-  pullRoomCounts,
+  isBoardView,
+  pullListState,
   repoOptions,
-  scopeToRepos,
+  reposToLoad,
+  scopeToFamily,
   type PullRoomFilters,
 } from './pullRoomModel';
+import { timelineSentence } from './pullTimelineModel';
 
 import './page.css';
 import './PullRoomPage.css';
+
+/** Checks, reviews and merges move without this tab doing anything: poll. */
+const REFRESH_MS = 30_000;
 
 const EVIDENCE_STATES: EvidenceState[] = [
   'fresh',
@@ -28,8 +38,7 @@ const EVIDENCE_STATES: EvidenceState[] = [
 ];
 
 export function PullRoomPage(): JSX.Element {
-  // Checks, reviews and merges move without this tab doing anything: poll.
-  const snapshot = useControlPlane({ refetchInterval: 30_000 });
+  const snapshot = useControlPlane({ refetchInterval: REFRESH_MS });
   const [searchParams, setSearchParams] = useSearchParams();
   const [localFilters, setFilters] = useState<PullRoomFilters>(DEFAULT_PULL_ROOM_FILTERS);
   // Keep the repository in the URL so shared links and history update the results.
@@ -44,24 +53,25 @@ export function PullRoomPage(): JSX.Element {
     filters.checkPosture !== DEFAULT_PULL_ROOM_FILTERS.checkPosture ||
     filters.search !== DEFAULT_PULL_ROOM_FILTERS.search;
   const [filtersOpen, setFiltersOpen] = useState(filtersActive);
-  // `?family=` scopes everything on the page to that family's repos.
+  // `?family=` scopes everything on the page to that family's repos. The
+  // repository list (already cached for /repos) says which family a repo is in.
   const family = searchParams.get('family') ?? '';
-  const familyRepos = useRepositories({ family }, { enabled: family !== '' });
-  const familyRepoSet = useMemo(
+  const repositories = useRepositories({});
+  const families = useMemo(
     () =>
-      family
-        ? new Set(
-            (familyRepos.data?.repositories ?? []).map(
-              (member) => `${member.id.owner}/${member.id.name}`
-            )
-          )
-        : null,
-    [family, familyRepos.data]
+      new Map(
+        (repositories.data?.repositories ?? []).map((member) => [
+          `${member.id.owner}/${member.id.name}`,
+          member.family ?? null,
+        ])
+      ),
+    [repositories.data]
   );
-  const clearFamily = (): void => {
+  const setFamily = (value: string): void => {
     const params = new URLSearchParams(searchParams);
-    params.delete('family');
-    setSearchParams(params, { replace: true });
+    if (value) params.set('family', value);
+    else params.delete('family');
+    setSearchParams(params);
   };
   const setRepo = (value: string): void => {
     const params = new URLSearchParams(searchParams);
@@ -69,14 +79,23 @@ export function PullRoomPage(): JSX.Element {
     else params.set('repo', value);
     setSearchParams(params, { replace: true });
   };
+  // The timeline is the page; the lane board stays one click away.
+  const board = isBoardView(searchParams.get('view'));
+  const setBoard = (next: boolean): void => {
+    const params = new URLSearchParams(searchParams);
+    if (next) params.set('view', 'board');
+    else params.delete('view');
+    setSearchParams(params, { replace: true });
+  };
 
+  const everything = useMemo(
+    () => snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],
+    [snapshot.data]
+  );
+  const pills = useMemo(() => familyPills(everything, families), [everything, families]);
   const items = useMemo(
-    () =>
-      scopeToRepos(
-        snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],
-        familyRepoSet
-      ),
-    [snapshot.data, familyRepoSet]
+    () => scopeToFamily(everything, family, families),
+    [everything, family, families]
   );
   const filtered = useMemo(
     () => filterPullRequests(items, filters),
@@ -84,7 +103,18 @@ export function PullRoomPage(): JSX.Element {
   );
   const lanes = useMemo(() => groupPullRequests(filtered), [filtered]);
   const repos = useMemo(() => repoOptions(items), [items]);
-  const counts = useMemo(() => pullRoomCounts(items), [items]);
+  // The snapshot says which repositories hold a matching pull request; only
+  // those are asked for their lists, which carry review and merge state.
+  const wanted = useMemo(() => reposToLoad(filtered), [filtered]);
+  const lists = useRepoPullLists(
+    board ? [] : wanted.repos,
+    pullListState(filters.state),
+    REFRESH_MS
+  );
+  const rows = useMemo(
+    () => filterPullSummaries(lists.pulls, filters),
+    [filters, lists.pulls]
+  );
   if (snapshot.isLoading) {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
@@ -117,24 +147,48 @@ export function PullRoomPage(): JSX.Element {
           <p className="page__subtitle">
             Open pull requests across every repository.
           </p>
-          {family ? (
-            <p className="pull-room__scope" data-testid="pull-room-family-scope">
-              Family{' '}
-              <Link to={`/repos/family/${encodeURIComponent(family)}`}>{family}</Link>
-              {familyRepos.isLoading ? ' · loading members' : null}
-              {familyRepos.isError ? ' · members unavailable' : null}{' '}
-              <button type="button" className="pull-room__scope-clear" onClick={clearFamily}>
-                Show all repos
-              </button>
+          {board ? null : (
+            <p className="pull-room__sentence" data-testid="pull-room-sentence">
+              {timelineSentence(rows)}
             </p>
-          ) : null}
+          )}
         </div>
-        <div className="pull-room__summary">
-          <Metric label="open" value={counts.open} />
-          <Metric label="missing checks" value={counts.missingChecks} />
-          <Metric label="failing checks" value={counts.failingChecks} />
+        <div className="pull-room__views" role="group" aria-label="View">
+          <button type="button" aria-pressed={!board} onClick={() => setBoard(false)}>
+            Timeline
+          </button>
+          <button type="button" aria-pressed={board} onClick={() => setBoard(true)}>
+            Board
+          </button>
         </div>
       </header>
+
+      <nav className="pull-room__families" aria-label="Family" data-testid="pull-room-families">
+        <button
+          type="button"
+          className="pull-room__family"
+          aria-pressed={family === ''}
+          onClick={() => setFamily('')}
+        >
+          All <span className="pull-room__family-count">{pills.reduce((sum, pill) => sum + pill.count, 0)}</span>
+        </button>
+        {pills.map((pill) => (
+          <button
+            key={pill.family}
+            type="button"
+            className="pull-room__family"
+            aria-pressed={family === pill.family}
+            onClick={() => setFamily(pill.family)}
+          >
+            {pill.family} <span className="pull-room__family-count">{pill.count}</span>
+          </button>
+        ))}
+        {family && !pills.some((pill) => pill.family === family) ? (
+          <button type="button" className="pull-room__family" aria-pressed="true" onClick={() => setFamily('')}>
+            {family} <span className="pull-room__family-count">0</span>
+          </button>
+        ) : null}
+      </nav>
 
       <details
         className="pull-room__filter-fold"
@@ -227,20 +281,41 @@ export function PullRoomPage(): JSX.Element {
       </details>
 
       <div className="pull-room__content">
-        <PullRequestListView
-          lanes={lanes}
-          emptyMessage="No pull requests match the current filters."
-        />
+        {board ? (
+          <PullRequestListView
+            lanes={lanes}
+            emptyMessage="No pull requests match the current filters."
+          />
+        ) : (
+          <>
+            {lists.failed.map((failure) => (
+              <p key={failure.repo} className="pull-room__aside" role="status">
+                {failure.repo} did not answer: {failure.message}
+              </p>
+            ))}
+            {wanted.skipped > 0 ? (
+              <p className="pull-room__aside">
+                Showing the first {wanted.repos.length} repositories; {wanted.skipped} more match.
+                Narrow by family or repo to see them.
+              </p>
+            ) : null}
+            {rows.length === 0 && lists.loading.length > 0 ? (
+              <p className="page__roadmap-note">Loading pull requests.</p>
+            ) : rows.length === 0 ? (
+              <p className="pull-list__empty" data-testid="pull-room-empty">
+                {filtersActive ? 'No pull requests match the current filters.' : 'No open pull requests.'}{' '}
+                {family ? (
+                  <button type="button" className="pull-room__scope-clear" onClick={() => setFamily('')}>
+                    Show every family
+                  </button>
+                ) : null}
+              </p>
+            ) : (
+              <PullRequestTimeline pulls={rows} emptyMessage="No open pull requests." showRepo />
+            )}
+          </>
+        )}
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: number }): JSX.Element {
-  return (
-    <div className="pull-room__metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
     </div>
   );
 }

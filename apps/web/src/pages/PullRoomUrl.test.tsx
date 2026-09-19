@@ -19,17 +19,43 @@ vi.mock('../hooks/useControlPlane', () => ({ useControlPlane: () => ({
   },
 }) }));
 vi.mock('../hooks/useRepositories', () => ({
-  useRepositories: (query: { family?: string }) => ({
+  useRepositories: () => ({
     isLoading: false,
     isError: false,
-    data: query.family === 'fam'
-      ? { repositories: [{ id: { owner: 'owner', name: 'a' } }] }
-      : undefined,
+    data: {
+      repositories: [
+        { id: { owner: 'owner', name: 'a' }, family: 'fam' },
+        { id: { owner: 'owner', name: 'b' }, family: null },
+      ],
+    },
   }),
 }));
-vi.mock('../hooks/useToolingEvidence', () => ({
-  useToolBuildClusters: () => ({ data: { clusters: [] } }),
-  useEcosystem: () => ({ data: { tools: [] } }),
+// The timeline asks each repo the snapshot names for its list; answer with one
+// open pull request per repo asked for, so a row proves the repo was loaded.
+vi.mock('../hooks/useRepoPullLists', () => ({
+  useRepoPullLists: (repos: string[]) => ({
+    loading: [],
+    failed: [],
+    pulls: repos.map((full) => {
+      const [owner, name] = full.split('/');
+      return {
+        repo: { id: full, host: 'jeryu', owner, name },
+        number: 1,
+        title: `Change in ${full}`,
+        author: 'alice',
+        head_ref: 'feature',
+        base_ref: 'main',
+        head_sha: 'abc12345',
+        base_sha: 'def12345',
+        state: 'open',
+        draft: false,
+        mergeable: { level: 'mergeable', can_merge: true, reason: null },
+        review: { required_approvals: 1, approvals: 1, changes_requested: 0 },
+        checks: { total: 1, passing: 1, failing: 0, pending: 0, skipped: 0 },
+        updated_at: '2026-09-19T00:00:00Z',
+      };
+    }),
+  }),
 }));
 
 function setup(initialEntries: string[]) {
@@ -42,10 +68,12 @@ function setup(initialEntries: string[]) {
 
 function expectRepo(repo: string) {
   expect(screen.getByLabelText('Repo')).toHaveValue(repo);
+  // Timeline rows by default, board cards behind ?view=board (or its older name, queue).
+  const board = screen.queryByTestId('pull-timeline') === null;
   for (const name of ['owner/a', 'owner/b']) {
-    const card = screen.queryByTestId(`pull-card-${name}-1`);
-    if (repo === 'all' || name === repo) expect(card).toBeInTheDocument();
-    else expect(card).not.toBeInTheDocument();
+    const shown = screen.queryByTestId(board ? `pull-card-${name}-1` : `pull-timeline-${name}-1`);
+    if (repo === 'all' || name === repo) expect(shown).toBeInTheDocument();
+    else expect(shown).not.toBeInTheDocument();
   }
 }
 
@@ -86,15 +114,57 @@ describe('Pull Room URL navigation', () => {
     expect(router.state.location.search).toBe('?repo=owner%2Fb');
   });
 
-  it('scopes to a family from ?family= and can clear it', async () => {
+  it('shows the timeline by default, with the repo leading each row, and the board one click away', async () => {
     const user = userEvent.setup();
-    const router = setup(['/pull-room?family=fam']);
-    expect(screen.getByTestId('pull-room-family-scope')).toHaveTextContent('fam');
-    expect(screen.getByTestId('pull-card-owner/a-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('pull-card-owner/b-1')).not.toBeInTheDocument();
+    const router = setup(['/pull-room']);
+    const row = screen.getByTestId('pull-timeline-owner/a-1');
+    expect(row).toHaveTextContent('owner/a#1');
+    expect(row).toHaveTextContent('Change in owner/a');
+    expect(screen.getByTestId('pull-room-sentence')).toHaveTextContent(
+      '2 open · 0 waiting on checks · 0 stopped by a failing check'
+    );
+    expect(screen.queryByTestId('pull-card-owner/a-1')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Show all repos' }));
+    await user.click(screen.getByRole('button', { name: 'Board' }));
+    expect(router.state.location.search).toBe('?view=board');
+    expect(screen.getByTestId('pull-card-owner/a-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('pull-timeline')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Timeline' }));
     expect(router.state.location.search).toBe('');
-    expect(screen.getByTestId('pull-card-owner/b-1')).toBeInTheDocument();
+  });
+
+  it('filters by family from a pill, keeps the choice in the URL, and clears it', async () => {
+    const user = userEvent.setup();
+    const router = setup(['/pull-room']);
+    const pills = screen.getByTestId('pull-room-families');
+    expect(pills).toHaveTextContent('All 2');
+    expect(pills).toHaveTextContent('fam 1');
+    // A repo the forge gives no family falls under "other", listed last.
+    expect(pills).toHaveTextContent('other 1');
+
+    await user.click(screen.getByRole('button', { name: /^fam/ }));
+    expect(router.state.location.search).toBe('?family=fam');
+    expect(screen.getByRole('button', { name: /^fam/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('pull-timeline-owner/a-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('pull-timeline-owner/b-1')).not.toBeInTheDocument();
+
+    // The back button undoes a pill: a pill is a navigation, not a replace.
+    await act(async () => { await router.navigate(-1); });
+    expect(screen.getByTestId('pull-timeline-owner/b-1')).toBeInTheDocument();
+
+    await act(async () => { await router.navigate('/pull-room?family=other'); });
+    expect(screen.getByTestId('pull-timeline-owner/b-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('pull-timeline-owner/a-1')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^All/ }));
+    expect(router.state.location.search).toBe('');
+  });
+
+  it('says so when a family has nothing open, with the way back', async () => {
+    const user = userEvent.setup();
+    const router = setup(['/pull-room?family=nobody']);
+    expect(screen.getByTestId('pull-room-empty')).toHaveTextContent('No open pull requests.');
+    await user.click(screen.getByRole('button', { name: 'Show every family' }));
+    expect(router.state.location.search).toBe('');
+    expect(screen.getByTestId('pull-timeline-owner/a-1')).toBeInTheDocument();
   });
 });

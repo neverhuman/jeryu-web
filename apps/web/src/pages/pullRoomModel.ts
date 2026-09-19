@@ -328,3 +328,97 @@ export function pullRequestPath(host: string, fullName: string, number: number):
   const name = fullName.split('/').map(encodeURIComponent).join('/');
   return `/repos/${encodeURIComponent(host)}/${name}/pulls/${number}`;
 }
+
+/** `?view=` values that mean the lane board (`queue` is its older name). */
+export function isBoardView(view: string | null): boolean {
+  return view === 'board' || view === 'queue';
+}
+
+/** Family of repos the forge assigns no family to. */
+export const OTHER_FAMILY = 'other';
+
+/** The family a repo (`owner/name`) belongs to; unknown or unassigned is "other". */
+export function familyOfRepo(
+  repo: string,
+  families: ReadonlyMap<string, string | null>
+): string {
+  return families.get(repo) || OTHER_FAMILY;
+}
+
+/** Keep the pull requests of one family; an empty family keeps them all. */
+export function scopeToFamily(
+  items: PullListItem[],
+  family: string,
+  families: ReadonlyMap<string, string | null>
+): PullListItem[] {
+  return family ? items.filter((item) => familyOfRepo(item.repo, families) === family) : items;
+}
+
+export interface FamilyPill {
+  family: string;
+  count: number;
+}
+
+/**
+ * One pill per family that has a pull request in flight, with its count,
+ * alphabetical with "other" last. Merged and closed ones do not make a pill.
+ */
+export function familyPills(
+  items: PullListItem[],
+  families: ReadonlyMap<string, string | null>
+): FamilyPill[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (isFinished(item)) continue;
+    const family = familyOfRepo(item.repo, families);
+    counts.set(family, (counts.get(family) ?? 0) + 1);
+  }
+  return Array.from(counts, ([family, count]) => ({ family, count })).sort((a, b) => {
+    if (a.family === OTHER_FAMILY) return 1;
+    if (b.family === OTHER_FAMILY) return -1;
+    return a.family.localeCompare(b.family);
+  });
+}
+
+/** The most repos the timeline loads at once; the rest are named, not fetched. */
+export const TIMELINE_REPO_LIMIT = 24;
+
+/**
+ * The repos whose pull request lists the timeline needs: the snapshot says
+ * which repos hold a pull request that passes the filters, so only those are
+ * asked for their lists.
+ */
+export function reposToLoad(items: PullListItem[]): { repos: string[]; skipped: number } {
+  const repos = repoOptions(items);
+  return {
+    repos: repos.slice(0, TIMELINE_REPO_LIMIT),
+    skipped: Math.max(0, repos.length - TIMELINE_REPO_LIMIT),
+  };
+}
+
+/** `state` for the per-repo list: only open ones unless the filter asks for finished ones. */
+export function pullListState(stateFilter: string): 'open' | undefined {
+  return stateFilter === 'all' || stateFilter === 'merged' || stateFilter === 'closed'
+    ? undefined
+    : 'open';
+}
+
+/** The summaries that pass the page's filters, judged as the board judges its cards. */
+export function filterPullSummaries(
+  pulls: PullRequestSummary[],
+  filters: PullRoomFilters
+): PullRequestSummary[] {
+  // The snapshot calls an open pull request by its merge state ("mergeable",
+  // "blockedbychecks"); the list calls it "open". A state filter other than the
+  // finished ones was already applied when the repos were chosen.
+  const relaxed =
+    filters.state === 'merged' || filters.state === 'closed' || filters.state === 'all'
+      ? filters
+      : { ...filters, state: ACTIVE_STATE_FILTER };
+  return pulls.filter(
+    (pr) =>
+      (filters.state !== 'draft' || pr.draft) &&
+      filterPullRequests([fromPullRequestSummary(pr)], relaxed).length === 1
+  );
+}
+
