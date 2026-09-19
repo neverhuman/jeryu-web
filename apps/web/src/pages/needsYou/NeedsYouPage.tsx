@@ -13,7 +13,7 @@ import { CircleCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type { AttentionItem } from '../../api/types';
-import { CopyCommand } from '../../components/copy/CopyCommand';
+import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
 import { useControlPlaneRunners } from '../../hooks/useControlPlaneRunners';
 import {

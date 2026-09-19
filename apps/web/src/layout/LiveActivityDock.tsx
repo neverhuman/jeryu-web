@@ -13,11 +13,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { PIPELINE_KEY, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
 import { ACTIVITY_PATH, eventTone, formatClock } from '../pages/activity/activityModel';
+import type { PipelineEventsQuery } from '../api/types/pipeline';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 
 const COLLAPSED_KEY = 'jeryu.activityDock.collapsed.v1';
 const DOCK_EVENTS = 8;
-const DOCK_QUERY = { limit: DOCK_EVENTS } as const;
+const DOCK_QUERY: PipelineEventsQuery = { limit: DOCK_EVENTS };
 
 export function LiveActivityDock(): JSX.Element | null {
   const { user } = useAuth();

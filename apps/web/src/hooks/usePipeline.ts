@@ -6,7 +6,7 @@
 // every surface can say "not available on this server version" instead of
 // erroring or spinning. Nothing here retries: an old server stays old.
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   useQuery,
   useQueryClient,
@@ -24,7 +24,7 @@ import { useRealtimeStore } from '../stores/realtimeStore';
 import { useRealtime } from './useRealtime';
 
 export const PIPELINE_KEY = ['pipeline'] as const;
-export const ATTENTION_QUERY_KEY = [...PIPELINE_KEY, 'attention'] as const;
+export const ATTENTION_QUERY_KEY: readonly string[] = [...PIPELINE_KEY, 'attention'];
 export const PIPELINE_SCOPE = 'pipeline';
 
 /** True when the server does not implement the route (404, or the SPA shell). */
@@ -50,16 +50,18 @@ export function usePipelineNudge(
   queryKey: readonly unknown[] = PIPELINE_KEY
 ): void {
   const queryClient = useQueryClient();
-  const keyId = JSON.stringify(queryKey);
+  // The caller may build the key inline; a ref keeps the subscription stable.
+  const keyRef = useRef(queryKey);
+  keyRef.current = queryKey;
   useRealtime(enabled ? [PIPELINE_SCOPE] : []);
   useEffect(() => {
     if (!enabled) return () => {};
     return useRealtimeStore.getState().addInvalidator((event) => {
       if (event.scope === PIPELINE_SCOPE) {
-        void queryClient.invalidateQueries({ queryKey: JSON.parse(keyId) as unknown[] });
+        void queryClient.invalidateQueries({ queryKey: keyRef.current });
       }
     });
-  }, [enabled, keyId, queryClient]);
+  }, [enabled, queryClient]);
 }
 
 /** What needs a human right now. Polls every 15 s; stops once known-unavailable. */

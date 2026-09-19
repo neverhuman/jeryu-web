@@ -9,7 +9,7 @@
 
 import { Link, useSearchParams } from 'react-router-dom';
 
-import { CopyCommand } from '../components/copy/CopyCommand';
+import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { useAuth } from '../hooks/useAuth';
 import { useAttention } from '../hooks/usePipeline';
 
