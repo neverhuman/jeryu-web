@@ -35,6 +35,7 @@ import {
   formatCost,
   todoCost,
   isLastNight,
+  isLongNote,
   latestWorker,
   repoOwners,
   repoCodeHref,
@@ -316,11 +317,7 @@ function TodoRow({
             {todo.title}
           </button>
           {/* Why it is stuck is the information; it does not hide behind a click. */}
-          {stuck && todo.note ? (
-            <p className="shift__why" data-testid={`shift-why-${todo.id}`}>
-              {todo.note}
-            </p>
-          ) : null}
+          {stuck && todo.note ? <WhyStuck id={todo.id} note={todo.note} /> : null}
           <span className="shift__id">
             {todo.id} · P{todo.priority} · {todo.mode}
             {todo.triaged ? '' : ' · untriaged'}
@@ -396,6 +393,38 @@ function TodoRow({
 function RepoName({ owners, repo }: { owners: RepoOwners; repo: string }): JSX.Element {
   const href = repoCodeHref(owners, repo);
   return href ? <Link to={href}>{repo}</Link> : <span>{repo}</span>;
+}
+
+/**
+ * Why a todo is stuck, inline. A worker's note can run to twenty lines, which
+ * pushed every other row off the screen: four lines show, the rest unfolds.
+ */
+function WhyStuck({ id, note }: { id: string; note: string }): JSX.Element {
+  const [full, setFull] = useState(false);
+  const long = isLongNote(note);
+  const noteId = `shift-why-text-${id}`;
+  return (
+    <div className="shift__why-wrap">
+      <p
+        id={noteId}
+        className={`shift__why${long && !full ? ' shift__why--clamped' : ''}`}
+        data-testid={`shift-why-${id}`}
+      >
+        {note}
+      </p>
+      {long ? (
+        <button
+          type="button"
+          className="shift__why-toggle"
+          aria-expanded={full}
+          aria-controls={noteId}
+          onClick={() => setFull((v) => !v)}
+        >
+          {full ? 'Show less' : 'Show full note'}
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 /** Queued > Claimed > Done > PR > Merged > Released, with the PR step linked. */
@@ -488,7 +517,8 @@ function TodoPrimaryAction({ todo }: { todo: ShiftTodo }): JSX.Element | null {
     <span className="shift__actions">
       {releasable ? (
         <ActionButton
-          variant={todo.status === 'claimed' ? 'ghost' : 'primary'}
+          // Outlined, never filled: the page's one filled action is "Open review PR".
+          variant={todo.status === 'claimed' ? 'ghost' : 'default'}
           disabled={action.isPending}
           onClick={() => action.mutate({ ...base, action: 'release' })}
           aria-label={`Release ${todo.id}`}

@@ -182,7 +182,11 @@ describe('ShiftQueuePage', () => {
     expect(within(blocked).getByText('2 attempts · last: blocked')).toHaveClass('is-failing');
     // Why it is stuck is on the row, and the row offers the one thing to do.
     expect(within(blocked).getByTestId('shift-why-blk-1')).toHaveTextContent('tag split.7 does not exist');
-    expect(within(blocked).getByRole('button', { name: 'Release blk-1' })).toBeInTheDocument();
+    // Outlined: the page's one filled action stays "Open review PR".
+    const release = within(blocked).getByRole('button', { name: 'Release blk-1' });
+    expect(release.className).not.toContain('action-button--primary');
+    // A short note needs no disclosure.
+    expect(within(blocked).queryByRole('button', { name: 'Show full note' })).toBeNull();
     expect(within(blocked).queryByRole('button', { name: 'Block blk-1' })).toBeNull();
     expect(within(blocked).getByRole('list', { name: /blocked — needs a human/ })).toBeInTheDocument();
 

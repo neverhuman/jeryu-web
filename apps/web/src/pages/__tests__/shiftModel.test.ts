@@ -37,6 +37,7 @@ import {
   todoTrace,
   traceSummary,
   todoWorkers,
+  isLongNote,
 } from '../shift/shiftModel';
 import { SHIFTS, TODOS, WORKERS, attempt, todo } from './shiftTestData';
 
@@ -285,3 +286,13 @@ describe('slotLabel', () => {
     expect(split.shown.map((w) => w.slot)).toEqual(['w1']);
   });
 });
+
+describe('isLongNote', () => {
+  it('folds only a note that will not fit four lines', () => {
+    expect(isLongNote('The tag split.7 does not exist.')).toBe(false);
+    expect(isLongNote('one\ntwo\nthree\nfour')).toBe(false);
+    expect(isLongNote('one\ntwo\nthree\nfour\nfive')).toBe(true);
+    expect(isLongNote('x'.repeat(4 * 72 + 1))).toBe(true);
+  });
+});
+

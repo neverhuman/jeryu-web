@@ -412,6 +412,25 @@
 }
 
 /* Why a todo is stuck, shown on the row. */
+.shift__why--clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+}
+
+.shift__why-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .shift__why {
   margin: var(--space-1) 0;
   color: var(--color-fg-primary);

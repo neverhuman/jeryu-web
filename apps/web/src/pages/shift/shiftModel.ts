@@ -526,3 +526,18 @@ export function slotLabel(operator: string, host: string, slot: string): string 
   const who = host && !operator.endsWith(`@${host}`) ? `${operator}@${host}` : operator;
   return `${who}/${slot}`;
 }
+
+/** Lines of a blocked note shown inline before the rest folds away. */
+export const NOTE_CLAMP_LINES = 4;
+
+/**
+ * True when a note will not fit the inline clamp, so a "Show full note" control
+ * is worth a tab stop. A short note never gets one.
+ */
+export function isLongNote(note: string): boolean {
+  const lines = note.split('\n');
+  if (lines.length > NOTE_CLAMP_LINES) return true;
+  // ~72ch per line in the queue's first column.
+  return note.length > NOTE_CLAMP_LINES * 72;
+}
+
