@@ -31,11 +31,11 @@ const NAVIGATION_COMMANDS: Command[] = [
     shortcut: 'g r',
   },
   {
-    id: 'nav.search',
-    title: 'Search…',
-    keywords: ['search', 'find'],
-    target: { kind: 'route', path: '/search' },
-    shortcut: '/',
+    id: 'nav.activity',
+    title: 'Go to Activity',
+    keywords: ['activity', 'events'],
+    target: { kind: 'route', path: '/activity' },
+    shortcut: 'g a',
   },
 ];
 

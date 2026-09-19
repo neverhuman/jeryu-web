@@ -242,7 +242,7 @@ Built-in shortcuts:
 | Shortcut | Where | Action |
 |---|---|---|
 | `⌘K` / `Ctrl+K` | global | Open the command palette. |
-| `/` | global | Focus the global search input. |
+| `/` | global | Open the command palette. |
 | `?` | global | Show the keyboard shortcut overlay. |
 | `Esc` | global | Close the topmost modal / palette / overlay. |
 | `g r` | global | Go to Repositories. |
@@ -302,8 +302,8 @@ which is registered via `vitest.config.ts` (`setupFiles`).
   screenshot tagged `geom-*.png` to `target/jankurai/ux-qa/`.
 - Every interactive element has a visible focus ring driven by
   `--color-border-strong` + `outline-offset`.
-- The activity dock is keyboard-navigable and announces new events via
-  `aria-live="polite"`.
+- The activity dock is one keyboard-reachable line until opened; opened, it
+  is a `role="log"` list of the newest events. It is absent on `/activity`.
 
 ---
 

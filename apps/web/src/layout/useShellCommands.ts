@@ -113,14 +113,6 @@ export function useShellCommands(): void {
         shortcut: 'g t',
       },
       {
-        id: 'nav.search',
-        title: 'Search…',
-        keywords: ['search', 'find', 'lookup', 'global'],
-        icon: 'search',
-        target: { kind: 'route', path: '/search' },
-        shortcut: '/',
-      },
-      {
         id: 'nav.settings',
         title: 'Go to Admin Settings',
         keywords: ['settings', 'admin', 'preferences'],

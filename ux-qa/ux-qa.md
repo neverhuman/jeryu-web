@@ -92,3 +92,15 @@ under `apps/web/e2e/fixtures/`, and a Playwright screenshot from the route spec.
 | `/work/shift*` | `shift-queue`, `shift-add`, `shift-workers` | `shiftMocks.ts` | `28-shift.spec.ts` |
 | `/releases` (one page: what runs, Ready to pin, Merged not yet released; `/unreleased` redirects to its last section) | `unreleased` | `unreleasedMocks.ts`, `pipelineMocks.ts` (pins) | `28-unreleased.spec.ts`, `29-pipeline.spec.ts` (Ready to pin) |
 | `/needs-you`, `/activity`, `/activity?wall=1` (and the live dock on every page) | `needs-you`, `activity`, `activity-wall` | `pipelineMocks.ts` | `29-pipeline.spec.ts` |
+
+UX pass 1 (2026-09-19, from a walk of the live site) changed what these specs
+assert rather than adding surfaces: the blob view is a plain numbered source
+view with `#L<n>` anchors (`04-code.spec.ts`; the Monaco editor it replaced was
+fetched from a CDN the site's CSP refuses, so files never loaded); Work > Queue
+shows live todos and shifts and folds finished ones and the filters
+(`28-shift.spec.ts`); Activity rows read in plain words with chips for views,
+and the dock is one line until opened and absent on `/activity`
+(`29-pipeline.spec.ts`); repository removal lives under Settings > Danger zone
+(`22-repo-danger-zone.spec.ts`); the header names the repository and links to
+the list (`25-action-matrix.spec.ts`). `/search` is gone: no server route ever
+backed it.

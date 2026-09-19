@@ -85,20 +85,30 @@ test.describe('Pipeline visibility', () => {
     );
     await page.getByTestId('activity-page').screenshot({ path: 'playwright-report/activity.png' });
 
-    await page.getByLabel('Kind').fill('todo.');
-    await page.getByLabel('Kind').press('Enter');
+    // Plain words on the row; the wire kind is not shouted at the reader.
+    await expect(gate).toContainText('Gate failed');
+    await expect(gate.locator('.activity-row__line')).not.toContainText('gate.log');
+
+    // One click per view: a chip sets the server-side filter through the URL.
+    await page.getByRole('button', { name: 'Todos', exact: true }).click();
     await expect(page).toHaveURL(/kind=todo\./);
+    await expect(page.getByRole('button', { name: 'Todos', exact: true })).toHaveAttribute('aria-pressed', 'true');
     // The filter is applied by the server, not in the browser.
     await expect.poll(() => log.eventQueries.join(' | ')).toContain('kind=todo.');
     await expect(page.getByTestId('activity-event-9')).toBeVisible();
     await expect(page.getByTestId('activity-event-12')).toHaveCount(0);
+    // The free-text filters are folded, not gone.
+    await expect(page.getByLabel('Kind')).toBeHidden();
 
-    // The box is bound to the URL, which the router updates in a transition:
+    // The chip is bound to the URL, which the router updates in a transition:
     // click, then wait for the state rather than asserting it synchronously.
-    await page.getByLabel('Needs a human only').click();
+    await page.getByRole('button', { name: 'Needs a human' }).click();
     await expect(page).toHaveURL(/needs_human=1/);
-    await expect(page.getByLabel('Needs a human only')).toBeChecked();
-    await expect(page.getByText('No events match these filters.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Needs a human' })).toHaveAttribute('aria-pressed', 'true');
+    // A chip is a whole view: it replaces the kind filter rather than stacking on it.
+    await expect(page).not.toHaveURL(/kind=/);
+    await expect(page.getByTestId('activity-event-12')).toBeVisible();
+    await expect(page.getByTestId('activity-event-9')).toHaveCount(0);
 
     await page.goto('/activity?wall=1');
     await expect(page.getByRole('region', { name: 'Last 24 hours' })).toContainText('Todos finished');
@@ -107,7 +117,7 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
   });
 
-  test('the live dock shows the newest events on any page and remembers being collapsed @action:chrome.activity_dock', async ({
+  test('the live dock is one quiet line on any page, opens to the newest events, and remembers @action:chrome.activity_dock', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
@@ -115,19 +125,28 @@ test.describe('Pipeline visibility', () => {
 
     await page.goto('/settings');
     const dock = page.getByTestId('activity-dock');
-    await expect(dock).toContainText('Merged neverhuman/jeryu#99', { timeout: 15_000 });
+    // One quiet line until opened: the newest event and how many need you.
+    await expect(dock.getByRole('button', { name: 'Live activity' })).toHaveAttribute('aria-expanded', 'false', {
+      timeout: 15_000,
+    });
+    await expect(dock.getByRole('log')).toHaveCount(0);
     await expect(dock).toContainText('1 need you');
     await dock.getByRole('button', { name: 'Live activity' }).click();
-    await expect(dock.getByRole('log')).toHaveCount(0);
+    await expect(dock.getByRole('log')).toContainText('Merged neverhuman/jeryu#99');
+    await expect(dock.getByRole('log')).toContainText('PR merged');
 
+    // Opening it is remembered.
     await page.reload();
     await expect(page.getByTestId('activity-dock').getByRole('button', { name: 'Live activity' })).toHaveAttribute(
       'aria-expanded',
-      'false',
+      'true',
       { timeout: 15_000 }
     );
     await page.getByTestId('activity-dock').getByRole('link', { name: 'All activity' }).click();
     await expect(page).toHaveURL(/\/activity$/);
+    // The Activity page is the same feed at full size, so the dock steps aside.
+    await expect(page.getByTestId('activity-event-12')).toBeVisible();
+    await expect(page.getByTestId('activity-dock')).toHaveCount(0);
   });
   test('Releases says what is merged but not pinned, with one next step @action:unreleased.ready_to_pin', async ({
     page,

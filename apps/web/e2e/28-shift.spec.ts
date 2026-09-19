@@ -29,8 +29,19 @@ test.describe('Work shift tabs', () => {
     await expect(page.getByTestId(`shift-branch-${NIGHT}`)).toContainText('last night');
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();
 
+    // What is live is the page; finished todos and finished shifts fold away.
+    const finished = page.getByTestId('shift-finished-todos');
+    await expect(finished).toContainText('1 finished todo');
+    await expect(page.getByTestId('shift-todo-20260918-2200-bbb')).toBeHidden();
+    await expect(page.getByTestId('shift-finished-shifts')).toContainText('1 finished shift');
+    await expect(page.getByRole('columnheader', { name: 'Requested by' })).toHaveCount(0);
+
+    // The six selects fold behind More filters.
+    await expect(page.getByLabel('Mode')).toBeHidden();
+    await page.getByText('More filters').click();
     await page.getByLabel('Mode').selectOption('night');
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toHaveCount(0);
+    await finished.getByText('1 finished todo').click();
     await page.getByRole('button', { name: 'Ship heartbeats' }).click();
     const detail = page.getByTestId('shift-todo-detail-20260918-2200-bbb');
     await expect(detail).toContainText('Slots POST heartbeats every 30 s.');
@@ -38,7 +49,7 @@ test.describe('Work shift tabs', () => {
     await expect(detail).toContainText('alton@xbabe0/w1');
     // Non-admins see no row actions and no review-PR button.
     await expect(page.getByRole('button', { name: /Open review PR/ })).toHaveCount(0);
-    await expect(page.getByRole('columnheader', { name: 'Actions' })).toHaveCount(0);
+    await expect(page.getByRole('columnheader', { name: 'Action' })).toHaveCount(0);
 
     await tabs.getByRole('link', { name: 'Workers' }).click();
     await expect(page).toHaveURL(/\/work\/shift\/workers$/);
@@ -59,6 +70,9 @@ test.describe('Work shift tabs', () => {
     await page.getByLabel('Reason for blocking 20260919-0800-aaa').fill('needs design');
     await page.getByRole('button', { name: 'Confirm block' }).click();
     await expect.poll(() => log.posts.length).toBe(1);
+    // Priority and now/night are adjustments: they live in the opened row.
+    await expect(page.getByLabel('Priority for 20260919-0800-aaa')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Fix cache key' }).click();
     await page.getByLabel('Priority for 20260919-0800-aaa').selectOption('1');
     await expect.poll(() => log.posts.length).toBe(2);
     await page.getByRole('button', { name: 'Release 20260919-0900-ccc' }).click();
@@ -87,9 +101,14 @@ test.describe('Work shift tabs', () => {
     const first = page.locator('tbody > tr[data-testid^="shift-todo-"]').first();
     await expect(first).toHaveAttribute('data-testid', 'shift-todo-20260919-0930-ddd');
     await expect(blocked).toContainText('2 attempts · last: blocked');
+    // Why it is stuck is on the row, not behind a click.
+    await expect(blocked.getByTestId('shift-why-20260919-0930-ddd')).toContainText(
+      'The jeryu-core tag split.7 does not exist.'
+    );
     await expect(blocked.getByRole('list', { name: /blocked — needs a human/ })).toBeVisible();
 
     // The landed todo links to the PR that carries it, from the trace and the commit chip.
+    await page.getByTestId('shift-finished-todos').getByText('1 finished todo').click();
     const done = page.getByTestId('shift-todo-20260918-2200-bbb');
     await expect(done.getByRole('list', { name: /PR #41, Merged, Released not yet/ })).toBeVisible();
     await expect(done.getByRole('link', { name: 'PR #41' })).toHaveAttribute(

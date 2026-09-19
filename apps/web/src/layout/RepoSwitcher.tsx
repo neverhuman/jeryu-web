@@ -26,7 +26,7 @@ export function RepoSwitcher(): JSX.Element {
     <Link
       to="/repos"
       className="repo-switcher"
-      aria-label={current ? `${current}: switch repository` : 'Repositories'}
+      aria-label={current ? `${current}: switch repository` : 'All repositories'}
       title={current ? 'Switch repository' : 'All repositories'}
     >
       <FolderGit2 size={14} aria-hidden="true" />

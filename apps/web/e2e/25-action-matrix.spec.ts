@@ -72,7 +72,7 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   // The header names where you are and links to every repository; it no longer
   // opens the palette a second way.
   await page.goto('/needs-you');
-  await page.getByRole('banner').getByRole('link', { name: 'Repositories' }).click();
+  await page.getByRole('banner').getByRole('link', { name: 'All repositories' }).click();
   await expect(page).toHaveURL(/\/repos$/);
 
   await page.getByRole('button', { name: 'Collapse sidebar' }).click();

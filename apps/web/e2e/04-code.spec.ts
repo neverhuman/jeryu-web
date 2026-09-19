@@ -112,9 +112,15 @@ test.describe('Code browser (W-T-12)', () => {
     });
     await page.getByRole('tab', { name: 'Raw' }).click();
     await expect(page.getByRole('tab', { name: 'Raw' })).toHaveAttribute(
-      'aria-pressed',
+      'aria-selected',
       'true'
     );
+    // The source renders in the page itself: numbered lines, no editor to load
+    // (the old one came from a CDN that the site's own CSP refused).
+    const source = page.getByRole('table', { name: 'Source of README.md' });
+    await expect(source).toContainText('# Blob toolbar proof.');
+    await expect(source.getByRole('link', { name: 'Line 1' })).toHaveAttribute('href', '#L1');
+    await expect(page.getByText(/Loading editor/)).toHaveCount(0);
 
     const raw = page.getByRole('link', { name: 'View raw file' });
     await expect(raw).toHaveAttribute('href', /\/api\/v1\/repos\/.*\/raw\?/);

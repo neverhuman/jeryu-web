@@ -35,6 +35,6 @@ describe('RepoSwitcher', () => {
         <RepoSwitcher />
       </MemoryRouter>
     );
-    expect(screen.getByRole('link', { name: 'Repositories' })).toHaveTextContent('Repositories');
+    expect(screen.getByRole('link', { name: 'All repositories' })).toHaveTextContent('Repositories');
   });
 });

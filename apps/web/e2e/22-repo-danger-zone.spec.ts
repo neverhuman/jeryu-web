@@ -1,6 +1,7 @@
-// 22-repo-danger-zone.spec.ts — two-tier repository removal from the overview.
+// 22-repo-danger-zone.spec.ts — two-tier repository removal from the repo's Settings.
 //
-// The overview page renders a danger zone with two destructive rows:
+// Settings → Danger zone renders two destructive rows (they used to sit at the
+// bottom of the repository's front page):
 // registry-only removal (bare storage on disk is kept) and the purge tier
 // (registry + storage, typed-name confirmation, cannot be undone). The
 // removal endpoint (HTTP DELETE) is mocked via `mockDeleteRepo`, which captures the
@@ -21,6 +22,7 @@ import {
   mockReadme,
   mockRefs,
   mockRepoList,
+  mockSettings,
 } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
@@ -60,8 +62,9 @@ async function openOverview(
   await mockRepoList(page, [REPO]);
   await mockRefs(page);
   await mockReadme(page, { html: '<h1>redline</h1>' });
+  await mockSettings(page);
   const captured = await mockDeleteRepo(page, REPO.id, deleteOpts);
-  await page.goto('/repos/jeryu/veox/redline');
+  await page.goto('/repos/jeryu/veox/redline/settings/danger-zone');
   await expect(page.getByTestId('repo-danger-zone')).toBeVisible({
     timeout: 10_000,
   });
@@ -149,7 +152,7 @@ test.describe('Repository danger zone (delete)', () => {
       confirm_full_name: FULL_NAME,
       delete_storage: false,
     });
-    // Still on the overview — nothing was deleted.
+    // Still on the settings page — nothing was deleted.
     await expect(page).toHaveURL(/\/repos\/jeryu\/veox\/redline/);
   });
 

@@ -72,7 +72,9 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
   const navigate = useNavigate();
   const provider = props.provider ?? params.provider ?? 'unknown';
   const fullName = props.fullName ?? fullNameFromParams(params);
-  const activeSection = params.section ?? 'general';
+  // RepoRouter parses the splat and hands the section in; reading only the
+  // route param left every section link showing General.
+  const activeSection = props.section ?? params.section ?? 'general';
 
   const resolved = useResolveRepo(provider, fullName);
   const repoId = resolved.data?.id ?? null;

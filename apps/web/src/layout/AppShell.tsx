@@ -60,12 +60,14 @@ export function AppShell(): JSX.Element {
   useKeyboardShortcut(
     '/',
     (event) => {
-      // Ignore Shift+/ ("?") so it opens the shortcuts overlay cleanly instead
-      // of also navigating to search.
+      // Ignore Shift+/ ("?") so it opens the shortcuts overlay cleanly. There
+      // is no server-side search; "/" opens the palette, the one place that
+      // finds things, as the header box beside it does.
       if (event.shiftKey) return;
-      navigate('/search');
+      event.preventDefault();
+      openPalette();
     },
-    { label: 'Focus search', group: 'Navigation', enabled: !!auth.user }
+    { label: 'Open command palette', group: 'Navigation', enabled: !!auth.user }
   );
 
   useKeyboardShortcut('mod+b', toggleSidebar, {
@@ -121,11 +123,6 @@ export function AppShell(): JSX.Element {
   });
   useKeyboardShortcut('g s', () => navigate('/settings'), {
     label: 'Go to Settings',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('Mod+/', () => navigate('/search'), {
-    label: 'Go to Search',
     group: 'Navigation',
     enabled: !!auth.user,
   });
