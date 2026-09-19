@@ -108,3 +108,13 @@ and the dock is one line until opened and absent on `/activity`
 (`22-repo-danger-zone.spec.ts`); the header names the repository and links to
 the list (`25-action-matrix.spec.ts`). `/search` is gone: no server route ever
 backed it.
+
+Pull requests (`/pull-room`, 2026-09-19, owner request): the page is the same
+Opened > Checks > Review > Mergeable > Merged timeline the per-repo page shows,
+one row per open pull request across every repository, led by `owner/name#n`;
+the lane board is behind the Timeline / Board toggle (`?view=board`, or the older
+`queue`). Family pills with counts filter through `?family=` (a repo with no
+family is "other"); three stat tiles became one sentence. `14-pull-room.spec.ts`
+covers the default timeline, the filters, the board, the pills and the back
+button, a repo whose list fails (one quiet line, never a page error), and an axe
+scan persisted as `pull-requests.axe.json`.

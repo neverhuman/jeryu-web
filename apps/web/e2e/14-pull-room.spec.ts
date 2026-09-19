@@ -2,8 +2,9 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { blockingViolations, persistAxeResult, runAxe } from './fixtures/accessibility';
 import { AppShellPage } from './pages/AppShellPage';
-import { mockBootstrap } from './fixtures/mocks';
+import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -13,7 +14,60 @@ async function blockWebSocket(page: Page): Promise<void> {
   );
 }
 
+type Snapshot = ReturnType<typeof controlPlane>;
+
+/** The per-repo list the timeline loads, built from the snapshot's pull requests. */
+function pullSummaries(snapshot: Snapshot, repo: string) {
+  const [owner, name] = repo.split('/');
+  return snapshot.pullRequests
+    .filter((pr) => pr.repo === repo)
+    .map((pr) => ({
+      repo: { id: repo, host: 'jeryu', owner, name },
+      number: pr.number,
+      entity: { kind: 'pull_request', id: `${repo}#${pr.number}` },
+      title: pr.title,
+      author: pr.author,
+      head_ref: pr.headRef,
+      base_ref: pr.baseRef,
+      head_sha: pr.headSha,
+      base_sha: pr.baseSha,
+      state: 'open',
+      draft: pr.draft,
+      mergeable: { level: 'blocked', can_merge: false, reason: 'checks', exact_head_sha: pr.headSha, required_gate: null },
+      review: { required_approvals: 1, approvals: 0, changes_requested: 0, unresolved_threads: 0, user_review_state: null },
+      checks: {
+        total: pr.checks.total,
+        passing: pr.checks.successful,
+        failing: pr.checks.failing,
+        pending: pr.checks.running + pr.checks.queued,
+        skipped: 0,
+      },
+      agents: { active_sessions: 0, proposed_patches: 0, evidence_packets: 0, blockers: 0 },
+      labels: [],
+      updated_at: `2026-06-05T00:00:0${pr.number % 10}Z`,
+      passport_hash: null,
+      available_actions: [],
+    }));
+}
+
 async function mockPullRoom(page: Page, snapshot = controlPlane()): Promise<void> {
+  // Families come from the repository list; bob/jeryu has none and reads "other".
+  await mockRepoList(page, [
+    { id: { host: 'jeryu', owner: 'alice', name: 'jeryu' }, family: 'core' },
+    { id: { host: 'jeryu', owner: 'bob', name: 'jeryu' }, family: null },
+  ]);
+  await page.route('**/api/v1/repos/*/pulls**', async (route) => {
+    const repo = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[4]);
+    if (repo === 'bob/broken') {
+      await route.fulfill({ status: 500, contentType: 'application/json', body: '{"code":"boom","message":"list unavailable"}' });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: pullSummaries(snapshot, repo), next_cursor: null }),
+    });
+  });
   await page.route('**/api/v1/control-plane/status', async (route) => {
     await route.fulfill({
       status: 200,
@@ -79,7 +133,7 @@ async function mockPullRoom(page: Page, snapshot = controlPlane()): Promise<void
   });
 }
 
-test('Pull Room renders filters, queue lanes, PR cards and cockpit links @action:pull_room.filters @action:pull_room.search @action:pull_room.cockpit_link', async ({
+test('Pull requests shows every open pull request as a timeline row, filters, and keeps the board one click away @action:pull_room.timeline @action:pull_room.filters @action:pull_room.search @action:pull_room.cockpit_link', async ({
   page,
 }) => {
   await blockWebSocket(page);
@@ -91,11 +145,34 @@ test('Pull Room renders filters, queue lanes, PR cards and cockpit links @action
   await shell.assertShellLoaded();
 
   await expect(page.getByTestId('pull-room-page')).toBeVisible();
-  // The filters fold away until someone wants them (they open by themselves
-  // when the URL already carries one).
+  // The timeline is the page: one row per open pull request, led by owner/name#n.
+  const row = page.getByTestId('pull-timeline-alice/jeryu-7');
+  await expect(row).toContainText('alice/jeryu#7');
+  await expect(row).toContainText('Fix BFF PR list');
+  await expect(page.getByTestId('pull-stage-alice/jeryu-7-checks')).toHaveAttribute('data-status', 'pending');
+  await expect(page.getByTestId('pull-stage-alice/jeryu-8-checks')).toHaveAttribute('data-status', 'blocked');
+  // One sentence where three stat tiles were.
+  await expect(page.getByTestId('pull-room-sentence')).toHaveText(
+    '2 open · 1 waiting on checks · 1 stopped by a failing check'
+  );
+  await expect(page.getByText('Open pull requests across every repository.')).toBeVisible();
+  await expect(page.getByText('Tooling opportunities')).toHaveCount(0);
+  await expect(page.getByText(/tool clusters/i)).toHaveCount(0);
+
+  const link = page.getByRole('link', { name: /Fix BFF PR list/ });
+  await expect(link).toHaveAttribute('href', '/repos/jeryu/alice/jeryu/pulls/7');
+
+  // The filters fold away until someone wants them, and they filter the rows.
   await expect(page.getByLabel('Search pull requests')).toBeHidden();
   await page.getByText('Filters', { exact: true }).click();
   await page.getByLabel('Search pull requests').fill('Fix');
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-8')).toHaveCount(0);
+  await expect(row).toBeVisible();
+  await page.getByLabel('Search pull requests').fill('');
+
+  // The lane board is still there, one click away, and the URL says so.
+  await page.getByRole('button', { name: 'Board', exact: true }).click();
+  await expect(page).toHaveURL(/view=board/);
   await page
     .locator('section[aria-label="Pull request filters"]')
     .getByLabel('Checks')
@@ -103,19 +180,42 @@ test('Pull Room renders filters, queue lanes, PR cards and cockpit links @action
   await expect(page.getByTestId('pull-lane-missing_checks')).toBeVisible();
   // An empty lane is a header over nothing: only lanes that hold a PR render.
   await expect(page.getByTestId('pull-lane-failing_checks')).toHaveCount(0);
-  await expect(page.getByText('Fix BFF PR list')).toBeVisible();
   await expect(page.getByTestId('pull-card-alice/jeryu-7').getByTestId('pull-card-author')).toHaveText('by alice');
-  // The page is about pull requests only: no tooling rail, no tool tiles.
-  await expect(page.getByText('Open pull requests across every repository.')).toBeVisible();
-  await expect(page.getByText('Tooling opportunities')).toHaveCount(0);
-  await expect(page.getByText(/tool clusters/i)).toHaveCount(0);
-
-  const link = page.getByRole('link', { name: 'Fix BFF PR list' });
-  await expect(link).toHaveAttribute(
-    'href',
-    '/repos/jeryu/alice/jeryu/pulls/7'
-  );
   await expect(page.getByText(/W-FE-11/i)).toHaveCount(0);
+});
+
+test('Pull requests filters by family from a pill, and one repo that does not answer is one quiet line @action:pull_room.family_pills', async ({
+  page,
+}) => {
+  await blockWebSocket(page);
+  await mockBootstrap(page);
+  const snapshot = controlPlane();
+  snapshot.pullRequests[1].repo = 'bob/jeryu';
+  snapshot.pullRequests.push({ ...snapshot.pullRequests[0], repo: 'bob/broken', number: 9, title: 'Unlisted work' });
+  await mockPullRoom(page, snapshot);
+  const shell = new AppShellPage(page);
+  await shell.goto('/pull-room');
+  await shell.assertShellLoaded();
+
+  const pills = page.getByTestId('pull-room-families');
+  await expect(pills.getByRole('button', { name: /^All/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(pills.getByRole('button', { name: /^core/ })).toContainText('1');
+  // Repos the forge gives no family fall under "other".
+  await expect(pills.getByRole('button', { name: /^other/ })).toContainText('2');
+  // A repo whose list fails is named quietly; the rest of the page still works.
+  await expect(page.getByText(/bob\/broken did not answer/)).toBeVisible();
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible();
+  await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toBeVisible();
+
+  await pills.getByRole('button', { name: /^core/ }).click();
+  await expect(page).toHaveURL(/\/pull-room\?family=core$/);
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible();
+  await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toHaveCount(0);
+  await expect(page.getByText(/did not answer/)).toHaveCount(0);
+
+  // A pill is a navigation: the back button undoes it.
+  await page.goBack();
+  await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toBeVisible();
 });
 
 test('Pull Room follows repository URLs and browser history @action:pull_room.filters', async ({ page }, testInfo) => {
@@ -153,6 +253,19 @@ test('Pull Room follows repository URLs and browser history @action:pull_room.fi
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
   });
+});
+
+test('axe scan: Pull requests timeline with family pills', async ({ page }) => {
+  await blockWebSocket(page);
+  await mockBootstrap(page);
+  const snapshot = controlPlane();
+  snapshot.pullRequests[1].repo = 'bob/jeryu';
+  await mockPullRoom(page, snapshot);
+  await page.goto('/pull-room?family=core');
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible({ timeout: 15_000 });
+  const results = await runAxe(page);
+  await persistAxeResult('pull-requests', results);
+  expect(blockingViolations(results).map((v) => v.id)).toEqual([]);
 });
 
 function controlPlane() {
