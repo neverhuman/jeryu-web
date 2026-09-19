@@ -1,29 +1,25 @@
-// CodeViewer.tsx — Monaco-based viewer with markdown rendering toggle
+// CodeViewer.tsx — read-only file view with a markdown rendering toggle
 // (W-FE-10).
 //
-// Monaco is heavy (~1 MB minified) so the viewer loads it on demand with a
-// dynamic import and a local loading state. For .md files, the viewer offers a
-// second tab that renders the server-provided HTML via MarkdownRenderer; the
-// default tab is "Rendered" when HTML is available so the README experience
-// matches a GitHub-style blob view.
+// Source renders through SourceView: plain lines with a number gutter and
+// `#L<n>` anchors, nothing fetched from anywhere. For .md files a second tab
+// renders the markdown; "Rendered" is the default so a README reads like one.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { usePreferencesStore } from '../../stores/preferencesStore';
-import { LoadingState } from '../state';
 
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { MarkdownSource } from './MarkdownSource';
+import { SourceView } from './SourceView';
 import { isMarkdownPath } from '../../hooks/useBlob';
 
 import './browser.css';
 
-type MonacoEditorComponent = typeof import('@monaco-editor/react')['Editor'];
-
 export interface CodeViewerProps {
   /** File path (used to detect language + markdown handling). */
   path: string;
-  /** UTF-8 file content (Monaco). May be `null` if the blob is binary. */
+  /** UTF-8 file content. May be `null` if the blob is binary. */
   text: string | null;
   /** Server-rendered sanitized markdown HTML; `null` if not markdown. */
   renderedHtml?: string | null;
@@ -33,49 +29,6 @@ export interface CodeViewerProps {
   mime?: string;
   /** When true, the viewer renders a "Binary file" notice instead. */
   isBinary?: boolean;
-}
-
-/** Map a file extension to a Monaco language id. */
-function languageForPath(path: string): string {
-  const lower = path.toLowerCase();
-  const ext = lower.split('.').pop() ?? '';
-  const map: Record<string, string> = {
-    ts: 'typescript',
-    tsx: 'typescript',
-    js: 'javascript',
-    jsx: 'javascript',
-    mjs: 'javascript',
-    cjs: 'javascript',
-    rs: 'rust',
-    py: 'python',
-    go: 'go',
-    java: 'java',
-    kt: 'kotlin',
-    c: 'c',
-    cc: 'cpp',
-    cpp: 'cpp',
-    cxx: 'cpp',
-    h: 'cpp',
-    hpp: 'cpp',
-    cs: 'csharp',
-    php: 'php',
-    swift: 'swift',
-    sh: 'shell',
-    bash: 'shell',
-    sql: 'sql',
-    json: 'json',
-    toml: 'toml',
-    yaml: 'yaml',
-    yml: 'yaml',
-    md: 'markdown',
-    markdown: 'markdown',
-    html: 'html',
-    css: 'css',
-    scss: 'scss',
-    xml: 'xml',
-    dockerfile: 'dockerfile',
-  };
-  return map[ext] ?? 'plaintext';
 }
 
 export function CodeViewer({
@@ -92,26 +45,6 @@ export function CodeViewer({
   const [tab, setTab] = useState<'rendered' | 'raw'>(
     hasRenderedHtml ? 'rendered' : 'raw'
   );
-  const [MonacoEditor, setMonacoEditor] =
-    useState<MonacoEditorComponent | null>(null);
-
-  const language = useMemo(() => languageForPath(path), [path]);
-
-  useEffect(() => {
-    if (isBinary || (hasRenderedHtml && tab === 'rendered') || MonacoEditor) {
-      return () => {};
-    }
-    let cancelled = false;
-    void import('@monaco-editor/react').then((m) => {
-      if (!cancelled) {
-        setMonacoEditor(() => m.Editor);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [MonacoEditor, hasRenderedHtml, isBinary, tab]);
-
   if (isBinary) {
     return (
       <div className="code-viewer">
@@ -133,7 +66,7 @@ export function CodeViewer({
               type="button"
               role="tab"
               className="code-viewer__tab"
-              aria-pressed={tab === 'rendered'}
+              aria-selected={tab === 'rendered'}
               onClick={() => setTab('rendered')}
             >
               Rendered
@@ -142,7 +75,7 @@ export function CodeViewer({
               type="button"
               role="tab"
               className="code-viewer__tab"
-              aria-pressed={tab === 'raw'}
+              aria-selected={tab === 'raw'}
               onClick={() => setTab('raw')}
             >
               Raw
@@ -158,29 +91,10 @@ export function CodeViewer({
             <MarkdownRenderer html={renderedHtml ?? ''} />
           )}
         </div>
-      ) : MonacoEditor && text !== null ? (
-        <div className="code-viewer__monaco">
-          <MonacoEditor
-            value={text}
-            language={language}
-            theme="vs-dark"
-            height="100%"
-            options={{
-              readOnly: true,
-              minimap: { enabled: false },
-              fontSize: codeFontSize,
-              scrollBeyondLastLine: false,
-              wordWrap: 'on',
-              renderLineHighlight: 'none',
-            }}
-          />
-        </div>
+      ) : text !== null ? (
+        <SourceView text={text} fontSize={codeFontSize} label={path} />
       ) : (
-        <LoadingState
-          title="Loading editor…"
-          variant="message"
-          description="Monaco is loading."
-        />
+        <p className="source-view__empty">This file has no text to show.</p>
       )}
     </div>
   );

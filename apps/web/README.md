@@ -324,9 +324,9 @@ du -b dist/assets/index-*.js | awk '{print $1}' \\
   | xargs -I {} sh -c '[ {} -lt 716800 ] || echo "JS BUDGET EXCEEDED"'
 ```
 
-Monaco editor (when wired) is **lazy-loaded** on the file view route; the
-default shell never imports it. `shiki` is the lighter alternative
-should the budget break.
+The file view is a plain read-only source view (`SourceView`): numbered
+lines and `#L<n>` anchors, no editor bundle and nothing fetched from a CDN,
+so the site's Content-Security-Policy cannot break it.
 
 ---
 

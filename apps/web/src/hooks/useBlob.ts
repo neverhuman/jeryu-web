@@ -2,8 +2,8 @@
 //
 // Markdown files (`*.md` / `*.markdown`) get the `render=html` query param so
 // the server returns sanitized HTML alongside the raw text. Non-markdown
-// blobs always request just the raw bytes (the viewer renders syntax
-// highlighting client-side via Monaco).
+// blobs always request just the raw bytes (the viewer renders them as
+// plain numbered lines).
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 

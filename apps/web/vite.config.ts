@@ -17,8 +17,8 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: { compress: { passes: 3 } },
     // Manual chunking keeps the main entry under Vite's 500 KB
-    // warning threshold by splitting the three large vendor surfaces
-    // (Monaco editor, markdown pipeline, TanStack data layer) into
+    // warning threshold by splitting the large vendor surfaces
+    // (terminal, markdown pipeline, TanStack data layer) into
     // their own lazily-evaluated chunks.
     // jeryu-deploy pins this build by commit and a hash of the whole dist, so
     // the output must not depend on where the checkout lives.
@@ -27,7 +27,6 @@ export default defineConfig({
         ...reproducibleFileNames,
         sourcemapPathTransform: (source) => sourcemapSourcePath(source, projectRoot),
         manualChunks: {
-          'monaco-vendor': ['@monaco-editor/react'],
           'xterm-vendor': ['@xterm/xterm', '@xterm/addon-fit'],
           'markdown-vendor': [
             'react-markdown', 'remark-gfm', 'rehype-autolink-headings',
