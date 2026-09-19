@@ -31,7 +31,8 @@ test.describe('Pipeline visibility', () => {
     const staged = page.getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
     await expect(staged).toContainText(DEPLOY_COMMAND);
     await expect(staged.getByRole('link')).toHaveCount(0);
-    await expect(staged.getByRole('button')).toHaveCount(1);
+    // One act (copy) plus the family pill, which only filters.
+    await expect(staged.getByRole('button')).toHaveCount(2);
 
     // Watch rows are folded behind a count until asked for.
     const watch = page.getByTestId('needs-you-watch');
@@ -40,6 +41,20 @@ test.describe('Pipeline visibility', () => {
     await watch.locator('summary').click();
     await expect(watch.getByText('Claim on 20260919-1 has a dead lease')).toBeVisible();
     await page.getByTestId('needs-you-page').screenshot({ path: 'playwright-report/needs-you.png' });
+
+    // Family pills: the pill on a row filters the page to that family, in the
+    // URL so it is a link; pressing it again shows every family.
+    const blockedRow = page.getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66');
+    await blockedRow.getByRole('button', { name: 'Show only jeryu' }).click();
+    await expect(page).toHaveURL(/[?&]family=jeryu/);
+    await expect(page.getByTestId('needs-you-item-workers_down:jain')).toHaveCount(0);
+    await expect(blockedRow).toBeVisible();
+    await blockedRow.getByRole('button', { name: /^Showing only jeryu/ }).click();
+    await expect(page).not.toHaveURL(/family=/);
+    await expect(page.getByTestId('needs-you-item-workers_down:jain')).toBeVisible();
+
+    // The Live pill is the way to the feed.
+    await expect(page.getByTestId('live-pill')).toHaveAttribute('href', '/activity');
 
     // In-app act: one link, to the place to act.
     await page

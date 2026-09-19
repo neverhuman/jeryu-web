@@ -250,6 +250,11 @@ test.describe('Primary left navigation', () => {
     await system.click();
     await expect(system).toHaveAttribute('aria-expanded', 'true');
 
+    // A nav click is an in-app navigation, never a page reload: a reload drops
+    // this marker (and used to reconnect the live socket on every click).
+    await page.evaluate(() => {
+      Reflect.set(window, '__navMarker', 'kept');
+    });
     for (const route of routes) {
       const expectedUrl = new RegExp(`${route.path.replace(/\//g, '\\/')}$`);
       await Promise.all([
@@ -262,6 +267,7 @@ test.describe('Primary left navigation', () => {
         await expect(page.getByTestId(route.testId)).toBeVisible();
       }
       await expect(page.getByText(/Page not found/i)).toHaveCount(0);
+      expect(await page.evaluate(() => Reflect.get(window, '__navMarker'))).toBe('kept');
     }
 
     // On a System page the group is open and cannot be closed over the current page.
