@@ -92,6 +92,7 @@ under `apps/web/e2e/fixtures/`, and a Playwright screenshot from the route spec.
 | `/work/shift*` | `shift-queue`, `shift-add`, `shift-workers` | `shiftMocks.ts` | `28-shift.spec.ts` |
 | `/releases` (one page: what runs, Ready to pin, Merged not yet released; `/unreleased` redirects to its last section) | `unreleased` | `unreleasedMocks.ts`, `pipelineMocks.ts` (pins) | `28-unreleased.spec.ts`, `29-pipeline.spec.ts` (Ready to pin) |
 | Shell chrome on every page: skip link, home logo, the search-or-jump palette (pages, repositories, `name#n`), the left nav's System disclosure, header at 900 and 480 px | `shell-chrome` | `mocks.ts` (`mockRepoList`), `pipelineMocks.ts` | `25-action-matrix.spec.ts`, `13-left-nav.spec.ts`, `29-pipeline.spec.ts` (narrow), `10-a11y.spec.ts` (palette + System open) |
+| The one repository page: `/repos/:host/:owner/:repo` (README) and `…/blob/<ref>/<path>` (a file) share a layout with a Files panel on the right that stays while files open; `/code`, `/work` and `/issues` redirect to it | `repo-overview`, `repo-file` | `mocks.ts` (`mockTreeByPath`, `mockBlob`, `mockReadme`) | `04-code.spec.ts`, `20-repo-routing.spec.ts` |
 | `/needs-you`, `/activity`, `/activity?wall=1` (and the live dock on every page) | `needs-you`, `activity`, `activity-wall` | `pipelineMocks.ts` | `29-pipeline.spec.ts` |
 
 UX pass 1 (2026-09-19, from a walk of the live site) changed what these specs

@@ -21,5 +21,4 @@
 21-repo-families.spec.ts
 22-repo-danger-zone.spec.ts
 23-auth-hardening.spec.ts
-24-work-tracker.spec.ts
 25-action-matrix.spec.ts

@@ -57,6 +57,12 @@ const TARGETS: AxeTarget[] = [
     description: 'Repository overview',
   },
   {
+    // The same page with a file open: content on the left, Files panel on the right.
+    scope: 'repo-file',
+    path: `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/blob/main/README.md`,
+    description: 'Repository file with the Files panel',
+  },
+  {
     scope: 'repo-settings',
     path: `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/settings/general`,
     description: 'Repository settings',

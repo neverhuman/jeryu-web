@@ -88,16 +88,27 @@ test.describe('Repository sub-page routing', () => {
     await expect(page.getByTestId('agent-terminal')).toHaveAttribute('data-run-id', 'run-1');
   });
 
-  test('navigating to /repos/jeryu/jeryu/jankurai/code shows the code browser @action:repo.route_code', async ({
+  test('/code, /work and /issues land on the repository front page @action:repo.route_code', async ({
     page,
   }) => {
     await seed(page);
     const shell = new AppShellPage(page);
+    // /code: the front page's Files panel is the code browser.
     await shell.goto(`${REPO_PATH}/code`);
     await shell.assertShellLoaded();
-
-    await expect(page.getByTestId('repo-code-page')).toBeVisible({ timeout: 10000 });
+    await expect(page).toHaveURL(new RegExp(`${REPO_PATH}$`));
+    await expect(page.getByTestId('repo-overview-page')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Files', exact: true })).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByText(/Repository not found/i)).toHaveCount(0);
+
+    // The per-repository tracker is retired; its URLs do not 404.
+    for (const tail of ['work', 'issues']) {
+      await shell.goto(`${REPO_PATH}/${tail}`);
+      await expect(page).toHaveURL(new RegExp(`${REPO_PATH}$`));
+      await expect(page.getByTestId('repo-overview-page')).toBeVisible({ timeout: 10000 });
+    }
+    await expect(page.getByRole('link', { name: 'Tracker' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Code', exact: true })).toHaveAttribute('href', REPO_PATH);
   });
 
   test('navigating to /repos/jeryu/jeryu/jankurai/pulls shows pull requests @action:repo.route_pulls', async ({

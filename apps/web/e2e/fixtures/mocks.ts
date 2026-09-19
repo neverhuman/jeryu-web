@@ -789,6 +789,34 @@ export async function mockTree(
   );
 }
 
+/**
+ * Mock the tree per directory: `{ '': [...root], 'src': [...] }`. A directory
+ * that is not listed answers an empty listing.
+ */
+export async function mockTreeByPath(
+  page: Page,
+  listings: Record<string, Array<{ path: string; kind: 'file' | 'directory' }>>
+): Promise<void> {
+  await page.route(/\/api\/v1\/repos\/[^/]+\/tree(\?.*)?$/, async (route: Route, request) => {
+    if (request.method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    const dir = new URL(request.url()).searchParams.get('path') ?? '';
+    const body = (listings[dir] ?? []).map((entry) => ({
+      path: entry.path,
+      name: entry.path.split('/').pop() ?? entry.path,
+      kind: entry.kind,
+      size_bytes: entry.kind === 'file' ? 1024 : null,
+      sha: '0'.repeat(40),
+      last_commit_sha: null,
+      last_commit_message: null,
+      last_commit_at: null,
+    }));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
+}
+
 export interface MockRenderedReadme {
   html: string;
   toc?: Array<{ depth: number; id: string; text: string }>;

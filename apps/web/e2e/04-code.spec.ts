@@ -1,15 +1,8 @@
-// 04-code.spec.ts — code browser smoke (W-T-12).
+// 04-code.spec.ts — reading code on the one repository page (W-T-12).
 //
-// Phase-3-tolerant smoke for the RepositoryCodePage. The SPA renders one of
-// three states depending on whether the API can reach the forge backend:
-//
-//   1. Real repository → BranchSelector + FileTree visible.
-//   2. Backend unavailable (`502/503` from the BFF) → `ErrorState` visible.
-//   3. Backend reachable but repo unknown (`404`) → also `ErrorState`.
-//
-// Mocking the bootstrap + repo lookup keeps the spec deterministic; the
-// tree endpoint is intentionally left to the live BFF so any wiring
-// regression surfaces as an ErrorState rather than a green pass.
+// The repository front page and the file page are one layout: the README or
+// the open file on the left, a Files panel on the right that stays put. `/code`
+// redirects to the front page with the panel open.
 
 import { expect, test } from '@playwright/test';
 
@@ -17,20 +10,23 @@ import {
   mockBlob,
   mockBootstrap,
   mockRefs,
+  mockReadme,
   mockRepoLookup,
   mockTree,
+  mockTreeByPath,
 } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
 test.describe('Code browser (W-T-12)', () => {
-  test('page renders branch selector, file tree, and file finder @action:code.branch_selector @action:code.file_tree @action:code.file_search', async ({ page }) => {
+  test('/code lands on the front page with the Files panel open; branch selector and file finder work @action:code.branch_selector @action:code.file_tree @action:code.file_search', async ({ page }) => {
     await mockBootstrap(page);
     await mockRepoLookup(page, {
       id: { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' },
       default_branch: 'main',
     });
     await mockRefs(page);
+    await mockReadme(page, { html: '<h1>Portal</h1>' });
     await mockTree(page, [
       { path: 'README.md', kind: 'file' },
       { path: 'src', kind: 'directory' },
@@ -38,44 +34,88 @@ test.describe('Code browser (W-T-12)', () => {
     await mockBlob(page);
 
     await page.goto('/repos/jeryu/neverhuman/jeryu/code');
+    await expect(page).toHaveURL(/\/repos\/jeryu\/neverhuman\/jeryu$/);
+    await expect(page.getByTestId('repo-overview-page')).toBeVisible({ timeout: 15_000 });
 
-    // Three acceptable states. The page either renders the browser layout
-    // (BranchSelector + FileTree visible) or one of the state surfaces.
-    const layout = page.locator('.code-browser-layout');
-    const errorState = page.locator('[role="alert"]');
-    const notAvailable = page.locator('h2', {
-      hasText: /not available in this build/i,
+    const files = page.getByRole('complementary', { name: 'Files' });
+    await expect(files).toBeVisible();
+    await expect(files.getByRole('treeitem', { name: 'README.md' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Files', exact: true })).toHaveAttribute('aria-expanded', 'true');
+    // The panel is the code browser: there is no separate "Browse code" page to go to.
+    await expect(page.getByRole('link', { name: 'Browse code' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: /Switch branches\/tags: main/i }).click();
+    await page.getByRole('combobox', { name: 'Switch branches/tags' }).fill('develop');
+    await page.getByRole('option', { name: /develop/ }).click();
+    await expect(page.getByRole('button', { name: /Switch branches\/tags: develop/i })).toBeVisible();
+    await expect(page).toHaveURL(/\?ref=develop$/);
+
+    await page.getByRole('button', { name: /Find files/i }).click();
+    await page.getByRole('combobox', { name: 'Find files' }).fill('README');
+    await page.getByRole('option', { name: 'README.md' }).click();
+    await expect(page).toHaveURL(/\/blob\/develop\/README\.md$/);
+    await expect(page.getByRole('link', { name: 'View raw file' })).toBeVisible();
+  });
+
+  test('the Files panel stays while files open, highlights the file, hides on request and remembers it @action:code.files_panel', async ({ page }) => {
+    await mockBootstrap(page);
+    await mockRepoLookup(page, {
+      id: { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' },
+      default_branch: 'main',
     });
-
-    await expect(layout.or(errorState).or(notAvailable)).toBeVisible({
-      timeout: 15_000,
+    await mockRefs(page);
+    await mockReadme(page, { html: '<h1>Portal</h1>' });
+    await mockTreeByPath(page, {
+      '': [
+        { path: 'src', kind: 'directory' },
+        { path: 'README.md', kind: 'file' },
+      ],
+      src: [
+        { path: 'src/web', kind: 'directory' },
+        { path: 'src/lib.rs', kind: 'file' },
+      ],
+      'src/web': [{ path: 'src/web/pipeline.rs', kind: 'file' }],
     });
+    await mockBlob(page, { text: 'pub fn nested() {}', html: '', mime: 'text/plain' });
 
-    // If the browser layout came up, the file tree aside MUST be present.
-    if (await layout.isVisible()) {
-      await expect(
-        page.locator('[aria-label="File tree"], .code-browser-layout__sidebar')
-      ).toBeVisible();
+    await page.goto('/repos/jeryu/neverhuman/jeryu');
+    const files = page.getByRole('complementary', { name: 'Files' });
+    await expect(files).toBeVisible({ timeout: 15_000 });
 
-      await page
-        .getByRole('button', { name: /Switch branches\/tags: main/i })
-        .click();
-      await page
-        .getByRole('combobox', { name: 'Switch branches/tags' })
-        .fill('develop');
-      await page.getByRole('option', { name: /develop/ }).click();
-      await expect(
-        page.getByRole('button', { name: /Switch branches\/tags: develop/i })
-      ).toBeVisible();
+    // Open a nested file from the panel.
+    await files.getByRole('treeitem', { name: 'src', exact: true }).click();
+    await files.getByRole('treeitem', { name: 'web', exact: true }).click();
+    await files.getByRole('treeitem', { name: 'pipeline.rs' }).click();
+    await expect(page).toHaveURL(/\/blob\/main\/src\/web\/pipeline\.rs$/);
+    await expect(page.getByTestId('repo-file-page')).toBeVisible();
+    await expect(page.getByRole('table', { name: 'Source of src/web/pipeline.rs' })).toContainText('pub fn nested() {}');
 
-      await page.getByRole('button', { name: /Find files/i }).click();
-      await page.getByRole('combobox', { name: 'Find files' }).fill('README');
-      await page.getByRole('option', { name: 'README.md' }).click();
-      await expect(page).toHaveURL(/\/blob\/develop\/README\.md$/);
-      await expect(
-        page.getByRole('link', { name: 'View raw file' })
-      ).toBeVisible();
-    }
+    // The panel did not go away: same folders open, the file highlighted.
+    await expect(files).toBeVisible();
+    await expect(files.getByRole('treeitem', { name: 'src', exact: true })).toHaveAttribute('aria-expanded', 'true');
+    await expect(files.getByRole('treeitem', { name: 'web', exact: true })).toHaveAttribute('aria-expanded', 'true');
+    await expect(files.getByRole('treeitem', { name: 'pipeline.rs' })).toHaveAttribute('aria-selected', 'true');
+
+    // Another file, still there; back to the front page, nothing highlighted.
+    await files.getByRole('treeitem', { name: 'lib.rs' }).click();
+    await expect(page).toHaveURL(/\/blob\/main\/src\/lib\.rs$/);
+    await expect(files.getByRole('treeitem', { name: 'lib.rs' })).toHaveAttribute('aria-selected', 'true');
+    await page.locator('nav[aria-label="Breadcrumb"] a[href$="/neverhuman/jeryu"]').click();
+    await expect(page.getByTestId('repo-overview-page')).toBeVisible();
+    await expect(files.getByRole('treeitem', { name: 'web', exact: true })).toHaveAttribute('aria-expanded', 'true');
+    await expect(files.locator('[aria-selected="true"]')).toHaveCount(0);
+
+    // Hide, show, hide; the choice survives a reload.
+    const toggle = page.getByRole('button', { name: 'Files', exact: true });
+    await toggle.click();
+    await expect(files).toBeHidden();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+    await expect(files).toBeVisible();
+    await toggle.click();
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Files', exact: true })).toHaveAttribute('aria-expanded', 'false', { timeout: 15_000 });
+    await expect(page.getByRole('complementary', { name: 'Files' })).toBeHidden();
   });
 
   test('blob page exposes rendered/raw tabs and file toolbar actions @action:code.blob_tabs @action:code.blob_raw_link @action:code.blob_download @action:code.blob_permalink', async ({

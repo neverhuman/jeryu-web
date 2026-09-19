@@ -30,6 +30,7 @@ import {
   PermissionDeniedState,
 } from '../components/state';
 import { useKeyboardShortcut } from '../hooks/useKeyboard';
+import { useMarkdown } from '../hooks/useMarkdown';
 import { useRealtime } from '../hooks/useRealtime';
 import { useRepoTree } from '../hooks/useRepoTree';
 import { useResolveRepo } from '../hooks/useResolveRepo';
@@ -94,7 +95,11 @@ export function RepositoryBrowserPage({
   // A repository whose source is hosted elsewhere has no tree here. The root
   // listing is the same query the panel uses, so this costs no second request.
   const rootTree = useRepoTree(repoId, activeRef, '');
-  const noCodeHere = rootTree.error instanceof ApiError && rootTree.error.status === 404;
+  const treeMissing = rootTree.error instanceof ApiError && rootTree.error.status === 404;
+  // Same query as the README panel (one request). No tree AND no README is a
+  // repository with no code here; a README without a tree is still shown.
+  const readme = useMarkdown(repoId, activeRef);
+  const noCodeHere = treeMissing && !onFile && readme.isError;
 
   useEffect(() => {
     setRepo(repoId);
@@ -106,7 +111,7 @@ export function RepositoryBrowserPage({
   useKeyboardShortcut(
     't',
     () => {
-      if (repoId && !noCodeHere) setFinderOpen(true);
+      if (repoId && !treeMissing) setFinderOpen(true);
     },
     { label: 'Open file finder', group: 'Navigation' }
   );
@@ -193,7 +198,7 @@ export function RepositoryBrowserPage({
           .map((part) => ({ label: part }))
       : []),
   ];
-  const showPanel = filesOpen && !noCodeHere;
+  const showPanel = filesOpen && !treeMissing;
 
   return (
     <div className="page" data-testid={testId}>
@@ -217,7 +222,7 @@ export function RepositoryBrowserPage({
           </Link>
           <ClonePopover httpUrl={summary.clone_http_url} sshUrl={summary.clone_ssh_url} />
           <span className="repo-browser__spacer" aria-hidden="true" />
-          {noCodeHere ? null : (
+          {treeMissing ? null : (
             <>
               <ActionButton
                 variant="ghost"

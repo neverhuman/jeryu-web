@@ -8,7 +8,7 @@
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { apiGet } from '../api/client';
+import { ApiError, apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { RenderedMarkdown } from '../api/types';
 
@@ -35,6 +35,7 @@ export function useMarkdown(
       // 404 from the README endpoint is "no README" — surface to the empty
       // state instead of retrying. Other errors fall through to the global
       // single-retry default.
+      if (error instanceof ApiError && error.status === 404) return false;
       if (error instanceof Error && /not_found/.test(error.message)) {
         return false;
       }

@@ -1,7 +1,7 @@
 // RepositoryOverviewPage — Page Object for `/repos/{provider}/{owner}/{repo}` (W-T-08).
 //
-// The overview route (W-FE-09) renders the README panel, branch selector,
-// and sidebar cards; the POM methods below locate those surfaces.
+// The repository front page renders the README, the branch selector and a
+// Files panel on the right; the POM methods below locate the README.
 
 import { expect, type Locator, type Page } from '@playwright/test';
 

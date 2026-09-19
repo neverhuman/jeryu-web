@@ -51,9 +51,8 @@ apps/web/
     │   ├── needsYou/           "Needs you" landing page (GET /api/v1/attention)
     │   ├── activity/           pipeline event feed + wall mode (GET /api/v1/events)
     │   ├── RepositoriesPage.tsx
-    │   ├── RepositoryOverviewPage.tsx
-    │   ├── RepositoryCodePage.tsx
-    │   ├── RepositoryFilePage.tsx
+    │   ├── RepositoryBrowserPage.tsx   the one repository page: README or a file, Files panel on the right
+    │   ├── RepoFileContent.tsx
     │   ├── RepositoryPullRequestsPage.tsx
     │   ├── PullRequestPage.tsx
     │   ├── PullRoomPage.tsx

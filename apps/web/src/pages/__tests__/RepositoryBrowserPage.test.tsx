@@ -31,9 +31,11 @@ const FRONT = '/repos/jeryu/neverhuman/jeryu';
 
 describe('RepositoryBrowserPage (one repository page)', () => {
   let hasCode = true;
+  let treeOnlyMissing = false;
 
   beforeEach(() => {
     hasCode = true;
+    treeOnlyMissing = false;
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
     vi.stubGlobal(
@@ -61,6 +63,7 @@ describe('RepositoryBrowserPage (one repository page)', () => {
         case '/api/v1/repos/repo-1/refs':
           return json([{ name: 'main', sha: 'abc123', kind: 'branch', protected: true }]);
         case '/api/v1/repos/repo-1/readme':
+          if (!hasCode) return json({ code: 'not_found', message: 'no readme' }, 404);
           return json({
             html: '<p>Portal</p>',
             markdown: '# Portal\n\nSee [docs](docs/testing.md).\n',
@@ -71,7 +74,7 @@ describe('RepositoryBrowserPage (one repository page)', () => {
             rendered_at: '2026-05-26T00:00:00Z',
           });
         case '/api/v1/repos/repo-1/tree':
-          if (!hasCode) return json({ code: 'not_found', message: 'no tree' }, 404);
+          if (!hasCode || treeOnlyMissing) return json({ code: 'not_found', message: 'no tree' }, 404);
           return json(
             path === 'src'
               ? [entry('src/lib.rs', 'file')]
@@ -187,6 +190,14 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(await screen.findByText('No code on this forge')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Files' })).toBeNull();
     expect(screen.queryByText('No README found')).toBeNull();
+  });
+
+  it('still shows a README when only the tree is missing', async () => {
+    treeOnlyMissing = true;
+    renderAt(FRONT);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Portal' })).toBeInTheDocument();
+    expect(screen.queryByText('No code on this forge')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Files' })).toBeNull();
   });
 });
 
