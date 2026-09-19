@@ -1,7 +1,7 @@
 // pipelineTestData.ts — fixtures in the exact shape of the pipeline
 // visibility contract v1 (attention items and events).
 
-import type { AttentionItem, AttentionResponse, PipelineEvent } from '../../api/types';
+import type { AttentionItem, AttentionResponse, Pin, PinsResponse, PipelineEvent } from '../../api/types';
 
 export function attentionItem(partial: Partial<AttentionItem> & Pick<AttentionItem, 'id' | 'kind'>): AttentionItem {
   return {
@@ -169,3 +169,58 @@ export const EVENTS: PipelineEvent[] = [
     summary: 'Production deploy of 283416e succeeded',
   }),
 ];
+
+export function pin(partial: Partial<Pin> & Pick<Pin, 'dependency'>): Pin {
+  return {
+    kind: 'commit',
+    source: 'jeryu-split.lock.toml',
+    pinned_ref: '8afe03c49bbdf1ad26d1282095561b50c840bf0e',
+    pinned_sha: '8afe03c49bbdf1ad26d1282095561b50c840bf0e',
+    latest_sha: '427bebecb848d7b7bb37ecc71521d7461072694d',
+    behind: 0,
+    latest_green: true,
+    state: 'current',
+    bump_pr: null,
+    unreleased: [],
+    ...partial,
+  };
+}
+
+export const PINS: PinsResponse = {
+  schema_version: '1',
+  generated_at: '2026-09-19T15:00:00Z',
+  consumers: [
+    {
+      repo: 'jeryu/jeryu-deploy',
+      family: 'jeryu',
+      branch: 'main',
+      pins: [
+        pin({
+          dependency: 'jeryu/jeryu-web',
+          behind: 9,
+          state: 'behind',
+          unreleased: [
+            { sha: '427bebecb848d7b7bb37ecc71521d7461072694d', subject: 'test: the dock test brings its own Storage' },
+            { sha: '59dc41d000000000000000000000000000000000', subject: 'Land admins on a "Needs you" page' },
+          ],
+        }),
+        pin({
+          dependency: 'jeryu/jeryu-core',
+          kind: 'tag',
+          source: 'crates/jeryu-api/Cargo.toml',
+          pinned_ref: 'jeryu-core-v5.0.0-split.6',
+          behind: 3,
+          state: 'behind',
+        }),
+        pin({ dependency: 'jeryu/jeryu-cache', kind: 'tag', pinned_ref: 'jeryu-cache-v5.0.0-split.0' }),
+        pin({ dependency: 'jeryu/jeryu-jira', kind: 'tag', pinned_ref: 'jeryu-jira-v5.0.0-split.0' }),
+      ],
+    },
+    {
+      repo: 'veox/jain-deploy',
+      family: 'jain',
+      branch: 'main',
+      pins: [pin({ dependency: 'veox/jain-web' })],
+    },
+  ],
+};

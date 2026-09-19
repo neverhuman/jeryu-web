@@ -17,3 +17,42 @@
   font-weight: normal;
   color: var(--color-text-muted, inherit);
 }
+
+.pins__consumer {
+  margin: 0 0 var(--space-3);
+}
+
+.pins__consumer-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.pins__list {
+  margin: 0 0 var(--space-1);
+  padding: 0;
+  list-style: none;
+}
+
+.pins__row {
+  padding: var(--space-1) 0;
+}
+
+.pins__line {
+  margin: 0;
+}
+
+.pins__step {
+  color: var(--color-text-muted, inherit);
+  font-size: var(--font-size-sm);
+}
+
+.pins__commits {
+  margin: var(--space-1) 0 0 var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.pins__commits ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-3);
+}

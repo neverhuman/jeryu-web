@@ -5,11 +5,16 @@
 // carries yet come first, under a per-repo line saying how far main is ahead
 // of the newest release. "Show released" adds the PRs a release already
 // carries. Scope comes from `?repo=owner/name` or `?family=<family>`.
+//
+// Above it, "Ready to pin" (ReadyToPin.tsx) says what the scope's deploy repo
+// has not pinned yet, so the page reads as a pipeline: merged but not pinned,
+// then pinned but not deployed.
 
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { useRepositories } from '../hooks/useRepositories';
 import { useRepoUnreleased } from '../hooks/useRepoUnreleased';
+import { ReadyToPin } from './ReadyToPin';
 import { DEFAULT_RELEASE_REPO } from './ReleasesPage';
 import { STATUS_LABELS, visibleRows, type UnreleasedRow, type UnreleasedStatus } from './unreleasedModel';
 
@@ -99,6 +104,14 @@ export function UnreleasedPage(): JSX.Element {
           </label>
         </form>
       </header>
+
+      <ReadyToPin
+        scope={{
+          repo: repoParam,
+          family,
+          familyRepos: family ? repos.map((repo) => repo.id) : [],
+        }}
+      />
 
       {family && members.isLoading ? (
         <p className="page__roadmap-note">Loading {family} repositories…</p>
