@@ -115,6 +115,22 @@ function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
   );
 }
 
+/**
+ * The timestamp the Updated column shows: the last push when the repository
+ * has one, otherwise `updated_at`, which also moves for metadata edits. The
+ * flag lets the cell say which of the two it is showing. Mirrors the server's
+ * default "recent_activity" ordering.
+ */
+function activityTime(repo: RepositorySummary): {
+  iso: string;
+  pushed: boolean;
+} {
+  const pushedAt = repo.pushed_at;
+  return pushedAt
+    ? { iso: pushedAt, pushed: true }
+    : { iso: repo.updated_at, pushed: false };
+}
+
 /** DOM id of the detail row a repository's status chip opens. */
 function detailId(repo: RepositorySummary): string {
   return `repo-status-${repo.id.id}`;
@@ -255,16 +271,19 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
       {
         id: 'updated_at',
         header: 'Updated',
-        accessorFn: (row) => row.updated_at,
+        accessorFn: (row) => activityTime(row).iso,
         // Sort on the raw timestamp; show it abbreviated, full on hover.
-        cell: ({ row }) => (
-          <time
-            dateTime={row.original.updated_at}
-            title={row.original.updated_at}
-          >
-            {relativeTime(row.original.updated_at)}
-          </time>
-        )
+        cell: ({ row }) => {
+          const { iso, pushed } = activityTime(row.original);
+          return (
+            <time
+              dateTime={iso}
+              title={`${pushed ? 'Last push' : 'Last updated'}: ${iso}`}
+            >
+              {relativeTime(iso)}
+            </time>
+          );
+        }
       }
     ],
     []

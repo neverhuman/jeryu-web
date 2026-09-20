@@ -68,6 +68,52 @@ describe('RepoTable', () => {
     expect(screen.getByRole('heading', { name: 'Pull requests' })).toBeInTheDocument();
   });
 
+  it('shows the last push in Updated, and says so, falling back to updated_at', () => {
+    const pushed: RepositorySummary = {
+      ...REPO,
+      pushed_at: '2026-09-18T09:00:00Z',
+    };
+    const neverPushed: RepositorySummary = {
+      ...REPO,
+      id: { ...REPO.id, id: 'repo-uuid-2', name: 'jeryu-web' },
+    };
+    renderTable([pushed, neverPushed]);
+
+    const [first, second] = Array.from(
+      document.querySelectorAll('tbody time')
+    );
+    expect(first).toHaveAttribute('datetime', '2026-09-18T09:00:00Z');
+    expect(first).toHaveAttribute('title', 'Last push: 2026-09-18T09:00:00Z');
+    expect(second).toHaveAttribute('datetime', '2026-05-26T12:00:00Z');
+    expect(second).toHaveAttribute('title', 'Last updated: 2026-05-26T12:00:00Z');
+  });
+
+  it('sorts Updated on the push time when there is one', async () => {
+    const user = userEvent.setup();
+    // Pushed longer ago than the other repo's metadata edit: sorting on
+    // `updated_at` alone would put them the other way round.
+    const pushed: RepositorySummary = {
+      ...REPO,
+      updated_at: '2026-09-19T12:00:00Z',
+      pushed_at: '2026-01-02T09:00:00Z',
+    };
+    const edited: RepositorySummary = {
+      ...REPO,
+      id: { ...REPO.id, id: 'repo-uuid-2', name: 'jeryu-web' },
+      updated_at: '2026-05-26T12:00:00Z',
+    };
+    renderTable([pushed, edited]);
+
+    await user.click(screen.getByRole('columnheader', { name: 'Updated' }));
+    const names = () =>
+      Array.from(document.querySelectorAll('tbody tr strong')).map(
+        (node) => node.textContent
+      );
+    expect(names()).toEqual(['jeryu-core', 'jeryu-web']);
+    await user.click(screen.getByRole('columnheader', { name: 'Updated' }));
+    expect(names()).toEqual(['jeryu-web', 'jeryu-core']);
+  });
+
   it('renders split-member role badges in rows', () => {
     render(
       <MemoryRouter>
