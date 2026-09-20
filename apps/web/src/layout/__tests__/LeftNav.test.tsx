@@ -53,7 +53,12 @@ describe('LeftNav', () => {
       'Releases',
       'Repositories',
     ]);
-    expect(SYSTEM_NAV.map((item) => item.label)).toEqual(['Runners', 'Intelligence', 'Shared tools']);
+    expect(SYSTEM_NAV.map((item) => item.label)).toEqual([
+      'Runners',
+      'Intelligence',
+      'Quality gate',
+      'Shared tools',
+    ]);
   });
 
   it('hides the System group until it is opened, and remembers the choice', () => {

@@ -167,6 +167,22 @@ export const endpoints = {
   attention: (): string => '/api/v1/attention',
   /** What each deploy repo pins versus its dependencies' main (admin-only). */
   pins: (): string => '/api/v1/pins',
+
+  /** How the jankurai/proof gate behaved over the last `days` days. */
+  qualityGateOverview: (days: number): string =>
+    `/api/v1/quality-gate/overview?days=${days}`,
+  /** The heads one rule flagged over the same window. */
+  qualityGateRule: (rule: string, days: number): string =>
+    `/api/v1/quality-gate/rules/${encodeURIComponent(rule)}?days=${days}`,
+  /** One scored head: its score and every finding on it. `repo` is `owner/name`. */
+  qualityGateHead: (repo: string, sha: string): string =>
+    `/api/v1/quality-gate/heads/${repo
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/')}/${encodeURIComponent(sha)}`,
+  /** Record that a finding looks wrong to the operator reading it (admin-only). */
+  qualityGateDispute: (findingId: string): string =>
+    `/api/v1/quality-gate/findings/${encodeURIComponent(findingId)}/dispute`,
 } as const;
 
 export type Endpoints = typeof endpoints;

@@ -91,6 +91,13 @@ export function useShellCommands(): void {
         shortcut: 'g i',
       },
       {
+        id: 'nav.quality-gate',
+        title: 'Go to Quality gate',
+        keywords: ['quality', 'gate', 'jankurai', 'proof', 'score', 'findings', 'dispute'],
+        icon: 'shield-check',
+        target: { kind: 'route', path: '/quality-gate' },
+      },
+      {
         id: 'nav.tools',
         title: 'Go to Shared tools',
         keywords: ['shared', 'code', 'tools', 'duplicate', 'finder', 'loc', 'proposals', 'approve', 'adoption', 'fleet'],

@@ -1,0 +1,249 @@
+/* QualityGate.css — the Quality gate overview and its two drill-down pages.
+   Tokens only: both themes come from the same variables the other pages use. */
+
+.quality-gate__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.quality-gate__tile {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--color-bg-1);
+}
+
+.quality-gate__tile-label {
+  font-size: 12px;
+  color: var(--color-fg-secondary);
+}
+
+.quality-gate__tile-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-fg-primary);
+}
+
+.quality-gate__tile-detail {
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+
+.quality-gate__summary {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--color-fg-secondary);
+}
+
+.quality-gate__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  background: var(--color-bg-2);
+  color: var(--color-fg-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.quality-gate__action:hover {
+  border-color: var(--color-accent-info);
+}
+
+.quality-gate__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-fg-secondary);
+  text-decoration: none;
+}
+
+.quality-gate__back:hover {
+  text-decoration: underline;
+}
+
+.quality-gate__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.quality-gate__table th,
+.quality-gate__table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.quality-gate__table th {
+  color: var(--color-fg-secondary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.quality-gate__num {
+  text-align: right;
+}
+
+.quality-gate__rule-title,
+.quality-gate__sub {
+  display: block;
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+
+.quality-gate__chart {
+  width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--color-bg-1);
+}
+
+.quality-gate__chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.quality-gate__axis {
+  fill: var(--color-fg-muted);
+  font-size: 10px;
+}
+
+.quality-gate__grid {
+  stroke: var(--color-border-subtle);
+  stroke-width: 1;
+}
+
+.quality-gate__bar.is-passed { fill: var(--color-accent-success); }
+.quality-gate__bar.is-failed { fill: var(--color-accent-danger); }
+
+.quality-gate__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-fg-secondary);
+}
+
+.quality-gate__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+.quality-gate__swatch.is-passed { background: var(--color-accent-success); }
+.quality-gate__swatch.is-failed { background: var(--color-accent-danger); }
+
+.quality-gate__score {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-fg-secondary);
+}
+
+.quality-gate__findings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.quality-gate__finding {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--color-bg-1);
+}
+
+.quality-gate__finding-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.quality-gate__finding-title {
+  font-weight: 600;
+  color: var(--color-fg-primary);
+}
+
+.quality-gate__finding-where {
+  display: inline-block;
+  margin-top: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+}
+
+.quality-gate__evidence {
+  margin: 8px 0 0;
+  padding: 8px;
+  overflow-x: auto;
+  border-radius: 4px;
+  background: var(--color-bg-2);
+  font-size: 12px;
+}
+
+.quality-gate__dispute-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--color-fg-secondary);
+}
+
+.quality-gate__dispute {
+  margin-top: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  background: var(--color-bg-2);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.quality-gate__dispute-form {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  max-width: 480px;
+  font-size: 12px;
+}
+
+.quality-gate__dispute-form textarea {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  background: var(--color-bg-0);
+  color: var(--color-fg-primary);
+  font: inherit;
+}
+
+.quality-gate__dispute-form button {
+  justify-self: start;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  background: var(--color-bg-2);
+  color: var(--color-fg-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.quality-gate__dispute-form button[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}

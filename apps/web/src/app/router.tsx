@@ -31,6 +31,11 @@ import { RepositorySettingsPage } from '../pages/RepositorySettingsPage';
 import { ToolFleetPage } from '../pages/ToolFleetPage';
 import { ToolFleetToolPage } from '../pages/ToolFleetToolPage';
 import { ToolsPage } from '../pages/ToolsPage';
+import {
+  QualityGateHeadPage,
+  QualityGatePage,
+  QualityGateRulePage,
+} from '../pages/qualityGate';
 import { RepoRouter } from '../pages/RepoRouter';
 import { ShiftQueuePage, WORK_PATH } from '../pages/shift';
 
@@ -92,6 +97,10 @@ export const router = createBrowserRouter([
       // Unreleased is the last section of Releases; old links keep working.
       { path: 'unreleased', element: <UnreleasedRedirect /> },
       { path: 'intelligence', element: <IntelligencePage /> },
+      // Quality gate: how the jankurai/proof score behaves, rule -> head -> findings.
+      { path: 'quality-gate', element: <QualityGatePage /> },
+      { path: 'quality-gate/rules/:rule', element: <QualityGateRulePage /> },
+      { path: 'quality-gate/heads/:owner/:name/:sha', element: <QualityGateHeadPage /> },
       { path: 'runners', element: <FleetPage /> },
       { path: 'fleet', element: <Navigate to="/runners" replace /> },
       { path: 'shared-tools', element: <Navigate to={FINDINGS_PATH} replace /> },

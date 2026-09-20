@@ -1,8 +1,8 @@
 // LeftNav.tsx — primary navigation (W-FE-01).
 //
 // Six destinations an operator uses daily, then a "System" disclosure for the
-// three that explain the machinery (Runners, Intelligence, Shared tools). The
-// disclosure is closed by default, remembers what the operator chose, and is
+// four that explain the machinery (Runners, Intelligence, Quality gate, Shared
+// tools). The disclosure is closed by default, remembers what the operator chose, and is
 // open whenever the current page is inside it. When the current URL is inside a
 // repository route (`/repos/:provider/:fullName/*`), a contextual
 // sub-navigation appears below the workspace links so the operator can
@@ -26,6 +26,7 @@ import {
   Siren,
   Rocket,
   ServerCog,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -60,6 +61,7 @@ export const PRIMARY_NAV: NavItem[] = [
 export const SYSTEM_NAV: NavItem[] = [
   { to: '/runners', label: 'Runners', icon: ServerCog },
   { to: '/intelligence', label: 'Intelligence', icon: Brain },
+  { to: '/quality-gate', label: 'Quality gate', icon: ShieldCheck },
   { to: '/shared-tools', label: 'Shared tools', icon: Layers },
 ];
 
