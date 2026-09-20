@@ -16,6 +16,7 @@ import { HomeRedirect } from '../layout/HomeRedirect';
 import { ActivityPage } from '../pages/activity';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { FleetPage } from '../pages/FleetPage';
+import { ForgeLinkRedirect } from '../pages/ForgeLinkRedirect';
 import { ReleasesPage, UnreleasedRedirect } from '../pages/ReleasesPage';
 import { DependenciesPage, DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
@@ -121,6 +122,13 @@ export const router = createBrowserRouter([
       { path: 'notifications', element: <Navigate to="/activity" replace /> },
       // `/audit` had a placeholder page; until there is a real one it is NotFound.
       { path: 'settings', element: <AdminSettingsPage /> },
+      // Forge-shaped links (`/<owner>/<repo>/pull/<n>`) are everywhere: pull
+      // request bodies, notifications, agent output, bookmarks. They land on
+      // the canonical `/repos/<provider>/<owner>/<repo>/pulls/<n>`. Declared
+      // after every reserved top-level name above so `:owner` cannot shadow
+      // one, and before the catch-all so an unknown path is still a 404.
+      { path: ':owner/:repo/pull/:number', element: <ForgeLinkRedirect subPath="pulls" /> },
+      { path: ':owner/:repo/issues/:number', element: <ForgeLinkRedirect subPath="issues" /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
