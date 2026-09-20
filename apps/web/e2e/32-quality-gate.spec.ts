@@ -5,7 +5,12 @@
 
 import { expect, test } from './fixtures/test';
 
-import { blockingViolations, persistAxeResult, runAxe } from './fixtures/accessibility';
+import {
+  blockingViolations,
+  persistAxeResult,
+  persistRenderedEvidence,
+  runAxe,
+} from './fixtures/accessibility';
 import { mockBootstrap } from './fixtures/mocks';
 import { FLAGGED_SHA, mockQualityGateApi } from './fixtures/qualityGateMocks';
 
@@ -32,10 +37,13 @@ test.describe('Quality gate', () => {
     await expect(
       page.getByRole('img', { name: /^Scored heads per day: 30 scored/ })
     ).toBeVisible();
-    await page.getByTestId('quality-gate-page').screenshot({ path: 'playwright-report/quality-gate.png' });
-
     const result = await runAxe(page, { disableRules: ['color-contrast'] });
     await persistAxeResult('quality-gate', result);
+    // Every axe receipt is paired with rendered evidence; the ux-qa lane fails
+    // closed on a scope that scans but never shows what it scanned.
+    const rendered = await persistRenderedEvidence(page, 'quality-gate');
+    expect(rendered.geometry.width, 'the Quality gate overview rendered with width').toBeGreaterThan(0);
+    expect(rendered.geometry.height, 'the Quality gate overview rendered with height').toBeGreaterThan(0);
     expect(
       blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`),
       'the Quality gate overview adds no serious or critical violation'
