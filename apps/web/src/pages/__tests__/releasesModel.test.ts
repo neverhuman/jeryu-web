@@ -16,7 +16,7 @@ import {
   safeLogUrl,
   scopeParams,
   splitEnvironments,
-  unreleasedHref,
+  timelineHref,
   unshippedPulls,
 } from '../releasesModel';
 
@@ -196,9 +196,9 @@ describe('one Releases page', () => {
     expect(other.map((row) => row.name)).toEqual(['stable', 'canary', 'dev']);
   });
 
-  it('links to the unreleased section of the same page', () => {
-    expect(unreleasedHref({ repo: 'jeryu/jeryu-web' })).toBe('/releases?repo=jeryu%2Fjeryu-web#unreleased');
-    expect(unreleasedHref({ family: 'jeryu' })).toBe('/releases?family=jeryu#unreleased');
-    expect(unreleasedHref({})).toBe('/releases#unreleased');
+  it('sends merged-but-not-released questions to the Pull requests timeline', () => {
+    expect(timelineHref({ repo: 'jeryu/jeryu-web' })).toBe('/pull-room?repo=jeryu%2Fjeryu-web');
+    expect(timelineHref({ family: 'jeryu' })).toBe('/pull-room?family=jeryu');
+    expect(timelineHref({})).toBe('/pull-room');
   });
 });

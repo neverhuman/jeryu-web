@@ -37,7 +37,14 @@ import {
 import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { controlPlane, mockPullRoom } from './fixtures/pullRoomMocks';
 import { mockShiftApi } from './fixtures/shiftMocks';
-import { mockUnreleasedFamily } from './fixtures/unreleasedMocks';
+import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
+import {
+  FOUR_CHANNELS,
+  mockReleaseChannels,
+  mockShiftTodos,
+  shiftTodo,
+  snapshotWithReleaseHistory,
+} from './fixtures/releaseChannelMocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -322,7 +329,7 @@ test.describe('Accessibility scans — Work, one page', () => {
   }
 });
 
-test.describe('Accessibility scans — Unreleased', () => {
+test.describe('Accessibility scans — Pull requests and Releases', () => {
   test('axe scan: Pull requests timeline with family pills', async ({ page }) => {
     // Rows from two repositories, one family pill pressed, so the timeline
     // track, the pills and the view toggle are all on the page.
@@ -338,20 +345,43 @@ test.describe('Accessibility scans — Unreleased', () => {
     await scanAndAssert(page, 'pull-requests');
   });
 
-  test('axe scan: unreleased family view', async ({ page }) => {
-    // Hydrated family view: one table per member across all three release
-    // sources, with the released-PR toggle on so every row state renders, under
-    // the admin-only "Ready to pin" section with a pin row opened.
+  test('axe scan: timeline release bands and shift ghost rows', async ({ page }) => {
+    // The richest state of the timeline: a band per release channel, the
+    // settled band collapsed, ladder pips on every merged row, and dashed
+    // ghost rows for shift work that has no pull request yet.
+    await page.context().route('**/api/v1/ws', (route) => route.abort());
+    await mockBootstrap(page);
+    await mockPullRoom(page, snapshotWithReleaseHistory());
+    await mockReleaseChannels(page, [FOUR_CHANNELS]);
+    await mockShiftTodos(page, [
+      shiftTodo('a11y-claimed', {
+        status: 'claimed',
+        claim_by: 'alice@xbabe0/w1',
+        lease_until: new Date(Date.now() + 15 * 60_000).toISOString(),
+        lease_live: true,
+      }),
+      shiftTodo('a11y-open'),
+    ]);
+    await page.goto('/pull-room');
+    await expect(page.getByTestId('pull-band-stable')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('pull-ghost-a11y-claimed')).toBeVisible();
+    await scanAndAssert(page, 'pull-requests-bands');
+  });
+
+  test('axe scan: Releases environments and pins', async ({ page }) => {
+    // The other half of the split: what each environment runs, plus the
+    // admin-only "Ready to pin" section with a pin row opened.
     await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockPipelineApi(page);
-    await mockUnreleasedFamily(page);
-    await page.goto('/unreleased?family=jeryu&released=1');
-    await page.getByTestId('pin-jeryu/jeryu-web').locator('summary').click();
-    await expect(page.getByTestId('unreleased-table-jeryu/jeryu-deploy')).toBeVisible({
-      timeout: 15_000,
+    await mockRepo(page, 'jeryu-deploy', {
+      environments: [production],
+      pulls: [pull('jeryu-deploy', 27, 'feat: already live', 'merged', 'a')],
+      compare: compareBody('a', []),
     });
-    await expect(page.getByTestId('unreleased-summary-jeryu/jeryu-docs')).toBeVisible();
-    await scanAndAssert(page, 'unreleased');
+    await page.goto('/releases');
+    await expect(page.getByTestId('ready-to-pin')).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('pin-jeryu/jeryu-web').locator('summary').click();
+    await scanAndAssert(page, 'releases');
     const blockers = blockingViolations(
       await runAxe(page, { disableRules: ['color-contrast'] })
     );

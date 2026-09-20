@@ -2,7 +2,7 @@
 //
 // A deploy repo ships what it pins, not what its dependencies merged. These
 // helpers turn the server's comparison into one plain sentence and one next
-// step per pin, so the Unreleased page reads as a pipeline: merged but not
+// step per pin, so Releases reads as a pipeline: merged but not
 // pinned, then pinned but not deployed.
 
 import type { Pin, PinConsumer, PinState } from '../api/types';

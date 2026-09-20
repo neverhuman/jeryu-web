@@ -111,3 +111,16 @@
 .unreleased__repo {
   margin-top: var(--space-3);
 }
+
+/* A link inside a sentence must not rely on colour alone (axe
+   link-in-text-block): both the timeline pointer in the header and the
+   "what a bump would ship" line are links in running text. */
+.releases__muted a {
+  text-decoration: underline;
+}
+
+/* Same rule for the pin lines: the dependency name is a link in running text,
+   so it carries an underline rather than colour alone. */
+.pins__line a {
+  text-decoration: underline;
+}

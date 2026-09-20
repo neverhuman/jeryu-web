@@ -6,6 +6,54 @@
 
 import type { Page } from '@playwright/test';
 
+import { controlPlane } from './pullRoomMocks';
+
+/**
+ * The Pull requests snapshot with merged work at every rung of the ladder:
+ * shipped nowhere (12), dev only (11), canary (10), stable (9), production
+ * (13), and one closed attempt (14) that #9 carried.
+ */
+export function snapshotWithReleaseHistory(): ReturnType<typeof controlPlane> {
+  const snapshot = controlPlane();
+  const merged = (number: number, title: string, state = 'merged') => ({
+    ...snapshot.pullRequests[0],
+    number,
+    title,
+    state,
+    headRef: `feature/${number}`,
+    headSha: `head-${number}`,
+    baseSha: `base-${number}`,
+    checks: { total: 2, queued: 0, running: 0, failing: 0, successful: 2, missing: false },
+  });
+  snapshot.pullRequests.push(
+    merged(9, 'Reached stable'),
+    merged(10, 'Reached canary'),
+    merged(11, 'Reached dev only'),
+    merged(12, 'Merged, shipped nowhere'),
+    merged(13, 'Settled in production'),
+    merged(14, 'First attempt, superseded by #9', 'closed')
+  );
+  return snapshot;
+}
+
+/** The four deployed channels of `alice/jeryu`, one release name each. */
+export const FOUR_CHANNELS: ChannelFixture = {
+  repo: 'alice/jeryu',
+  channels: {
+    dev: { sha: 'dep-dev', release: 'v9' },
+    canary: { sha: 'dep-canary', release: 'v8' },
+    stable: { sha: 'dep-stable', release: 'v7' },
+    production: { sha: 'dep-prod', release: 'v6' },
+  },
+  // What each environment lacks. Deeper environments lack strictly more.
+  missing: {
+    dev: ['head-12'],
+    canary: ['head-12', 'head-11'],
+    stable: ['head-12', 'head-11', 'head-10'],
+    production: ['head-12', 'head-11', 'head-10', 'head-9'],
+  },
+};
+
 export interface ChannelFixture {
   /** `owner/name`. */
   repo: string;

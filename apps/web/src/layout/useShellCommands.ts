@@ -61,7 +61,7 @@ export function useShellCommands(): void {
       {
         id: 'nav.releases',
         title: 'Go to Releases',
-        keywords: ['release', 'deploy', 'production', 'environment', 'rollback', 'staged', 'unreleased', 'unshipped', 'pin'],
+        keywords: ['release', 'deploy', 'production', 'environment', 'rollback', 'staged', 'unshipped', 'pin'],
         icon: 'rocket',
         target: { kind: 'route', path: '/releases' },
         shortcut: 'g l',

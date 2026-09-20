@@ -6,11 +6,13 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap } from './fixtures/mocks';
-import { controlPlane, mockPullRoom } from './fixtures/pullRoomMocks';
+import { mockPullRoom } from './fixtures/pullRoomMocks';
 import {
+  FOUR_CHANNELS,
   mockReleaseChannels,
   mockShiftTodos,
   shiftTodo,
+  snapshotWithReleaseHistory,
 } from './fixtures/releaseChannelMocks';
 
 test.describe.configure({ retries: 1 });
@@ -21,56 +23,15 @@ async function blockWebSocket(page: Page): Promise<void> {
   );
 }
 
-/** The snapshot's two open PRs, plus merged work at every rung of the ladder. */
-function snapshotWithHistory(): ReturnType<typeof controlPlane> {
-  const snapshot = controlPlane();
-  const merged = (number: number, title: string, state = 'merged') => ({
-    ...snapshot.pullRequests[0],
-    number,
-    title,
-    state,
-    headRef: `feature/${number}`,
-    headSha: `head-${number}`,
-    baseSha: `base-${number}`,
-    checks: { total: 2, queued: 0, running: 0, failing: 0, successful: 2, missing: false },
-  });
-  snapshot.pullRequests.push(
-    merged(9, 'Reached stable'),
-    merged(10, 'Reached canary'),
-    merged(11, 'Reached dev only'),
-    merged(12, 'Merged, shipped nowhere'),
-    merged(13, 'Settled in production'),
-    merged(14, 'First attempt, superseded by #9', 'closed')
-  );
-  return snapshot;
-}
-
 test('The timeline bands merged work by release channel and keeps settled history behind one line @action:pull_room.release_bands', async ({
   page,
 }) => {
-  const snapshot = snapshotWithHistory();
+  const snapshot = snapshotWithReleaseHistory();
   await blockWebSocket(page);
   await mockBootstrap(page);
   await mockPullRoom(page, snapshot);
   await mockShiftTodos(page, []);
-  await mockReleaseChannels(page, [
-    {
-      repo: 'alice/jeryu',
-      channels: {
-        dev: { sha: 'dep-dev', release: 'v9' },
-        canary: { sha: 'dep-canary', release: 'v8' },
-        stable: { sha: 'dep-stable', release: 'v7' },
-        production: { sha: 'dep-prod', release: 'v6' },
-      },
-      // What each environment lacks. Deeper environments lack strictly more.
-      missing: {
-        dev: ['head-12'],
-        canary: ['head-12', 'head-11'],
-        stable: ['head-12', 'head-11', 'head-10'],
-        production: ['head-12', 'head-11', 'head-10', 'head-9'],
-      },
-    },
-  ]);
+  await mockReleaseChannels(page, [FOUR_CHANNELS]);
 
   const shell = new AppShellPage(page);
   await shell.goto('/pull-room');
@@ -121,7 +82,7 @@ test('The timeline bands merged work by release channel and keeps settled histor
 test('A repository that records no release says so instead of calling merged work unreleased @action:pull_room.release_bands', async ({
   page,
 }) => {
-  const snapshot = snapshotWithHistory();
+  const snapshot = snapshotWithReleaseHistory();
   await blockWebSocket(page);
   await mockBootstrap(page);
   await mockPullRoom(page, snapshot);

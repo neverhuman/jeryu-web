@@ -6,10 +6,17 @@
 //      the environment does not). Environments with nothing recorded fold
 //      behind "other environments".
 //   2. Ready to pin: merged in a dependency, not yet in the deploy repo's pin.
-//   3. Merged, not yet released: the pull requests no release carries yet.
+//
+// This page is about ENVIRONMENTS: what each one runs and what is holding the
+// next release. How far an individual change has got — opened, checked,
+// reviewed, merged, and out to dev, canary, stable and production — is the Pull
+// requests timeline's job, and the two link to each other rather than each
+// keeping half a list of pull requests.
 //
 // Scope comes from `?repo=owner/name` (default the jeryu deploy repo) or
-// `?family=<family>`. `/unreleased` redirects here (see UnreleasedRedirect).
+// `?family=<family>`. `/unreleased` was a page, then a section here; it is
+// neither now, and the route redirects (see UnreleasedRedirect) because the
+// forge's own attention items still link to it.
 
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
@@ -22,14 +29,13 @@ import { useRepositories } from '../hooks/useRepositories';
 import { findAttention } from './needsYou/needsYouModel';
 import { behindPinLines } from './pinsModel';
 import { ReadyToPin } from './ReadyToPin';
-import { UnreleasedSection, type RepoScope } from './ReleasesUnreleased';
 import {
   behindLabel,
   releasePullHref,
   releaseScopeOptions,
   scopeParams,
   splitEnvironments,
-  unreleasedHref,
+  timelineHref,
   type DeployedRef,
   type EnvironmentRow,
 } from './releasesModel';
@@ -55,13 +61,12 @@ export function ReleasesPage(): JSX.Element {
   const family = params.get('family');
   const repoId = family ? null : (params.get('repo') ?? DEFAULT_RELEASE_REPO);
   const branch = params.get('branch') ?? 'main';
-  const showReleased = params.get('released') === '1';
 
   const members = useRepositories(
     { family: family ?? undefined, sort: 'name' },
     { enabled: family !== null }
   );
-  let repos: RepoScope[] = [];
+  let repos: { id: string; branch: string }[] = [];
   if (repoId) {
     repos = [{ id: repoId, branch }];
   } else if (members.data) {
@@ -83,13 +88,7 @@ export function ReleasesPage(): JSX.Element {
   const setScope = (value: string): void => {
     const next = scopeParams(value);
     if (!next) return;
-    setParams(showReleased ? { ...next, released: '1' } : next);
-  };
-  const toggleReleased = (next: boolean): void => {
-    const updated = new URLSearchParams(params);
-    if (next) updated.set('released', '1');
-    else updated.delete('released');
-    setParams(updated);
+    setParams(next);
   };
 
   return (
@@ -97,7 +96,11 @@ export function ReleasesPage(): JSX.Element {
       <header className="page__header">
         <h1 className="page__title">Releases</h1>
         <p className="page__subtitle">
-          What runs now, what is merged but not pinned, and what no release carries yet.
+          What every environment runs, and what is holding the next release.
+        </p>
+        <p className="releases__muted">
+          For how far one change has got on its way here, see the{' '}
+          <Link to={timelineHref({ repo: repoId, family })}>Pull requests timeline</Link>.
         </p>
         <p className="releases__repo">
           <label htmlFor="releases-scope">Repository or family</label>
@@ -127,23 +130,18 @@ export function ReleasesPage(): JSX.Element {
           familyRepos: family ? repos.map((repo) => repo.id) : [],
         }}
       />
-
-      <UnreleasedSection
-        repos={repos}
-        family={family}
-        familyState={{ isLoading: members.isLoading, error: members.error }}
-        showReleased={showReleased}
-        onToggleReleased={toggleReleased}
-        linkRepos={family !== null}
-      />
     </div>
   );
 }
 
-/** `/unreleased[?…]` was its own page; it is the last section of Releases now. */
+/**
+ * `/unreleased[?…]` was a page of its own, then a section here, and is now the
+ * Pull requests timeline. The forge's attention items still emit the old path,
+ * so it keeps working and lands on this page's environments and pins.
+ */
 export function UnreleasedRedirect(): JSX.Element {
   const { search } = useLocation();
-  return <Navigate to={{ pathname: '/releases', search, hash: '#unreleased' }} replace />;
+  return <Navigate to={{ pathname: '/releases', search }} replace />;
 }
 
 function Environments({ repoId, branch }: { repoId: string; branch: string }): JSX.Element {
@@ -359,7 +357,7 @@ function UnpinnedLine({ repoId }: { repoId: string }): JSX.Element | null {
   return (
     <p className="releases__muted" role="status" data-testid="releases-unpinned">
       {lines.join('; ')}.{' '}
-      <Link to={unreleasedHref({ repo: repoId })}>See what a bump would ship</Link>
+      <Link to={timelineHref({ repo: repoId })}>See what a bump would ship</Link>
     </p>
   );
 }

@@ -116,12 +116,17 @@ test('environments show the live release, rollback target and unshipped PRs @act
     /#21 feat: runners page/,
     /#20 chore: jankurai pin/,
   ]);
-  // Unshipped PRs open the pull request; the unreleased list is a section of this page.
+  // Unshipped PRs open the pull request. How far each one has got is the Pull
+  // requests timeline's job, which this page links to rather than duplicating.
   await expect(behind.getByRole('link', { name: '#21 feat: runners page' })).toHaveAttribute(
     'href',
     '/repos/jeryu/jeryu/jeryu-deploy/pulls/21'
   );
-  await expect(page.getByRole('heading', { name: 'Merged, not yet released' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Merged, not yet released' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Pull requests timeline' })).toHaveAttribute(
+    'href',
+    '/pull-room?repo=jeryu%2Fjeryu-deploy'
+  );
   await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
   // No attention feed for this viewer: no staged banner.
   await expect(page.getByTestId('releases-staged')).toHaveCount(0);

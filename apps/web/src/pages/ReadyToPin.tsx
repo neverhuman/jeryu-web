@@ -1,4 +1,4 @@
-// ReadyToPin.tsx — the top of the Unreleased page: what a deploy repo's
+// ReadyToPin.tsx — a section of Releases: what a deploy repo's
 // dependencies have merged that its pins do not carry yet.
 //
 // One row per pin that is not current: the dependency, one plain sentence,
@@ -23,7 +23,7 @@ import {
   type ConsumerPins,
   type PinScope,
 } from './pinsModel';
-import { unreleasedHref } from './releasesModel';
+import { timelineHref } from './releasesModel';
 
 
 export function ReadyToPin({ scope }: { scope: PinScope }): JSX.Element | null {
@@ -105,7 +105,7 @@ function PinRow({ pin }: { pin: Pin }): JSX.Element {
   return (
     <li className="pins__row" data-testid={`pin-${pin.dependency}`} data-state={pinStateOf(pin)}>
       <p className="pins__line">
-        <Link to={unreleasedHref({ repo: pin.dependency })}>{shortRepo(pin.dependency)}</Link>
+        <Link to={timelineHref({ repo: pin.dependency })}>{shortRepo(pin.dependency)}</Link>
         {': '}
         {pinTone(pin) === 'danger' ? (
           <span className="page__pill page__pill--danger">{pinLabel(pin)}</span>

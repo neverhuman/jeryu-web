@@ -1,11 +1,9 @@
-// unreleasedMocks.ts — browser-boundary mocks for the /unreleased page,
-// shaped like the repo list, environments, pulls, release-tag and compare
-// endpoints it reads. Shared by the route spec (28-unreleased) and the
-// rendered UX QA lane (10-a11y) so both render the same surface.
+// releaseFixtures.ts — browser-boundary mocks for the release endpoints a
+// repository answers with: environments, pulls, release-tag and compare, plus
+// the repo list. Shared by the Releases specs and the rendered UX QA lane so
+// both render the same surface.
 
 import type { Page } from '@playwright/test';
-
-import { mockRepoList } from './mocks';
 
 export const sha = (c: string) => c.repeat(40);
 const json = (body: unknown) => ({
@@ -110,41 +108,3 @@ export const production = {
     succeeded: true,
   },
 };
-
-/**
- * Three family members covering the three release sources — a production
- * deployment (jeryu-deploy), a release tag (jeryu-cli) and neither
- * (jeryu-docs) — plus one repository outside the family.
- */
-export async function mockUnreleasedFamily(page: Page): Promise<void> {
-  await mockRepoList(page, [
-    { id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-deploy' }, family: 'jeryu' },
-    { id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-cli' }, family: 'jeryu' },
-    { id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-docs' }, family: 'jeryu' },
-    { id: { host: 'jeryu', owner: 'jeryu', name: 'elsewhere' }, family: 'other' },
-  ]);
-  await mockRepo(page, 'jeryu-deploy', {
-    environments: [production],
-    pulls: [
-      pull('jeryu-deploy', 30, 'feat: about to land', 'open', 'f'),
-      pull('jeryu-deploy', 29, 'fix: broken build', 'open', 'e', { passing: 1, failing: 1, pending: 0 }),
-      pull('jeryu-deploy', 28, 'feat: merged not live', 'merged', 'c'),
-      pull('jeryu-deploy', 27, 'feat: already live', 'merged', 'a'),
-    ],
-    compare: compareBody('a', ['b', 'c']),
-  });
-  await mockRepo(page, 'jeryu-cli', {
-    environments: [],
-    pulls: [
-      pull('jeryu-cli', 12, 'feat: after the tag', 'merged', 'k'),
-      pull('jeryu-cli', 11, 'feat: in the tag', 'merged', 'j'),
-    ],
-    tag: { tag: 'v5.0.0-split.4', sha: sha('j'), tagged_at: '2026-09-10T00:00:00Z' },
-    compare: compareBody('j', ['k']),
-  });
-  await mockRepo(page, 'jeryu-docs', {
-    environments: [],
-    pulls: [pull('jeryu-docs', 4, 'docs: never released', 'merged', 'd')],
-  });
-
-}

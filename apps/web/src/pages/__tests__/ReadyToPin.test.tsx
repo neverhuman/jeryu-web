@@ -18,7 +18,7 @@ vi.mock('../../hooks/useAuth', () => ({
 const DEPLOY_SCOPE = { repo: 'jeryu/jeryu-deploy', family: null, familyRepos: [] };
 
 function renderSection(scope = DEPLOY_SCOPE): void {
-  renderAt('/unreleased', '/unreleased', <ReadyToPin scope={scope} />);
+  renderAt('/releases', '/releases', <ReadyToPin scope={scope} />);
 }
 
 describe('ReadyToPin', () => {
@@ -42,7 +42,7 @@ describe('ReadyToPin', () => {
     expect(within(web).getByText('9 merged commits not pinned yet')).not.toHaveClass('page__pill--danger');
     expect(within(web).getByRole('link', { name: 'jeryu-web' })).toHaveAttribute(
       'href',
-      '/releases?repo=jeryu%2Fjeryu-web#unreleased'
+      '/pull-room?repo=jeryu%2Fjeryu-web'
     );
     const ships = within(web).getByText('What a bump would ship (2 of 9)');
     expect(ships.closest('details')).not.toHaveAttribute('open');

@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 
 import { mockBootstrap } from './fixtures/mocks';
 import { DEPLOY_COMMAND, mockPipelineApi, pinsBody } from './fixtures/pipelineMocks';
-import { compareBody, mockRepo, production, pull } from './fixtures/unreleasedMocks';
+import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
 
 test.describe('Pipeline visibility', () => {
   test.beforeEach(async ({ page }) => {
@@ -188,7 +188,7 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('activity-event-12')).toBeVisible();
     await expect(page.getByTestId('activity-dock')).toHaveCount(0);
   });
-  test('Releases says what is merged but not pinned, with one next step @action:unreleased.ready_to_pin', async ({
+  test('Releases says what is merged but not pinned, with one next step @action:releases.ready_to_pin', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
@@ -199,7 +199,7 @@ test.describe('Pipeline visibility', () => {
       compare: compareBody('a', []),
     });
 
-    await page.goto('/unreleased');
+    await page.goto('/releases');
     const ready = page.getByTestId('ready-to-pin');
     await expect(ready).toBeVisible({ timeout: 15_000 });
     const web = ready.getByTestId('pin-jeryu/jeryu-web');
@@ -218,17 +218,15 @@ test.describe('Pipeline visibility', () => {
     await expect(core).toBeVisible();
     await expect(core).toContainText('3 commits since tag jeryu-core-v5.0.0-split.6, needs a new tag');
     await expect(ready.getByTestId('pins-current-jeryu/jeryu-deploy')).toHaveText('1 pin current');
-    // The existing content stays below it.
-    await expect(page.getByTestId('unreleased-summary-jeryu/jeryu-deploy')).toBeVisible();
 
-    await page.goto('/releases');
+    // What a bump would ship is the timeline's question now, not this page's.
     const unpinned = page.getByTestId('releases-unpinned');
     await expect(unpinned).toContainText("jeryu-web has 9 merged commits not in this repo's pin");
     await unpinned.getByRole('link', { name: 'See what a bump would ship' }).click();
-    await expect(page).toHaveURL(/\/releases\?repo=jeryu%2Fjeryu-deploy#unreleased$/);
+    await expect(page).toHaveURL(/\/pull-room\?repo=jeryu%2Fjeryu-deploy$/);
   });
 
-  test('an open bump PR is the next step, and an older server stays quiet @action:unreleased.ready_to_pin', async ({
+  test('an open bump PR is the next step, and an older server stays quiet @action:releases.ready_to_pin', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
@@ -240,7 +238,9 @@ test.describe('Pipeline visibility', () => {
       pulls: [pull('jeryu-deploy', 27, 'feat: already live', 'merged', 'a')],
       compare: compareBody('a', []),
     });
+    // The old path still resolves: the forge's attention items emit it.
     await page.goto('/unreleased');
+    await expect(page).toHaveURL(/\/releases$/);
     await expect(
       page.getByTestId('pin-jeryu/jeryu-web').getByRole('link', { name: 'bump PR #53 is open' })
     ).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-deploy/pulls/53');
@@ -253,6 +253,7 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('ready-to-pin-unavailable')).toHaveText(
       'Pins are not available on this server version.'
     );
-    await expect(page.getByTestId('unreleased-summary-jeryu/jeryu-deploy')).toBeVisible();
+    // The environments the page is really about are still there.
+    await expect(page.getByTestId('releases-page')).toBeVisible();
   });
 });

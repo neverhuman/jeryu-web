@@ -188,13 +188,18 @@ export function splitEnvironments(rows: EnvironmentRow[]): {
   return { live, other };
 }
 
-/** Where the merged-not-released list lives, for one repository or family. */
-export function unreleasedHref(scope: { repo?: string | null; family?: string | null }): string {
+/**
+ * Where merged-but-not-released work is read now: the Pull requests timeline,
+ * whose bands run from "merged, not yet released" down to what production runs.
+ * This page answers the other half — what each environment runs — and links
+ * across rather than listing pull requests itself.
+ */
+export function timelineHref(scope: { repo?: string | null; family?: string | null }): string {
   const query = scope.family
     ? `?family=${encodeURIComponent(scope.family)}`
     : scope.repo
       ? `?repo=${encodeURIComponent(scope.repo)}`
       : '';
-  return `/releases${query}#unreleased`;
+  return `/pull-room${query}`;
 }
 
