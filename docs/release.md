@@ -6,6 +6,13 @@ Version source: `VERSION` plus the split tag recorded in
 `repos.manifest.toml` when present. Release notes are recorded in
 `CHANGELOG.md`.
 
+`VERSION` is stamped by the release, not by hand: run
+`scripts/stamp-version.sh jeryu-web-vX.Y.Z-split.N` with the version about to
+be promoted, commit the result, then cut the tag. Running it with no argument
+restamps from the newest `jeryu-web-v*` tag in the clone. A `VERSION` left
+behind the newest tag fails `apps/web` tests
+(`src/build/versionStamp.test.ts`), so the drift is caught before promotion.
+
 Release process doc: this file is the frontend release control surface. The
 release automation or command policy is to run the proof commands below from
 this repo, then let `jeryu-deploy` package and publish the binary/web artifact.
@@ -16,6 +23,7 @@ checksum, provenance, SBOM, and cosign evidence recorded with the release.
 
 Before a release or split tag is promoted:
 
+- stamp `VERSION` with `scripts/stamp-version.sh <version>` and commit it
 - run `just fast`, `just check`, `just score`, `just security`, and `just artifact-support`
 - confirm checksum, provenance, SBOM, and cosign evidence for release artifacts
 - confirm monitoring is active for the promoted version
