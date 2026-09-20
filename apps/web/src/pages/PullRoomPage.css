@@ -348,7 +348,7 @@
 }
 
 .pull-timeline {
-  --pull-timeline-cols: minmax(220px, 2fr) repeat(5, minmax(96px, 1fr));
+  --pull-timeline-cols: minmax(220px, 2fr) repeat(6, minmax(96px, 1fr));
   overflow-x: auto;
 }
 
@@ -358,7 +358,7 @@
   grid-template-columns: var(--pull-timeline-cols);
   gap: 0 var(--space-2);
   align-items: center;
-  min-width: 760px;
+  min-width: 880px;
 }
 
 .pull-timeline__head {
@@ -537,3 +537,154 @@
   margin-bottom: var(--space-2);
 }
 
+
+/* ---------------------------------------------------------------- bands
+   Merged work grouped by how far out it has shipped, and shift work that has
+   not opened a pull request yet. A band is a <details>: one line collapsed,
+   its rows on a click. */
+
+.pull-band {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.pull-band__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  list-style: none;
+}
+
+.pull-band > .pull-band__summary::-webkit-details-marker {
+  display: none;
+}
+
+.pull-band__summary::before {
+  content: '\25b8';
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.pull-band[open] > .pull-band__summary::before {
+  content: '\25be';
+}
+
+.pull-band.is-ghost > .pull-band__summary {
+  cursor: default;
+}
+
+.pull-band.is-ghost > .pull-band__summary::before {
+  content: '\25cc';
+}
+
+.pull-band__label {
+  font-weight: var(--font-weight-semibold);
+}
+
+.pull-band__hint,
+.pull-band__more,
+.pull-timeline__floor {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.pull-band__more,
+.pull-timeline__floor {
+  margin: var(--space-2) var(--space-3) 0;
+}
+
+/* The settled band is history: quieter than the manifest above it. */
+.pull-band.is-production .pull-timeline__rows,
+.pull-band.is-tag .pull-timeline__rows,
+.pull-band.is-closed .pull-timeline__rows {
+  opacity: 0.8;
+}
+
+/* ----------------------------------------------------------- the ladder
+   dev - canary - stable - prod under the Released stage. */
+
+.pull-ladder {
+  display: flex;
+  gap: var(--space-1);
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-xs);
+}
+
+.pull-ladder__pip {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  color: var(--color-fg-muted);
+}
+
+.pull-ladder__dot {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+}
+
+.pull-ladder__pip.is-in {
+  color: var(--color-fg-primary);
+}
+
+.pull-ladder__pip.is-in .pull-ladder__dot {
+  border-color: var(--color-accent-success);
+  background: var(--color-accent-success);
+}
+
+/* Unknown is hollow and dashed: not decided, which is not the same as absent. */
+.pull-ladder__pip.is-unknown .pull-ladder__dot {
+  border-style: dashed;
+}
+
+.pull-ladder__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A release the page could not place reads as undecided, not as failed. */
+.pull-stage.is-unknown {
+  --pull-stage-color: var(--color-border-strong);
+}
+
+.pull-stage.is-unknown .pull-stage__dot {
+  border-style: dashed;
+}
+
+.pull-stage.is-unknown .pull-stage__label {
+  color: var(--color-fg-muted);
+  font-style: italic;
+}
+
+/* --------------------------------------------------------------- ghosts
+   Work that will become a pull request. Dashed, not faded: a closed pull
+   request is dim because it will never move again, a ghost because it has not
+   started. The two must not look alike. */
+
+.pull-timeline__row.is-ghost {
+  border-style: dashed;
+  background: transparent;
+}
+
+.pull-timeline__row.is-ghost.needs-human {
+  border-color: var(--color-accent-warning);
+}
+
+.pull-ghost__title {
+  color: var(--color-fg-secondary);
+}
+
+.pull-timeline__track--ghost .pull-stage__label {
+  color: var(--color-fg-muted);
+}
+
+.pull-timeline__supersedes {
+  color: var(--color-fg-muted);
+}

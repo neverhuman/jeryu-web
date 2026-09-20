@@ -58,6 +58,16 @@ vi.mock('../hooks/useRepoPullLists', () => ({
   }),
 }));
 
+// The release ladder and the shift queue are their own pages' concern; here
+// they answer nothing so the URL behaviour is what is under test.
+vi.mock('../hooks/useRepoChannels', () => ({
+  EMPTY_CHANNELS: { baselines: { kind: 'none', baselines: [] }, compares: new Map() },
+  useRepoChannels: () => ({ byRepo: new Map(), isLoading: false }),
+}));
+vi.mock('../hooks/useShift', () => ({
+  useShiftTodos: () => ({ data: { todos: [] }, isLoading: false, isError: false }),
+}));
+
 function setup(initialEntries: string[]) {
   const router = createMemoryRouter([{ path: '/pull-room', element: <PullRoomPage /> }], {
     initialEntries,

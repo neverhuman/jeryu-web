@@ -23,7 +23,7 @@ export function pullSummaries(snapshot: Snapshot, repo: string) {
       base_ref: pr.baseRef,
       head_sha: pr.headSha,
       base_sha: pr.baseSha,
-      state: 'open',
+      state: pr.state ?? 'open',
       draft: pr.draft,
       mergeable: { level: 'blocked', can_merge: false, reason: 'checks', exact_head_sha: pr.headSha, required_gate: null },
       review: { required_approvals: 1, approvals: 0, changes_requested: 0, unresolved_threads: 0, user_review_state: null },

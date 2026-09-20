@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { EvidenceState } from '../api/types';
+import type { EvidenceState, PullRequestSummary } from '../api/types';
 import { useControlPlane } from '../hooks/useControlPlane';
+import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
 import { useRepoPullLists } from '../hooks/useRepoPullLists';
 import { useRepositories } from '../hooks/useRepositories';
+import { useShiftTodos } from '../hooks/useShift';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
+import { awaitingReleaseCount } from './pullBandsModel';
+import { pullGhostGroups, type GhostGroup } from './pullGhostsModel';
+import { releaseLadder } from './releaseChannelsModel';
 import {
+  ACTIVE_STATE_FILTER,
   DEFAULT_PULL_ROOM_FILTERS,
   familyLabel,
   familyPills,
@@ -89,6 +95,15 @@ export function PullRoomPage(): JSX.Element {
     setSearchParams(params, { replace: true });
   };
 
+  // The board shows work in flight. The timeline is a history — its bands run
+  // from work that has not merged yet down to what production runs — so its
+  // default asks for merged and closed pull requests too.
+  const viewFilters = useMemo(
+    () =>
+      board || filters.state !== ACTIVE_STATE_FILTER ? filters : { ...filters, state: 'all' },
+    [board, filters]
+  );
+
   const everything = useMemo(
     () => snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],
     [snapshot.data]
@@ -106,15 +121,39 @@ export function PullRoomPage(): JSX.Element {
   const repos = useMemo(() => repoOptions(items), [items]);
   // The snapshot says which repositories hold a matching pull request; only
   // those are asked for their lists, which carry review and merge state.
-  const wanted = useMemo(() => reposToLoad(filtered), [filtered]);
+  const wanted = useMemo(
+    () => reposToLoad(filterPullRequests(items, viewFilters)),
+    [items, viewFilters]
+  );
   const lists = useRepoPullLists(
     board ? [] : wanted.repos,
-    pullListState(filters.state),
+    pullListState(viewFilters.state),
     REFRESH_MS
   );
   const rows = useMemo(
-    () => filterPullSummaries(lists.pulls, filters),
-    [filters, lists.pulls]
+    () => filterPullSummaries(lists.pulls, viewFilters),
+    [viewFilters, lists.pulls]
+  );
+
+  // Where every merged change has got to: dev, canary, stable, production.
+  const channels = useRepoChannels(board ? [] : wanted.repos);
+  const ladderFor = (pr: PullRequestSummary) => {
+    const entry = channels.byRepo.get(`${pr.repo.owner}/${pr.repo.name}`) ?? EMPTY_CHANNELS;
+    return releaseLadder(pr, entry.baselines, entry.compares);
+  };
+
+  // Shift work that has not opened a pull request yet, above the open rows.
+  const todos = useShiftTodos(undefined);
+  const ghosts: GhostGroup[] = useMemo(
+    () =>
+      board
+        ? []
+        : pullGhostGroups(todos.data?.todos ?? [], {
+            now: new Date(),
+            repos: repo === 'all' ? null : new Set([repo]),
+            family,
+          }),
+    [board, family, repo, todos.data]
   );
   if (snapshot.isLoading) {
     return (
@@ -150,7 +189,7 @@ export function PullRoomPage(): JSX.Element {
           </p>
           {board ? null : (
             <p className="pull-room__sentence" data-testid="pull-room-sentence">
-              {timelineSentence(rows)}
+              {timelineSentence(rows, awaitingReleaseCount(rows, ladderFor))}
             </p>
           )}
         </div>
@@ -221,7 +260,7 @@ export function PullRoomPage(): JSX.Element {
               setFilters((current) => ({ ...current, state: event.target.value }))
             }
           >
-            <option value="active">Active (not merged/closed)</option>
+            <option value="active">Default (timeline adds release history)</option>
             <option value="all">All states</option>
             <option value="draft">Draft</option>
             <option value="open">Open</option>
@@ -301,9 +340,9 @@ export function PullRoomPage(): JSX.Element {
                 Narrow by family or repo to see them.
               </p>
             ) : null}
-            {rows.length === 0 && lists.loading.length > 0 ? (
+            {rows.length === 0 && ghosts.length === 0 && lists.loading.length > 0 ? (
               <p className="page__roadmap-note">Loading pull requests.</p>
-            ) : rows.length === 0 ? (
+            ) : rows.length === 0 && ghosts.length === 0 ? (
               <p className="pull-list__empty" data-testid="pull-room-empty">
                 {filtersActive ? 'No pull requests match the current filters.' : 'No open pull requests.'}{' '}
                 {family ? (
@@ -313,7 +352,13 @@ export function PullRoomPage(): JSX.Element {
                 ) : null}
               </p>
             ) : (
-              <PullRequestTimeline pulls={rows} emptyMessage="No open pull requests." showRepo />
+              <PullRequestTimeline
+                pulls={rows}
+                emptyMessage="No open pull requests."
+                showRepo
+                ladderFor={ladderFor}
+                ghosts={ghosts}
+              />
             )}
           </>
         )}

@@ -1,13 +1,30 @@
 import type { PullRequestSummary } from '../api/types';
+import {
+  ladderDetail,
+  ladderReach,
+  type ReleaseLadder,
+} from './releaseChannelsModel';
 
 /**
- * A PR's position on its path to `main`, left to right. Each stage is
- * derived from the summary alone, so the track costs no extra requests.
+ * A PR's position on its path to `main` and out to the fleet, left to right.
+ * Every stage but `released` is derived from the summary alone, so the track
+ * costs no extra requests; `released` needs the repository's release ladder
+ * (see `releaseChannelsModel`) and reads `unknown` without it.
  */
-export type PullStageId = 'opened' | 'checks' | 'review' | 'mergeable' | 'merged';
+export type PullStageId =
+  | 'opened'
+  | 'checks'
+  | 'review'
+  | 'mergeable'
+  | 'merged'
+  | 'released';
 
-/** done: passed; active: in progress now; blocked: stopped here; pending: not reached; skipped: never will be. */
-export type PullStageStatus = 'done' | 'active' | 'blocked' | 'pending' | 'skipped';
+/**
+ * done: passed; active: in progress now; blocked: stopped here; pending: not
+ * reached; skipped: never will be; unknown: cannot be decided from what the
+ * server said (a capped compare, a release the forge does not record).
+ */
+export type PullStageStatus = 'done' | 'active' | 'blocked' | 'pending' | 'skipped' | 'unknown';
 
 export interface PullStage {
   id: PullStageId;
@@ -22,9 +39,10 @@ export const PULL_STAGE_LABELS: Record<PullStageId, string> = {
   review: 'Review',
   mergeable: 'Mergeable',
   merged: 'Merged',
+  released: 'Released',
 };
 
-export function pullStages(pr: PullRequestSummary): PullStage[] {
+export function pullStages(pr: PullRequestSummary, ladder?: ReleaseLadder): PullStage[] {
   const stage = (id: PullStageId, status: PullStageStatus, detail: string): PullStage => ({
     id,
     label: PULL_STAGE_LABELS[id],
@@ -43,6 +61,7 @@ export function pullStages(pr: PullRequestSummary): PullStage[] {
       stage('review', settled(reviewStage(pr)), reviewDetail(pr)),
       stage('mergeable', 'done', 'merged'),
       stage('merged', 'done', 'merged'),
+      releaseStage(pr, ladder),
     ];
   }
 
@@ -63,7 +82,34 @@ export function pullStages(pr: PullRequestSummary): PullStage[] {
     stage('review', closed && review !== 'done' ? 'skipped' : review, reviewDetail(pr)),
     stage('mergeable', mergeable, pr.mergeable.reason ?? pr.mergeable.level),
     stage('merged', closed ? 'blocked' : 'pending', closed ? 'closed unmerged' : 'not yet'),
+    releaseStage(pr, ladder),
   ];
+}
+
+/**
+ * How far out the change has shipped. Without a ladder the stage says
+ * `unknown` for a merged PR — the page has not been told where it is, which is
+ * not the same as it being unreleased.
+ */
+function releaseStage(pr: PullRequestSummary, ladder?: ReleaseLadder): PullStage {
+  const stage = (status: PullStageStatus, detail: string): PullStage => ({
+    id: 'released',
+    label: PULL_STAGE_LABELS.released,
+    status,
+    detail,
+  });
+  if (pr.state === 'closed') return stage('skipped', 'not merged');
+  if (!ladder) return stage(pr.state === 'merged' ? 'unknown' : 'pending', releasePending(pr));
+  // No deployment and no tag anywhere: nothing will ever mark this released.
+  if (ladder.kind === 'none') {
+    return stage(pr.state === 'merged' ? 'skipped' : 'pending', ladderDetail(ladder, pr.state));
+  }
+  if (pr.state !== 'merged') return stage('pending', ladderDetail(ladder, pr.state));
+  return stage(ladderReach(ladder), ladderDetail(ladder, pr.state));
+}
+
+function releasePending(pr: PullRequestSummary): string {
+  return pr.state === 'merged' ? 'release unknown' : 'not yet';
 }
 
 function checksStage(pr: PullRequestSummary): PullStageStatus {
@@ -103,15 +149,23 @@ export function timelineOrder(a: PullRequestSummary, b: PullRequestSummary): num
 
 /**
  * The page in one line: how many are open, how many wait on checks, how many
- * are stopped by a red check. A red check that does not stop the merge (the
- * forge says the pull request can merge) is not counted as blocking.
+ * are stopped by a red check, and — when the release ladder has loaded — how
+ * many have merged but not shipped yet. A red check that does not stop the
+ * merge (the forge says the pull request can merge) is not counted as blocking.
  */
-export function timelineSentence(pulls: PullRequestSummary[]): string {
+export function timelineSentence(pulls: PullRequestSummary[], awaitingRelease?: number): string {
   const open = pulls.filter((pr) => pr.state !== 'merged' && pr.state !== 'closed');
   const waiting = open.filter(
     (pr) => pr.checks.failing === 0 && (pr.checks.total === 0 || pr.checks.pending > 0)
   ).length;
   const blocked = open.filter((pr) => pr.checks.failing > 0 && !pr.mergeable.can_merge).length;
-  return `${open.length} open · ${waiting} waiting on checks · ${blocked} stopped by a failing check`;
+  const parts = [
+    `${open.length} open`,
+    `${waiting} waiting on checks`,
+    `${blocked} stopped by a failing check`,
+  ];
+  if (awaitingRelease !== undefined && awaitingRelease > 0) {
+    parts.push(`${awaitingRelease} merged, not yet released`);
+  }
+  return parts.join(' · ');
 }
-

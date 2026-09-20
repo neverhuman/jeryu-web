@@ -7,7 +7,15 @@ describe('pullTimelineModel', () => {
   const statuses = (p: PullRequestSummary) => pullStages(p).map((s) => s.status);
 
   it('walks a merged PR all the way to done', () => {
-    expect(statuses(pr({ state: 'merged' }))).toEqual(['done', 'done', 'done', 'done', 'done']);
+    // The sixth stage is `released`, and nothing has said where it shipped.
+    expect(statuses(pr({ state: 'merged' }))).toEqual([
+      'done',
+      'done',
+      'done',
+      'done',
+      'done',
+      'unknown',
+    ]);
   });
 
   it('keeps a merge over failing checks and without review visible', () => {
@@ -17,7 +25,7 @@ describe('pullTimelineModel', () => {
       review: { approvals: 0, required: 1 },
       canMerge: false,
     });
-    expect(statuses(p)).toEqual(['done', 'blocked', 'skipped', 'done', 'done']);
+    expect(statuses(p)).toEqual(['done', 'blocked', 'skipped', 'done', 'done', 'unknown']);
   });
 
   it('stops at failing checks', () => {
@@ -32,7 +40,7 @@ describe('pullTimelineModel', () => {
       review: { approvals: 0, required: 1 },
       canMerge: false,
     });
-    expect(statuses(p)).toEqual(['done', 'active', 'pending', 'pending', 'pending']);
+    expect(statuses(p)).toEqual(['done', 'active', 'pending', 'pending', 'pending', 'pending']);
   });
 
   it('marks mergeability blocked when checks and review are green but merge is refused', () => {
@@ -46,7 +54,36 @@ describe('pullTimelineModel', () => {
 
   it('ends a closed PR blocked at merged and skips what it never reached', () => {
     const p = pr({ state: 'closed', review: { approvals: 0, required: 1 }, canMerge: false });
-    expect(statuses(p)).toEqual(['done', 'done', 'skipped', 'skipped', 'blocked']);
+    expect(statuses(p)).toEqual(['done', 'done', 'skipped', 'skipped', 'blocked', 'skipped']);
+  });
+
+  it('reports where a merged PR shipped when the ladder says, and unknown when it does not', () => {
+    const merged = pr({ state: 'merged' });
+    const inCanary = pullStages(merged, {
+      kind: 'channels',
+      pips: [
+        { id: 'dev', label: 'dev', membership: 'in', release: 'v9', at: null },
+        { id: 'canary', label: 'canary', membership: 'in', release: 'v8', at: null },
+        { id: 'production', label: 'prod', membership: 'out', release: null, at: null },
+      ],
+      furthest: 'canary',
+      release: 'v8',
+      uncertain: false,
+    })[5];
+    expect(inCanary).toMatchObject({ status: 'active', detail: 'canary \u00b7 v8' });
+    // Without a ladder the stage says nothing was looked up, not "unreleased".
+    expect(pullStages(merged)[5]).toMatchObject({ status: 'unknown', detail: 'release unknown' });
+    expect(pullStages(pr({ state: 'open' }))[5]).toMatchObject({ status: 'pending', detail: 'not yet' });
+  });
+
+  it('adds the release manifest to the one-line summary once it is known', () => {
+    const pulls = [pr({ number: 1 }), pr({ number: 2, state: 'merged' })];
+    expect(timelineSentence(pulls, 3)).toBe(
+      '1 open \u00b7 0 waiting on checks \u00b7 0 stopped by a failing check \u00b7 3 merged, not yet released'
+    );
+    expect(timelineSentence(pulls, 0)).toBe(
+      '1 open \u00b7 0 waiting on checks \u00b7 0 stopped by a failing check'
+    );
   });
 
   it('orders open PRs first, newest update first', () => {
