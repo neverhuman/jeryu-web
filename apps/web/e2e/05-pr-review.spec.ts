@@ -14,7 +14,7 @@
 // and the route MUST resolve from a deep URL — the W-spa-fix smoke pinned
 // in 04-code is also exercised here.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import {
   mockBootstrap,

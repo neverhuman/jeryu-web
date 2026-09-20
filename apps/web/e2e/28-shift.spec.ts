@@ -4,7 +4,7 @@
 // Phase 2 contract so the page, its family filter, admin gating and chart
 // surfaces are locked without a live queue.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
 import { NIGHT, mockShiftApi } from './fixtures/shiftMocks';

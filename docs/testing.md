@@ -21,6 +21,12 @@ are intentionally excluded from the action matrix; run them with
 `npm --workspace @jeryu/web run test:e2e:bff` only when the BFF workspace is
 available.
 
+Specs import `test` and `expect` from `apps/web/e2e/fixtures/test.ts`, never
+from `@playwright/test` directly. That `test` serves the app's own files to the
+page from the Node test process, so a host network change (any Docker container
+starting or stopping on a shared box makes Chromium abort in-flight requests
+with `net::ERR_NETWORK_CHANGED`) cannot stop the SPA from mounting mid-test.
+
 `scripts/ci-local.sh` delegates to the same `ops/ci/*.sh` lanes used by the
 GitHub workflow. `scripts/ci-doctor.sh` checks the required local tools.
 

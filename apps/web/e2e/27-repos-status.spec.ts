@@ -7,7 +7,7 @@
 // runs), without leaving the page. The Mirror, Unshipped and Failing CI columns
 // are gone: they were empty or a dash on almost every row.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 

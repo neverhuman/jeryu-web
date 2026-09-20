@@ -7,7 +7,7 @@
 // The list mock honours `?family=` like the real backend, so the
 // drill-down page exercises the same filter path the SPA ships.
 
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Page, type Route } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import {

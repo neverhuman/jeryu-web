@@ -6,7 +6,7 @@
 // `/api/v1/repos/{id}/pulls?state=all`. A merged PR is unshipped when its head
 // sha is one of the compare commits.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
 import { DEPLOY_COMMAND, mockPipelineApi } from './fixtures/pipelineMocks';

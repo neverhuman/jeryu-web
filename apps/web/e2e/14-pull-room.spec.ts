@@ -1,6 +1,6 @@
 // 14-pull-room.spec.ts - W-FE-11 Pull Room smoke.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap } from './fixtures/mocks';

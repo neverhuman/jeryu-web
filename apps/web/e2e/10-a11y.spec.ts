@@ -18,7 +18,7 @@
 // not-implemented envelope page) flag a transitional violation; the JSON
 // artifact still records the full violation list for review.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import {
   blockingViolations,

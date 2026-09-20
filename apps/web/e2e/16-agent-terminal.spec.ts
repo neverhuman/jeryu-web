@@ -9,7 +9,7 @@
 // mocked UI lane. The endpoint mocks stay installed so local backend runs can
 // keep exercising the same request shapes.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap, mockRepoAgentRuns, mockRepoList } from './fixtures/mocks';

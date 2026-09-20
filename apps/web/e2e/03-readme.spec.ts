@@ -18,7 +18,7 @@
 //      `RenderedMarkdown` envelope with the expected renderer/sanitizer
 //      metadata (server-side contract).
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import { mockBootstrap, mockReadme, mockRepoList } from './fixtures/mocks';
 import type { RenderedMarkdown } from '../src/api/types';

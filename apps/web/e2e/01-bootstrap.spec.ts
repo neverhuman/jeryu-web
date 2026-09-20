@@ -12,7 +12,7 @@
 // serves the SPA from `apps/web/dist`, and `JERYU_WEB_TRUST_LOCAL=1` lets
 // the WebSocket handshake succeed without a session cookie.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import {

@@ -2,7 +2,7 @@
 // live dock and the pins ("Ready to pin"), on the pipeline visibility contract mocked at the browser
 // boundary; plus the same surfaces against a server that predates it.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
 import { DEPLOY_COMMAND, mockPipelineApi, pinsBody } from './fixtures/pipelineMocks';

@@ -6,7 +6,7 @@
 // line, and the rule that `local` only appears when the backend payload
 // actually includes it.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import {

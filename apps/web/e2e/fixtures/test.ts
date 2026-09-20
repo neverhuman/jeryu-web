@@ -1,0 +1,71 @@
+// test.ts — the `test` every spec imports: Playwright's, with the app's own
+// files served to the page from this Node process instead of over the
+// browser's network stack.
+//
+// Why: Chromium aborts every in-flight request with `net::ERR_NETWORK_CHANGED`
+// whenever a network interface on the host changes, loopback traffic included.
+// On a shared box that is every Docker container another job starts or stops.
+// The Vite dev server hands the SPA over as a few hundred separate modules, so a
+// page load is a wide target; one aborted module and the app never mounts, and
+// the test fails on its first locator with "element(s) not found" on code that
+// is fine. A request answered through `route.fulfill` never gets a browser
+// socket, so there is nothing for the network change to abort.
+//
+// API calls are left alone: specs mock `/api/v1/*` with their own routes, which
+// are registered later and so win over this one.
+
+import { test as base, type BrowserContext, type Route } from '@playwright/test';
+
+export * from '@playwright/test';
+
+interface ServedFile {
+  status: number;
+  headers: Record<string, string>;
+  body: Buffer;
+}
+
+// One per worker process. The dev server's answer for a URL does not change
+// within a run, so later tests in the worker load the app from memory.
+const served = new Map<string, ServedFile>();
+
+async function serveFromNode(route: Route): Promise<void> {
+  const request = route.request();
+  if (request.method() !== 'GET') {
+    await route.fallback();
+    return;
+  }
+  const url = request.url();
+  let file = served.get(url);
+  if (!file) {
+    const response = await route.fetch();
+    file = {
+      status: response.status(),
+      headers: response.headers(),
+      body: await response.body(),
+    };
+    if (response.ok()) served.set(url, file);
+  }
+  await route.fulfill(file);
+}
+
+export async function serveAppFromNode(
+  context: BrowserContext,
+  baseURL: string | undefined
+): Promise<void> {
+  if (!baseURL) return;
+  const origin = new URL(baseURL).origin;
+  await context.route(
+    (url) => url.origin === origin && !url.pathname.startsWith('/api/'),
+    serveFromNode
+  );
+}
+
+export const test = base.extend({
+  context: async ({ context, baseURL }, provide) => {
+    await serveAppFromNode(context, baseURL);
+    await provide(context);
+    // A test may end while a file is still on its way to the page; that fetch
+    // dies with the context and is not a failure of the test.
+    await context.unrouteAll({ behavior: 'ignoreErrors' });
+  },
+});

@@ -18,7 +18,7 @@
 // the middle of the cycle (timing-sensitive); it asserts the shell stays
 // mounted before and after the network manipulation.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
 

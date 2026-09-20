@@ -1,6 +1,6 @@
 // 13-left-nav.spec.ts — primary navigation smoke (Slice C-web).
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import {

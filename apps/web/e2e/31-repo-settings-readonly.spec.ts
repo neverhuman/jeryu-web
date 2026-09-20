@@ -4,7 +4,7 @@
 // when its last push failed, the dates and the one sentence that says an
 // operator must fix the host. No buttons besides the danger zone.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 

@@ -5,7 +5,7 @@
 // 2. The left-nav repo-context sub-navigation
 // 3. The repo overview "Agents" button and sidebar link
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import {

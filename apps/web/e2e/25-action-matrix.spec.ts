@@ -1,7 +1,7 @@
 // 25-action-matrix.spec.ts -- supplemental action tags for chrome, tools, and
 // admin-denied controls that do not belong to a route-specific spec.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 

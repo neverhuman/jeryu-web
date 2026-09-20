@@ -1,6 +1,6 @@
 // 15-repo-pulls.spec.ts - W-FE-11 repo-scoped pull request list.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap, mockPullRequestList, mockRepoList } from './fixtures/mocks';

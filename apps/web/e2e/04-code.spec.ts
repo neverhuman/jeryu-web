@@ -4,7 +4,7 @@
 // the open file on the left, a Files panel on the right that stays put. `/code`
 // redirects to the front page with the panel open.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import {
   mockBlob,

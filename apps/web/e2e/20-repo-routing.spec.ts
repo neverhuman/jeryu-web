@@ -4,7 +4,7 @@
 // but the router uses a splat route. This test verifies that every sub-page
 // (agents, code, pulls, settings) resolves correctly for the URL pattern.
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import {

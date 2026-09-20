@@ -11,7 +11,7 @@
 // pins the preview contract and the second drives preview/apply/discard/drift
 // through visible controls.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import {
   mockBootstrap,

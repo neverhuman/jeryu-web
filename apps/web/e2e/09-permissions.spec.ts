@@ -15,7 +15,7 @@
 // PATCH is rejected with `permission_denied`, proving enforcement is
 // server-authoritative per §35.1.5.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import {
   forceSettingsForbidden,

@@ -6,7 +6,7 @@
 // `upstream_unavailable` without a live forge backend; the SPA-side spec mocks
 // `/api/v1/repos` to a deterministic list so the cards render every run.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import { RepositoriesPage } from './pages/RepositoriesPage';

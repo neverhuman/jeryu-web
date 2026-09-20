@@ -14,7 +14,7 @@
 // inside the dialog (role="alert") and provably do NOT leave the page —
 // the destructive call did not succeed.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import {
   mockBootstrap,

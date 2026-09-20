@@ -5,7 +5,7 @@
 // the real AuthProvider, AuthPage, fetch client, AppShell gate, settings panel,
 // and repository-family browser without depending on mutable backend accounts.
 
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Page, type Route } from './fixtures/test';
 
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 

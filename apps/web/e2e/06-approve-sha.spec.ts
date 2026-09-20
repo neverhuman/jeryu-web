@@ -17,7 +17,7 @@
 // (`ReviewSidebar` reads `detail.summary.head_sha`), so clicking it is the
 // real driver of the exact-SHA body the backend gates on.
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 import {
   forceDriftSha,
