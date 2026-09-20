@@ -1,6 +1,7 @@
-// 29-pull-timeline-release.spec.ts — the Pull requests timeline as one time
-// axis: shift work that has no pull request yet, open rows, then merged work
-// banded by how far out it has shipped, down to what production runs.
+// 29-pull-timeline-release.spec.ts — the Pull requests timeline grouped the way
+// work is owned: shift work with no pull request yet on top, then one section
+// per repository, and inside each section one row per state of the pipeline —
+// least far first, the newest change at each state, the rest folded away.
 
 import { expect, test, type Page } from '@playwright/test';
 
@@ -23,7 +24,12 @@ async function blockWebSocket(page: Page): Promise<void> {
   );
 }
 
-test('The timeline bands merged work by release channel and keeps settled history behind one line @action:pull_room.release_bands', async ({
+/** Every state heading of one repository's section, in DOM order. */
+async function stateLabels(page: Page, repo: string): Promise<string[]> {
+  return page.getByTestId(`pull-repo-${repo}`).locator('.pull-state__label').allTextContents();
+}
+
+test('The timeline groups by repository and shows the newest change at each state of the pipeline @action:pull_room.repo_states', async ({
   page,
 }) => {
   const snapshot = snapshotWithReleaseHistory();
@@ -37,27 +43,57 @@ test('The timeline bands merged work by release channel and keeps settled histor
   await shell.goto('/pull-room');
   await shell.assertShellLoaded();
 
-  // The manifest — merged, shipped nowhere — is open, and it is what the
-  // release step reads.
-  const pending = page.getByTestId('pull-band-pending');
-  await expect(pending).toContainText('Merged · not yet released');
-  await expect(pending).toHaveAttribute('open', '');
-  await expect(pending).toContainText('Merged, shipped nowhere');
+  // One section per repository, headed by the repository and what it holds.
+  const section = page.getByTestId('pull-repo-alice/jeryu');
+  await expect(section).toBeVisible();
+  await expect(section.getByRole('link', { name: 'alice/jeryu' })).toHaveAttribute(
+    'href',
+    '/repos/jeryu/alice/jeryu/pulls'
+  );
+  // #14 is folded into #9, so the section counts seven, not eight.
+  await expect(section.locator('.pull-repo__count')).toHaveText(
+    '7 PRs · 2 open · 1 older behind the states'
+  );
 
-  // One band per rung, each naming the release that carries it.
-  await expect(page.getByTestId('pull-band-dev')).toContainText('In dev, not yet canary');
-  await expect(page.getByTestId('pull-band-dev')).toContainText('v9');
-  await expect(page.getByTestId('pull-band-canary')).toContainText('In canary, not yet stable');
-  await expect(page.getByTestId('pull-band-stable')).toContainText('In stable, not yet prod');
+  // The state blocks read top to bottom as the pipeline itself, and a state
+  // past the merge names the release that carries it.
+  expect(await stateLabels(page, 'alice/jeryu')).toEqual([
+    'Waiting on checks',
+    'Merged · not yet released',
+    'In dev · v9',
+    'In canary · v8',
+    'In stable · v7',
+    'In prod · v6',
+  ]);
 
-  // Everything production runs is settled: one collapsed line until clicked.
-  const settled = page.getByTestId('pull-band-production');
-  await expect(settled).toContainText('In prod');
-  await expect(settled).toContainText('v6');
-  await expect(settled).not.toHaveAttribute('open', '');
-  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeHidden();
-  await settled.locator('summary').click();
-  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeVisible();
+  // Each state shows exactly one row: the most recent PR that got that far.
+  const frontier: [string, number][] = [
+    ['checks', 8],
+    ['merged', 12],
+    ['dev', 11],
+    ['canary', 10],
+    ['stable', 9],
+    ['production', 13],
+  ];
+  for (const [state, number] of frontier) {
+    const block = page.getByTestId(`pull-state-alice/jeryu-${state}`);
+    await expect(block.locator(':scope > ol > li')).toHaveCount(1);
+    const row = block.getByTestId(`pull-timeline-alice/jeryu-${number}`);
+    await expect(row).toBeVisible();
+    // The row no longer repeats the repository: the section heading says it.
+    await expect(row).toContainText(`#${number}`);
+    await expect(row).not.toContainText('alice/jeryu#');
+  }
+
+  // Older work at the same state is behind that state's one expander. #7 is
+  // waiting on checks too, but #8 is the newer one.
+  const older = page.getByTestId('pull-older-alice/jeryu-checks');
+  await expect(older.locator('summary')).toHaveText('+ 1 older at this state');
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeHidden();
+  await older.locator('summary').click();
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible();
+  // A state with a single row has no expander at all.
+  await expect(page.getByTestId('pull-older-alice/jeryu-production')).toHaveCount(0);
 
   // The released stage is a ladder: filled as far as the change has got.
   await expect(page.getByTestId('pull-ladder-alice/jeryu-9-stable')).toHaveAttribute(
@@ -79,7 +115,7 @@ test('The timeline bands merged work by release channel and keeps settled histor
   await expect(page.getByTestId('pull-timeline-alice/jeryu-9')).toContainText('supersedes #14');
 });
 
-test('A repository that records no release says so instead of calling merged work unreleased @action:pull_room.release_bands', async ({
+test('A repository that records no release says so instead of calling merged work unreleased @action:pull_room.repo_states', async ({
   page,
 }) => {
   const snapshot = snapshotWithReleaseHistory();
@@ -94,13 +130,36 @@ test('A repository that records no release says so instead of calling merged wor
   await shell.goto('/pull-room');
   await shell.assertShellLoaded();
 
-  const band = page.getByTestId('pull-band-unrecorded');
-  await expect(band).toContainText('Merged · no release recorded');
-  await expect(band).toContainText('no deployment and no release tag');
-  await expect(page.getByTestId('pull-band-pending')).toHaveCount(0);
+  // With no release to place them by, every merged row sits at one state that
+  // says exactly that — not at "merged, not yet released", which would be a
+  // claim about a release process this repository does not have.
+  const unrecorded = page.getByTestId('pull-state-alice/jeryu-unrecorded');
+  await expect(unrecorded.locator('.pull-state__label')).toHaveText(
+    'Merged · no release recorded'
+  );
+  // And it says why, rather than leaving the reader to guess.
+  await expect(unrecorded.locator('.pull-state__hint')).toHaveText(
+    'no deployment and no release tag'
+  );
+  await expect(page.getByTestId('pull-state-alice/jeryu-merged')).toHaveCount(0);
+  expect(await stateLabels(page, 'alice/jeryu')).toEqual([
+    'Waiting on checks',
+    'Merged · no release recorded',
+  ]);
+
+  // The newest merged PR leads; the four behind it are folded.
+  await expect(unrecorded.getByTestId('pull-timeline-alice/jeryu-9')).toBeVisible();
+  const older = page.getByTestId('pull-older-alice/jeryu-unrecorded');
+  await expect(older.locator('summary')).toHaveText('+ 4 older at this state');
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeHidden();
+  await older.locator('summary').click();
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeVisible();
+
+  // Still folded into its successor, release history or not.
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-14')).toHaveCount(0);
 });
 
-test('Shift work with no pull request yet sits above the open rows, with a truthful "when" @action:pull_room.ghost_rows', async ({
+test('Shift work with no pull request yet sits above the repositories, with a truthful "when" @action:pull_room.ghost_rows', async ({
   page,
 }) => {
   await blockWebSocket(page);
@@ -167,6 +226,18 @@ test('Shift work with no pull request yet sits above the open rows, with a truth
 
   // A todo that already has a pull request is not also a ghost.
   await expect(page.getByTestId('pull-ghost-t-has-pr')).toHaveCount(0);
-  // The real pull requests still render below.
-  await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible();
+
+  // The ghosts lead the page; the repository sections follow.
+  const sections = page.locator('[data-testid="pull-timeline"] > section');
+  expect(await sections.first().getAttribute('data-testid')).toBe(
+    'pull-ghosts-bulletshift/2026-06-05'
+  );
+  expect(await sections.last().getAttribute('data-testid')).toBe('pull-repo-alice/jeryu');
+
+  // The real pull requests still render below: #8 is the frontier of the
+  // checks state, with #7 behind its expander.
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-8')).toBeVisible();
+  await expect(page.getByTestId('pull-older-alice/jeryu-checks')).toContainText(
+    '+ 1 older at this state'
+  );
 });

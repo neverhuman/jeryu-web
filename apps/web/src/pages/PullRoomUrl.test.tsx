@@ -128,7 +128,9 @@ describe('Pull Room URL navigation', () => {
     const user = userEvent.setup();
     const router = setup(['/pull-room']);
     const row = screen.getByTestId('pull-timeline-owner/a-1');
-    expect(row).toHaveTextContent('owner/a#1');
+    // The repository leads its section now, so the row itself is just `#n`.
+    expect(row).toHaveTextContent('#1');
+    expect(screen.getByTestId('pull-repo-owner/a')).toHaveTextContent('owner/a');
     expect(row).toHaveTextContent('Change in owner/a');
     expect(screen.getByTestId('pull-room-sentence')).toHaveTextContent(
       '2 open · 0 waiting on checks · 0 stopped by a failing check'

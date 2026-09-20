@@ -9,7 +9,7 @@ import { useRepositories } from '../hooks/useRepositories';
 import { useShiftTodos } from '../hooks/useShift';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
-import { awaitingReleaseCount } from './pullBandsModel';
+import { awaitingReleaseCount } from './pullRepoGroupsModel';
 import { pullGhostGroups, type GhostGroup } from './pullGhostsModel';
 import { releaseLadder } from './releaseChannelsModel';
 import {

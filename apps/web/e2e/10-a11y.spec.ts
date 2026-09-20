@@ -345,10 +345,13 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
     await scanAndAssert(page, 'pull-requests');
   });
 
-  test('axe scan: timeline release bands and shift ghost rows', async ({ page }) => {
-    // The richest state of the timeline: a band per release channel, the
-    // settled band collapsed, ladder pips on every merged row, and dashed
-    // ghost rows for shift work that has no pull request yet.
+  test('axe scan: timeline repository sections, state blocks and shift ghost rows', async ({
+    page,
+  }) => {
+    // The richest state of the timeline: a section per repository, one state
+    // block per rung of the pipeline with its older work folded behind an
+    // expander, ladder pips on every merged row, and dashed ghost rows for
+    // shift work that has no pull request yet.
     await page.context().route('**/api/v1/ws', (route) => route.abort());
     await mockBootstrap(page);
     await mockPullRoom(page, snapshotWithReleaseHistory());
@@ -363,9 +366,11 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
       shiftTodo('a11y-open'),
     ]);
     await page.goto('/pull-room');
-    await expect(page.getByTestId('pull-band-stable')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('pull-state-alice/jeryu-stable')).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByTestId('pull-ghost-a11y-claimed')).toBeVisible();
-    await scanAndAssert(page, 'pull-requests-bands');
+    await scanAndAssert(page, 'pull-requests-repo-states');
   });
 
   test('axe scan: Releases environments and pins', async ({ page }) => {

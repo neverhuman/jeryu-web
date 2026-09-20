@@ -596,11 +596,74 @@
   margin: var(--space-2) var(--space-3) 0;
 }
 
-/* The settled band is history: quieter than the manifest above it. */
-.pull-band.is-production .pull-timeline__rows,
-.pull-band.is-tag .pull-timeline__rows,
-.pull-band.is-closed .pull-timeline__rows {
-  opacity: 0.8;
+/* ------------------------------------------------- repositories and states
+   One section per repository; inside it one row per state of the pipeline,
+   least far first, each showing the newest pull request that has got that far.
+   Older work at the same state folds behind that state's expander. */
+
+.pull-repo {
+  margin-top: var(--space-4);
+}
+
+.pull-repo__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-md);
+}
+
+.pull-repo__head a {
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+}
+
+.pull-repo__count {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
+.pull-state {
+  margin-top: var(--space-2);
+}
+
+.pull-state__label {
+  margin: 0 0 2px var(--space-3);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Work that will never move again is quieter than work still on its way. */
+.pull-state.is-closed .pull-state__label,
+.pull-state.is-closed .pull-timeline__rows {
+  opacity: 0.7;
+}
+
+.pull-state__hint {
+  margin: 0 0 2px var(--space-3);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.pull-state__older {
+  margin: var(--space-1) 0 0 var(--space-3);
+}
+
+.pull-state__older > summary {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.pull-state__older[open] > summary {
+  margin-bottom: var(--space-2);
 }
 
 /* ----------------------------------------------------------- the ladder

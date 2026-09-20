@@ -26,9 +26,17 @@ test('Pull requests shows every open pull request as a timeline row, filters, an
   await shell.assertShellLoaded();
 
   await expect(page.getByTestId('pull-room-page')).toBeVisible();
-  // The timeline is the page: one row per open pull request, led by owner/name#n.
+  // The timeline is the page: one section per repository, and inside it the
+  // newest pull request at each state of the pipeline. Both open PRs are
+  // waiting on checks, so #8 is the frontier and #7 sits behind the expander.
+  const section = page.getByTestId('pull-repo-alice/jeryu');
+  await expect(section.getByRole('link', { name: 'alice/jeryu' })).toHaveAttribute(
+    'href',
+    '/repos/jeryu/alice/jeryu/pulls'
+  );
+  await page.getByTestId('pull-older-alice/jeryu-checks').locator('summary').click();
   const row = page.getByTestId('pull-timeline-alice/jeryu-7');
-  await expect(row).toContainText('alice/jeryu#7');
+  await expect(row).toContainText('#7');
   await expect(row).toContainText('Fix BFF PR list');
   await expect(page.getByTestId('pull-stage-alice/jeryu-7-checks')).toHaveAttribute('data-status', 'pending');
   await expect(page.getByTestId('pull-stage-alice/jeryu-8-checks')).toHaveAttribute('data-status', 'blocked');

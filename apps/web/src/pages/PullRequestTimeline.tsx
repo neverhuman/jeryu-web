@@ -2,7 +2,13 @@ import { Link } from 'react-router-dom';
 
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
-import { buildTimeline, type TimelineBand, type TimelineRow } from './pullBandsModel';
+import {
+  buildRepoGroups,
+  stateHeading,
+  type RepoGroup,
+  type StateRow,
+  type TimelineRow,
+} from './pullRepoGroupsModel';
 import { pullRequestPath } from './pullRoomModel';
 import { UNKNOWN_LADDER, type ReleaseLadder } from './releaseChannelsModel';
 import { PULL_STAGE_LABELS, pullStages } from './pullTimelineModel';
@@ -10,10 +16,12 @@ import { PULL_STAGE_LABELS, pullStages } from './pullTimelineModel';
 import './PullRoomPage.css';
 
 /**
- * One row per change, each a horizontal track of stages from opened to
- * released, down a single time axis: shift work that has not opened a PR yet,
- * then open PRs, then merged work banded by how far out it has shipped, then
- * the settled history behind one expandable band.
+ * One section per repository; inside it one row per state of the pipeline,
+ * least far first, each showing the most recent pull request that has got that
+ * far. Older work at the same state sits behind that state's expander, because
+ * between the newest change at a state and the ones before it there is usually
+ * nothing to act on. Shift work that has not opened a pull request yet leads
+ * the page, so it reads future → present → past from top to bottom.
  */
 export function PullRequestTimeline({
   pulls,
@@ -24,17 +32,17 @@ export function PullRequestTimeline({
 }: {
   pulls: PullRequestSummary[];
   emptyMessage: string;
-  /** Rows from several repositories: lead each with `owner/name#n`. */
+  /** Several repositories: each section is headed by `owner/name`. */
   showRepo?: boolean;
   /** The release ladder of a PR's repository; without it release reads unknown. */
   ladderFor?: (pr: PullRequestSummary) => ReleaseLadder;
-  /** Shift work that will become a PR, shown above the open rows. */
+  /** Shift work that will become a PR, shown above the repositories. */
   ghosts?: GhostGroup[];
 }): JSX.Element {
   if (pulls.length === 0 && ghosts.length === 0) {
     return <p className="pull-list__empty">{emptyMessage}</p>;
   }
-  const timeline = buildTimeline(pulls, { ladderFor: ladderFor ?? (() => UNKNOWN_LADDER) });
+  const timeline = buildRepoGroups(pulls, { ladderFor: ladderFor ?? (() => UNKNOWN_LADDER) });
   return (
     <div className="pull-timeline" data-testid="pull-timeline">
       <div className="pull-timeline__head" aria-hidden="true">
@@ -48,22 +56,64 @@ export function PullRequestTimeline({
         <GhostBand key={group.key} group={group} />
       ))}
 
-      {timeline.open.length > 0 ? (
-        <ol className="pull-timeline__rows" data-testid="pull-timeline-open">
-          {timeline.open.map((row) => (
-            <Row key={rowId(row, showRepo)} row={row} showRepo={showRepo} />
-          ))}
-        </ol>
-      ) : null}
-
-      {timeline.bands.map((band) => (
-        <Band key={band.id} band={band} showRepo={showRepo} />
+      {timeline.groups.map((group) => (
+        <RepoSection key={group.repo} group={group} showRepo={showRepo} />
       ))}
+    </div>
+  );
+}
 
-      {timeline.floor ? (
-        <p className="pull-timeline__floor" data-testid="pull-timeline-floor">
-          {timeline.floor}
-        </p>
+function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean }): JSX.Element {
+  return (
+    <section className="pull-repo" data-testid={`pull-repo-${group.repo}`}>
+      {showRepo ? (
+        <h2 className="pull-repo__head">
+          <Link to={`/repos/${group.host}/${group.repo}/pulls`}>{group.repo}</Link>
+          <span className="pull-repo__count">
+            {group.total} PR{group.total === 1 ? '' : 's'} · {group.open} open
+            {group.hidden > 0 ? ` · ${group.hidden} older behind the states` : ''}
+          </span>
+        </h2>
+      ) : null}
+      {group.states.map((stateRow) => (
+        <State key={stateRow.state} repo={group.repo} stateRow={stateRow} showRepo={showRepo} />
+      ))}
+    </section>
+  );
+}
+
+/** One state of one repository: its frontier row, then the older ones folded. */
+function State({
+  repo,
+  stateRow,
+  showRepo,
+}: {
+  repo: string;
+  stateRow: StateRow;
+  showRepo: boolean;
+}): JSX.Element {
+  return (
+    <div
+      className={`pull-state is-${stateRow.state}`}
+      data-testid={`pull-state-${repo}-${stateRow.state}`}
+    >
+      <p className="pull-state__label">{stateHeading(stateRow)}</p>
+      {/* Why this state exists, where the label alone would leave a guess. */}
+      {stateRow.hint ? <p className="pull-state__hint">{stateRow.hint}</p> : null}
+      <ol className="pull-timeline__rows">
+        <Row row={stateRow.row} showRepo={showRepo} />
+      </ol>
+      {stateRow.older.length > 0 ? (
+        <details className="pull-state__older" data-testid={`pull-older-${repo}-${stateRow.state}`}>
+          <summary>
+            + {stateRow.older.length} older at this state
+          </summary>
+          <ol className="pull-timeline__rows">
+            {stateRow.older.map((row) => (
+              <Row key={rowId(row, showRepo)} row={row} showRepo={showRepo} />
+            ))}
+          </ol>
+        </details>
       ) : null}
     </div>
   );
@@ -75,45 +125,15 @@ function rowId(row: TimelineRow, showRepo: boolean): string {
   return showRepo ? `${repo}-${row.pr.number}` : String(row.pr.number);
 }
 
-/** A band of merged or closed work: one summary line, expandable to its rows. */
-function Band({ band, showRepo }: { band: TimelineBand; showRepo: boolean }): JSX.Element {
-  return (
-    <details
-      className={`pull-band is-${band.id}`}
-      data-testid={`pull-band-${band.id}`}
-      open={!band.collapsed}
-    >
-      <summary className="pull-band__summary">
-        <span className="pull-band__label">{band.label}</span>
-        <span className="pull-band__hint">{band.hint}</span>
-      </summary>
-      <ol className="pull-timeline__rows">
-        {band.rows.map((row) => (
-          <Row key={rowId(row, showRepo)} row={row} showRepo={showRepo} />
-        ))}
-      </ol>
-      {band.hidden > 0 ? (
-        <p className="pull-band__more">{band.hidden} more not listed.</p>
-      ) : null}
-    </details>
-  );
-}
-
 function Row({ row, showRepo }: { row: TimelineRow; showRepo: boolean }): JSX.Element {
   const { pr, ladder } = row;
   const repo = `${pr.repo.owner}/${pr.repo.name}`;
   const id = rowId(row, showRepo);
   return (
-    <li
-      className={`pull-timeline__row is-${pr.state}`}
-      data-testid={`pull-timeline-${id}`}
-    >
+    <li className={`pull-timeline__row is-${pr.state}`} data-testid={`pull-timeline-${id}`}>
       <div className="pull-timeline__pr">
         <Link to={pullRequestPath(pr.repo.host, repo, pr.number)}>
-          <span className="pull-timeline__number">
-            {showRepo ? repo : ''}#{pr.number}
-          </span>{' '}
-          {pr.title}
+          <span className="pull-timeline__number">#{pr.number}</span> {pr.title}
         </Link>
         <span className="pull-timeline__meta">
           <code>{pr.head_ref}</code> → <code>{pr.base_ref}</code> · {pr.author}
@@ -125,10 +145,7 @@ function Row({ row, showRepo }: { row: TimelineRow; showRepo: boolean }): JSX.El
           ) : null}
         </span>
       </div>
-      <ol
-        className="pull-timeline__track"
-        aria-label={`Status of ${showRepo ? repo : ''}#${pr.number}`}
-      >
+      <ol className="pull-timeline__track" aria-label={`Status of ${repo}#${pr.number}`}>
         {pullStages(pr, ladder).map((stage) => (
           <li
             key={stage.id}
@@ -177,8 +194,8 @@ function pipTitle(label: string, membership: string, release: string | null): st
 }
 
 /**
- * Shift work above the open rows: it has no PR yet, so it is dashed and dim —
- * a different dim from a closed PR, which will never move again.
+ * Shift work above the repositories: it has no PR yet, so it is dashed and dim
+ * — a different dim from a closed PR, which will never move again.
  */
 function GhostBand({ group }: { group: GhostGroup }): JSX.Element {
   const family = group.rows[0]?.family ?? '';
@@ -222,7 +239,10 @@ function GhostRowView({ row }: { row: GhostRow }): JSX.Element {
         </span>
       </div>
       {/* The todo's own lifecycle, which the PR stages continue once it opens. */}
-      <ol className="pull-timeline__track pull-timeline__track--ghost" aria-label={`Status of ${row.title}`}>
+      <ol
+        className="pull-timeline__track pull-timeline__track--ghost"
+        aria-label={`Status of ${row.title}`}
+      >
         {row.steps.map((step) => (
           <li
             key={step.key}
