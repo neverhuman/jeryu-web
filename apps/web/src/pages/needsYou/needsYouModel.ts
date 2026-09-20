@@ -94,7 +94,7 @@ export function attentionContext(item: AttentionItem): string {
 }
 
 export type PrimaryAction =
-  | { type: 'command'; label: string; command: string }
+  | { type: 'command'; label: string; command: string; where: string | null }
   | { type: 'link'; label: string; to: string }
   | null;
 
@@ -104,9 +104,24 @@ export type PrimaryAction =
  */
 export function primaryAction(item: AttentionItem): PrimaryAction {
   const label = item.action?.label || 'Open';
-  if (item.action?.command) return { type: 'command', label, command: item.action.command };
+  if (item.action?.command) {
+    return { type: 'command', label, command: item.action.command, where: commandPlace(item) };
+  }
   const to = safeHref(item.href);
   return to ? { type: 'link', label, to } : null;
+}
+
+/**
+ * Where a row's command is run, as one short line shown above it. The server
+ * names the machine and directory (`action.run_in`); one that predates the
+ * field leaves the item's repository as the only hint, and with neither there
+ * is nothing true to say.
+ */
+export function commandPlace(item: Pick<AttentionItem, 'action' | 'repo'>): string | null {
+  const runIn = item.action?.run_in?.trim();
+  if (runIn) return `Run on ${runIn}`;
+  const repo = item.repo?.trim();
+  return repo ? `Run in a checkout of ${repo}` : null;
 }
 
 export interface SystemPulseInput {

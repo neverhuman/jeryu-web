@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ReleasesPage } from '../ReleasesPage';
 import { mockPipelineApi } from './pipelinePageHelpers';
-import { DEPLOY_COMMAND } from './pipelineTestData';
+import { DEPLOY_COMMAND, DEPLOY_RUN_IN } from './pipelineTestData';
 import { json, renderAt } from './shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
@@ -91,7 +91,10 @@ describe('ReleasesPage', () => {
     const staged = await screen.findByTestId('releases-staged');
     expect(within(staged).getByText('Staged, awaiting deploy')).toBeInTheDocument();
     expect(within(staged).getByText(DEPLOY_COMMAND)).toBeInTheDocument();
-    expect(within(staged).getByRole('button', { name: 'Copy deploy command' })).toBeInTheDocument();
+    // The same where-line Needs you shows, and it describes the copy button.
+    expect(within(staged).getByRole('button', { name: 'Copy deploy command' })).toHaveAccessibleDescription(
+      `Run on ${DEPLOY_RUN_IN}`
+    );
 
     const prod = await screen.findByTestId('releases-env-production');
     expect(within(prod).getByRole('link', { name: 'deploy log' })).toHaveAttribute(

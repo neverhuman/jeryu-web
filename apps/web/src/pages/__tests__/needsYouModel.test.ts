@@ -8,6 +8,7 @@ import {
   filterByFamily,
   attentionBadgeCount,
   attentionContext,
+  commandPlace,
   primaryAction,
   systemPulse,
   findAttention,
@@ -51,10 +52,28 @@ describe('needsYouModel', () => {
       type: 'command',
       label: 'Deploy',
       command: staged.action!.command,
+      where: 'Run on xbabe0, in a jeryu/jeryu-deploy checkout',
     });
     const blocked = findAttention(ATTENTION, 'todo_blocked')!;
     expect(primaryAction(blocked)).toEqual({ type: 'link', label: 'Open', to: blocked.href });
     expect(primaryAction(attentionItem({ id: 'x', kind: 'y', href: 'https://evil.example' }))).toBeNull();
+  });
+
+  it('says where a command runs: the server\'s place, else a checkout of the repository, else nothing', () => {
+    const command = 'systemctl --user start jeryu-auto-pin.service';
+    const item = (action: { run_in?: string | null }, repo: string | null): ReturnType<typeof attentionItem> =>
+      attentionItem({ id: 'x', kind: 'pin_behind', repo, action: { label: 'Run', command, ...action } });
+    expect(commandPlace(item({ run_in: 'xbabe0, any directory' }, 'jeryu/jeryu-deploy'))).toBe(
+      'Run on xbabe0, any directory'
+    );
+    // A server that predates `run_in`, or sent it blank: the repository is the hint.
+    expect(commandPlace(item({}, 'jeryu/jeryu-deploy'))).toBe('Run in a checkout of jeryu/jeryu-deploy');
+    expect(commandPlace(item({ run_in: ' ' }, 'jeryu/jeryu-deploy'))).toBe(
+      'Run in a checkout of jeryu/jeryu-deploy'
+    );
+    expect(commandPlace(item({ run_in: null }, null))).toBeNull();
+    expect(commandPlace(attentionItem({ id: 'y', kind: 'z' }))).toBeNull();
+    expect(primaryAction(item({}, null))).toEqual({ type: 'command', label: 'Run', command, where: null });
   });
 
   it('never shows a raw kind', () => {

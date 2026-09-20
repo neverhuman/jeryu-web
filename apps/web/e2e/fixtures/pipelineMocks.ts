@@ -10,6 +10,9 @@ import type { Page, Route } from '@playwright/test';
 export const DEPLOY_COMMAND =
   'scripts/release/deploy-release.sh prod-20260919T130210Z-01dfe68-unsigned';
 
+/** Where the deploy command runs, as the server phrases it (`action.run_in`). */
+export const DEPLOY_RUN_IN = 'xbabe0, in a jeryu/jeryu-deploy checkout';
+
 function minutesAgo(minutes: number): string {
   return new Date(Date.now() - minutes * 60_000).toISOString();
 }
@@ -55,7 +58,7 @@ export function attentionBody(): Record<string, unknown> {
         since: minutesAgo(12),
         repo: 'jeryu/jeryu-deploy',
         href: '/releases',
-        action: { label: 'Deploy', command: DEPLOY_COMMAND },
+        action: { label: 'Deploy', command: DEPLOY_COMMAND, run_in: DEPLOY_RUN_IN },
       }),
       item({
         id: 'todo-blocked:jeryu:20260919-130515-f8cc66',

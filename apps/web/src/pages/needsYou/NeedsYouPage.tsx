@@ -4,7 +4,8 @@
 //
 // Built to be read in a glance. A row is a title, one line of reason, and
 // exactly one thing to do: a link to where to act, or the command to copy
-// when the act happens off-site. Red is reserved for rows where a person is
+// when the act happens off-site, under one muted line saying on which machine
+// and in which directory to run it. Red is reserved for rows where a person is
 // the next step; `watch` rows stay neutral, folded behind a count. When
 // nothing is waiting, one sentence says so and a single line shows what the
 // system is doing, so calm reads as alive rather than broken.
@@ -213,7 +214,11 @@ function AttentionRow({
         ) : null}
       </div>
       {action?.type === 'command' ? (
-        <CopyCommand command={action.command} label={`${action.label} command for ${item.title}`} />
+        <CopyCommand
+          command={action.command}
+          where={action.where}
+          label={`${action.label} command for ${item.title}`}
+        />
       ) : action?.type === 'link' ? (
         // One link, stretched over the row (CSS): the whole row leads there,
         // and there is still exactly one thing to activate.

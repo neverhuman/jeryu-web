@@ -21,6 +21,9 @@ export function attentionItem(partial: Partial<AttentionItem> & Pick<AttentionIt
   };
 }
 
+/** Where the deploy command runs, as the server phrases it (`action.run_in`). */
+export const DEPLOY_RUN_IN = 'xbabe0, in a jeryu/jeryu-deploy checkout';
+
 export const DEPLOY_COMMAND =
   'scripts/release/deploy-release.sh prod-20260919T130210Z-01dfe68-unsigned';
 
@@ -38,7 +41,7 @@ export const ATTENTION: AttentionResponse = {
       repo: 'jeryu/jeryu-deploy',
       sha: '01dfe680a6de5e02da4e9aa7821534742aa46d7e',
       href: '/releases',
-      action: { label: 'Deploy', command: DEPLOY_COMMAND },
+      action: { label: 'Deploy', command: DEPLOY_COMMAND, run_in: DEPLOY_RUN_IN },
     }),
     attentionItem({
       id: 'todo-blocked:jeryu:20260919-130515-f8cc66',

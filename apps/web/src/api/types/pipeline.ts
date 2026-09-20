@@ -12,6 +12,12 @@ export interface AttentionAction {
   label: string;
   /** A copyable shell line when the act happens off-site. */
   command: string | null;
+  /**
+   * Where `command` is run: a short phrase naming the machine and directory
+   * ("xbabe0, any directory"). Absent from a server that predates it, and on
+   * every action without a command.
+   */
+  run_in?: string | null;
 }
 
 export interface AttentionItem {

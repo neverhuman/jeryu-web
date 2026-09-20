@@ -5,7 +5,13 @@
 import { expect, test } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
-import { attentionBody, DEPLOY_COMMAND, mockPipelineApi, pinsBody } from './fixtures/pipelineMocks';
+import {
+  attentionBody,
+  DEPLOY_COMMAND,
+  DEPLOY_RUN_IN,
+  mockPipelineApi,
+  pinsBody,
+} from './fixtures/pipelineMocks';
 import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
 
 test.describe('Pipeline visibility', () => {
@@ -66,6 +72,11 @@ test.describe('Pipeline visibility', () => {
     // Off-site act: the command is the single action.
     const staged = page.getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
     await expect(staged).toContainText(DEPLOY_COMMAND);
+    // Where before what: one line above the command, and the copy button's description.
+    await expect(staged.getByTestId('copy-command-where')).toHaveText(`Run on ${DEPLOY_RUN_IN}`);
+    await expect(staged.getByRole('button', { name: /^Copy Deploy command/ })).toHaveAccessibleDescription(
+      `Run on ${DEPLOY_RUN_IN}`
+    );
     await expect(staged.getByRole('link')).toHaveCount(0);
     // One act (copy) plus the family pill, which only filters.
     await expect(staged.getByRole('button')).toHaveCount(2);
@@ -124,6 +135,16 @@ test.describe('Pipeline visibility', () => {
         .locator('.needs-you__title');
       const box = await title.boundingBox();
       expect(box?.width ?? 0, `title width at ${width}px`).toBeGreaterThan(200);
+      // A command row stays inside the page: the where-line wraps and the
+      // command scrolls inside its own box.
+      const where = page
+        .getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy')
+        .getByTestId('copy-command-where');
+      await expect(where).toBeVisible();
+      const sideways = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+      expect(sideways, `page scrolls sideways at ${width}px`).toBeLessThanOrEqual(0);
     }
   });
 

@@ -4,9 +4,10 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { AttentionItem } from '../../api/types';
 import { NeedsYouPage } from '../needsYou';
 import { htmlShell, mockPipelineApi } from './pipelinePageHelpers';
-import { ATTENTION, DEPLOY_COMMAND, attentionItem } from './pipelineTestData';
+import { ATTENTION, DEPLOY_COMMAND, DEPLOY_RUN_IN, attentionItem } from './pipelineTestData';
 import { errorResponse, json, renderAt } from './shiftPageHelpers';
 
 function renderPage(): void {
@@ -34,7 +35,15 @@ describe('NeedsYouPage', () => {
     // One act (the copy control) plus the family pill, which filters and never acts.
     expect(within(staged).getAllByRole('button')).toHaveLength(2);
     expect(within(staged).getByRole('button', { name: /^Show only / })).toBeInTheDocument();
-    fireEvent.click(within(staged).getByRole('button', { name: /^Copy Deploy command for Release/ }));
+    // Where comes before what: real text above the command, and the copy
+    // button's description. Only the command reaches the clipboard.
+    const where = within(staged).getByText(`Run on ${DEPLOY_RUN_IN}`);
+    const commandText = within(staged).getByText(DEPLOY_COMMAND);
+    expect(where.compareDocumentPosition(commandText) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const copy = within(staged).getByRole('button', { name: /^Copy Deploy command for Release/ });
+    expect(copy).toHaveAccessibleDescription(`Run on ${DEPLOY_RUN_IN}`);
+    fireEvent.click(copy);
+    expect(writeText).toHaveBeenCalledTimes(1);
     expect(writeText).toHaveBeenCalledWith(DEPLOY_COMMAND);
     expect(await within(staged).findByText('Copied')).toBeInTheDocument();
 
@@ -59,6 +68,67 @@ describe('NeedsYouPage', () => {
     expect(watch.querySelector('.needs-you__row--neutral')).not.toBeNull();
     expect(watch.querySelector('.needs-you__row--danger')).toBeNull();
     expect(screen.queryByTestId('needs-you-pulse')).toBeNull();
+  });
+
+  it('says where a command runs: the server\'s place, else the repository, else nothing', async () => {
+    const command = 'systemctl --user start jeryu-auto-pin.service';
+    const row = (id: string, extra: Partial<AttentionItem>): AttentionItem =>
+      attentionItem({ id, kind: 'pin_behind', title: id, href: '/unreleased', ...extra });
+    mockPipelineApi((req) => {
+      if (req.pathname !== '/api/v1/attention') return undefined;
+      return json({
+        schema_version: 'jeryu.attention/v1',
+        generated_at: '2026-09-20T09:00:00Z',
+        counts: { critical: 0, action: 4, watch: 0 },
+        items: [
+          row('placed', {
+            repo: 'jeryu/jeryu-deploy',
+            action: { label: 'Run auto-pin now', command, run_in: 'xbabe0, any directory' },
+          }),
+          // An older server: no `run_in`, so the repository is the only hint.
+          row('older-server', {
+            repo: 'jeryu/jeryu-deploy',
+            action: { label: 'Bump the pin', command },
+          }),
+          row('blank-place', {
+            repo: 'jeryu/jeryu-deploy',
+            action: { label: 'Bump the pin', command, run_in: '  ' },
+          }),
+          row('no-hint', { action: { label: 'Check the timers', command, run_in: null } }),
+        ],
+      });
+    });
+    renderPage();
+
+    const placed = await screen.findByTestId('needs-you-item-placed');
+    expect(within(placed).getByTestId('copy-command-where')).toHaveTextContent(
+      /^Run on xbabe0, any directory$/
+    );
+    expect(within(placed).getByRole('button', { name: /^Copy Run auto-pin now command/ })).toHaveAccessibleDescription(
+      'Run on xbabe0, any directory'
+    );
+
+    for (const id of ['older-server', 'blank-place']) {
+      const fallback = screen.getByTestId(`needs-you-item-${id}`);
+      expect(within(fallback).getByTestId('copy-command-where')).toHaveTextContent(
+        /^Run in a checkout of jeryu\/jeryu-deploy$/
+      );
+    }
+
+    const bare = screen.getByTestId('needs-you-item-no-hint');
+    expect(within(bare).getByText(command)).toBeInTheDocument();
+    expect(within(bare).queryByTestId('copy-command-where')).toBeNull();
+    expect(within(bare).queryByText(/^Run (on|in) /)).toBeNull();
+    expect(within(bare).getByRole('button', { name: /^Copy Check the timers command/ })).not.toHaveAttribute(
+      'aria-describedby'
+    );
+
+    // Still one act per row: the where-line added no link and no button.
+    for (const id of ['placed', 'older-server', 'blank-place', 'no-hint']) {
+      const each = screen.getByTestId(`needs-you-item-${id}`);
+      expect(within(each).queryByRole('link')).toBeNull();
+      expect(within(each).getAllByRole('button')).toHaveLength(2);
+    }
   });
 
   it('shows a stale pin as one action with its bump command, and as a folded watch row once a bump PR is open', async () => {

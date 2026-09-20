@@ -1,5 +1,26 @@
 /* CopyCommand.css — a visible shell line plus its copy control. */
 
+/* With a place: the where-line sits on the command and wraps; the command
+   keeps scrolling inside its own box, so neither can widen the page. */
+.copy-command-placed {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  /* No min-width: 0 here. In a row the block keeps the command's full width,
+     as the bare command box always did, so the command does not become a
+     scroll region on a wide screen; stacked (narrow), the row stretches it. */
+  max-width: 100%;
+}
+
+.copy-command__where {
+  max-width: 100%;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  overflow-wrap: anywhere;
+}
+
 .copy-command {
   display: inline-flex;
   align-items: stretch;

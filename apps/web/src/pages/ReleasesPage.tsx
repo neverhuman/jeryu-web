@@ -26,7 +26,7 @@ import { useAttention, usePins } from '../hooks/usePipeline';
 
 import { useReleaseOverview } from '../hooks/useReleaseOverview';
 import { useRepositories } from '../hooks/useRepositories';
-import { findAttention } from './needsYou/needsYouModel';
+import { commandPlace, findAttention } from './needsYou/needsYouModel';
 import { behindPinLines } from './pinsModel';
 import { ReadyToPin } from './ReadyToPin';
 import {
@@ -328,7 +328,11 @@ function StagedRelease(): JSX.Element | null {
       </p>
       {staged.reason ? <p className="releases__muted">{staged.reason}</p> : null}
       {staged.action?.command ? (
-        <CopyCommand command={staged.action.command} label="deploy command" />
+        <CopyCommand
+          command={staged.action.command}
+          where={commandPlace(staged)}
+          label="deploy command"
+        />
       ) : null}
     </section>
   );

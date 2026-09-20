@@ -9,7 +9,7 @@
 import { expect, test, type Page } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
-import { DEPLOY_COMMAND, mockPipelineApi } from './fixtures/pipelineMocks';
+import { DEPLOY_COMMAND, DEPLOY_RUN_IN, mockPipelineApi } from './fixtures/pipelineMocks';
 
 const sha = (c: string) => c.repeat(40);
 
@@ -171,6 +171,7 @@ test('a staged release waits with its deploy command and a failed attempt links 
   await expect(staged).toContainText('Staged, awaiting deploy', { timeout: 15_000 });
   await expect(staged).toContainText(DEPLOY_COMMAND);
   await expect(staged.getByRole('button', { name: 'Copy deploy command' })).toBeVisible();
+  await expect(staged.getByTestId('copy-command-where')).toHaveText(`Run on ${DEPLOY_RUN_IN}`);
   await expect(
     page.getByTestId('releases-env-production').getByRole('link', { name: 'deploy log' })
   ).toHaveAttribute('href', 'https://git.neverhuman.org/logs/rel-e.txt');
