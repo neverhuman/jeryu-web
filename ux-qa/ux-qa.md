@@ -88,7 +88,7 @@ under `apps/web/e2e/fixtures/`, and a Playwright screenshot from the route spec.
 
 | Surface | Scope | Mocks | Route spec |
 |---|---|---|---|
-| `/runners` (one sentence for the gate network; rows say Runner, Now, Last job, Seen; PR reviewers share the shape, and a missing reviewer is said) | `fleet` | `mocks.ts` (`mockFleetBootstrap`) | `11-fleet.spec.ts` |
+| `/runners` (one sentence for the gate network; rows say Runner, Now, Last job, Seen; PR reviewers share the shape, and a missing reviewer is said; the background timers get an Automation section only when one reports) | `fleet` | `mocks.ts` (`mockFleetBootstrap`) | `11-fleet.spec.ts` |
 | `/repos` Status column: a red chip opens the failing checks and what to do, in place; Mirror, Unshipped and Failing CI columns removed | `repositories`, `repositories-status` | `mocks.ts` (`mockRepoList`) | `27-repos-status.spec.ts`, `02-repos.spec.ts` |
 | Repository Settings, read-only: branch protection and the GitHub mirror | `repo-settings` | `mocks.ts` (`mockRepoList`) | `31-repo-settings-readonly.spec.ts` |
 | `/work` (one page: a one-line Add work composer that opens when used, a one-line workers summary that opens to the slots, timeline and capacity chart, then every family's queue with a family pill at the far left of each row; `/work/shift`, `/work/shift/new` and `/work/shift/workers` redirect to it, to `#add` and to `#workers`, query string kept) | `shift-queue` (as it opens), `shift-add` (composer opened), `shift-workers` (workers opened) | `shiftMocks.ts` (two families) | `28-shift.spec.ts` |

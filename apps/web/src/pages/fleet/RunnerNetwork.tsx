@@ -15,6 +15,7 @@ import {
   runnerName,
   seenStale,
   type PullRef,
+  type RowLast,
   type RunnerNetworkNode
 } from '../runnerNetworkModel';
 
@@ -155,11 +156,11 @@ function RunnerRow({
                   <span className={`fleet__tone--${last.tone}`}>
                     {last.verb}
                   </span>{' '}
-                  <PullLink pull={last.pull} />
+                  <LastSubject last={last} />
                 </>
               ) : (
                 <>
-                  <PullLink pull={last.pull} />{' '}
+                  <LastSubject last={last} />{' '}
                   <span className={`fleet__tone--${last.tone}`}>
                     {last.verb}
                   </span>
@@ -259,6 +260,11 @@ function taskTerminalPath(
 
 function testIdSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+/** The job's pull request as a link, or its `repo@sha` in plain text. */
+function LastSubject({ last }: { last: RowLast }): JSX.Element {
+  return last.pull ? <PullLink pull={last.pull} /> : <>{last.subject}</>;
 }
 
 /** `owner/name#pr`, linked to the pull request it names. */

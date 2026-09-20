@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Runners: an Automation section lists the forge's background timers (auto-pin, auto-stage) from
+  their `automation`-labelled heartbeats: which timer, where, what it last did (with the one pull
+  request link when there is one) and when it was last seen. A timer is offline by the forge's
+  `offlineAfterSeconds`, reads as a problem and says since when; with no timer reporting there is
+  no section. `lastActivity.pr` may be null (a staged commit has no pull request).
 - Web: high-contrast multi-neon TUI overhaul — boot splash + moving feature
   carousel + keyboard-first login; the dark terminal theme is the new default
   (light and high-contrast still selectable); self-hosted JetBrains Mono.

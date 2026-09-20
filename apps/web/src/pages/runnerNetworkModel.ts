@@ -1,7 +1,10 @@
 // runnerNetworkModel.ts — pure selectors for the /fleet runner-network drilldown.
 //
 // Nodes labelled `redteam` are PR reviewers (pr-redteam), not gate slots: they
-// are split into `reviewers` and kept out of the slot totals.
+// are split into `reviewers` and kept out of the slot totals. Nodes labelled
+// `automation` are the forge's background timers (auto-pin, auto-stage): they
+// go to `automation` and nowhere else; their words are in
+// fleet/automationModel.ts.
 //
 // The Fleet page consumes the shared runner-fabric response directly and keeps
 // the node/task/TTY projection isolated from React. That lets the page show the
@@ -25,11 +28,14 @@ export type RunnerAvailability =
 
 export type RunnerActivityState = 'active' | 'idle' | 'unknown';
 
-/** A gate runner slot, or a PR reviewer (pr-redteam) that holds no gate slot. */
-export type RunnerKind = 'gate' | 'reviewer';
+/** A gate runner slot, or a PR reviewer or background timer that holds none. */
+export type RunnerKind = 'gate' | 'reviewer' | 'automation';
 
 /** Heartbeat label that marks a PR reviewer rather than a gate slot. */
 export const REVIEWER_LABEL = 'redteam';
+
+/** Heartbeat label that marks a background timer (auto-pin, auto-stage). */
+export const AUTOMATION_LABEL = 'automation';
 
 /** What a reviewer's last pass concluded, as shown on /runners. */
 export type ReviewVerdict = 'approve' | 'hold' | 'no usable verdict';
@@ -75,6 +81,8 @@ export interface RunnerNetworkNode {
   tasks: RunnerNetworkTask[];
   /** The last gate this runner finished, when it reports one. */
   lastActivity?: RunnerLastActivity | null;
+  /** The forge's offline threshold for this runner, when it sends one. */
+  offlineAfterSeconds?: number | null;
 }
 
 export interface RunnerNetworkTotals {
@@ -94,6 +102,8 @@ export interface RunnerNetworkState {
   nodes: RunnerNetworkNode[];
   /** PR reviewers, listed apart from the gate slots. */
   reviewers: RunnerNetworkNode[];
+  /** Background timers (auto-pin, auto-stage); empty from an older forge. */
+  automation: RunnerNetworkNode[];
   totals: RunnerNetworkTotals;
   lastUpdated: string | null;
 }
@@ -189,7 +199,11 @@ function nodeFromRaw(raw: RunnerNodeSummary): RunnerNetworkNode {
     null;
   return {
     runnerId: raw.runnerId,
-    kind: raw.labels.includes(REVIEWER_LABEL) ? 'reviewer' : 'gate',
+    kind: raw.labels.includes(AUTOMATION_LABEL)
+      ? 'automation'
+      : raw.labels.includes(REVIEWER_LABEL)
+        ? 'reviewer'
+        : 'gate',
     source: raw.source,
     state: raw.state,
     availability,
@@ -202,6 +216,7 @@ function nodeFromRaw(raw: RunnerNodeSummary): RunnerNetworkNode {
     lastUpdated,
     tasks,
     lastActivity: raw.lastActivity ?? null,
+    offlineAfterSeconds: raw.offlineAfterSeconds ?? null,
   };
 }
 
@@ -241,7 +256,8 @@ function lastActivityFromRaw(value: unknown): RunnerLastActivity | null {
   if (!repo || !sha || !conclusion || !finishedAt) return null;
   return {
     repo,
-    pr: num(record.pr),
+    // Absent or null: the work had no pull request (a staged commit).
+    pr: num(record.pr) > 0 ? num(record.pr) : null,
     sha,
     recipe: str(record.recipe),
     conclusion,
@@ -272,6 +288,7 @@ export function runnerNetworkFromResponse(
         activeTaskCount: num(record.activeTaskCount),
         lastUpdated: typeof record.lastUpdated === 'string' ? record.lastUpdated : null,
         lastActivity: lastActivityFromRaw(record.lastActivity),
+        offlineAfterSeconds: num(record.offlineAfterSeconds) > 0 ? num(record.offlineAfterSeconds) : null,
         activeTasks: tasks
           .map((task) => {
             const taskRecord = asRecord(task);
@@ -306,8 +323,9 @@ export function runnerNetworkFromResponse(
     })
     .filter((node): node is RunnerNetworkNode => node !== undefined)
     .sort((a, b) => a.runnerId.localeCompare(b.runnerId));
-  const nodes = allNodes.filter((node) => node.kind !== 'reviewer');
+  const nodes = allNodes.filter((node) => node.kind === 'gate');
   const reviewers = allNodes.filter((node) => node.kind === 'reviewer');
+  const automation = allNodes.filter((node) => node.kind === 'automation');
 
   const totals = totalsFromNodes(nodes);
   const lastUpdated =
@@ -326,6 +344,7 @@ export function runnerNetworkFromResponse(
         : 'unknown',
     nodes,
     reviewers,
+    automation,
     totals,
     lastUpdated,
   };
@@ -380,6 +399,11 @@ export function runnerName(runnerId: string): string {
   if (slot) return `${slot[1]} · slot ${slot[2]}`;
   const [host, ...rest] = runnerId.split('/');
   return rest.length > 0 && host ? `${host} · ${rest.join('/')}` : runnerId;
+}
+
+/** The seven-character sha people read aloud. */
+export function shortSha(sha: string): string {
+  return sha.slice(0, 7);
 }
 
 /** 14 -> "14s", 127 -> "2m 7s", 3780 -> "1h 3m". */
@@ -450,7 +474,10 @@ export function rowNow(node: RunnerNetworkNode, nowMs: number): RowNow {
 }
 
 export interface RowLast {
-  pull: PullRef;
+  /** The pull request the job was for; null when it had none. */
+  pull: PullRef | null;
+  /** `owner/name#12`, or `owner/name@77dc331` for a job with no pull request. */
+  subject: string;
   /** "passed" / "failed" / "errored", or "approved" / "held" / "no usable verdict on". */
   verb: string;
   /** Whether the verb comes before the subject ("approved x#1") or after ("x#1 passed"). */
@@ -464,12 +491,16 @@ export interface RowLast {
 export function rowLast(node: RunnerNetworkNode): RowLast | null {
   const last = node.lastActivity;
   if (!last) return null;
-  const pull = { repo: last.repo, pr: last.pr };
+  const pull = last.pr === null ? null : { repo: last.repo, pr: last.pr };
+  const subject = pull
+    ? `${pull.repo}#${pull.pr}`
+    : `${last.repo}@${shortSha(last.sha)}`;
   const duration = durationWords(last.seconds);
   if (node.kind === 'reviewer') {
     const verdict = reviewVerdict(last.conclusion);
     return {
       pull,
+      subject,
       verb:
         verdict === 'approve'
           ? 'approved'
@@ -490,6 +521,7 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
   const passed = last.conclusion === 'success';
   return {
     pull,
+    subject,
     verb: passed
       ? 'passed'
       : last.conclusion === 'failure'

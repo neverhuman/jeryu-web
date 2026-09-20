@@ -14,7 +14,7 @@ import {
   mockControlPlaneRunners,
   mockFleetBootstrap,
 } from './fixtures/mocks';
-import type { RunnerFabricResponse } from '../src/api/types';
+import type { RunnerFabricResponse, RunnerLastActivity } from '../src/api/types';
 
 test.describe.configure({ retries: 1 });
 
@@ -291,6 +291,79 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     );
     await expect(page.getByTestId('fleet-no-reviewer')).toHaveCount(0);
     await expect(page.getByTestId('fleet-node-xbabe0_redteam')).toHaveCount(0);
+  });
+
+  test('lists the background timers under Automation, and shows no section when none reports @action:fleet.automation', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockFleetBootstrap(page, []);
+    const fabric = runnerFabric(false);
+    const beat = new Date(Date.now() - 240_000).toISOString();
+    const timer = (name: string, lastActivity: RunnerLastActivity) => ({
+      runnerId: `xbabe0/${name}`,
+      source: 'automation',
+      state: 'active',
+      capacity: 0,
+      inFlight: 0,
+      labels: ['xbabe0', 'slot 0', 'automation'],
+      classes: ['automation'],
+      activeTaskCount: 0,
+      // Four minutes since the beat of a five-minute timer: healthy.
+      lastUpdated: beat,
+      activeTasks: [],
+      offlineAfterSeconds: 900,
+      lastActivity,
+    });
+    fabric.local.nodeDetails.push(
+      timer('auto-pin', {
+        repo: 'jeryu/jeryu-deploy',
+        pr: 74,
+        sha: 'ea04cac1f05eadc15694dd1434d9f8f99c44a0d3',
+        recipe: 'auto-pin',
+        conclusion: 'opened',
+        seconds: 0,
+        finishedAt: beat,
+      }),
+      timer('auto-stage', {
+        repo: 'jeryu/jeryu-deploy',
+        pr: null,
+        sha: '77dc3310aa5eadc15694dd1434d9f8f99c44a0d3',
+        recipe: 'auto-stage',
+        conclusion: 'staged',
+        seconds: 0,
+        finishedAt: beat,
+      })
+    );
+    await mockControlPlaneRunners(page, fabric);
+
+    const shell = new AppShellPage(page);
+    await shell.goto('/runners');
+    await shell.assertShellLoaded();
+
+    const section = page.getByTestId('fleet-automation');
+    await expect(section).toBeVisible({ timeout: 10_000 });
+    await expect(section.getByRole('heading', { name: 'Automation' })).toBeVisible();
+    const pin = page.getByTestId('fleet-automation-xbabe0_auto-pin');
+    await expect(pin).toContainText('Auto-pin');
+    await expect(pin).toContainText('opened jeryu-deploy#74');
+    await expect(pin.getByRole('link')).toHaveAttribute(
+      'href',
+      '/repos/jeryu/jeryu/jeryu-deploy/pulls/74'
+    );
+    await expect(page.getByTestId('fleet-automation-seen-xbabe0_auto-pin')).not.toContainText('offline');
+    const stage = page.getByTestId('fleet-automation-xbabe0_auto-stage');
+    await expect(stage).toContainText('staged 77dc331');
+    await expect(stage.getByRole('link')).toHaveCount(0);
+    // A timer is neither a gate slot nor a reviewer as well.
+    await expect(page.getByTestId('fleet-node-xbabe0_auto-pin')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-reviewer-xbabe0_auto-pin')).toHaveCount(0);
+
+    // An older forge, or timers never installed: no section, not an empty box.
+    await mockControlPlaneRunners(page, runnerFabric(false));
+    await page.reload();
+    await expect(page.getByTestId('fleet-node-xbabe0')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('fleet-automation')).toHaveCount(0);
   });
 
 });

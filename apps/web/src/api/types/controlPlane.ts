@@ -143,13 +143,20 @@ export interface RunnerNodeSummary {
   activeTaskCount: number;
   lastUpdated: string | null;
   activeTasks: RunnerTaskSummary[];
-  /** The last gate a PR gate runner finished; absent for other runner kinds. */
+  /** The last job a heartbeat runner finished; absent for other runner kinds. */
   lastActivity?: RunnerLastActivity | null;
+  /**
+   * Seconds of silence after which the forge shows this runner offline
+   * (`max(180, 3 * intervalSeconds)`). Absent from an older forge and on
+   * nodes that do not report by heartbeat.
+   */
+  offlineAfterSeconds?: number | null;
 }
 
 export interface RunnerLastActivity {
   repo: string;
-  pr: number;
+  /** Null for work that has no pull request (auto-stage stages a commit). */
+  pr: number | null;
   sha: string;
   recipe: string;
   conclusion: string;

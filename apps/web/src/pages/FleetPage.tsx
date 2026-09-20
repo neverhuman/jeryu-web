@@ -4,6 +4,9 @@
 // fed by real runner heartbeats: the PR-gate slots, and the pr-redteam PR
 // reviewer, which is listed in its own section because it holds no gate slot. The page polls it
 // so the one-sentence summary and the rows stay current without a reload.
+// The forge's background timers (auto-pin, auto-stage) get a third section,
+// "Automation", which is absent altogether when none reports: an older forge,
+// or timers that were never installed, should not leave an empty box.
 //
 // It used to also render "Runner pools" and "System health" from the
 // bootstrap read model, but those were not real: pool capacity came from a
@@ -17,7 +20,7 @@ import {
   networkSentence,
   runnerNetworkFromResponse
 } from './runnerNetworkModel';
-import { ReviewerList, RunnerNodeList } from './fleet';
+import { AutomationList, ReviewerList, RunnerNodeList } from './fleet';
 
 import './page.css';
 import './FleetPage.css';
@@ -117,6 +120,22 @@ export function FleetPage(): JSX.Element {
           />
         )}
       </section>
+
+      {runnerNetworkNote || runnerNetwork.automation.length === 0 ? null : (
+        <section
+          className="page__section"
+          aria-labelledby="fleet-automation"
+          data-testid="fleet-automation"
+        >
+          <h2 className="page__section-title" id="fleet-automation">
+            Automation
+          </h2>
+          <AutomationList
+            timers={runnerNetwork.automation}
+            nowMs={runnersQuery.dataUpdatedAt}
+          />
+        </section>
+      )}
     </div>
   );
 }
