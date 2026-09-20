@@ -11,7 +11,11 @@ import { useRealtimeStore } from '../stores/realtimeStore';
 export function statusMessage(status: string, errorCode: string | null): string | null {
   if (status === 'reconnecting') return 'Live updates paused. Reconnecting…';
   if (status === 'closed') return 'Live updates are off. What you see may be out of date; reload to reconnect.';
-  if (errorCode) return `Live updates reported a problem (${errorCode}).`;
+  // An error while the socket is open has not stopped the page hearing from
+  // the server, and this strip only speaks when it has.
+  if (errorCode && status !== 'open') {
+    return `Live updates reported a problem (${errorCode}).`;
+  }
   return null;
 }
 

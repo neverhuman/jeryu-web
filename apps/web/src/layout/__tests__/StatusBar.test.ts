@@ -12,6 +12,11 @@ describe('statusMessage', () => {
   it('speaks up when the page may be stale', () => {
     expect(statusMessage('reconnecting', null)).toMatch(/Reconnecting/);
     expect(statusMessage('closed', null)).toMatch(/out of date/);
-    expect(statusMessage('open', 'subscription_denied')).toMatch(/subscription_denied/);
+    expect(statusMessage('idle', 'unknown_message')).toMatch(/unknown_message/);
+  });
+
+  it('stays quiet about an error while the socket is open', () => {
+    expect(statusMessage('open', 'subscription_denied')).toBeNull();
+    expect(statusMessage('open', 'unknown_message')).toBeNull();
   });
 });

@@ -30,6 +30,9 @@ import {
 } from '../storage/browserStorage';
 
 const SEQ_STORAGE_KEY = 'jeryu.ws.lastSeq.v1';
+/** Server error code for a scope the viewer may not subscribe to
+ *  (`send_scope_denied` in the API's `web/ws.rs`). */
+const SCOPE_DENIED_CODE = 'subscription_denied';
 const EVENT_BUFFER_LIMIT = 200;
 
 export type EventInvalidationListener = (event: WebEvent) => void;
@@ -166,6 +169,12 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => {
         persistSeq(currentSeq);
       },
       onError: (code, message) => {
+        // A refused scope is an answer about one subscription, not a fault in
+        // the connection: the socket stays open and every scope the viewer may
+        // see keeps streaming. Only an admin may subscribe to the fleet-wide
+        // scopes, so for everyone else this arrives on every page; recording it
+        // would park a permanent "reported a problem" line under a working app.
+        if (code === SCOPE_DENIED_CODE) return;
         set({ lastError: { code, message } });
       },
     };
