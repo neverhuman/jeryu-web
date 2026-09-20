@@ -9,6 +9,10 @@ export { ToolBuildDossiers } from './ToolBuildDossiers';
 export { EvidencePanel } from './EvidencePanel';
 export { StatePill, SeverityPill, SeverityIcon } from './StateIndicators';
 export {
+  edgePinFreshness,
+  pinFreshnessClass,
+  pinFreshnessLabel,
+  PIN_FRESHNESS_ORDER,
   nodeRadius,
   compactLabel,
   diamondPoints,

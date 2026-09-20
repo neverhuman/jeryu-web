@@ -4,6 +4,7 @@ import type { EvidenceState } from '../../api/types';
 import {
   GRAPH_STATE_ORDER,
   type GraphFilters,
+  type GraphMode,
   type OperatorGraph,
 } from '../intelligenceGraphModel';
 
@@ -17,14 +18,26 @@ export function OperatorGraphConsole({
   filters,
   onFiltersChange,
   onSelectNode,
+  mode = 'clusters',
 }: {
   graph: OperatorGraph;
   filters: GraphFilters;
   onFiltersChange: (filters: GraphFilters) => void;
   onSelectNode: (id: string) => void;
+  /**
+   * `clusters`: every kind of node, grouped by kind, edges coloured by
+   * evidence state. `dependencies`: repos by dependency depth, edges coloured
+   * by how stale the pin behind them is.
+   */
+  mode?: GraphMode;
 }): JSX.Element {
+  const dependencies = mode === 'dependencies';
   return (
-    <div className="intelligence__operator" data-testid="operator-graph-console">
+    <div
+      className="intelligence__operator"
+      data-testid="operator-graph-console"
+      data-mode={mode}
+    >
       <div className="intelligence__graph-controls">
         <GraphToggles
           title="Kinds"
@@ -58,12 +71,16 @@ export function OperatorGraphConsole({
         </label>
       </div>
       <div className="intelligence__graph-console">
-        <GraphSvg graph={graph} onSelectNode={onSelectNode} />
+        <GraphSvg
+          graph={graph}
+          onSelectNode={onSelectNode}
+          edgeTone={dependencies ? 'pin' : 'state'}
+        />
         <NodeInspector graph={graph} />
       </div>
       <div className="intelligence__graph-bottom">
-        <EdgeList edges={graph.edges} />
-        <ClusterChips graph={graph} />
+        <EdgeList edges={graph.edges} showPins={dependencies} />
+        {dependencies ? null : <ClusterChips graph={graph} />}
       </div>
     </div>
   );

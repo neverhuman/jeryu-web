@@ -17,6 +17,7 @@ import { ActivityPage } from '../pages/activity';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { FleetPage } from '../pages/FleetPage';
 import { ReleasesPage, UnreleasedRedirect } from '../pages/ReleasesPage';
+import { DependenciesPage, DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
 import { PullRequestPage } from '../pages/PullRequestPage';
 import { PullRoomPage } from '../pages/PullRoomPage';
@@ -97,6 +98,8 @@ export const router = createBrowserRouter([
       // Unreleased is the last section of Releases; old links keep working.
       { path: 'unreleased', element: <UnreleasedRedirect /> },
       { path: 'intelligence', element: <IntelligencePage /> },
+      // The same graph, laid out by dependency depth and coloured by pin staleness.
+      { path: DEPENDENCIES_PATH.slice(1), element: <DependenciesPage /> },
       // Quality gate: how the jankurai/proof score behaves, rule -> head -> findings.
       { path: 'quality-gate', element: <QualityGatePage /> },
       { path: 'quality-gate/rules/:rule', element: <QualityGateRulePage /> },

@@ -307,6 +307,26 @@
   stroke: var(--color-accent-danger);
 }
 
+.intelligence__graph-edge.is-pin-current {
+  stroke: var(--color-accent-success);
+  opacity: 0.9;
+}
+
+.intelligence__graph-edge.is-pin-behind {
+  stroke: var(--color-accent-warning);
+  opacity: 0.9;
+}
+
+.intelligence__graph-edge.is-pin-diverged {
+  stroke: var(--color-accent-danger);
+  opacity: 0.9;
+}
+
+.intelligence__graph-edge.is-pin-unknown {
+  stroke: var(--color-border-subtle);
+  stroke-dasharray: 4 3;
+}
+
 .intelligence__legend {
   display: flex;
   flex-wrap: wrap;
@@ -341,8 +361,22 @@
   background: var(--color-accent-warning);
 }
 
-.intelligence__legend-item.is-failed::before {
+.intelligence__legend-item.is-failed::before,
+.intelligence__legend-item.is-pin-diverged::before {
   background: var(--color-accent-danger);
+}
+
+.intelligence__legend-item.is-pin-current::before {
+  background: var(--color-accent-success);
+}
+
+.intelligence__legend-item.is-pin-behind::before {
+  background: var(--color-accent-warning);
+}
+
+.intelligence__pin-note {
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
 }
 
 .intelligence__inspector,

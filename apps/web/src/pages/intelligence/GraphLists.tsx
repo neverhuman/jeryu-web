@@ -3,10 +3,17 @@
 import type { GraphEdge } from '../../api/types';
 import type { OperatorGraph } from '../intelligenceGraphModel';
 
-import { compactLabel } from './graphHelpers';
+import { compactLabel, pinFreshnessLabel } from './graphHelpers';
 import { SeverityPill, StatePill } from './StateIndicators';
 
-export function EdgeList({ edges }: { edges: GraphEdge[] }): JSX.Element {
+export function EdgeList({
+  edges,
+  showPins = false,
+}: {
+  edges: GraphEdge[];
+  /** Say what each pin is doing instead of the edge's evidence state. */
+  showPins?: boolean;
+}): JSX.Element {
   return (
     <section className="intelligence__edge-list">
       <h3>Edges</h3>
@@ -20,7 +27,13 @@ export function EdgeList({ edges }: { edges: GraphEdge[] }): JSX.Element {
               <code>{compactLabel(edge.source)}</code>
               <span>→</span>
               <code>{compactLabel(edge.target)}</code>
-              <StatePill state={edge.state} />
+              {showPins ? (
+                <span className="intelligence__pin-note">
+                  {pinFreshnessLabel(edge)}
+                </span>
+              ) : (
+                <StatePill state={edge.state} />
+              )}
             </li>
           ))}
         </ol>

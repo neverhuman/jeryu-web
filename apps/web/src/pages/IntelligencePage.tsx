@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { DEPENDENCIES_PATH } from './DependenciesPage';
 import { useControlPlane } from '../hooks/useControlPlane';
 import { useEcosystem, useToolBuildClusters } from '../hooks/useToolingEvidence';
 import type { ControlPlaneSnapshot } from '../api/types';
@@ -150,6 +151,9 @@ function IntelligenceSnapshot({
           <span className="page__pill">{operatorGraph.nodes.length} nodes</span>
           <span className="page__pill">{operatorGraph.edges.length} edges</span>
           <span className="page__pill">{operatorGraph.clusters.length} clusters</span>
+          <Link className="page__pill" to={DEPENDENCIES_PATH}>
+            Dependencies view
+          </Link>
         </div>
         <OperatorGraphConsole
           graph={operatorGraph}

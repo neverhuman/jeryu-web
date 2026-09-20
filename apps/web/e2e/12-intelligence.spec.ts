@@ -354,3 +354,81 @@ test.describe('Intelligence control-plane page', () => {
     await expect(page).toHaveURL(/\/intelligence$/);
   });
 });
+
+async function mockDependencyGraph(page: Page): Promise<void> {
+  await page.route('**/api/v1/control-plane/repo-graph*', async (route) => {
+    const repo = (name: string): Record<string, unknown> => ({
+      id: `repo:${name}`,
+      label: name,
+      kind: 'repo',
+      state: 'fresh',
+      weight: 2,
+      metadata: { owner: 'jeryu' },
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        schemaVersion: 'jeryu.repo_graph/v2',
+        generatedAt: '2026-09-19T00:00:00Z',
+        nodes: [repo('jeryu/web'), repo('jeryu/deploy'), repo('jeryu/core')],
+        edges: [
+          {
+            source: 'repo:jeryu/web',
+            target: 'repo:jeryu/deploy',
+            kind: 'depends_on',
+            state: 'fresh',
+            weight: 1,
+            metadata: { pinState: 'current', behind: '0' },
+          },
+          {
+            source: 'repo:jeryu/deploy',
+            target: 'repo:jeryu/core',
+            kind: 'depends_on',
+            state: 'fresh',
+            weight: 1,
+            metadata: { pinState: 'behind', behind: '4' },
+          },
+        ],
+        clusters: [],
+        insights: [],
+      }),
+    });
+  });
+}
+
+test.describe('Dependencies graph view', () => {
+  test('reaches Dependencies from the nav and colours edges by pin staleness @action:intelligence.dependencies', async ({
+    page,
+  }) => {
+    await blockWebSocket(page);
+    await mockBootstrap(page);
+    await mockControlPlane(page);
+    await mockToolingEvidence(page);
+    await mockDependencyGraph(page);
+
+    const shell = new AppShellPage(page);
+    await shell.goto('/');
+    await shell.assertShellLoaded();
+
+    const nav = page.getByRole('navigation', { name: 'Primary' });
+    await nav.getByRole('button', { name: 'System' }).click();
+    await nav.getByRole('link', { name: 'Dependencies', exact: true }).click();
+    await expect(page).toHaveURL(/\/intelligence\/dependencies$/);
+
+    await expect(page.getByTestId('dependencies-page')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByTestId('operator-graph-console')).toHaveAttribute(
+      'data-mode',
+      'dependencies'
+    );
+    await expect(page.getByTestId('dependencies-current-pins')).toContainText(
+      '1 current pins'
+    );
+    await expect(page.getByLabel('Pin staleness legend')).toBeVisible();
+    await expect(page.getByText('4 commits behind')).toBeVisible();
+    await page.getByTestId('graph-node-repo:jeryu/core').click();
+    await expect(page.getByTestId('node-inspector')).toContainText('Depth');
+  });
+});

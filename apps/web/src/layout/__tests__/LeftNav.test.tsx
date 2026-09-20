@@ -56,6 +56,7 @@ describe('LeftNav', () => {
     expect(SYSTEM_NAV.map((item) => item.label)).toEqual([
       'Runners',
       'Intelligence',
+      'Dependencies',
       'Quality gate',
       'Shared tools',
     ]);
@@ -83,6 +84,17 @@ describe('LeftNav', () => {
     expect(isSystemPath('/releases')).toBe(false);
     expect(screen.getByRole('button', { name: 'System' })).toBeDisabled();
     expect(screen.getByRole('link', { name: 'Shared tools' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('marks Dependencies, not Intelligence, as the page it is on', () => {
+    renderAt('/intelligence/dependencies');
+    expect(screen.getByRole('link', { name: 'Dependencies' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    expect(screen.getByRole('link', { name: 'Intelligence' })).not.toHaveAttribute(
+      'aria-current'
+    );
   });
 
   it('names the repository whose pull requests the repo link opens', () => {

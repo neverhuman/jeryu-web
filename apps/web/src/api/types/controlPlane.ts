@@ -232,6 +232,11 @@ export interface GraphEdge {
   kind: string;
   state: EvidenceState;
   weight: number;
+  /**
+   * Edge facts the server has, as plain strings. `depends_on` edges carry the
+   * pin comparison: `pinState`, `pinnedRef`, `behind`.
+   */
+  metadata?: Record<string, string>;
 }
 
 export interface GraphCluster {
@@ -257,6 +262,12 @@ export interface RepoGraphResponse {
     evidence: string[];
   }>;
 }
+
+/**
+ * `GET /api/v1/control-plane/repo-graph?include=depends_on` (`jeryu.repo_graph/v2`).
+ * The same shape as the snapshot graph, with the requested edge kinds added.
+ */
+export type RepoGraphInclude = 'depends_on';
 
 export interface McpToolHealth {
   state: EvidenceState;

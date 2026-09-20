@@ -1,8 +1,8 @@
 // LeftNav.tsx — primary navigation (W-FE-01).
 //
 // Six destinations an operator uses daily, then a "System" disclosure for the
-// four that explain the machinery (Runners, Intelligence, Quality gate, Shared
-// tools). The disclosure is closed by default, remembers what the operator chose, and is
+// five that explain the machinery (Runners, Intelligence, Dependencies,
+// Quality gate, Shared tools). The disclosure is closed by default, remembers what the operator chose, and is
 // open whenever the current page is inside it. When the current URL is inside a
 // repository route (`/repos/:provider/:fullName/*`), a contextual
 // sub-navigation appears below the workspace links so the operator can
@@ -23,6 +23,7 @@ import {
   FolderGit2,
   GitMerge,
   Layers,
+  Share2,
   Siren,
   Rocket,
   ServerCog,
@@ -33,6 +34,7 @@ import {
 import { useAttention } from '../hooks/usePipeline';
 import { useAuth } from '../hooks/useAuth';
 import { attentionBadgeCount } from '../pages/needsYou/needsYouModel';
+import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
 
@@ -60,7 +62,9 @@ export const PRIMARY_NAV: NavItem[] = [
 /** How the machinery is doing: looked at when something is off, not daily. */
 export const SYSTEM_NAV: NavItem[] = [
   { to: '/runners', label: 'Runners', icon: ServerCog },
-  { to: '/intelligence', label: 'Intelligence', icon: Brain },
+  // `end`: Dependencies lives under /intelligence and is its own destination.
+  { to: '/intelligence', label: 'Intelligence', icon: Brain, end: true },
+  { to: DEPENDENCIES_PATH, label: 'Dependencies', icon: Share2 },
   { to: '/quality-gate', label: 'Quality gate', icon: ShieldCheck },
   { to: '/shared-tools', label: 'Shared tools', icon: Layers },
 ];

@@ -5,10 +5,14 @@ import type {
   GraphCluster,
   GraphEdge,
   GraphNode,
+  RepoGraphResponse,
   ToolBuildCluster,
 } from '../api/types';
 
 export type GraphShape = 'circle' | 'rect' | 'diamond' | 'hex';
+
+/** Which view of the operator graph a console is showing. */
+export type GraphMode = 'clusters' | 'dependencies';
 
 export interface GraphFilters {
   kinds: string[];
@@ -21,6 +25,8 @@ export interface OperatorGraphNode extends GraphNode {
   colorClass: string;
   x: number;
   y: number;
+  /** Dependency mode only: how many `depends_on` hops reach this node. */
+  depth?: number;
 }
 
 export interface SelectedNodeDetails {
@@ -92,20 +98,7 @@ export function buildOperatorGraph(
     ...snapshot.repoGraph.clusters,
     ...toolClusterGraphClusters(toolClusters),
   ];
-  const query = filters.query.trim().toLowerCase();
-  const filteredRaw = baseNodes.filter((node) => {
-    if (filters.kinds.length > 0 && !filters.kinds.includes(node.kind)) {
-      return false;
-    }
-    if (filters.states.length > 0 && !filters.states.includes(node.state)) {
-      return false;
-    }
-    if (!query) return true;
-    return [node.id, node.label, node.kind, ...Object.values(node.metadata)]
-      .join(' ')
-      .toLowerCase()
-      .includes(query);
-  });
+  const filteredRaw = baseNodes.filter((node) => matchesFilters(node, filters));
   const visibleIds = new Set(filteredRaw.map((node) => node.id));
   const edges = baseEdges.filter(
     (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target)
@@ -131,6 +124,118 @@ export function buildOperatorGraph(
     kindOptions: sortedKinds(baseNodes),
     stateOptions: GRAPH_STATE_ORDER,
   };
+}
+
+/** The edge kind the dependency mode reads (`jeryu.repo_graph/v2`). */
+export const DEPENDS_ON_KIND = 'depends_on';
+
+/**
+ * The dependency view of the same graph: only `depends_on` edges, and the
+ * repos they connect, laid out left to right by how deep in the dependency
+ * chain each repo sits. A repo nothing depends on is depth 0.
+ */
+export function buildDependencyGraph(
+  response: RepoGraphResponse | null,
+  filters: GraphFilters,
+  selectedId: string | null
+): OperatorGraph {
+  const dependsOn = (response?.edges ?? []).filter(
+    (edge) => edge.kind === DEPENDS_ON_KIND
+  );
+  const connected = new Set(
+    dependsOn.flatMap((edge) => [edge.source, edge.target])
+  );
+  const baseNodes = (response?.nodes ?? []).filter((node) =>
+    connected.has(node.id)
+  );
+  const depths = dependencyDepths(baseNodes, dependsOn);
+  const filteredRaw = baseNodes.filter((node) => matchesFilters(node, filters));
+  const visibleIds = new Set(filteredRaw.map((node) => node.id));
+  const edges = dependsOn.filter(
+    (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target)
+  );
+  const nodes = layoutByDepth(filteredRaw, depths);
+  const selectedNode =
+    nodes.find((node) => node.id === selectedId) ?? nodes[0] ?? null;
+  return {
+    nodes,
+    edges,
+    clusters: [],
+    selected: selectedNode
+      ? {
+          node: selectedNode,
+          inbound: dependsOn.filter((edge) => edge.target === selectedNode.id),
+          outbound: dependsOn.filter((edge) => edge.source === selectedNode.id),
+          clusters: [],
+          evidenceCount: evidenceCount(selectedNode, []),
+        }
+      : null,
+    kindOptions: sortedKinds(baseNodes),
+    stateOptions: GRAPH_STATE_ORDER,
+  };
+}
+
+/**
+ * Longest `depends_on` chain reaching each node. A dependency cycle cannot
+ * deepen a node forever: no chain is longer than the graph has nodes, so the
+ * depth stops there.
+ */
+export function dependencyDepths(
+  nodes: GraphNode[],
+  edges: GraphEdge[]
+): Map<string, number> {
+  const depths = new Map(nodes.map((node) => [node.id, 0]));
+  const deepest = Math.max(0, nodes.length - 1);
+  for (let round = 0; round < nodes.length; round += 1) {
+    let moved = false;
+    for (const edge of edges) {
+      const source = depths.get(edge.source);
+      const target = depths.get(edge.target);
+      if (source === undefined || target === undefined) continue;
+      const next = Math.min(source + 1, deepest);
+      if (target < next) {
+        depths.set(edge.target, next);
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  return depths;
+}
+
+function layoutByDepth(
+  nodes: GraphNode[],
+  depths: Map<string, number>
+): OperatorGraphNode[] {
+  const perDepth = new Map<number, number>();
+  return nodes.map((node) => {
+    const depth = depths.get(node.id) ?? 0;
+    const row = perDepth.get(depth) ?? 0;
+    perDepth.set(depth, row + 1);
+    return {
+      ...node,
+      shape: nodeShape(node.kind),
+      colorClass: nodeColorClass(node.state),
+      depth,
+      x: 84 + (depth % 8) * 116,
+      y: 54 + ((row * 58) % 292),
+    };
+  });
+}
+
+function matchesFilters(node: GraphNode, filters: GraphFilters): boolean {
+  if (filters.kinds.length > 0 && !filters.kinds.includes(node.kind)) {
+    return false;
+  }
+  if (filters.states.length > 0 && !filters.states.includes(node.state)) {
+    return false;
+  }
+  const query = filters.query.trim().toLowerCase();
+  if (!query) return true;
+  return [node.id, node.label, node.kind, ...Object.values(node.metadata)]
+    .join(' ')
+    .toLowerCase()
+    .includes(query);
 }
 
 export function emptyGraph(snapshot: ControlPlaneSnapshot): boolean {

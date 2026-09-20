@@ -3,6 +3,7 @@
 // Single source of truth for every API path so URL bugs surface at
 // typecheck time. All paths are versioned (§35.1.1) under `/api/v1/`.
 
+import type { RepoGraphInclude } from './types/controlPlane';
 import type { PipelineEventsQuery } from './types/pipeline';
 
 export const endpoints = {
@@ -85,6 +86,16 @@ export const endpoints = {
   ws: (): string => '/api/v1/ws',
   controlPlaneStatus: (): string => '/api/v1/control-plane/status',
   controlPlaneRunners: (): string => '/api/v1/control-plane/runners',
+  /**
+   * The repository graph on its own. `include` asks for edge kinds the
+   * snapshot graph leaves out, such as `depends_on` (`jeryu.repo_graph/v2`).
+   */
+  controlPlaneRepoGraph: (params?: { include?: RepoGraphInclude[] }): string => {
+    const include = params?.include ?? [];
+    return include.length > 0
+      ? `/api/v1/control-plane/repo-graph?include=${include.map(encodeURIComponent).join(',')}`
+      : '/api/v1/control-plane/repo-graph';
+  },
   /** GitHub-shaped per-environment summary (latest, current, previous). */
   repoEnvironments: (owner: string, repo: string): string =>
     `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/environments`,

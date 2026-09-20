@@ -28,8 +28,17 @@ export function NodeInspector({ graph }: { graph: OperatorGraph }): JSX.Element 
         <dd>{evidenceCount}</dd>
         <dt>Edges</dt>
         <dd>{inbound.length} in · {outbound.length} out</dd>
-        <dt>Clusters</dt>
-        <dd>{clusters.length}</dd>
+        {node.depth === undefined ? (
+          <>
+            <dt>Clusters</dt>
+            <dd>{clusters.length}</dd>
+          </>
+        ) : (
+          <>
+            <dt>Depth</dt>
+            <dd>{node.depth} hop{node.depth === 1 ? '' : 's'} deep</dd>
+          </>
+        )}
       </dl>
       <div className="intelligence__metadata">
         {Object.entries(node.metadata).map(([key, value]) =>

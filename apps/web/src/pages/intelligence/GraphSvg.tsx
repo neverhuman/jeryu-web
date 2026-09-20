@@ -1,5 +1,6 @@
 // GraphSvg.tsx - SVG rendering of the operator graph and its node marks.
 
+import type { GraphEdge } from '../../api/types';
 import {
   GRAPH_STATE_ORDER,
   type OperatorGraph,
@@ -9,16 +10,30 @@ import {
 import {
   compactLabel,
   diamondPoints,
+  edgePinFreshness,
   hexPoints,
   nodeRadius,
+  pinFreshnessClass,
+  PIN_FRESHNESS_ORDER,
 } from './graphHelpers';
+
+/** How edges are coloured: by evidence state, or by the pin behind them. */
+export type EdgeTone = 'state' | 'pin';
+
+function edgeClass(edge: GraphEdge, tone: EdgeTone): string {
+  return tone === 'pin'
+    ? pinFreshnessClass(edgePinFreshness(edge))
+    : `is-${edge.state}`;
+}
 
 export function GraphSvg({
   graph,
   onSelectNode,
+  edgeTone = 'state',
 }: {
   graph: OperatorGraph;
   onSelectNode: (id: string) => void;
+  edgeTone?: EdgeTone;
 }): JSX.Element {
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
   if (graph.nodes.length === 0) {
@@ -50,7 +65,7 @@ export function GraphSvg({
               y1={source.y}
               x2={target.x}
               y2={target.y}
-              className={`intelligence__graph-edge is-${edge.state}`}
+              className={`intelligence__graph-edge ${edgeClass(edge, edgeTone)}`}
               strokeWidth={Math.min(5, Math.max(1, edge.weight))}
             />
           );
@@ -64,13 +79,26 @@ export function GraphSvg({
           />
         ))}
       </svg>
-      <div className="intelligence__legend" aria-label="Graph state legend">
-        {GRAPH_STATE_ORDER.map((state) => (
-          <span key={state} className={`intelligence__legend-item is-${state}`}>
-            {state}
-          </span>
-        ))}
-      </div>
+      {edgeTone === 'pin' ? (
+        <div className="intelligence__legend" aria-label="Pin staleness legend">
+          {PIN_FRESHNESS_ORDER.map((freshness) => (
+            <span
+              key={freshness}
+              className={`intelligence__legend-item ${pinFreshnessClass(freshness)}`}
+            >
+              {freshness}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="intelligence__legend" aria-label="Graph state legend">
+          {GRAPH_STATE_ORDER.map((state) => (
+            <span key={state} className={`intelligence__legend-item is-${state}`}>
+              {state}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
