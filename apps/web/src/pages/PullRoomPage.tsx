@@ -142,7 +142,26 @@ export function PullRoomPage(): JSX.Element {
     return releaseLadder(pr, entry.baselines, entry.compares);
   };
 
-  // Shift work that has not opened a pull request yet, above the open rows.
+  /**
+   * A todo names its repos bare (`jeryu-web`); a section is keyed `owner/name`.
+   * Two repositories can share a name under different owners, so a repository
+   * this page is already showing wins over one it is not.
+   */
+  const repoKeyFor = useMemo(() => {
+    const byName = new Map<string, string>();
+    for (const member of repositories.data?.repositories ?? []) {
+      const full = `${member.id.owner}/${member.id.name}`;
+      if (!byName.has(member.id.name)) byName.set(member.id.name, full);
+    }
+    for (const full of wanted.repos) {
+      const name = full.split('/')[1];
+      if (name) byName.set(name, full);
+    }
+    return (repo: string): string | null =>
+      repo.includes('/') ? repo : byName.get(repo) ?? null;
+  }, [repositories.data, wanted.repos]);
+
+  // Shift work that has not opened a pull request yet, filed under its repo.
   const todos = useShiftTodos(undefined);
   const ghosts: GhostGroup[] = useMemo(
     () =>
@@ -358,6 +377,7 @@ export function PullRoomPage(): JSX.Element {
                 showRepo
                 ladderFor={ladderFor}
                 ghosts={ghosts}
+                repoKeyFor={repoKeyFor}
               />
             )}
           </>

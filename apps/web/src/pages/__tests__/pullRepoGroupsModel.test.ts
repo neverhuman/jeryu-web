@@ -231,6 +231,83 @@ describe('buildRepoGroups', () => {
   });
 });
 
+describe('filing shift work under its repository', () => {
+  const ladderFor = () => UNKNOWN_LADDER;
+  const ghost = (id: string, repos: string[], status = 'open') => ({
+    todoId: id,
+    title: `todo ${id}`,
+    family: 'jeryu',
+    repos,
+    status,
+    kind: 'bulletshift' as const,
+    date: '2026-09-20',
+    steps: [],
+    when: 'next up',
+    attention: false,
+    worker: null,
+  });
+  const group = (rows: ReturnType<typeof ghost>[], queued = 0) => [
+    { key: 'bulletshift/2026-09-20', label: 'bulletshift 2026-09-20', hint: '', rows, queued },
+  ];
+
+  it('files a row under every repository it names', () => {
+    const { groups } = buildRepoGroups([pull(1, 'open')], {
+      ladderFor,
+      ghosts: group([ghost('t1', ['jeryu-web', 'jeryu-api'])]),
+      repoKeyFor: (repo) => `jeryu/${repo}`,
+    });
+    const byRepo = new Map(groups.map((g) => [g.repo, g]));
+    expect(byRepo.get('jeryu/jeryu-web')?.incoming.map((r) => r.todoId)).toEqual(['t1']);
+    // The second repository has no pull requests, so the row gives it a section.
+    expect(byRepo.get('jeryu/jeryu-api')).toMatchObject({ total: 0, states: [] });
+    expect(byRepo.get('jeryu/jeryu-api')?.incoming.map((r) => r.todoId)).toEqual(['t1']);
+  });
+
+  it('returns a row naming nothing placeable instead of dropping it', () => {
+    const { groups, unassigned } = buildRepoGroups([pull(1, 'open')], {
+      ladderFor,
+      ghosts: group([ghost('t2', []), ghost('t3', ['who-knows'])]),
+      repoKeyFor: (repo) => (repo === 'who-knows' ? null : `jeryu/${repo}`),
+    });
+    expect(unassigned.map((r) => r.todoId)).toEqual(['t2', 't3']);
+    expect(groups.every((g) => g.incoming.length === 0)).toBe(true);
+  });
+
+  it('counts the queue once, across repositories', () => {
+    const { shift } = buildRepoGroups([pull(1, 'open')], {
+      ladderFor,
+      ghosts: group(
+        [ghost('t4', ['jeryu-web'], 'claimed'), ghost('t5', ['jeryu-web']), ghost('t6', ['jeryu-api'], 'done')],
+        7
+      ),
+      repoKeyFor: (repo) => `jeryu/${repo}`,
+    });
+    // Two are in flight (claimed, done-without-a-PR); one is merely queued.
+    expect(shift).toEqual({ inFlight: 2, queued: 7, family: 'jeryu' });
+  });
+
+  it('leads with a repository that has incoming work', () => {
+    const { groups } = buildRepoGroups(
+      [
+        pull(1, 'open', { repo: 'jeryu/jeryu-web', updated: '2026-09-19T00:00:00Z' }),
+        pull(2, 'open', { repo: 'jeryu/jeryu-api', updated: '2026-09-11T00:00:00Z' }),
+      ],
+      {
+        ladderFor,
+        ghosts: group([ghost('t7', ['jeryu-api'])]),
+        repoKeyFor: (repo) => `jeryu/${repo}`,
+      }
+    );
+    expect(groups.map((g) => g.repo)).toEqual(['jeryu/jeryu-api', 'jeryu/jeryu-web']);
+  });
+
+  it('says nothing about shifts when no ghosts are passed', () => {
+    const { shift, unassigned } = buildRepoGroups([pull(1, 'open')], { ladderFor });
+    expect(shift).toBeNull();
+    expect(unassigned).toEqual([]);
+  });
+});
+
 describe('linkSupersessions', () => {
   const rowsOf = (pulls: PullRequestSummary[]): TimelineRow[] => pulls.map((pr) => row(pr));
 

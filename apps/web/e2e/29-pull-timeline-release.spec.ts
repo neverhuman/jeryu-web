@@ -151,7 +151,7 @@ test('A repository that records no release says so instead of calling merged wor
   await expect(page.getByTestId('pull-timeline-alice/jeryu-14')).toHaveCount(0);
 });
 
-test('Shift work with no pull request yet sits above the repositories, with a truthful "when" @action:pull_room.ghost_rows', async ({
+test('Shift work with no pull request yet is filed under its repository, with a truthful "when" @action:pull_room.ghost_rows', async ({
   page,
 }) => {
   await mockBootstrap(page);
@@ -194,23 +194,30 @@ test('Shift work with no pull request yet sits above the repositories, with a tr
   await shell.goto('/pull-room');
   await shell.assertShellLoaded();
 
-  const band = page.getByTestId('pull-ghosts-bulletshift/2026-06-05');
-  await expect(band).toContainText('bulletshift 2026-06-05');
-  await expect(band).toContainText('in flight');
+  // The rows live inside the repository they name, before its PR states.
+  const incoming = page.getByTestId('pull-incoming-alice/jeryu');
+  await expect(incoming).toContainText('Queued / in flight');
+  await expect(incoming).toContainText('no pull request yet');
 
-  // Claimed work reports its lease, not an invented arrival time.
-  const claimed = page.getByTestId('pull-ghost-t-claimed');
-  await expect(claimed).toContainText('no pull request yet');
+  // Claimed work reports its lease, not an invented arrival time, and carries
+  // its own shift now that the shift is no longer a heading.
+  const claimed = incoming.getByTestId('pull-ghost-t-claimed');
+  await expect(claimed).toContainText('bulletshift 2026-06-05');
   await expect(claimed).toContainText('hands off in');
   await expect(claimed).toContainText('alice@xbabe0/w2');
 
   // Finished work with no pull request is the row worth seeing.
-  await expect(page.getByTestId('pull-ghost-t-done-no-pr')).toContainText('PR pending');
+  await expect(incoming.getByTestId('pull-ghost-t-done-no-pr')).toContainText('PR pending');
 
-  // Only the first few of the open queue; the rest are a link to Work.
-  await expect(page.getByTestId('pull-ghost-t-open-1')).toContainText('next up');
+  // Only the first few of the open queue are rows.
+  await expect(incoming.getByTestId('pull-ghost-t-open-1')).toContainText('next up');
   await expect(page.getByTestId('pull-ghost-t-open-4')).toHaveCount(0);
-  await expect(band.getByRole('link', { name: /queued/ })).toHaveAttribute(
+
+  // The queue's own numbers are cross-repo, so they are said once, up top.
+  const queue = page.getByTestId('pull-shift-queue');
+  await expect(queue).toContainText('in flight');
+  await expect(queue).toContainText('queued');
+  await expect(queue.getByRole('link', { name: /Work/ })).toHaveAttribute(
     'href',
     '/work?family=core'
   );
@@ -218,12 +225,14 @@ test('Shift work with no pull request yet sits above the repositories, with a tr
   // A todo that already has a pull request is not also a ghost.
   await expect(page.getByTestId('pull-ghost-t-has-pr')).toHaveCount(0);
 
-  // The ghosts lead the page; the repository sections follow.
+  // Incoming work leads its section, and the section is the page's content.
   const sections = page.locator('[data-testid="pull-timeline"] > section');
-  expect(await sections.first().getAttribute('data-testid')).toBe(
-    'pull-ghosts-bulletshift/2026-06-05'
+  expect(await sections.first().getAttribute('data-testid')).toBe('pull-repo-alice/jeryu');
+  await expect(page.getByTestId('pull-repo-alice/jeryu').locator('> div').first()).toHaveAttribute(
+    'data-testid',
+    'pull-incoming-alice/jeryu'
   );
-  expect(await sections.last().getAttribute('data-testid')).toBe('pull-repo-alice/jeryu');
+
 
   // The real pull requests still render below: #8 is the frontier of the
   // checks state, with #7 behind its expander.

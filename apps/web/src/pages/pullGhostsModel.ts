@@ -26,6 +26,8 @@ export interface GhostRow {
   title: string;
   family: string;
   repos: string[];
+  /** The todo's status, so a reader of the rows can tell live work from queued. */
+  status: string;
   kind: ShiftKind;
   /** YYYY-MM-DD of the shift, null when unscheduled. */
   date: string | null;
@@ -175,6 +177,7 @@ function row(
     title: todo.title,
     family: todo.family,
     repos: todo.repos,
+    status: todo.status,
     kind,
     date,
     steps: todoTrace(todo),

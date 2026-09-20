@@ -15,6 +15,7 @@
 // state" well defined without the server keeping a status column.
 
 import type { PullRequestSummary } from '../api/types';
+import type { GhostGroup, GhostRow } from './pullGhostsModel';
 import type { PipId, ReleaseLadder } from './releaseChannelsModel';
 
 /** Every state a row can sit at, pipeline order: least far first. */
@@ -85,6 +86,11 @@ export interface RepoGroup {
   /** `owner/name`. */
   repo: string;
   host: string;
+  /**
+   * Shift work for this repository that has not opened a pull request yet: the
+   * states before `draft`, so it leads the section rather than the page.
+   */
+  incoming: GhostRow[];
   /** Pull requests this group covers, superseded ones excluded. */
   total: number;
   open: number;
@@ -98,6 +104,14 @@ export interface RepoGroupsOptions {
   ladderFor: (pr: PullRequestSummary) => ReleaseLadder;
   /** Most `older` rows kept per state; the rest are dropped from the page. */
   olderCap?: number;
+  /** Shift work with no pull request yet, to file under the repos it names. */
+  ghosts?: readonly GhostGroup[];
+  /**
+   * A todo names repos bare (`jeryu-web`); a section is keyed `owner/name`.
+   * Return null for a name this page cannot place, and its rows land in
+   * `unassigned` rather than being dropped.
+   */
+  repoKeyFor?: (repo: string) => string | null;
 }
 
 /** Older rows kept per state before the page stops listing them. */
@@ -107,6 +121,10 @@ export interface RepoTimeline {
   groups: RepoGroup[];
   /** Merged work that decidedly shipped nowhere: the release manifest. */
   awaitingRelease: number;
+  /** Shift rows that name no repository this page can place. */
+  unassigned: GhostRow[];
+  /** The queue itself is cross-repo, so it is said once, above the sections. */
+  shift: { inFlight: number; queued: number; family: string | null } | null;
 }
 
 export function buildRepoGroups(
@@ -132,7 +150,7 @@ export function buildRepoGroups(
     else byRepo.set(repo, [row]);
   }
 
-  const groups: RepoGroup[] = [];
+  const groups = new Map<string, RepoGroup>();
   let awaitingRelease = 0;
   for (const [repo, members] of byRepo) {
     const grouped = new Map<PullStateId, TimelineRow[]>();
@@ -159,16 +177,70 @@ export function buildRepoGroups(
         older: kept,
       });
     }
-    groups.push({
+    groups.set(repo, {
       repo,
       host: members[0]?.pr.repo.host ?? 'jeryu',
+      incoming: [],
       total: members.length,
       open: members.filter((row) => row.pr.state === 'open').length,
       states,
       hidden,
     });
   }
-  return { groups: groups.sort(byNewestActivity), awaitingRelease };
+
+  const { unassigned, shift } = fileGhosts(groups, options);
+  return {
+    groups: [...groups.values()].sort(byNewestActivity),
+    awaitingRelease,
+    unassigned,
+    shift,
+  };
+}
+
+/**
+ * File each shift row under every repository it names, creating a section for a
+ * repository that has incoming work but no pull requests yet. A row naming
+ * nothing this page can place is returned rather than dropped — untriaged work
+ * is exactly what someone needs to see.
+ *
+ * The queue's own numbers stay cross-repo: they are counted once here and said
+ * once above the sections, because `+12 queued` cannot be attributed to a repo.
+ */
+function fileGhosts(
+  groups: Map<string, RepoGroup>,
+  options: RepoGroupsOptions
+): { unassigned: GhostRow[]; shift: RepoTimeline['shift'] } {
+  const ghostGroups = options.ghosts ?? [];
+  if (ghostGroups.length === 0) return { unassigned: [], shift: null };
+  const keyFor = options.repoKeyFor ?? ((repo: string) => (repo.includes('/') ? repo : null));
+  const unassigned: GhostRow[] = [];
+  let inFlight = 0;
+  let queued = 0;
+  let family: string | null = null;
+  for (const ghostGroup of ghostGroups) {
+    queued += ghostGroup.queued;
+    for (const row of ghostGroup.rows) {
+      family ??= row.family;
+      if (row.status !== 'open') inFlight += 1;
+      const keys = row.repos.map(keyFor).filter((key): key is string => key !== null);
+      if (keys.length === 0) {
+        unassigned.push(row);
+        continue;
+      }
+      // A todo naming three repos opens a pull request in each, so it belongs
+      // in each section rather than only the first.
+      for (const key of new Set(keys)) {
+        const group = groups.get(key) ?? emptyGroup(key);
+        groups.set(key, group);
+        group.incoming.push(row);
+      }
+    }
+  }
+  return { unassigned, shift: { inFlight, queued, family } };
+}
+
+function emptyGroup(repo: string): RepoGroup {
+  return { repo, host: 'jeryu', incoming: [], total: 0, open: 0, states: [], hidden: 0 };
 }
 
 /**
@@ -286,9 +358,16 @@ function newestFirst(a: TimelineRow, b: TimelineRow): number {
   return b.pr.updated_at.localeCompare(a.pr.updated_at) || b.pr.number - a.pr.number;
 }
 
-/** The repository something happened in most recently leads the page. */
+/**
+ * Repositories with incoming shift work lead — that is the work about to
+ * arrive — then the one something happened in most recently.
+ */
 function byNewestActivity(a: RepoGroup, b: RepoGroup): number {
-  return lastActivity(b).localeCompare(lastActivity(a)) || a.repo.localeCompare(b.repo);
+  return (
+    Number(b.incoming.length > 0) - Number(a.incoming.length > 0) ||
+    lastActivity(b).localeCompare(lastActivity(a)) ||
+    a.repo.localeCompare(b.repo)
+  );
 }
 
 function lastActivity(group: RepoGroup): string {

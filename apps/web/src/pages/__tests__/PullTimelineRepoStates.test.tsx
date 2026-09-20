@@ -124,25 +124,61 @@ describe('the Pull requests timeline', () => {
     expect(screen.queryByTestId('pull-state-jeryu/jeryu-web-closed')).not.toBeInTheDocument();
   });
 
-  it('shows shift work that has no pull request yet above the repositories', () => {
+  it('files shift work with no pull request under the repository it names', () => {
     const ghosts = pullGhostGroups(
       [
         todo('t1', { status: 'claimed', lease_until: '2026-09-20T03:00:00Z', lease_live: true }),
         todo('t2', { status: 'done' }),
+        todo('t3', { status: 'open', repos: ['jeryu-api'] }),
       ],
       { now: new Date('2026-09-20T02:46:00Z'), openLimit: 1 }
     );
     renderAt(
       '/pull-room',
       '/pull-room',
-      <PullRequestTimeline pulls={[pull(60, 'open')]} emptyMessage="none" showRepo ghosts={ghosts} />
+      <PullRequestTimeline
+        pulls={[pull(60, 'open')]}
+        emptyMessage="none"
+        showRepo
+        ghosts={ghosts}
+        repoKeyFor={(repo) => (repo.includes('/') ? repo : `jeryu/${repo}`)}
+      />
     );
 
-    expect(screen.getByTestId('pull-ghost-t1')).toHaveTextContent('no pull request yet');
-    expect(screen.getByTestId('pull-ghost-t1')).toHaveTextContent('hands off in');
-    expect(screen.getByTestId('pull-ghost-t2')).toHaveTextContent('PR pending');
-    // The real pull request still renders in its repository's section below.
-    expect(screen.getByTestId('pull-repo-jeryu/jeryu-web')).toBeInTheDocument();
+    // The rows sit inside their repository's section, before its PR states.
+    const incoming = screen.getByTestId('pull-incoming-jeryu/jeryu-web');
+    expect(incoming).toHaveTextContent('Queued / in flight');
+    expect(within(incoming).getByTestId('pull-ghost-t1')).toHaveTextContent('hands off in');
+    expect(within(incoming).getByTestId('pull-ghost-t2')).toHaveTextContent('PR pending');
+    // A row carries its own shift now that the shift is not a heading.
+    expect(within(incoming).getByTestId('pull-ghost-t1')).toHaveTextContent('bulletshift 2026-09-20');
+
+    // A todo for a repository with no pull requests still gets a section.
+    expect(screen.getByTestId('pull-incoming-jeryu/jeryu-api')).toHaveTextContent('todo t3');
+
+    // The queue's own numbers are said once, not per repository.
+    expect(screen.getByTestId('pull-shift-queue')).toHaveTextContent('2 in flight');
+    expect(screen.getByTestId('pull-repo-jeryu/jeryu-web')).toContainElement(incoming);
+  });
+
+  it('keeps shift work that names no repository visible above the sections', () => {
+    const ghosts = pullGhostGroups([todo('t9', { status: 'open', repos: [] })], {
+      now: new Date('2026-09-20T02:46:00Z'),
+    });
+    renderAt(
+      '/pull-room',
+      '/pull-room',
+      <PullRequestTimeline
+        pulls={[pull(61, 'open')]}
+        emptyMessage="none"
+        showRepo
+        ghosts={ghosts}
+        repoKeyFor={() => null}
+      />
+    );
+    const unassigned = screen.getByTestId('pull-ghosts-unassigned');
+    expect(unassigned).toHaveTextContent('Shift work not tied to a repository');
+    expect(within(unassigned).getByTestId('pull-ghost-t9')).toBeInTheDocument();
   });
 
   it('leaves the repository heading off when the page is already one repository', () => {

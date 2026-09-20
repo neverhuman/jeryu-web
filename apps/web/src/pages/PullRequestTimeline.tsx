@@ -20,8 +20,13 @@ import './PullRoomPage.css';
  * least far first, each showing the most recent pull request that has got that
  * far. Older work at the same state sits behind that state's expander, because
  * between the newest change at a state and the ones before it there is usually
- * nothing to act on. Shift work that has not opened a pull request yet leads
- * the page, so it reads future → present → past from top to bottom.
+ * nothing to act on.
+ *
+ * Shift work with no pull request yet is filed under the repository it names,
+ * as the states BEFORE `draft` — queued, claimed, done-without-a-PR — so a
+ * repository's whole pipeline reads in one place. Only the queue's own numbers
+ * and work that names no repository stay above the sections, since neither
+ * belongs to any one of them.
  */
 export function PullRequestTimeline({
   pulls,
@@ -29,6 +34,7 @@ export function PullRequestTimeline({
   showRepo = false,
   ladderFor,
   ghosts = [],
+  repoKeyFor,
 }: {
   pulls: PullRequestSummary[];
   emptyMessage: string;
@@ -36,13 +42,19 @@ export function PullRequestTimeline({
   showRepo?: boolean;
   /** The release ladder of a PR's repository; without it release reads unknown. */
   ladderFor?: (pr: PullRequestSummary) => ReleaseLadder;
-  /** Shift work that will become a PR, shown above the repositories. */
+  /** Shift work that will become a PR, filed under the repos it names. */
   ghosts?: GhostGroup[];
+  /** Resolves a todo's bare repo name to an `owner/name` section key. */
+  repoKeyFor?: (repo: string) => string | null;
 }): JSX.Element {
   if (pulls.length === 0 && ghosts.length === 0) {
     return <p className="pull-list__empty">{emptyMessage}</p>;
   }
-  const timeline = buildRepoGroups(pulls, { ladderFor: ladderFor ?? (() => UNKNOWN_LADDER) });
+  const timeline = buildRepoGroups(pulls, {
+    ladderFor: ladderFor ?? (() => UNKNOWN_LADDER),
+    ghosts,
+    repoKeyFor,
+  });
   return (
     <div className="pull-timeline" data-testid="pull-timeline">
       <div className="pull-timeline__head" aria-hidden="true">
@@ -52,9 +64,36 @@ export function PullRequestTimeline({
         ))}
       </div>
 
-      {ghosts.map((group) => (
-        <GhostBand key={group.key} group={group} />
-      ))}
+      {timeline.shift && (timeline.shift.inFlight > 0 || timeline.shift.queued > 0) ? (
+        <p className="pull-shift-queue" data-testid="pull-shift-queue">
+          Shift queue: {timeline.shift.inFlight} in flight · {timeline.shift.queued} queued{' '}
+          <Link
+            to={
+              timeline.shift.family
+                ? `/work?family=${encodeURIComponent(timeline.shift.family)}`
+                : '/work'
+            }
+          >
+            open Work
+          </Link>
+        </p>
+      ) : null}
+
+      {timeline.unassigned.length > 0 ? (
+        <section className="pull-band is-ghost" data-testid="pull-ghosts-unassigned">
+          <div className="pull-band__summary">
+            <span className="pull-band__label">Shift work not tied to a repository</span>
+            <span className="pull-band__hint">
+              {timeline.unassigned.length} waiting on triage
+            </span>
+          </div>
+          <ol className="pull-timeline__rows">
+            {timeline.unassigned.map((row) => (
+              <GhostRowView key={row.todoId} row={row} />
+            ))}
+          </ol>
+        </section>
+      ) : null}
 
       {timeline.groups.map((group) => (
         <RepoSection key={group.repo} group={group} showRepo={showRepo} />
@@ -74,6 +113,17 @@ function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean 
             {group.hidden > 0 ? ` · ${group.hidden} older behind the states` : ''}
           </span>
         </h2>
+      ) : null}
+      {group.incoming.length > 0 ? (
+        <div className="pull-state is-incoming" data-testid={`pull-incoming-${group.repo}`}>
+          <p className="pull-state__label">Queued / in flight</p>
+          <p className="pull-state__hint">no pull request yet</p>
+          <ol className="pull-timeline__rows">
+            {group.incoming.map((row) => (
+              <GhostRowView key={row.todoId} row={row} />
+            ))}
+          </ol>
+        </div>
       ) : null}
       {group.states.map((stateRow) => (
         <State key={stateRow.state} repo={group.repo} stateRow={stateRow} showRepo={showRepo} />
@@ -193,35 +243,6 @@ function pipTitle(label: string, membership: string, release: string | null): st
   return `${label}: unknown`;
 }
 
-/**
- * Shift work above the repositories: it has no PR yet, so it is dashed and dim
- * — a different dim from a closed PR, which will never move again.
- */
-function GhostBand({ group }: { group: GhostGroup }): JSX.Element {
-  const family = group.rows[0]?.family ?? '';
-  return (
-    <section className="pull-band is-ghost" data-testid={`pull-ghosts-${group.key}`}>
-      <div className="pull-band__summary">
-        <span className="pull-band__label">{group.label}</span>
-        <span className="pull-band__hint">{group.hint}</span>
-      </div>
-      <ol className="pull-timeline__rows">
-        {group.rows.map((row) => (
-          <GhostRowView key={row.todoId} row={row} />
-        ))}
-      </ol>
-      {group.queued > 0 ? (
-        <p className="pull-band__more">
-          {/* The rest of the queue is the Work page's job, not this one's. */}
-          <Link to={family ? `/work?family=${encodeURIComponent(family)}` : '/work'}>
-            +{group.queued} queued
-          </Link>
-        </p>
-      ) : null}
-    </section>
-  );
-}
-
 function GhostRowView({ row }: { row: GhostRow }): JSX.Element {
   return (
     <li
@@ -234,7 +255,7 @@ function GhostRowView({ row }: { row: GhostRow }): JSX.Element {
           {row.title}
         </span>
         <span className="pull-timeline__meta">
-          no pull request yet · {row.when}
+          {row.date ? `${row.kind} ${row.date}` : row.kind} · {row.when}
           {row.worker ? ` · ${row.worker}` : ''}
         </span>
       </div>

@@ -751,3 +751,19 @@
 .pull-timeline__supersedes {
   color: var(--color-fg-muted);
 }
+
+/* The queue's own numbers are cross-repo, so they are said once, up here. */
+.pull-shift-queue {
+  margin: 0 0 var(--space-2) var(--space-3);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.pull-shift-queue a {
+  text-decoration: underline;
+}
+
+/* Incoming shift work leads a repository: the states before a PR exists. */
+.pull-state.is-incoming .pull-state__label {
+  color: var(--color-fg-secondary);
+}
