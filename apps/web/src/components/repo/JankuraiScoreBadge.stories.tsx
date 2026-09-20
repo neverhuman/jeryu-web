@@ -1,7 +1,7 @@
 // JankuraiScoreBadge.stories.tsx — audit-score pill state matrix.
 //
 // Covers the four states: good (>= 85), warn (< 85), "audit failed"
-// (no score but a decision, e.g. tool-failed), and neutral "no score"
+// (no score but a decision, e.g. tool-failed), and the "--" pill
 // (no audit ingested yet). The addon-a11y panel scans each colour ramp.
 
 import type { Meta, StoryObj } from '@storybook/react-vite';

@@ -1,8 +1,8 @@
 // JankuraiScoreBadge.test.tsx — threshold + null-state coverage.
 //
 // The pill has four shapes: good (score >= 85, muted), warn (score < 85),
-// danger "audit failed" (no score but a decision), and warn "no score"
-// (no audit ingested). Relative-time output depends on the wall clock,
+// danger "audit failed" (no score but a decision), and warn "--"
+// (no audit ingested, labelled "no score"). Relative-time output depends on the wall clock,
 // so assertions match on the stable "scored" prefix instead of exact text.
 
 import { render, screen } from '@testing-library/react';
@@ -44,11 +44,20 @@ describe('JankuraiScoreBadge', () => {
     expect(badge.getAttribute('aria-label')).toContain('tool-failed');
   });
 
-  it('flags "no score" as a warning when no audit exists', () => {
+  it('renders "--" as a warning when no audit exists', () => {
     render(<JankuraiScoreBadge />);
     const badge = screen.getByRole('status');
-    expect(badge).toHaveTextContent('no score');
+    expect(badge).toHaveTextContent('--');
+    expect(badge).not.toHaveTextContent('no score');
     expect(badge).toHaveClass('repo-score-badge--warn');
+  });
+
+  it('keeps "no score" in the title and aria-label of an unscored pill', () => {
+    render(<JankuraiScoreBadge />);
+    const badge = screen.getByRole('status');
+    const label = badge.getAttribute('aria-label') ?? '';
+    expect(label).toContain('no score');
+    expect(badge.getAttribute('title')).toBe(label);
   });
 
   it('carries the score and scored-at time in title and aria-label', () => {

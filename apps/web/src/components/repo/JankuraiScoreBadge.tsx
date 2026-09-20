@@ -8,7 +8,10 @@
 //   * score <  85           → warn (warning tokens)
 //   * no score + a decision → "audit failed" danger pill (the tool ran but
 //                              could not score the tree, e.g. `tool-failed`)
-//   * no score, no decision → "no score" warn pill (no audit ingested yet)
+//   * no score, no decision → warn pill reading "--" (no audit ingested
+//                              yet); the dash keeps the column aligned with
+//                              scored rows while title/aria-label say
+//                              "no score"
 //
 // The title/aria-label carry the numeric score plus a relative "scored
 // <when>" so the pill stays compact while hover/AT get the full context.
@@ -17,6 +20,9 @@ import { Gauge } from 'lucide-react';
 
 import { relativeTime } from './relativeTime';
 import './repo.css';
+
+/** Stand-in for the number on unscored rows, so the pill stays the same shape. */
+const NO_SCORE_TEXT = '--';
 
 /** Scores at or above this are rendered muted, as needing no action. */
 export const JANKURAI_GOOD_THRESHOLD = 85;
@@ -48,8 +54,8 @@ function resolve(
     }
     return {
       variant: 'warn',
-      text: 'no score',
-      detail: 'No jankurai audit recorded for this repository.',
+      text: NO_SCORE_TEXT,
+      detail: 'no score · no jankurai audit recorded for this repository.',
     };
   }
   const variant: Variant = score >= JANKURAI_GOOD_THRESHOLD ? 'good' : 'warn';
