@@ -6,7 +6,7 @@
 // line, and the rule that `local` only appears when the backend payload
 // actually includes it.
 
-import { expect, test, type Page } from './fixtures/test';
+import { expect, test } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import {
@@ -17,12 +17,6 @@ import {
 import type { RunnerFabricResponse } from '../src/api/types';
 
 test.describe.configure({ retries: 1 });
-
-async function blockFleetWebSocket(page: Page): Promise<void> {
-  await page.context().route('**/api/v1/ws', (route) =>
-    route.abort('failed').catch(() => undefined)
-  );
-}
 
 function runnerFabric(includeLocal: boolean): RunnerFabricResponse {
   return {
@@ -128,7 +122,6 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
   test('renders node cards, active task preview, and local only when present @action:fleet.render', async ({
     page,
   }) => {
-    await blockFleetWebSocket(page);
     await mockBootstrap(page);
     await mockFleetBootstrap(page, [
       {
@@ -176,7 +169,6 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
   test('does not invent a local node when the backend omits it @action:fleet.no_local_absence', async ({
     page,
   }) => {
-    await blockFleetWebSocket(page);
     await mockBootstrap(page);
     await mockFleetBootstrap(page, [
       {
@@ -205,7 +197,6 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
   test('clicking a task card with repo + agentRunId navigates to the agent terminal @action:fleet.task_navigation', async ({
     page,
   }) => {
-    await blockFleetWebSocket(page);
     await mockBootstrap(page);
     await mockFleetBootstrap(page, [
       {
@@ -235,7 +226,6 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
   });
 
   test('task card without repo remains non-interactive @action:fleet.noninteractive_card', async ({ page }) => {
-    await blockFleetWebSocket(page);
     await mockBootstrap(page);
     await mockFleetBootstrap(page, [
       {
@@ -261,7 +251,6 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
   test('lists the pr-redteam reviewer apart from the gate slots @action:fleet.reviewer', async ({
     page,
   }) => {
-    await blockFleetWebSocket(page);
     await mockBootstrap(page);
     await mockFleetBootstrap(page, []);
     const fabric = runnerFabric(false);

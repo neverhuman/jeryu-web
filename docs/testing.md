@@ -27,6 +27,14 @@ page from the Node test process, so a host network change (any Docker container
 starting or stopping on a shared box makes Chromium abort in-flight requests
 with `net::ERR_NETWORK_CHANGED`) cannot stop the SPA from mounting mid-test.
 
+That `test` also answers the app's WebSocket (`/api/v1/ws`) inside the
+browser through `page.routeWebSocket`, so no socket reaches the dev proxy or
+whatever sits behind it. The connection is accepted and silent by default; a
+spec that tests live updates takes the `realtime` fixture
+(`apps/web/e2e/fixtures/realtime.ts`) and pushes frames with `hello()` and
+`event()`. `e2e/33-realtime-socket.spec.ts` proves no upgrade leaves the
+browser.
+
 `scripts/ci-local.sh` delegates to the same `ops/ci/*.sh` lanes used by the
 GitHub workflow. `scripts/ci-doctor.sh` checks the required local tools.
 

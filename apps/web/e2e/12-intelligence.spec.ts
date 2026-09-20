@@ -7,12 +7,6 @@ import { mockBootstrap } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
-async function blockWebSocket(page: Page): Promise<void> {
-  await page.context().route('**/api/v1/ws', (route) =>
-    route.abort('failed').catch(() => undefined)
-  );
-}
-
 async function mockControlPlane(page: Page): Promise<void> {
   await page.route('**/api/v1/control-plane/status', async (route) => {
     await route.fulfill({
@@ -307,7 +301,6 @@ test.describe('Intelligence control-plane page', () => {
   test('renders priority, graph, search, selection, and absence evidence @action:intelligence.render @action:intelligence.graph_search @action:intelligence.graph_select', async ({
     page,
   }) => {
-    await blockWebSocket(page);
     await mockBootstrap(page);
     await mockControlPlane(page);
     await mockToolingEvidence(page);
@@ -338,7 +331,6 @@ test.describe('Intelligence control-plane page', () => {
   });
 
   test('Intelligence nav link routes to the page @action:intelligence.nav', async ({ page }) => {
-    await blockWebSocket(page);
     await mockBootstrap(page);
     await mockControlPlane(page);
     await mockToolingEvidence(page);
@@ -401,7 +393,6 @@ test.describe('Dependencies graph view', () => {
   test('reaches Dependencies from the nav and colours edges by pin staleness @action:intelligence.dependencies', async ({
     page,
   }) => {
-    await blockWebSocket(page);
     await mockBootstrap(page);
     await mockControlPlane(page);
     await mockToolingEvidence(page);

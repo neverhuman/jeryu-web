@@ -19,14 +19,7 @@ test.describe.configure({ retries: 1 });
 const REPO = { host: 'jeryu', owner: 'jeryu', name: 'veox' } as const;
 const REPO_PATH = `/repos/${REPO.host}/${REPO.owner}/${REPO.name}`;
 
-async function blockWebSocket(page: Page): Promise<void> {
-  await page.context().route('**/api/v1/ws', (route) =>
-    route.abort('failed').catch(() => undefined)
-  );
-}
-
 async function seed(page: Page): Promise<void> {
-  await blockWebSocket(page);
   await mockBootstrap(page);
   await mockRepoList(page, [
     {

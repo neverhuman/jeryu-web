@@ -1,6 +1,6 @@
 // 14-pull-room.spec.ts - W-FE-11 Pull Room smoke.
 
-import { expect, test, type Page } from './fixtures/test';
+import { expect, test } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap } from './fixtures/mocks';
@@ -8,16 +8,9 @@ import { controlPlane, mockPullRoom } from './fixtures/pullRoomMocks';
 
 test.describe.configure({ retries: 1 });
 
-async function blockWebSocket(page: Page): Promise<void> {
-  await page.context().route('**/api/v1/ws', (route) =>
-    route.abort('failed').catch(() => undefined)
-  );
-}
-
 test('Pull requests shows every open pull request as a timeline row, filters, and keeps the board one click away @action:pull_room.timeline @action:pull_room.filters @action:pull_room.search @action:pull_room.cockpit_link', async ({
   page,
 }) => {
-  await blockWebSocket(page);
   await mockBootstrap(page);
   await mockPullRoom(page);
 
@@ -76,7 +69,6 @@ test('Pull requests shows every open pull request as a timeline row, filters, an
 test('Pull requests filters by family from a pill, and one repo that does not answer is one quiet line @action:pull_room.family_pills', async ({
   page,
 }) => {
-  await blockWebSocket(page);
   await mockBootstrap(page);
   const snapshot = controlPlane();
   snapshot.pullRequests[1].repo = 'bob/jeryu';
@@ -108,7 +100,6 @@ test('Pull requests filters by family from a pill, and one repo that does not an
 });
 
 test('Pull Room follows repository URLs and browser history @action:pull_room.filters', async ({ page }, testInfo) => {
-  await blockWebSocket(page);
   await mockBootstrap(page);
   const snapshot = controlPlane();
   snapshot.pullRequests[1].repo = 'bob/jeryu';

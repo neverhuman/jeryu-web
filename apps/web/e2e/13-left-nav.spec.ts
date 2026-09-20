@@ -12,12 +12,6 @@ import {
 
 test.describe.configure({ retries: 1 });
 
-async function blockWebSocket(page: Page): Promise<void> {
-  await page.context().route('**/api/v1/ws', (route) =>
-    route.abort('failed').catch(() => undefined)
-  );
-}
-
 async function mockIntelligence(page: Page): Promise<void> {
   await page.route('**/api/v1/control-plane/status', async (route) => {
     await route.fulfill({
@@ -155,7 +149,6 @@ test.describe('Primary left navigation', () => {
   test('routes every left-nav destination without hitting NotFound @action:chrome.sidebar_nav @action:settings.render @action:shared_tools.nav', async ({
     page,
   }) => {
-    await blockWebSocket(page);
     await mockBootstrap(page);
     await mockRepoList(page, [
       {

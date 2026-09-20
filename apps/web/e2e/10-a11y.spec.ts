@@ -275,12 +275,9 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
     // `missing-rendered-ux-qa-lane` cap. Scan it in its richest state: the
     // active-agents list, the "New Session" button, and a mounted
     // `<AgentTerminal>` (deep-linked via the splat so the pane renders without
-    // depending on row selection). The realtime socket is blocked — the scan
-    // covers the rendered DOM, not live streaming.
+    // depending on row selection). The realtime socket is answered in the browser
+    // and stays silent — the scan covers the rendered DOM, not live streaming.
     const repo = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
-    await page.context().route('**/api/v1/ws', (route) =>
-      route.abort('failed').catch(() => undefined)
-    );
     await mockBootstrap(page);
     await mockRepoList(page, [{ id: repo, default_branch: 'main' }]);
     await mockRepoAgentRuns(page, [
@@ -315,7 +312,6 @@ test.describe('Accessibility scans — Work, one page', () => {
     { scope: 'shift-workers', path: '/work#workers', testId: 'shift-capacity' },
   ]) {
     test(`axe scan: ${target.scope}`, async ({ page }) => {
-      await page.context().route('**/api/v1/ws', (route) => route.abort());
       await mockBootstrap(page, { auth: { role: 'admin' } });
       await mockShiftApi(page);
       await page.goto(target.path);
@@ -333,7 +329,6 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
   test('axe scan: Pull requests timeline with family pills', async ({ page }) => {
     // Rows from two repositories, one family pill pressed, so the timeline
     // track, the pills and the view toggle are all on the page.
-    await page.context().route('**/api/v1/ws', (route) => route.abort());
     await mockBootstrap(page);
     const snapshot = controlPlane();
     snapshot.pullRequests[1].repo = 'bob/jeryu';
@@ -352,7 +347,6 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
     // block per rung of the pipeline with its older work folded behind an
     // expander, ladder pips on every merged row, and dashed ghost rows for
     // shift work that has no pull request yet.
-    await page.context().route('**/api/v1/ws', (route) => route.abort());
     await mockBootstrap(page);
     await mockPullRoom(page, snapshotWithReleaseHistory());
     await mockReleaseChannels(page, [FOUR_CHANNELS]);
@@ -401,7 +395,6 @@ test.describe('Accessibility scans — pipeline visibility', () => {
     { scope: 'activity-wall', path: '/activity?wall=1', testId: 'activity-event-12' },
   ]) {
     test(`axe scan: ${target.scope}`, async ({ page }) => {
-      await page.context().route('**/api/v1/ws', (route) => route.abort());
       await mockBootstrap(page, { auth: { role: 'admin' } });
       await mockPipelineApi(page);
       await page.goto(target.path);

@@ -18,12 +18,6 @@ import {
 
 test.describe.configure({ retries: 1 });
 
-async function blockWebSocket(page: Page): Promise<void> {
-  await page.context().route('**/api/v1/ws', (route) =>
-    route.abort('failed').catch(() => undefined)
-  );
-}
-
 /** Every state heading of one repository's section, in DOM order. */
 async function stateLabels(page: Page, repo: string): Promise<string[]> {
   return page.getByTestId(`pull-repo-${repo}`).locator('.pull-state__label').allTextContents();
@@ -33,7 +27,6 @@ test('The timeline groups by repository and shows the newest change at each stat
   page,
 }) => {
   const snapshot = snapshotWithReleaseHistory();
-  await blockWebSocket(page);
   await mockBootstrap(page);
   await mockPullRoom(page, snapshot);
   await mockShiftTodos(page, []);
@@ -119,7 +112,6 @@ test('A repository that records no release says so instead of calling merged wor
   page,
 }) => {
   const snapshot = snapshotWithReleaseHistory();
-  await blockWebSocket(page);
   await mockBootstrap(page);
   await mockPullRoom(page, snapshot);
   await mockShiftTodos(page, []);
@@ -162,7 +154,6 @@ test('A repository that records no release says so instead of calling merged wor
 test('Shift work with no pull request yet sits above the repositories, with a truthful "when" @action:pull_room.ghost_rows', async ({
   page,
 }) => {
-  await blockWebSocket(page);
   await mockBootstrap(page);
   await mockPullRoom(page);
   await mockReleaseChannels(page, []);

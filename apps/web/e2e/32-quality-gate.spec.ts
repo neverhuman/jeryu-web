@@ -10,9 +10,6 @@ import { mockBootstrap } from './fixtures/mocks';
 import { FLAGGED_SHA, mockQualityGateApi } from './fixtures/qualityGateMocks';
 
 test.describe('Quality gate', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.context().route('**/api/v1/ws', (route) => route.abort());
-  });
 
   test('the overview tiles, both tables and the daily chart, with no a11y blocker @action:quality_gate.overview', async ({
     page,

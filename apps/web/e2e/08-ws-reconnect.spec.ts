@@ -2,83 +2,66 @@
 //
 // The SPA's `JeRyuWsClient` (apps/web/src/api/websocket.ts) drives
 // transport-level state in the GlobalHeader's "live" pill: "Live" once the
-// server `hello` arrives, "Connecting" / "Reconnecting" / "Offline" / "Idle"
+// socket is open, "Connecting" / "Reconnecting" / "Offline" / "Idle"
 // otherwise. The reconnect policy is exponential backoff capped at 30 s
-// with full jitter.
+// with full jitter, starting at 500 ms.
 //
-// Playwright limitations:
-//   * `page.route` only intercepts HTTP requests, not raw WebSocket frames.
-//     Aborting `/api/v1/ws` aborts the upgrade handshake; the SPA reacts to
-//     the `close` event with a reconnect attempt.
-//   * Browsers cache the redirect/close decision per-connection; once the
-//     abort is unrouted, subsequent reconnect attempts succeed.
-//
-// This spec verifies the SPA survives the disconnect/reconnect cycle
-// without an Error Boundary trip. It does NOT assert the pill text in
-// the middle of the cycle (timing-sensitive); it asserts the shell stays
-// mounted before and after the network manipulation.
+// The socket is answered inside the browser by the `realtime` fixture
+// (`e2e/fixtures/realtime.ts`), so nothing here touches a server. This spec
+// opts in to driving it: a server `hello`, then a close, then the reconnect.
 
 import { expect, test } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
+import { REALTIME_WS_PATTERN } from './fixtures/realtime';
 
 test.describe.configure({ retries: 1 });
 
 test.describe('WebSocket reconnect (W-T-16)', () => {
-  test('aborting WS does not crash the SPA @action:ws.reconnect', async ({ page }) => {
+  test('the pill reads Live, survives a close, and comes back @action:ws.reconnect', async ({
+    page,
+    realtime,
+  }) => {
     await mockBootstrap(page);
-
-    // Abort the WS upgrade. We register the route before any navigation
-    // so the SPA's first connect attempt encounters the abort.
-    await page.context().route('**/api/v1/ws', (route) =>
-      route.abort('failed').catch(() => undefined)
-    );
-
     await page.goto('/');
 
-    // The SPA must mount its shell or an error surface even though the
-    // WS upgrade is being aborted. Use `.first()` to avoid strict-mode
-    // duplicate matches between the header and its live pill.
-    const shellOrError = page
-      .locator('.global-header, .app-shell, [role="alert"]')
-      .first();
-    await expect(shellOrError).toBeVisible({ timeout: 15_000 });
+    const shell = page.locator('.global-header, .app-shell, [role="alert"]').first();
+    await expect(shell).toBeVisible({ timeout: 15_000 });
 
-    // Stop aborting. Subsequent reconnect attempts may now succeed
-    // against the live BFF.
-    await page.context().unroute('**/api/v1/ws');
+    // The page's first socket, answered in the browser. A server `hello` is
+    // what the client waits for before it trusts the connection.
+    await realtime.waitForOpen();
+    await realtime.hello();
+    const pill = page.getByTestId('live-pill');
+    await expect(pill).toHaveText('Live');
 
-    // Let the backoff timer fire one more reconnect cycle.
-    await page.waitForTimeout(2_500);
-
-    // Shell still mounted — no Error Boundary trip from the disconnect.
-    await expect(shellOrError).toBeVisible();
+    // Drop it the way a forge restart would. Backoff reopens the socket and
+    // the client greets the new one; the shell never trips an error boundary.
+    await realtime.close({ code: 1006 });
+    await expect.poll(() => realtime.openCount, { timeout: 15_000 }).toBeGreaterThan(1);
+    await expect
+      .poll(() => realtime.sentFrames.filter((frame) => frame.includes('"hello"')).length)
+      .toBeGreaterThan(1);
+    await realtime.hello({ currentSeq: 2 });
+    await expect(pill).toHaveText('Live');
+    await expect(shell).toBeVisible();
   });
 
-  test('SPA boots without an open WS (graceful degrade) @action:ws.offline_boot', async ({ page }) => {
+  test('SPA boots without an open WS (graceful degrade) @action:ws.offline_boot', async ({
+    page,
+  }) => {
     await mockBootstrap(page);
-    // Permanently block the WS upgrade by aborting every request.
-    await page.context().route('**/api/v1/ws', (route) =>
-      route.abort('failed').catch(() => undefined)
-    );
+    // Refuse every upgrade. Registered after the fixture's route, so it wins.
+    await page.routeWebSocket(REALTIME_WS_PATTERN, (ws) => ws.close({ code: 1006 }));
 
     await page.goto('/');
 
-    const shellOrError = page
-      .locator('.global-header, .app-shell, [role="alert"]')
-      .first();
-    await expect(shellOrError).toBeVisible({ timeout: 15_000 });
+    const shell = page.locator('.global-header, .app-shell, [role="alert"]').first();
+    await expect(shell).toBeVisible({ timeout: 15_000 });
 
-    // Live pill — if it rendered, must indicate a non-Live state OR
-    // already-Live (the live BFF may have answered before the route
-    // engaged on slower runners). The point is the SPA does not crash.
-    const pill = page.locator('.global-header__live');
-    if ((await pill.count()) > 0) {
-      const text = await pill.first().innerText();
-      expect(
-        /Live|Connecting|Reconnecting|Offline|Idle/i.test(text),
-        `live pill text: ${text}`
-      ).toBe(true);
-    }
+    // The pill reports the transport honestly and the SPA keeps working.
+    const pill = page.getByTestId('live-pill');
+    await expect(pill).toBeVisible();
+    await expect(pill).toHaveText(/Connecting|Reconnecting|Offline|Idle/);
   });
 });

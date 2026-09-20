@@ -5,12 +5,48 @@
 import { expect, test } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
-import { DEPLOY_COMMAND, mockPipelineApi, pinsBody } from './fixtures/pipelineMocks';
+import { attentionBody, DEPLOY_COMMAND, mockPipelineApi, pinsBody } from './fixtures/pipelineMocks';
 import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
 
 test.describe('Pipeline visibility', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.context().route('**/api/v1/ws', (route) => route.abort());
+
+  test('a push on the pipeline scope refetches Needs you @action:needs_you.live_nudge', async ({
+    page,
+    realtime,
+  }) => {
+    // Needs you polls every 15 s; the socket is only a nudge. Change what the
+    // read answers, then push one `pipeline` event: the row must follow well
+    // inside the poll interval, which only the nudge can do.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    let recovered = false;
+    await page.route(/\/api\/v1\/attention(\?.*)?$/, (route) => {
+      const body = attentionBody();
+      if (recovered) {
+        (body.items as Array<Record<string, unknown>>)[0].title = 'Two worker slots are back';
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    });
+
+    await page.goto('/needs-you');
+    const critical = page.getByTestId('needs-you-critical');
+    await expect(critical).toContainText('No healthy worker slot for jain', { timeout: 15_000 });
+
+    await realtime.waitForOpen();
+    await realtime.hello();
+    recovered = true;
+    await realtime.event({
+      seq: 13,
+      scope: 'pipeline',
+      kind: 'workers.recovered',
+      entity: 'shift',
+    });
+
+    await expect(critical).toContainText('Two worker slots are back', { timeout: 8_000 });
   });
 
   test('admins land on Needs you: red rows, one action each, badge on every page @action:needs_you.render @action:needs_you.badge', async ({

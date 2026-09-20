@@ -1,6 +1,6 @@
 // 15-repo-pulls.spec.ts - W-FE-11 repo-scoped pull request list.
 
-import { expect, test, type Page } from './fixtures/test';
+import { expect, test } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap, mockPullRequestList, mockRepoList } from './fixtures/mocks';
@@ -9,16 +9,9 @@ test.describe.configure({ retries: 1 });
 
 const REPO = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
 
-async function blockWebSocket(page: Page): Promise<void> {
-  await page.context().route('**/api/v1/ws', (route) =>
-    route.abort('failed').catch(() => undefined)
-  );
-}
-
 test('repo pull list renders PR cards without the W-FE-11 placeholder @action:repo_pulls.list', async ({
   page,
 }) => {
-  await blockWebSocket(page);
   await mockBootstrap(page);
   await mockRepoList(page, [
     {
@@ -55,7 +48,6 @@ test('repo pull list renders PR cards without the W-FE-11 placeholder @action:re
 });
 
 test('repo pull list empty state says No pull requests @action:repo_pulls.empty', async ({ page }) => {
-  await blockWebSocket(page);
   await mockBootstrap(page);
   await mockRepoList(page, [
     {

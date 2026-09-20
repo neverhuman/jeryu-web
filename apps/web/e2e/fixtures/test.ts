@@ -13,10 +13,16 @@
 //
 // API calls are left alone: specs mock `/api/v1/*` with their own routes, which
 // are registered later and so win over this one.
+//
+// The app's WebSocket is answered in the browser too, by the auto-used
+// `realtime` fixture below (`./realtime`), so no socket reaches the dev proxy.
 
 import { test as base, type BrowserContext, type Route } from '@playwright/test';
 
+import { mockRealtimeSocket, type RealtimeSocket } from './realtime';
+
 export * from '@playwright/test';
+export type { RealtimeEvent, RealtimeSocket } from './realtime';
 
 interface ServedFile {
   status: number;
@@ -60,7 +66,7 @@ export async function serveAppFromNode(
   );
 }
 
-export const test = base.extend({
+export const test = base.extend<{ realtime: RealtimeSocket }>({
   context: async ({ context, baseURL }, provide) => {
     await serveAppFromNode(context, baseURL);
     await provide(context);
@@ -68,4 +74,12 @@ export const test = base.extend({
     // dies with the context and is not a failure of the test.
     await context.unrouteAll({ behavior: 'ignoreErrors' });
   },
+  // Auto-used: every test gets the socket answered in the browser, silent
+  // unless the test asks for the handle and pushes frames through it.
+  realtime: [
+    async ({ page }, provide) => {
+      await provide(await mockRealtimeSocket(page));
+    },
+    { auto: true },
+  ],
 });

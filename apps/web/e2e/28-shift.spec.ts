@@ -10,9 +10,6 @@ import { mockBootstrap } from './fixtures/mocks';
 import { NIGHT, mockShiftApi } from './fixtures/shiftMocks';
 
 test.describe('Work, one page', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.context().route('**/api/v1/ws', (route) => route.abort());
-  });
 
   test('Work is one page: composer, workers line, queue; old addresses land on it @action:shift.tabs @action:shift.queue_filter', async ({
     page,
