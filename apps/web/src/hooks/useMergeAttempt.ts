@@ -12,13 +12,16 @@ import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { MergeAttemptResponse } from '../api/types';
 
+type MergeAttemptKey = readonly ['pull-merge-attempt', string | null, string | null];
+
 export function useMergeAttempt(
   repoId: string | null,
   prNumber: string | null,
   enabled = true
 ): UseQueryResult<MergeAttemptResponse, Error> {
+  const queryKey: MergeAttemptKey = ['pull-merge-attempt', repoId, prNumber];
   return useQuery({
-    queryKey: ['pull-merge-attempt', repoId, prNumber] as const,
+    queryKey,
     queryFn: ({ signal }) =>
       apiGet<MergeAttemptResponse>(
         endpoints.pullMergeAttempt(repoId as string, prNumber as string),
