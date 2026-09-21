@@ -23,6 +23,7 @@ const FIXTURE: RepositorySummary = {
   visibility: 'internal',
   default_branch: 'main',
   family: 'veox-*',
+  archived: false,
   repo_role: null,
   topics: ['rust', 'async'],
   language: 'Rust',

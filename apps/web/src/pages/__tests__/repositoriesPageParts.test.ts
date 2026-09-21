@@ -16,6 +16,7 @@ function repo(name: string, role: RepositorySummary['repo_role']): RepositorySum
     visibility: 'public',
     default_branch: 'main',
     family: 'jeryu-split',
+    archived: false,
     repo_role: role,
     topics: [],
     language: null,

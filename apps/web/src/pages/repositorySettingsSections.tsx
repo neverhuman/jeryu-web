@@ -110,15 +110,6 @@ export function GeneralSectionView({
           <option value="private">private</option>
         </select>
       </div>
-      <label className="settings-section__checkbox">
-        <input
-          type="checkbox"
-          checked={patch.archived ?? current.general.archived}
-          onChange={(e) => setPatch({ archived: e.target.checked })}
-          disabled={disabled}
-        />
-        Archived
-      </label>
     </SettingsSection>
   );
 }

@@ -36,6 +36,7 @@ function repoFixture(
     visibility: 'internal',
     default_branch: 'main',
     family: null,
+    archived: false,
     repo_role: null,
     topics: [],
     language: null,

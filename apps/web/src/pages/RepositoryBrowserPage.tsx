@@ -22,6 +22,7 @@ import {
 } from '../components/browser';
 import type { BreadcrumbSegment } from '../components/browser';
 import { RepoHealthPill } from '../components/repo/RepoHealthPill';
+import { RepoArchivedBadge } from '../components/repo/RepoArchivedBadge';
 import { RepoRoleBadge } from '../components/repo/RepoRoleBadge';
 import {
   EmptyState,
@@ -209,6 +210,7 @@ export function RepositoryBrowserPage({
           <h1 className="repo-overview__title">{summary.id.name}</h1>
           <RepoHealthPill health={summary.health} />
           <RepoRoleBadge role={summary.repo_role} />
+          <RepoArchivedBadge archived={summary.archived} />
           <span className="page__pill">{summary.visibility}</span>
           {summary.language ? <span className="page__pill">{summary.language}</span> : null}
         </div>

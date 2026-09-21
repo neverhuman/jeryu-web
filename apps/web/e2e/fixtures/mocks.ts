@@ -237,6 +237,7 @@ export interface MockRepoSummary {
   description?: string | null;
   visibility?: 'public' | 'internal' | 'private';
   family?: string | null;
+  archived?: boolean;
   repo_role?: 'public_portal' | 'split_member' | null;
   topics?: string[];
   open_pull_requests?: number;
@@ -291,11 +292,16 @@ export async function mockRepoList(
     // Honour the `?family=` filter like the real backend so the family
     // drill-down page sees only the matching members.
     const familyFilter = url.searchParams.get('family');
-    const filtered = familyFilter
-      ? repositories.filter(
-          (r) => (r as { family: string | null }).family === familyFilter
-        )
-      : repositories;
+    // And `?archived=1` like the real backend: the Archived filter lists only
+    // archived repositories, the default list only unarchived ones.
+    const archivedOnly = url.searchParams.get('archived') === '1';
+    const filtered = (
+      familyFilter
+        ? repositories.filter(
+            (r) => (r as { family: string | null }).family === familyFilter
+          )
+        : repositories
+    ).filter((r) => (r as { archived: boolean }).archived === archivedOnly);
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -347,6 +353,55 @@ export interface MockDeleteRepoError {
   status: number;
   code: string;
   message: string;
+}
+
+export interface CapturedArchiveRequest {
+  url: string;
+  body: Record<string, unknown>;
+}
+
+/**
+ * Mock `PATCH /api/v1/repos/{id}` (archive / unarchive) and capture each
+ * request body. Register it AFTER `mockRepoList`, like `mockDeleteRepo`.
+ */
+export async function mockArchiveRepo(
+  page: Page,
+  opts: { error?: MockDeleteRepoError } = {}
+): Promise<CapturedArchiveRequest[]> {
+  const captured: CapturedArchiveRequest[] = [];
+  await page.route('**/api/v1/repos/*', async (route: Route, request) => {
+    if (request.method() !== 'PATCH') {
+      await route.fallback();
+      return;
+    }
+    let body: Record<string, unknown> = {};
+    try {
+      body = JSON.parse(request.postData() ?? '{}') as Record<string, unknown>;
+    } catch {
+      // keep {}
+    }
+    captured.push({ url: request.url(), body });
+    if (opts.error) {
+      await route.fulfill({
+        status: opts.error.status,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: {
+            code: opts.error.code,
+            message: opts.error.message,
+            request_id: 'mock-archive-error',
+          },
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    });
+  });
+  return captured;
 }
 
 export interface CapturedDeleteRequest {
@@ -1220,6 +1275,7 @@ function normalizeRepo(repo: MockRepoSummary): Record<string, unknown> {
     visibility: repo.visibility ?? 'private',
     default_branch: repo.default_branch ?? 'main',
     family: repo.family ?? null,
+    archived: repo.archived ?? false,
     repo_role: repo.repo_role ?? null,
     topics: repo.topics ?? [],
     language: null,

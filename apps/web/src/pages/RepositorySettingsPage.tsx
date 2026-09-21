@@ -21,6 +21,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
+import { RepoArchiveSection } from '../components/repo/RepoArchiveSection';
 import { RepoDangerZone } from '../components/repo/RepoDangerZone';
 import { ActionButton } from '../components/action/ActionButton';
 import { SettingsLayout, SettingsSection } from '../components/settings';
@@ -180,6 +181,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
             branch={resolved.data.summary.default_branch ?? 'main'}
           />
           <GithubMirrorSummary mirror={resolved.data.summary.mirror} />
+          <RepoArchiveSection repo={resolved.data.summary} />
           <RepoDangerZone repo={resolved.data.summary} />
         </div>
       );
@@ -312,7 +314,12 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
           <RetentionSectionView current={current} />
         )}
 
-        {activeSection === 'danger-zone' && <RepoDangerZone repo={resolved.data.summary} />}
+        {activeSection === 'danger-zone' && (
+          <>
+            <RepoArchiveSection repo={resolved.data.summary} />
+            <RepoDangerZone repo={resolved.data.summary} />
+          </>
+        )}
 
         {/* Pending changes panel — always visible while a section is open. */}
         <PendingChangesPanel

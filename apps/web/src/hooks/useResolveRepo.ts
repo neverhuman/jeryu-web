@@ -52,20 +52,33 @@ export function useResolveRepo(
   // exposes list-with-host-filter, and the SPA resolves the full name
   // client-side against that page.
   const list = useRepositories({ host: provider });
+  const inList = list.data?.repositories.find((r) =>
+    matches(r, provider, fullName)
+  );
+  // The default list leaves archived repositories out; an archived one is
+  // still browsable (and unarchivable), so look it up under `archived=1`
+  // once the default list has answered without it.
+  const archivedList = useRepositories(
+    { host: provider, archived: true },
+    { enabled: Boolean(list.data) && !inList }
+  );
 
   const data = useMemo<ResolvedRepo | undefined>(() => {
-    if (!list.data) return;
-    const summary = list.data.repositories.find((r) =>
-      matches(r, provider, fullName)
-    );
+    const summary =
+      inList ??
+      archivedList.data?.repositories.find((r) =>
+        matches(r, provider, fullName)
+      );
     if (!summary) return;
     return { id: summary.id.id, summary };
-  }, [list.data, provider, fullName]);
+  }, [inList, archivedList.data, provider, fullName]);
 
+  const lookingInArchived = Boolean(list.data) && !inList;
   return {
-    isPending: list.isPending,
-    isError: list.isError,
-    error: list.error ?? null,
+    isPending:
+      list.isPending || (lookingInArchived && archivedList.isPending),
+    isError: list.isError || (lookingInArchived && archivedList.isError),
+    error: list.error ?? (lookingInArchived ? archivedList.error : null) ?? null,
     data,
   };
 }

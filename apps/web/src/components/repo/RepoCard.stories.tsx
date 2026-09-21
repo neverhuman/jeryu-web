@@ -19,6 +19,7 @@ function baseRepo(overrides: Partial<RepositorySummary> = {}): RepositorySummary
     visibility: 'internal',
     default_branch: 'main',
     family: 'veox-*',
+    archived: false,
     repo_role: null,
     topics: ['rust', 'async'],
     language: 'Rust',
@@ -111,7 +112,7 @@ export const Critical: Story = {
 export const Archived: Story = {
   args: {
     repo: baseRepo({
-      health: 'archived',
+      archived: true,
       open_pull_requests: 0,
       failing_checks: 0,
       active_agents: 0,

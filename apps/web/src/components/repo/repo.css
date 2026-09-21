@@ -828,3 +828,41 @@
   border-color: var(--color-border-strong);
 }
 
+
+/* Archive -------------------------------------------------------------------- */
+/* Reversible, so it sits above the danger zone with a neutral border. */
+
+.repo-archive-section {
+  margin-top: var(--space-6);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--color-bg-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.repo-archive-section__title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+}
+
+.repo-archive-section .action-button {
+  flex-shrink: 0;
+}
+
+.repo-archived-badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background-color: var(--color-gold-bg);
+  color: var(--color-gold);
+  border: 1px solid var(--color-gold-border);
+}

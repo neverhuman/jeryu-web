@@ -37,6 +37,7 @@ import {
 
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
 import { RepoFailingChecks } from './RepoFailingChecks';
+import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoRoleBadge } from './RepoRoleBadge';
 import { relativeTime } from './relativeTime';
 import { pullRoomHref } from '../../pages/pullRoomModel';
@@ -217,6 +218,7 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
               <strong>{row.original.id.name}</strong>
             </Link>
             <RepoRoleBadge role={row.original.repo_role} />
+            <RepoArchivedBadge archived={row.original.archived} />
             <NewerCopyChip repo={row.original} copies={copies} />
           </span>
         )

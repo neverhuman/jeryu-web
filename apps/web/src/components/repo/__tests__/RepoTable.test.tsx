@@ -20,6 +20,7 @@ const REPO: RepositorySummary = {
   visibility: 'public',
   default_branch: 'main',
   family: 'jeryu-split',
+  archived: false,
   repo_role: 'split_member',
   topics: [],
   language: 'Rust',

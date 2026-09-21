@@ -20,6 +20,7 @@ import type { RepositorySummary } from '../../api/types';
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
 import { MirrorStatusBadge } from './MirrorStatusBadge';
 import { RepoHealthPill } from './RepoHealthPill';
+import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoRoleBadge } from './RepoRoleBadge';
 import { relativeTime } from './relativeTime';
 import './repo.css';
@@ -44,6 +45,7 @@ export function RepoCard({ repo }: RepoCardProps): JSX.Element {
         <h3 className="repo-card__title">{repo.id.name}</h3>
         <div className="repo-card__pills">
           <RepoRoleBadge role={repo.repo_role} />
+          <RepoArchivedBadge archived={repo.archived} />
           <JankuraiScoreBadge
             score={repo.jankurai_score}
             decision={repo.jankurai_decision}

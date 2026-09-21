@@ -60,6 +60,7 @@ function repoSummary(
     visibility: 'internal',
     default_branch: 'main',
     family: 'veox-split',
+    archived: false,
     repo_role: null,
     topics: [],
     language: null,
