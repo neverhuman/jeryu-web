@@ -37,6 +37,8 @@ export interface PullRequestCockpitProps {
   /** A failed review submission that is not head drift (drift has its own banner). */
   reviewError?: string | null;
   /** `owner/name` and PR number, for the pipeline events panel. */
+  /** The server's merge refusal, shown verbatim. */
+  mergeError?: string | null;
   repoFullName?: string | null;
   prNumber?: string | null;
   onSelectFile: (path: string) => void;
@@ -62,6 +64,7 @@ export function PullRequestCockpit({
   diffMode,
   isBusy,
   reviewError,
+  mergeError,
   repoFullName,
   prNumber,
   onSelectFile,
@@ -127,6 +130,11 @@ export function PullRequestCockpit({
         {reviewError ? (
           <p className="pr-cockpit__review-error" role="alert">
             Review not submitted: {reviewError}
+          </p>
+        ) : null}
+        {mergeError ? (
+          <p className="pr-cockpit__review-error" role="alert" data-testid="pr-merge-error">
+            Merge refused: {mergeError}
           </p>
         ) : null}
         {settled ? null : <MergeGatePanel passport={data.merge_passport} />}

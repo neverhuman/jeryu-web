@@ -147,11 +147,15 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
       method: 'merge' | 'squash' | 'rebase';
     }) => {
       mergeMutation.reset();
-      await mergeMutation.mutateAsync({
-        expected_head_sha: input.expectedHeadSha,
-        expected_passport_hash: input.expectedPassportHash,
-        merge_method: input.method,
-      });
+      // A refusal lands in `mergeMutation.error` and is shown in the review
+      // pane; swallow the rejection here so it never becomes a silent no-op.
+      await mergeMutation
+        .mutateAsync({
+          expected_head_sha: input.expectedHeadSha,
+          expected_passport_hash: input.expectedPassportHash,
+          merge_method: input.method,
+        })
+        .catch(() => undefined);
     },
     [mergeMutation]
   );
@@ -339,6 +343,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         diffMode={diffMode}
         isBusy={approve.isPending || mergeMutation.isPending || review.isPending}
         reviewError={review.error && !headDrift ? review.error.message : null}
+        mergeError={mergeMutation.error && !headDrift ? mergeMutation.error.message : null}
         repoFullName={fullName}
         prNumber={prNumber}
         onRequestChanges={handleRequestChanges}

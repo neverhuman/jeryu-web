@@ -312,4 +312,48 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
       .poll(() => mergeMethods.join(','), { timeout: 10_000 })
       .toBe('merge,squash,rebase');
   });
+  test('a refused merge shows the server reason verbatim @action:pr.merge_refused', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockRepoList(page, [{ id: REPO, default_branch: 'main' }]);
+    await mockPullRequestDetail(page, {
+      repoId: REPO_ID,
+      number: PR_NUMBER,
+      title: 'Diverged from linear main',
+      head_sha: OLD_SHA,
+      passport: 'pass',
+      can_merge: true,
+      approvals: 1,
+      required_approvals: 1,
+    });
+    const reason =
+      'main requires linear history and the pull request could not be rebased onto it: replaying onto the base conflicts in: README.md';
+    await page.route(
+      /\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/merge$/,
+      async (route, request) => {
+        if (request.method() !== 'POST') {
+          await route.continue();
+          return;
+        }
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: { code: 'merge_blocked', message: reason, details: {} },
+          }),
+        });
+      }
+    );
+
+    await page.goto(PR_URL);
+    await expect(
+      page.getByRole('heading', { name: /PR #99: Diverged from linear main/i })
+    ).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole('button', { name: /^Merge$/ }).click();
+    await expect(page.getByTestId('pr-merge-error')).toHaveText(
+      `Merge refused: ${reason}`
+    );
+  });
 });
