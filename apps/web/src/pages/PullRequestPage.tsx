@@ -28,6 +28,7 @@ import {
   PermissionDeniedState,
 } from '../components/state';
 import { useApprovePr } from '../hooks/useApprovePr';
+import { useMergeAttempt } from '../hooks/useMergeAttempt';
 import { useMergePr } from '../hooks/useMergePr';
 import { useSubmitReview } from '../hooks/useSubmitReview';
 import { usePullRequest } from '../hooks/usePullRequest';
@@ -38,6 +39,7 @@ import { useRealtime } from '../hooks/useRealtime';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { usePreferencesStore } from '../stores/preferencesStore';
 import { useSelectionStore } from '../stores/selectionStore';
+import { mergeAttemptLine } from '../components/merge/mergeAttemptModel';
 import { isSettled, pullStateBadge } from '../components/merge/pullReviewModel';
 import { relativeTime } from '../components/repo/relativeTime';
 import { PullRequestCockpit } from './PullRequestCockpit';
@@ -89,6 +91,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
 
   const approve = useApprovePr(repoId, prNumber);
   const mergeMutation = useMergePr(repoId, prNumber);
+  const mergeAttempt = useMergeAttempt(repoId, prNumber);
   const review = useSubmitReview(repoId, prNumber);
 
   // Diff viewer state.
@@ -329,6 +332,19 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           >
             Refresh
           </ActionButton>
+        </div>
+      ) : null}
+
+      {!settled && mergeAttemptLine(mergeAttempt.data) ? (
+        <div
+          className="pr-cockpit__recovery"
+          role="status"
+          data-testid="pr-merge-attempt"
+        >
+          <div className="pr-cockpit__recovery-title">
+            <ShieldAlert aria-hidden="true" size={14} />
+            {mergeAttemptLine(mergeAttempt.data)}
+          </div>
         </div>
       ) : null}
 

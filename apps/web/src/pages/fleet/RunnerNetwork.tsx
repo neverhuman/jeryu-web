@@ -157,6 +157,14 @@ function RunnerRow({
                     {last.verb}
                   </span>{' '}
                   <LastSubject last={last} />
+                  {last.blocked ? (
+                    <span
+                      className="fleet__tone--warning"
+                      data-testid={`${testId}-merge-blocked-${nodeId}`}
+                    >
+                      {' '}- merge blocked: {last.blocked}
+                    </span>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -189,6 +197,14 @@ function RunnerRow({
           )}
         </p>
       </div>
+      {node.mergeGrantGaps?.length ? (
+        <p
+          className="fleet__node-last fleet__tone--warning"
+          data-testid={`${testId}-merge-grant-${nodeId}`}
+        >
+          {node.mergeGrantGaps.map((gap) => gap.message).join(' · ')}
+        </p>
+      ) : null}
     </article>
   );
 }

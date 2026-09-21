@@ -13,6 +13,8 @@
 
 import type {
   EvidenceState,
+  MergeAttempt,
+  MergeGrantGap,
   RunnerLastActivity,
   RunnerFabricResponse,
   RunnerNodeSummary,
@@ -83,6 +85,8 @@ export interface RunnerNetworkNode {
   lastActivity?: RunnerLastActivity | null;
   /** The forge's offline threshold for this runner, when it sends one. */
   offlineAfterSeconds?: number | null;
+  /** Reviewer only: repositories where the merge identity has no grant. */
+  mergeGrantGaps?: MergeGrantGap[];
 }
 
 export interface RunnerNetworkTotals {
@@ -216,6 +220,7 @@ function nodeFromRaw(raw: RunnerNodeSummary): RunnerNetworkNode {
     lastUpdated,
     tasks,
     lastActivity: raw.lastActivity ?? null,
+    mergeGrantGaps: raw.mergeGrantGaps ?? [],
     offlineAfterSeconds: raw.offlineAfterSeconds ?? null,
   };
 }
@@ -245,6 +250,43 @@ function totalsFromNodes(nodes: RunnerNetworkNode[]): RunnerNetworkTotals {
   );
 }
 
+/** The forge's answer to a merge attempt, or null when absent or malformed. */
+function mergeAttemptFromRaw(value: unknown): MergeAttempt | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const result = str(record.result);
+  const at = str(record.at);
+  if (!result || !at) return null;
+  return {
+    result,
+    status: num(record.status),
+    code: str(record.code) || undefined,
+    message: str(record.message) || undefined,
+    actor: str(record.actor) || undefined,
+    at,
+  };
+}
+
+function mergeGrantGapsFromRaw(value: unknown): MergeGrantGap[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const record = asRecord(item);
+    const repo = str(record?.repo);
+    if (!record || !repo) return [];
+    return [{ repo, identity: str(record.identity), message: str(record.message) }];
+  });
+}
+
+/**
+ * What blocks a merge, in one line: `queue_merge_commits - rebase it onto the
+ * base`. Null when the last attempt landed or queued, or none was made.
+ */
+export function mergeBlockedReason(attempt: MergeAttempt | null | undefined): string | null {
+  if (!attempt || attempt.result !== 'refused') return null;
+  const code = attempt.code || `http_${attempt.status}`;
+  return attempt.message ? `${code} - ${attempt.message}` : code;
+}
+
 /** A gate runner's last finished gate, or null when absent or malformed. */
 function lastActivityFromRaw(value: unknown): RunnerLastActivity | null {
   const record = asRecord(value);
@@ -263,6 +305,7 @@ function lastActivityFromRaw(value: unknown): RunnerLastActivity | null {
     conclusion,
     seconds: num(record.seconds),
     finishedAt,
+    mergeAttempt: mergeAttemptFromRaw(record.mergeAttempt),
   };
 }
 
@@ -288,6 +331,7 @@ export function runnerNetworkFromResponse(
         activeTaskCount: num(record.activeTaskCount),
         lastUpdated: typeof record.lastUpdated === 'string' ? record.lastUpdated : null,
         lastActivity: lastActivityFromRaw(record.lastActivity),
+        mergeGrantGaps: mergeGrantGapsFromRaw(record.mergeGrantGaps),
         offlineAfterSeconds: num(record.offlineAfterSeconds) > 0 ? num(record.offlineAfterSeconds) : null,
         activeTasks: tasks
           .map((task) => {
@@ -485,6 +529,11 @@ export interface RowLast {
   duration: string;
   finishedAt: string;
   tone: RowTone;
+  /**
+   * Reviewer only: why its approval has not landed ("queue_merge_commits -
+   * ..."), from the forge's last merge attempt or a missing merge grant.
+   */
+  blocked: string | null;
 }
 
 /** A runner's last finished job, in words; null when it reports none. */
@@ -498,6 +547,11 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
   const duration = durationWords(last.seconds);
   if (node.kind === 'reviewer') {
     const verdict = reviewVerdict(last.conclusion);
+    const gap = node.mergeGrantGaps?.find((item) => item.repo === last.repo);
+    const blocked =
+      verdict === 'approve'
+        ? mergeBlockedReason(last.mergeAttempt) ?? (gap ? gap.message : null)
+        : null;
     return {
       pull,
       subject,
@@ -512,10 +566,13 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
       finishedAt: last.finishedAt,
       tone:
         verdict === 'approve'
-          ? 'success'
+          ? blocked
+            ? 'warning'
+            : 'success'
           : verdict === 'hold'
             ? 'danger'
-            : 'warning'
+            : 'warning',
+      blocked
     };
   }
   const passed = last.conclusion === 'success';
@@ -530,7 +587,8 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
     verbFirst: false,
     duration,
     finishedAt: last.finishedAt,
-    tone: passed ? 'success' : 'danger'
+    tone: passed ? 'success' : 'danger',
+    blocked: null
   };
 }
 

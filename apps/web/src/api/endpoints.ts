@@ -78,6 +78,8 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/approve`,
   pullMerge: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge`,
+  pullMergeAttempt: (id: string, prNumber: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge-attempt`,
   settings: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/settings`,
   settingsPreview: (id: string): string =>

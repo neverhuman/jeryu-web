@@ -9,6 +9,7 @@ import {
   rowLast,
   rowNow,
   runnerName,
+  runnerNetworkFromResponse,
   seenStale,
   type RunnerNetworkNode
 } from '../runnerNetworkModel';
@@ -169,6 +170,107 @@ describe('runner rows in words', () => {
       verb: 'no usable verdict on',
       tone: 'warning'
     });
+  });
+
+  it('says why an approval has not merged instead of a plain approved', () => {
+    const approved = {
+      repo: 'veox-ai/ai-veox-app',
+      pr: 6,
+      sha: '3926cbd7',
+      recipe: 'redteam-review',
+      conclusion: 'approve',
+      seconds: 14,
+      finishedAt: '2026-09-19T19:00:30Z'
+    };
+    const refused = rowLast(
+      node({
+        kind: 'reviewer',
+        lastActivity: {
+          ...approved,
+          mergeAttempt: {
+            result: 'refused',
+            status: 409,
+            code: 'queue_merge_commits',
+            message: 'the pull request contains merge commits; rebase it onto the base',
+            at: '2026-09-19T19:00:50Z'
+          }
+        }
+      })
+    );
+    expect(refused).toMatchObject({
+      verb: 'approved',
+      tone: 'warning',
+      blocked:
+        'queue_merge_commits - the pull request contains merge commits; rebase it onto the base'
+    });
+    const noGrant = rowLast(
+      node({
+        kind: 'reviewer',
+        lastActivity: approved,
+        mergeGrantGaps: [
+          {
+            repo: 'veox-ai/ai-veox-app',
+            identity: 'jain-merge-bot',
+            message: 'jain-merge-bot has no write grant on veox-ai/ai-veox-app; its merges answer 403'
+          }
+        ]
+      })
+    );
+    expect(noGrant?.blocked).toContain('no write grant');
+    const landed = rowLast(
+      node({
+        kind: 'reviewer',
+        lastActivity: {
+          ...approved,
+          mergeAttempt: { result: 'queued', status: 201, at: '2026-09-19T19:00:50Z' }
+        }
+      })
+    );
+    expect(landed).toMatchObject({ tone: 'success', blocked: null });
+  });
+
+  it('reads the merge attempt and grant gaps a reviewer row carries', () => {
+    const state = runnerNetworkFromResponse({
+      local: {
+        nodeDetails: [
+          {
+            runnerId: 'xbabe0/redteam',
+            source: 'pr-redteam',
+            state: 'active',
+            capacity: 0,
+            inFlight: 0,
+            labels: ['xbabe0', 'slot 0', 'redteam'],
+            classes: ['reviewer'],
+            activeTaskCount: 0,
+            lastUpdated: '2026-09-19T19:00:48Z',
+            activeTasks: [],
+            lastActivity: {
+              repo: 'veox-ai/ai-veox-app',
+              pr: 6,
+              sha: '3926cbd7',
+              recipe: 'redteam-review',
+              conclusion: 'approve',
+              seconds: 14,
+              finishedAt: '2026-09-19T19:00:30Z',
+              mergeAttempt: {
+                result: 'refused',
+                status: 403,
+                code: 'permission_denied',
+                message: 'repository access denied',
+                actor: 'jain-merge-bot',
+                at: '2026-09-19T19:00:40Z'
+              }
+            },
+            mergeGrantGaps: [
+              { repo: 'veox-ai/ai-veox-app', identity: 'jain-merge-bot', message: 'no grant' }
+            ]
+          }
+        ]
+      }
+    } as never);
+    const reviewer = state.reviewers[0];
+    expect(reviewer.mergeGrantGaps).toHaveLength(1);
+    expect(rowLast(reviewer)?.blocked).toBe('permission_denied - repository access denied');
   });
 
   it('flags a runner not heard from for three minutes', () => {

@@ -151,6 +151,41 @@ export interface RunnerNodeSummary {
    * nodes that do not report by heartbeat.
    */
   offlineAfterSeconds?: number | null;
+  /**
+   * Reviewer only: repositories it is reviewing where the merge identity has
+   * no write grant, so an approval there cannot land. Absent when none.
+   */
+  mergeGrantGaps?: MergeGrantGap[];
+}
+
+/** The forge's answer to the last attempt to merge or enqueue a pull request. */
+export interface MergeAttempt {
+  /** `merged`, `queued`, or `refused`. */
+  result: string;
+  status: number;
+  /** Forge error code of a refusal (`permission_denied`, `queue_merge_commits`). */
+  code?: string;
+  message?: string;
+  actor?: string;
+  at: string;
+}
+
+/** The merge identity cannot write to a repository. */
+export interface MergeGrantGap {
+  repo: string;
+  identity: string;
+  message: string;
+}
+
+/** `GET /api/v1/repos/{id}/pulls/{number}/merge-attempt`. */
+export interface MergeAttemptResponse {
+  repo: string;
+  number: number;
+  attempt: MergeAttempt | null;
+  /** `code - message` of the last refusal; null when nothing blocks. */
+  blockedReason: string | null;
+  grantGap: MergeGrantGap | null;
+  approvedBy: string[];
 }
 
 export interface RunnerLastActivity {
@@ -162,6 +197,8 @@ export interface RunnerLastActivity {
   conclusion: string;
   seconds: number;
   finishedAt: string;
+  /** Reviewer only: the forge's answer to the last merge attempt on this PR. */
+  mergeAttempt?: MergeAttempt | null;
 }
 
 export interface RunnerTaskSummary {
