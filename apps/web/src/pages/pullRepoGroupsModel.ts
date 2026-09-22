@@ -15,7 +15,7 @@
 
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
-import type { PipId, ReleaseLadder } from './releaseChannelsModel';
+import { ladderUndecided, type PipId, type ReleaseLadder } from './releaseChannelsModel';
 
 /** Every state a row can sit at, pipeline order: least far first. */
 export type PullStateId =
@@ -63,6 +63,19 @@ export const PULL_STATE_HINTS: Record<string, string> = {
   unknown: 'the compare was capped or did not answer',
   unrecorded: 'no deployment and no release tag',
 };
+
+/**
+ * Why this row sits where it does. An undecided release names the compare the
+ * row gave up on ("prod v2.3 compare capped"), so the operator knows which
+ * release to go and look at rather than only that something was unknown.
+ */
+export function pullRowHint(row: PullRow): string | undefined {
+  if (row.state === 'unknown') {
+    const gaveUp = ladderUndecided(row.row.ladder);
+    if (gaveUp) return gaveUp;
+  }
+  return PULL_STATE_HINTS[row.state];
+}
 
 export interface TimelineRow {
   pr: PullRequestSummary;

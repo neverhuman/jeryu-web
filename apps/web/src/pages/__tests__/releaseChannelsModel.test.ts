@@ -10,6 +10,8 @@ import {
   ladderCompares,
   ladderDetail,
   ladderReach,
+  ladderUndecided,
+  UNKNOWN_LADDER,
   releaseLadder,
   type LadderBaselines,
   type PipId,
@@ -125,8 +127,22 @@ describe('releaseLadder', () => {
 
   it('reads release unknown when nothing at all has been decided', () => {
     const ladder = releaseLadder(merged, four, new Map([['dev', null]] as [PipId, null][]));
-    expect(ladderDetail(ladder, 'merged')).toBe('release unknown');
+    // It names the release it gave up comparing against, and why.
+    expect(ladderDetail(ladder, 'merged')).toBe('release unknown · dev v9 compare did not answer');
     expect(ladderReach(ladder)).toBe('unknown');
+  });
+
+  it('says which release a capped compare left undecided', () => {
+    const capped = new Map<PipId, CompareResponse | null>([
+      ['dev', { ...compare([]), truncated: true }],
+    ]);
+    const ladder = releaseLadder(merged, four, capped);
+    expect(ladder.pips[0]).toMatchObject({ membership: 'unknown', undecided: 'capped', baseline: 'v9' });
+    expect(ladder.pips[1]).toMatchObject({ undecided: 'unanswered' });
+    expect(ladderUndecided(ladder)).toBe('dev v9 compare capped');
+    expect(ladderDetail(ladder, 'merged')).toBe('release unknown · dev v9 compare capped');
+    expect(ladderUndecided(UNKNOWN_LADDER)).toBe('not compared');
+    expect(ladderUndecided(releaseLadder(merged, four, compares(four, { dev: [], canary: [], stable: [], production: [] })))).toBeNull();
   });
 
   it('leaves a channel whose compare has not answered unknown', () => {

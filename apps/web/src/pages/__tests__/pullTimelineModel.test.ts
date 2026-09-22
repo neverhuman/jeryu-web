@@ -25,7 +25,14 @@ describe('pullTimelineModel', () => {
       review: { approvals: 0, required: 1 },
       canMerge: false,
     });
-    expect(statuses(p)).toEqual(['done', 'blocked', 'skipped', 'done', 'done', 'unknown']);
+    // It merged, so the red checks were not required: qualified, not blocked.
+    expect(statuses(p)).toEqual(['done', 'done', 'skipped', 'done', 'done', 'unknown']);
+    expect(pullStages(p)[1].detail).toBe('2 failing, not required');
+  });
+
+  it('qualifies a failure on an open PR the forge will still merge', () => {
+    const p = pr({ checks: { total: 3, passing: 2, failing: 1, pending: 0, skipped: 0 }, canMerge: true });
+    expect(pullStages(p)[1]).toMatchObject({ status: 'done', detail: '1 failing, not required' });
   });
 
   it('stops at failing checks', () => {

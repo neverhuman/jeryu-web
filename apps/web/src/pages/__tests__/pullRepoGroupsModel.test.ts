@@ -80,6 +80,20 @@ describe('pullStateOf', () => {
     expect(pullStateOf(row(pull(12, 'merged'), NO_RELEASES))).toBe('unrecorded');
   });
 
+  it('heads an undecided release with the compare it gave up on', () => {
+    const capped: ReleaseLadder = {
+      kind: 'channels',
+      pips: [
+        { id: 'production', label: 'prod', membership: 'unknown', release: null, at: null, baseline: 'v2.3', undecided: 'capped' },
+      ],
+      furthest: null,
+      release: null,
+      uncertain: true,
+    };
+    const { groups } = buildRepoGroups([pull(81, 'merged')], { ladderFor: () => capped });
+    expect(groups[0]?.states[0]).toMatchObject({ state: 'unknown', hint: 'prod v2.3 compare capped' });
+  });
+
   it('places a closed pull request where nothing moves again', () => {
     expect(pullStateOf(row(pull(13, 'closed'), ladder('production')))).toBe('closed');
   });

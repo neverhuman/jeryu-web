@@ -5,7 +5,7 @@ import type { GhostGroup } from './pullGhostsModel';
 import {
   buildRepoGroups,
   countsSentence,
-  PULL_STATE_HINTS,
+  pullRowHint,
   pullRowStatus,
   type BranchRow,
   type FlowRow,
@@ -174,7 +174,7 @@ function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JS
           <span
             className="pull-timeline__status"
             data-testid={`pull-status-${id}`}
-            title={PULL_STATE_HINTS[row.state]}
+            title={pullRowHint(row)}
           >
             {pullRowStatus(row)}
           </span>{' '}
