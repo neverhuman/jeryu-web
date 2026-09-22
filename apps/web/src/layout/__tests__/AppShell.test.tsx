@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCommandStore } from '../../stores/commandStore';
-import { AppShell, returnPathFrom } from '../AppShell';
+import { AppShell, isPublicRepoPath, returnPathFrom } from '../AppShell';
 
 interface AuthStub {
   isPending: boolean;
@@ -108,6 +108,33 @@ describe('AppShell', () => {
     expect(boot.dataset.open).toBe('true');
     expect(boot.dataset.mode).toBe('login');
     expect(boot.dataset.return).toBe('/repos/jeryu/jeryu/jeryu-deploy/pulls/7?tab=files#c3');
+  });
+
+  it('signed out on a repository page, shows it in the public frame', () => {
+    auth = { isPending: false, user: null };
+    renderAt('/repos/jeryu/jeryu/jeryu-deploy/blob/main/README.md');
+    expect(screen.getByTestId('public-repo-shell')).toBeTruthy();
+    expect(screen.getByTestId('where').textContent).toBe(
+      '/repos/jeryu/jeryu/jeryu-deploy/blob/main/README.md'
+    );
+    expect(screen.getByRole('link', { name: 'Sign in' }).getAttribute('href')).toBe(
+      `/login?next=${encodeURIComponent('/repos/jeryu/jeryu/jeryu-deploy/blob/main/README.md')}`
+    );
+    expect(screen.queryByTestId('global-header')).toBeNull();
+    expect(screen.queryByTestId('boot')).toBeNull();
+  });
+
+  it('reads the front page and files of a repository as public, nothing else', () => {
+    expect(isPublicRepoPath('/repos/jeryu/jeryu/jeryu-deploy')).toBe(true);
+    expect(isPublicRepoPath('/repos/jeryu/jeryu/jeryu-deploy/')).toBe(true);
+    expect(isPublicRepoPath('/repos/jeryu/jeryu/jeryu-deploy/tree/main/docs')).toBe(true);
+    expect(isPublicRepoPath('/repos/jeryu/jeryu/jeryu-deploy/code')).toBe(true);
+    expect(isPublicRepoPath('/repos/jeryu/jeryu/jeryu-deploy/settings')).toBe(false);
+    expect(isPublicRepoPath('/repos/jeryu/jeryu/jeryu-deploy/agents')).toBe(false);
+    expect(isPublicRepoPath('/repos/jeryu/jeryu/jeryu-deploy/pulls/7')).toBe(false);
+    expect(isPublicRepoPath('/repos/family/jeryu-split/x')).toBe(false);
+    expect(isPublicRepoPath('/repos/jeryu/jeryu')).toBe(false);
+    expect(isPublicRepoPath('/repos')).toBe(false);
   });
 
   it('signed in on /login?next=, lands on the remembered page', () => {

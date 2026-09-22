@@ -30,6 +30,7 @@ import { useAuth } from '../hooks/useAuth';
 import { AuthPage } from '../pages/AuthPage';
 import { BootScreen } from '../pages/boot/BootScreen';
 import { NEEDS_YOU_PATH, homePathFor } from './HomeRedirect';
+import { PublicRepoShell } from './PublicRepoShell';
 
 import './AppShell.css';
 
@@ -46,6 +47,18 @@ export function returnPathFrom(search: string): string | null {
   }
   const pathname = next.split(/[?#]/, 1)[0];
   return AUTH_PATHS.has(pathname) ? null : next;
+}
+
+/**
+ * A repository page a signed-out visitor may open: the front page and its
+ * files (`blob`, `tree`, `code`). The API serves those for public
+ * repositories; a private one sends the visitor on to login.
+ */
+export function isPublicRepoPath(pathname: string): boolean {
+  const match = /^\/repos\/([^/]+)\/[^/]+\/[^/]+(?:\/([^/]+)(?:\/.*)?)?\/?$/.exec(pathname);
+  if (!match || match[1] === 'family') return false;
+  const sub = match[2];
+  return sub === undefined || sub === 'blob' || sub === 'tree' || sub === 'code';
 }
 
 export function AppShell(): JSX.Element {
@@ -152,8 +165,12 @@ export function AppShell(): JSX.Element {
   }
 
   if (!auth.user) {
-    // A deep link opened signed out goes to login and remembers where it was
-    // headed; `/` keeps the story landing.
+    // A public repository reads without an account.
+    if (isPublicRepoPath(location.pathname)) {
+      return <PublicRepoShell />;
+    }
+    // Any other deep link opened signed out goes to login and remembers where
+    // it was headed; `/` keeps the story landing.
     if (!isAuthRoute && location.pathname !== '/') {
       const next = `${location.pathname}${location.search}${location.hash}`;
       return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
