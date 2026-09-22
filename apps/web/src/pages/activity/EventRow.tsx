@@ -2,7 +2,7 @@
 // and the per-PR events panel. One line: when, what happened in plain words,
 // the summary with its subject as the link, how long it took. Everything else
 // (who, which commit, why, the log tail) opens below. A row that needs a human
-// is red.
+// is red until a later event clears its cause; then it is marked resolved.
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -23,12 +23,16 @@ import './Activity.css';
 export function EventRow({
   event,
   defaultOpen = false,
+  resolved = false,
 }: {
   event: PipelineEvent;
   defaultOpen?: boolean;
+  /** A later event cleared this row's cause: no attention pill. */
+  resolved?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(defaultOpen);
-  const tone = eventTone(event);
+  const needsHuman = event.needs_human && !resolved;
+  const tone = eventTone({ ...event, needs_human: needsHuman });
   const summary = summaryParts(event);
   const others = eventLinks(event).filter((link) => link.to !== summary.link?.to);
   const detailId = `activity-event-detail-${event.seq}`;
@@ -37,7 +41,7 @@ export function EventRow({
 
   return (
     <li
-      className={`activity-row activity-row--${tone}${event.needs_human ? ' is-needs-human' : ''}`}
+      className={`activity-row activity-row--${tone}${needsHuman ? ' is-needs-human' : ''}`}
       data-testid={`activity-event-${event.seq}`}
     >
       <div className="activity-row__line">
@@ -59,7 +63,12 @@ export function EventRow({
           ) : null}
           {summary.after}
         </span>
-        {event.needs_human ? <span className="page__pill page__pill--danger">needs you</span> : null}
+        {needsHuman ? <span className="page__pill page__pill--danger">needs you</span> : null}
+        {event.needs_human && resolved ? (
+          <span className="page__pill" title="A later event cleared this">
+            resolved
+          </span>
+        ) : null}
         {typeof event.cost_usd === 'number' ? (
           <span className="activity-row__meta">{formatCost(event.cost_usd)}</span>
         ) : null}

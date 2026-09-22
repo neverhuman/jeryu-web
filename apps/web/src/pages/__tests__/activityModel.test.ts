@@ -21,6 +21,7 @@ import {
   minSeq,
   parseActivityFilters,
   primaryLink,
+  resolvedSeqs,
   summaryParts,
   visibleEvents,
   wallCounters,
@@ -28,6 +29,18 @@ import {
 import { EVENTS, pipelineEvent } from './pipelineTestData';
 
 describe('activityModel', () => {
+  it('marks a needs-you event resolved once a later event on the same subject succeeds', () => {
+    const repo = 'jeryu/jeryu-deploy';
+    const failed = pipelineEvent({ seq: 10, kind: 'deploy.status', repo, outcome: 'failure', needs_human: true });
+    const otherRepo = pipelineEvent({ seq: 11, kind: 'deploy.status', repo: 'jeryu/jeryu-web', outcome: 'success' });
+    const gate = pipelineEvent({ seq: 12, kind: 'gate.finished', repo, outcome: 'success' });
+    expect(resolvedSeqs([gate, otherRepo, failed]).size).toBe(0);
+    const later = pipelineEvent({ seq: 13, kind: 'deploy.status', repo, outcome: 'success' });
+    expect([...resolvedSeqs([later, gate, otherRepo, failed])]).toEqual([10]);
+    const earlier = pipelineEvent({ seq: 9, kind: 'deploy.status', repo, outcome: 'success' });
+    expect(resolvedSeqs([failed, earlier]).size).toBe(0);
+  });
+
   it('reads filters from the URL and turns them into the events query', () => {
     const params = new URLSearchParams('family=jeryu&kind=todo.&pr=35&needs_human=1&wall=1&repo=%20');
     const filters = parseActivityFilters(params);

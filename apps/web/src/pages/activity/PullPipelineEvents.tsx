@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/useAuth';
 import { usePipelineEvents } from '../../hooks/usePipeline';
-import { activityHref, foldEchoes } from './activityModel';
+import { activityHref, foldEchoes, resolvedSeqs } from './activityModel';
 import { EventRow } from './EventRow';
 
 import './Activity.css';
@@ -25,6 +25,7 @@ export function PullPipelineEvents({ repo, pr }: { repo: string; pr: string }): 
   );
   if (!feed.isSuccess) return null;
   const events = foldEchoes(feed.data.events);
+  const resolved = resolvedSeqs(events);
 
   return (
     <section className="pull-events" aria-label="Pipeline events" data-testid="pull-pipeline-events">
@@ -39,7 +40,7 @@ export function PullPipelineEvents({ repo, pr }: { repo: string; pr: string }): 
       ) : (
         <ol className="activity__list pull-events__list" aria-label="Pipeline events for this pull request">
           {events.map((event) => (
-            <EventRow key={event.seq} event={event} />
+            <EventRow key={event.seq} event={event} resolved={resolved.has(event.seq)} />
           ))}
         </ol>
       )}

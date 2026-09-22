@@ -23,6 +23,7 @@ import {
   hasMoreFilters,
   isWallMode,
   parseActivityFilters,
+  resolvedSeqs,
   visibleEvents,
   wallCounters,
   type ActivityFilters,
@@ -54,6 +55,7 @@ export function ActivityPage(): JSX.Element {
   usePipelineNudge(feed.base.isSuccess, activityTailKey(query));
   // Cursors run on the raw feed (`feed`); what is shown and counted is folded.
   const events = visibleEvents(feed.base.data?.events ?? [], filters.kind);
+  const resolved = resolvedSeqs(events);
   const newest = events[0]?.seq ?? 0;
 
   // Wall mode keeps the newest event in view as the tail grows.
@@ -130,7 +132,7 @@ export function ActivityPage(): JSX.Element {
           </p>
           <ol className="activity__list" aria-label="Pipeline events">
             {events.map((event) => (
-              <EventRow key={event.seq} event={event} />
+              <EventRow key={event.seq} event={event} resolved={resolved.has(event.seq)} />
             ))}
           </ol>
           {wall ? null : feed.hasOlder ? (
