@@ -84,6 +84,8 @@ export function BootScreen({
             <JeryuLogo variant="mark" className="boot__brand-mark" decorative />
             <span>JeRyu</span>
           </span>
+          {/* No Sign up here: this is a single-operator forge and accounts are
+              created by the operator, not self-service. */}
           <nav className="boot__auth-controls" aria-label="Account access">
             <button
               type="button"
@@ -92,14 +94,6 @@ export function BootScreen({
               onClick={() => openAuth('login')}
             >
               Log in
-            </button>
-            <button
-              type="button"
-              className="boot__auth-link"
-              aria-pressed={authOpen && mode === 'signup'}
-              onClick={() => openAuth('signup')}
-            >
-              Sign up
             </button>
           </nav>
         </header>
