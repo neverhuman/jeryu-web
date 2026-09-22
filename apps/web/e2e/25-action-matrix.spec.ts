@@ -115,6 +115,12 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await page.goto('/notifications');
   await expect(page).toHaveURL(/\/activity$/);
 
+  // `/audit` is retired but still linked from runbooks: its 404 says where to go.
+  await page.goto('/audit');
+  await expect(page.getByText(/no longer has its own page.*Activity/)).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'Open Activity' }).click();
+  await expect(page).toHaveURL(/\/activity$/);
+
   await page.goto('/missing/action-matrix-route');
   await expect(page).toHaveURL(/\/missing\/action-matrix-route$/);
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible({

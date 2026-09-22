@@ -47,6 +47,12 @@ import {
   FINDINGS_PATH,
 } from '../pages/sharedTools/SharedToolsTabs';
 
+const AUDIT_MOVED_TO = {
+  what: 'Recorded events (who changed what, and when) are on Activity.',
+  label: 'Open Activity',
+  to: '/activity',
+};
+
 /** `/tool-fleet/:tool` → `/shared-tools/adoption/:tool`. */
 function ToolFleetToolRedirect(): JSX.Element {
   const { tool = '' } = useParams();
@@ -122,7 +128,9 @@ export const router = createBrowserRouter([
       // The in-memory notifications inbox is gone: Needs you says what waits on
       // a person and Activity is the event feed. Old links land on the feed.
       { path: 'notifications', element: <Navigate to="/activity" replace /> },
-      // `/audit` had a placeholder page; until there is a real one it is NotFound.
+      // `/audit` had a placeholder page and runbooks still link it: say where
+      // the record of who-did-what lives instead of a bare NotFound.
+      { path: 'audit', element: <NotFoundPage movedTo={AUDIT_MOVED_TO} /> },
       { path: 'settings', element: <AdminSettingsPage /> },
       // Forge-shaped links (`/<owner>/<repo>/pull/<n>`) are everywhere: pull
       // request bodies, notifications, agent output, bookmarks. They land on
