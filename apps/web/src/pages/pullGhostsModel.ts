@@ -13,13 +13,19 @@ import {
   formatAgo,
   latestWorker,
   needsHuman,
+  normalizeShiftKind,
   todoTrace,
   type TraceStep,
 } from './shift/shiftModel';
 
 export type { TraceStep };
 
-export type ShiftKind = 'bulletshift' | 'nightshift' | 'unscheduled';
+/**
+ * `dayshift` is canonical; `bulletshift` is its legacy name and is normalised
+ * away on the way in, so in-flight branches and older servers still group and
+ * date correctly.
+ */
+export type ShiftKind = 'dayshift' | 'nightshift' | 'unscheduled';
 
 export interface GhostRow {
   todoId: string;
@@ -219,16 +225,22 @@ function ordinal(n: number): string {
 
 // -------------------------------------------------------------- grouping
 
+const SHIFT_HEADS = new Set(['dayshift', 'bulletshift', 'nightshift']);
+
 function groupKeyOf(todo: ShiftTodo): string {
   const shift = todo.shift ?? '';
-  if (shift.includes('/')) return shift;
+  if (shift.includes('/')) {
+    const { kind, date } = partsOf(shift);
+    // A legacy `bulletshift/<date>` groups with the dayshift of that date.
+    return kind === 'unscheduled' ? shift : `${kind}/${date ?? ''}`;
+  }
   return `unscheduled/${todo.mode}`;
 }
 
 function partsOf(key: string): { kind: ShiftKind; date: string | null } {
   const [head, tail] = key.split('/');
-  if (head === 'bulletshift' || head === 'nightshift') {
-    return { kind: head, date: tail ?? null };
+  if (SHIFT_HEADS.has(head)) {
+    return { kind: normalizeShiftKind(head), date: tail ?? null };
   }
   return { kind: 'unscheduled', date: null };
 }
@@ -246,7 +258,7 @@ function compareGroups(a: GhostGroup, b: GhostGroup): number {
   if (ua !== ub) return ua - ub;
   const da = partsOf(a.key).date ?? '';
   const db = partsOf(b.key).date ?? '';
-  // Newest date first; a nightshift sorts after the bulletshift of its date.
+  // Newest date first; a nightshift sorts after the dayshift of its date.
   return db.localeCompare(da) || a.key.localeCompare(b.key);
 }
 

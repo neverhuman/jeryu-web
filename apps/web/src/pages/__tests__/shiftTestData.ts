@@ -105,8 +105,8 @@ export const SHIFTS: ShiftShiftsResponse = {
       todo_ids: ['20260918-2201-a9z'],
     },
     {
-      branch: 'bulletshift/2026-09-17',
-      kind: 'bulletshift',
+      branch: 'dayshift/2026-09-17',
+      kind: 'dayshift',
       date: '2026-09-17',
       repos: [
         {

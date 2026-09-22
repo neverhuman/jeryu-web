@@ -173,9 +173,9 @@ describe('the Pull requests timeline', () => {
       />
     );
 
-    const branch = screen.getByTestId('pull-branch-jeryu/jeryu-web-bulletshift/2026-09-20');
+    const branch = screen.getByTestId('pull-branch-jeryu/jeryu-web-dayshift/2026-09-20');
     expect(screen.getByTestId('pull-repo-jeryu/jeryu-web')).toContainElement(branch);
-    expect(branch).toHaveTextContent('bulletshift/2026-09-20 · 2 todos');
+    expect(branch).toHaveTextContent('dayshift/2026-09-20 · 2 todos');
     expect(branch).toHaveTextContent('1 working · alton@xbabe0/w1');
     // The branch sits on the same track as the PR below it, ahead of it.
     const rows = screen.getAllByTestId(/^pull-(branch|timeline)-jeryu\/jeryu-web/);
@@ -333,7 +333,7 @@ function todo(id: string, extra: Partial<ShiftTodo>): ShiftTodo {
     claim_by: null,
     lease_until: null,
     lease_live: false,
-    shift: 'bulletshift/2026-09-20',
+    shift: 'dayshift/2026-09-20',
     change_set: null,
     commits: {},
     merged: false,

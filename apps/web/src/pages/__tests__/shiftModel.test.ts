@@ -17,6 +17,7 @@ import {
   isLongStale,
   lastNightDate,
   needsHuman,
+  normalizeShiftKind,
   latestWorker,
   layoutSegments,
   parseList,
@@ -94,10 +95,34 @@ describe('shiftModel', () => {
     expect(dateInTz(at, 'Not/AZone')).toBe('2026-09-19');
   });
 
+  it('reads the legacy bulletshift name as a dayshift', () => {
+    expect(normalizeShiftKind('dayshift')).toBe('dayshift');
+    expect(normalizeShiftKind('bulletshift')).toBe('dayshift');
+    expect(normalizeShiftKind('nightshift')).toBe('nightshift');
+  });
+
+  it('sorts a legacy bulletshift where its dayshift would sort', () => {
+    const shift = (branch: string, kind: ShiftBranch['kind'], date: string): ShiftBranch => ({
+      branch,
+      kind,
+      date,
+      repos: [],
+      todo_ids: [],
+    });
+    const sorted = sortShifts([
+      shift('nightshift/2026-09-17', 'nightshift', '2026-09-17'),
+      shift('bulletshift/2026-09-17', 'bulletshift', '2026-09-17'),
+    ]);
+    expect(sorted.map((s) => s.branch)).toEqual([
+      'bulletshift/2026-09-17',
+      'nightshift/2026-09-17',
+    ]);
+  });
+
   it('sorts shifts newest first', () => {
     expect(sortShifts([...SHIFTS.shifts].reverse()).map((s) => s.branch)).toEqual([
       'nightshift/2026-09-18',
-      'bulletshift/2026-09-17',
+      'dayshift/2026-09-17',
     ]);
   });
 

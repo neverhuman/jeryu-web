@@ -176,6 +176,7 @@ export function shiftTodo(id: string, over: Record<string, unknown> = {}): Recor
     claim_by: null,
     lease_until: null,
     lease_live: false,
+    // The legacy name of a dayshift branch: it must still render as one.
     shift: 'bulletshift/2026-06-05',
     change_set: null,
     commits: {},

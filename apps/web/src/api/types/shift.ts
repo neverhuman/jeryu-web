@@ -217,9 +217,21 @@ export interface ShiftBranchRepo {
   unmerged_todos?: string[];
 }
 
+/**
+ * Canonical shift kinds. `dayshift` is the current name of what the driver and
+ * the server used to call `bulletshift`; see {@link ShiftBranchKindInput}.
+ */
+export type ShiftBranchKind = 'dayshift' | 'nightshift';
+
+/**
+ * What a server may send. Older servers — and branches created before the
+ * rename — say `bulletshift`; normalise with `normalizeShiftKind`.
+ */
+export type ShiftBranchKindInput = ShiftBranchKind | 'bulletshift';
+
 export interface ShiftBranch {
   branch: string;
-  kind: 'bulletshift' | 'nightshift';
+  kind: ShiftBranchKindInput;
   date: string;
   repos: ShiftBranchRepo[];
   todo_ids: string[];

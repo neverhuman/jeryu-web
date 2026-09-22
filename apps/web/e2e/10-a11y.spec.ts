@@ -364,7 +364,7 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
     });
     // A branch row opened, so its todos are scanned too.
     await page
-      .getByTestId('pull-branch-alice/jeryu-bulletshift/2026-06-05')
+      .getByTestId('pull-branch-alice/jeryu-dayshift/2026-06-05')
       .locator('summary')
       .click();
     await expect(page.getByTestId('pull-ghost-a11y-claimed')).toBeVisible();

@@ -35,7 +35,7 @@ describe('ShiftQueuePage', () => {
     const night = await screen.findByTestId('shift-branch-nightshift/2026-09-18');
     expect(night).toHaveClass('is-last-night');
     expect(within(night).getByText('last night')).toBeInTheDocument();
-    const bullet = screen.getByTestId('shift-branch-bulletshift/2026-09-17');
+    const bullet = screen.getByTestId('shift-branch-dayshift/2026-09-17');
     expect(within(bullet).getByRole('link', { name: 'PR #12 (open)' })).toHaveAttribute(
       'href',
       'https://git.example/jeryu/jeryu-web/pulls/12'
@@ -117,7 +117,7 @@ describe('ShiftQueuePage', () => {
     const pr = calls.find((c) => c.pathname === '/api/v1/shift/shifts/jeryu/pr');
     expect(pr?.body).toEqual({ branch: 'nightshift/2026-09-18' });
     // A shift whose repos all have PRs offers no button.
-    expect(screen.queryByRole('button', { name: 'Open review PR for bulletshift/2026-09-17' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open review PR for dayshift/2026-09-17' })).toBeNull();
   });
 
   it('hides admin actions from non-admins', async () => {

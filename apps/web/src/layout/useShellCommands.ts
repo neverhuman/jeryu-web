@@ -31,7 +31,7 @@ export function useShellCommands(): void {
       {
         id: 'nav.work',
         title: 'Go to Work',
-        keywords: ['work', 'shift', 'queue', 'todo', 'todoq', 'tasks', 'workers', 'slots', 'nightshift', 'bulletshift'],
+        keywords: ['work', 'shift', 'queue', 'todo', 'todoq', 'tasks', 'workers', 'slots', 'nightshift', 'dayshift', 'bulletshift'],
         icon: 'clipboard-list',
         target: { kind: 'route', path: '/work' },
         shortcut: 'g w',
@@ -39,7 +39,7 @@ export function useShellCommands(): void {
       {
         id: 'nav.work-add',
         title: 'Add work',
-        keywords: ['shift', 'todo', 'file', 'add', 'new', 'nightshift', 'bulletshift', 'queue'],
+        keywords: ['shift', 'todo', 'file', 'add', 'new', 'nightshift', 'dayshift', 'bulletshift', 'queue'],
         icon: 'clipboard-list',
         target: { kind: 'route', path: '/work#add' },
       },

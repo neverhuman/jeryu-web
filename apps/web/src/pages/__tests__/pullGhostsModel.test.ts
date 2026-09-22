@@ -22,7 +22,7 @@ function todo(id: string, extra: Partial<ShiftTodo> = {}): ShiftTodo {
     claim_by: null,
     lease_until: null,
     lease_live: false,
-    shift: 'bulletshift/2026-09-19',
+    shift: 'dayshift/2026-09-19',
     change_set: null,
     commits: {},
     merged: false,
@@ -187,17 +187,17 @@ describe('pullGhostGroups when', () => {
 });
 
 describe('pullGhostGroups grouping', () => {
-  it('orders newest date first, nightshift after the bulletshift of its date, unscheduled last', () => {
+  it('orders newest date first, nightshift after the dayshift of its date, unscheduled last', () => {
     const result = groups([
       todo('a', { status: 'claimed', shift: 'nightshift/2026-09-19' }),
       todo('b', { status: 'claimed', shift: 'bulletshift/2026-09-19' }),
-      todo('c', { status: 'claimed', shift: 'bulletshift/2026-09-20' }),
+      todo('c', { status: 'claimed', shift: 'dayshift/2026-09-20' }),
       todo('d', { status: 'claimed', shift: null }),
       todo('e', { status: 'claimed', shift: null, mode: 'night' }),
     ]);
     expect(result.map((g) => g.key)).toEqual([
-      'bulletshift/2026-09-20',
-      'bulletshift/2026-09-19',
+      'dayshift/2026-09-20',
+      'dayshift/2026-09-19',
       'nightshift/2026-09-19',
       'unscheduled/night',
       'unscheduled/now',
@@ -215,6 +215,29 @@ describe('pullGhostGroups grouping', () => {
       'nightshift (unscheduled)',
       'unscheduled',
     ]);
+  });
+
+  it('parses a dayshift branch into kind and date', () => {
+    const [group] = groups([todo('a', { status: 'claimed', shift: 'dayshift/2026-09-22' })]);
+    expect(group?.key).toBe('dayshift/2026-09-22');
+    expect(group?.label).toBe('dayshift 2026-09-22');
+    expect(group?.rows[0]).toMatchObject({ kind: 'dayshift', date: '2026-09-22' });
+  });
+
+  it('reads the legacy bulletshift name as a dayshift, keeping its date', () => {
+    const [group] = groups([todo('a', { status: 'claimed', shift: 'bulletshift/2026-09-22' })]);
+    expect(group?.key).toBe('dayshift/2026-09-22');
+    expect(group?.label).toBe('dayshift 2026-09-22');
+    expect(group?.rows[0]).toMatchObject({ kind: 'dayshift', date: '2026-09-22' });
+  });
+
+  it('groups a legacy bulletshift branch with the dayshift of the same date', () => {
+    const result = groups([
+      todo('a', { status: 'claimed', shift: 'bulletshift/2026-09-22' }),
+      todo('b', { status: 'claimed', shift: 'dayshift/2026-09-22' }),
+    ]);
+    expect(result.map((g) => g.key)).toEqual(['dayshift/2026-09-22']);
+    expect(result[0]?.rows.map((r) => r.todoId)).toEqual(['a', 'b']);
   });
 
   it('exposes the kind and date on each row', () => {

@@ -269,7 +269,7 @@ describe('shift work as branch rows', () => {
     family: 'jeryu',
     repos,
     status,
-    kind: 'bulletshift',
+    kind: 'dayshift',
     date: '2026-09-20',
     steps: [],
     when: 'hands off in 1h',
@@ -278,7 +278,7 @@ describe('shift work as branch rows', () => {
     ...extra,
   });
   const group = (rows: GhostRow[], queued = 0) => [
-    { key: 'bulletshift/2026-09-20', label: 'bulletshift 2026-09-20', hint: '', rows, queued },
+    { key: 'dayshift/2026-09-20', label: 'dayshift 2026-09-20', hint: '', rows, queued },
   ];
   const keyFor = (repo: string) => `jeryu/${repo}`;
   const branches = (rows: FlowRow[]) => rows.filter((r): r is BranchRow => r.kind === 'branch');
@@ -292,7 +292,7 @@ describe('shift work as branch rows', () => {
     const byRepo = new Map(groups.map((g) => [g.repo, g]));
     const web = branches(byRepo.get('jeryu/jeryu-web')?.rows ?? []);
     expect(web).toHaveLength(1);
-    expect(web[0]).toMatchObject({ key: 'bulletshift/2026-09-20', status: 'active', detail: '1 working' });
+    expect(web[0]).toMatchObject({ key: 'dayshift/2026-09-20', status: 'active', detail: '1 working' });
     expect(web[0]?.todos.map((t) => t.todoId)).toEqual(['t1', 't2']);
     // The branch leads the pull request: it is further from done.
     expect(byRepo.get('jeryu/jeryu-web')?.rows[0]?.kind).toBe('branch');
@@ -341,7 +341,7 @@ describe('shift work as branch rows', () => {
     const rows = groups[0]?.rows ?? [];
     expect(rows.map((r) => (r.kind === 'branch' ? r.key : r.row.pr.number))).toEqual([
       'nightshift/2026-09-21',
-      'bulletshift/2026-09-20',
+      'dayshift/2026-09-20',
       1,
     ]);
     expect(rows[0]).toMatchObject({ status: 'blocked', detail: '1 needs a human' });

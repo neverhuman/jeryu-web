@@ -5,6 +5,8 @@
 
 import type {
   ShiftBranch,
+  ShiftBranchKind,
+  ShiftBranchKindInput,
   ShiftBranchRepo,
   ShiftCapacityPoint,
   ShiftFamily,
@@ -172,14 +174,25 @@ export function lastNightDate(now: Date, tz: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * The canonical kind of a shift. `bulletshift` is the legacy name of
+ * `dayshift`: branches cut before the rename, and older servers, still say it,
+ * and both must keep rendering as one kind.
+ */
+export function normalizeShiftKind(kind: ShiftBranchKindInput | string): ShiftBranchKind {
+  return kind === 'nightshift' ? 'nightshift' : 'dayshift';
+}
+
 export function isLastNight(shift: ShiftBranch, now: Date, tz: string): boolean {
   return shift.kind === 'nightshift' && shift.date === lastNightDate(now, tz);
 }
 
-/** Newest shifts first; a nightshift sorts after the bulletshift of its date. */
+/** Newest shifts first; a nightshift sorts after the dayshift of its date. */
 export function sortShifts(shifts: ShiftBranch[]): ShiftBranch[] {
   return [...shifts].sort(
-    (a, b) => b.date.localeCompare(a.date) || a.kind.localeCompare(b.kind)
+    (a, b) =>
+      b.date.localeCompare(a.date) ||
+      normalizeShiftKind(a.kind).localeCompare(normalizeShiftKind(b.kind))
   );
 }
 

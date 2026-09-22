@@ -162,6 +162,7 @@ test('Shift work on a branch is one row per branch in its repository; queued tod
           outcome: 'running',
           cost_usd: null,
           note: '',
+          // The legacy name of a dayshift branch: it must still render as one.
           shift: 'bulletshift/2026-06-05',
         },
       ],
@@ -182,13 +183,13 @@ test('Shift work on a branch is one row per branch in its repository; queued tod
   // The two todos on the shift's branch are one row, in the repository they
   // name, on the same track as the pull requests — and ahead of them.
   const section = page.getByTestId('pull-repo-alice/jeryu');
-  const branch = page.getByTestId('pull-branch-alice/jeryu-bulletshift/2026-06-05');
-  await expect(branch).toContainText('bulletshift/2026-06-05 · 2 todos');
+  const branch = page.getByTestId('pull-branch-alice/jeryu-dayshift/2026-06-05');
+  await expect(branch).toContainText('dayshift/2026-06-05 · 2 todos');
   await expect(branch).toContainText('1 working · alice@xbabe0/w2');
   await expect(branch).toHaveAttribute('data-status', 'active');
   await expect(section.locator('.pull-timeline__rows > li').first()).toHaveAttribute(
     'data-testid',
-    'pull-branch-alice/jeryu-bulletshift/2026-06-05'
+    'pull-branch-alice/jeryu-dayshift/2026-06-05'
   );
   await expect(section.getByText('Queued / in flight')).toHaveCount(0);
 

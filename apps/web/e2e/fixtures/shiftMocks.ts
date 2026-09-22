@@ -204,8 +204,8 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
               todo_ids: ['20260918-2200-bbb'],
             },
             {
-              branch: 'bulletshift/2026-09-01',
-              kind: 'bulletshift',
+              branch: 'dayshift/2026-09-01',
+              kind: 'dayshift',
               date: '2026-09-01',
               repos: [
                 {
