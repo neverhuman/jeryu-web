@@ -180,7 +180,7 @@ test('shared tools findings, proposals, adoption, and non-admin settings @action
 
   await page.goto('/settings');
   await expect(page.getByTestId('settings-page')).toBeVisible();
-  await expect(page.getByText('Users and repository access')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Repository access' })).toHaveCount(0);
 });
 
 async function mockTooling(page: Page): Promise<void> {

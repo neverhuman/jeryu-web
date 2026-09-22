@@ -248,36 +248,86 @@ test.describe('Auth hardening browser proof', () => {
         });
       }
     );
+    let grants: Array<Record<string, string>> = [];
+    await mockRepoGrants(page, () => grants);
     await page.route(
       /\/api\/v1\/admin\/repos\/[^/]+\/[^/]+\/grants\/[^/]+$/,
       async (route, request) => {
         unsafeCsrfHeaders.push(request.headers()['x-jeryu-csrf'] ?? '');
+        expect(request.method()).toBe('POST');
         expect(request.postDataJSON()).toEqual({ access: 'read' });
+        grants = [repoGrant('jordanh', 'read')];
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ ok: true }),
+          body: JSON.stringify(grants[0]),
         });
       }
     );
 
     await page.goto('/settings');
-    await expect(page.getByText('Users and repository access')).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Users', exact: true })).toBeVisible({
       timeout: 10_000,
     });
     await page.getByRole('button', { name: 'Reset password' }).click();
     await expect(page.getByText(adminResetPasswordValue)).toBeVisible();
 
-    const adminRegion = page.getByRole('region', {
-      name: 'Users and repository access',
-    });
-    await adminRegion.getByRole('textbox', { name: 'Owner' }).fill('jeryu');
-    await adminRegion.getByRole('textbox', { name: 'Repo' }).fill('jeryu-web');
-    await adminRegion.getByRole('textbox', { name: 'User' }).fill('jordanh');
-    await adminRegion.getByRole('radio', { name: 'read' }).click();
-    await adminRegion.getByRole('button', { name: 'Grant access' }).click();
-    await expect(page.getByText('Granted')).toBeVisible();
+    const accessRegion = page.getByRole('region', { name: 'Repository access' });
+    await accessRegion.getByRole('textbox', { name: 'Owner' }).fill('jeryu');
+    await accessRegion.getByRole('textbox', { name: 'Repo' }).fill('jeryu-web');
+    await expect(accessRegion.getByText('No one has been granted access to jeryu/jeryu-web.')).toBeVisible();
+    await accessRegion.getByRole('textbox', { name: 'User' }).fill('jordanh');
+    await accessRegion.getByRole('radio', { name: 'read' }).click();
+    const grantButton = accessRegion.getByRole('button', { name: 'Grant access' });
+    await expect(grantButton).not.toHaveClass(/action-button--primary/);
+    await grantButton.click();
+    await expect(page.getByText('Granted', { exact: true })).toBeVisible();
+    await expect(
+      accessRegion.getByTestId('repo-grants-table').getByRole('rowheader', { name: 'jordanh' })
+    ).toBeVisible();
     expect(unsafeCsrfHeaders).toEqual(['csrf-admin', 'csrf-admin']);
+  });
+
+  test('admin reviews repository grants and revokes one @action:admin.revoke_repo_success', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { login: 'jeryu-admin', auth: null });
+    await mockAuthMe(page, {
+      login: 'jeryu-admin',
+      role: 'admin',
+      mustChangePassword: false,
+      csrfToken: 'csrf-admin',
+    });
+    await mockRepoList(page, []);
+    await mockAdminUsers(page);
+
+    let grants = [repoGrant('jordanh', 'write'), repoGrant('sam', 'read')];
+    await mockRepoGrants(page, () => grants);
+    const revoked: string[] = [];
+    await page.route(
+      /\/api\/v1\/admin\/repos\/jeryu\/jeryu\/grants\/[^/]+$/,
+      async (route, request) => {
+        expect(request.method()).toBe('DELETE');
+        expect(request.headers()['x-jeryu-csrf']).toBe('csrf-admin');
+        const login = decodeURIComponent(new URL(request.url()).pathname.split('/').pop() ?? '');
+        revoked.push(login);
+        grants = grants.filter((entry) => entry.login !== login);
+        await route.fulfill({ status: 204, body: '' });
+      }
+    );
+
+    await page.goto('/settings');
+    const table = page
+      .getByRole('region', { name: 'Repository access' })
+      .getByTestId('repo-grants-table');
+    await expect(table.getByRole('rowheader', { name: 'jordanh' })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(table.getByRole('row', { name: /jordanh/ })).toContainText('write');
+    await table.getByRole('button', { name: 'Revoke jordanh' }).click();
+    await expect(table.getByRole('rowheader', { name: 'jordanh' })).toHaveCount(0);
+    await expect(table.getByRole('rowheader', { name: 'sam' })).toBeVisible();
+    expect(revoked).toEqual(['jordanh']);
   });
 });
 
@@ -304,6 +354,30 @@ async function mockAuthMe(
       body: JSON.stringify({
         error: { code: 'unauthorized', message: 'login required' },
       }),
+    });
+  });
+}
+
+function repoGrant(login: string, access: string): Record<string, string> {
+  return {
+    login,
+    owner: 'jeryu',
+    repo: 'jeryu',
+    access,
+    granted_by: 'jeryu-admin',
+    granted_at: '2026-07-03T00:00:00Z',
+  };
+}
+
+async function mockRepoGrants(
+  page: Page,
+  current: () => Array<Record<string, string>>
+): Promise<void> {
+  await page.route(/\/api\/v1\/admin\/repos\/[^/]+\/[^/]+\/grants$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(current()),
     });
   });
 }
