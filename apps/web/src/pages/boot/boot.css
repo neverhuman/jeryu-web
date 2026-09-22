@@ -292,6 +292,13 @@
   width: min(380px, calc(100vw - var(--space-5) * 2));
 }
 
+.boot__return-to {
+  margin: 0 0 var(--space-2);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
 /* ---- Feature carousel ----------------------------------------------- */
 
 .feature-carousel {

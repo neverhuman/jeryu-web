@@ -33,6 +33,21 @@ import { NEEDS_YOU_PATH, homePathFor } from './HomeRedirect';
 
 import './AppShell.css';
 
+const AUTH_PATHS = new Set(['/login', '/signup']);
+
+/**
+ * The in-app path a `?next=` names, or null when it is missing or could leave
+ * the app (`//host`, `/\\host`, an absolute URL) or would loop back to login.
+ */
+export function returnPathFrom(search: string): string | null {
+  const next = new URLSearchParams(search).get('next');
+  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) {
+    return null;
+  }
+  const pathname = next.split(/[?#]/, 1)[0];
+  return AUTH_PATHS.has(pathname) ? null : next;
+}
+
 export function AppShell(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,7 +55,8 @@ export function AppShell(): JSX.Element {
   const openPalette = useCommandStore((s) => s.open);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const authRouteMode = location.pathname === '/signup' ? 'signup' : 'login';
-  const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup';
+  const isAuthRoute = AUTH_PATHS.has(location.pathname);
+  const returnTo = isAuthRoute ? returnPathFrom(location.search) : null;
 
   // Register navigation commands so the palette is non-empty on first render.
   useShellCommands();
@@ -136,11 +152,23 @@ export function AppShell(): JSX.Element {
   }
 
   if (!auth.user) {
-    return <BootScreen initialMode={authRouteMode} initialAuthOpen={isAuthRoute} />;
+    // A deep link opened signed out goes to login and remembers where it was
+    // headed; `/` keeps the story landing.
+    if (!isAuthRoute && location.pathname !== '/') {
+      const next = `${location.pathname}${location.search}${location.hash}`;
+      return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
+    }
+    return (
+      <BootScreen
+        initialMode={authRouteMode}
+        initialAuthOpen={isAuthRoute}
+        returnTo={returnTo}
+      />
+    );
   }
 
   if (isAuthRoute) {
-    return <Navigate to={homePathFor(auth.user)} replace />;
+    return <Navigate to={returnTo ?? homePathFor(auth.user)} replace />;
   }
 
   if (auth.user.mustChangePassword) {

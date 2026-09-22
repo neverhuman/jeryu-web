@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCommandStore } from '../../stores/commandStore';
-import { AppShell } from '../AppShell';
+import { AppShell, returnPathFrom } from '../AppShell';
 
 interface AuthStub {
   isPending: boolean;
@@ -26,8 +26,21 @@ vi.mock('../../components/KeyboardShortcutsOverlay', () => ({
   KeyboardShortcutsOverlay: () => null,
 }));
 vi.mock('../../pages/boot/BootScreen', () => ({
-  BootScreen: ({ initialMode, initialAuthOpen }: { initialMode: string; initialAuthOpen: boolean }) => (
-    <div data-testid="boot" data-mode={initialMode} data-open={String(initialAuthOpen)} />
+  BootScreen: ({
+    initialMode,
+    initialAuthOpen,
+    returnTo,
+  }: {
+    initialMode: string;
+    initialAuthOpen: boolean;
+    returnTo?: string | null;
+  }) => (
+    <div
+      data-testid="boot"
+      data-mode={initialMode}
+      data-open={String(initialAuthOpen)}
+      data-return={returnTo ?? ''}
+    />
   ),
 }));
 vi.mock('../../pages/AuthPage', () => ({
@@ -37,7 +50,8 @@ vi.mock('../../pages/AuthPage', () => ({
 }));
 
 function Where(): JSX.Element {
-  return <p data-testid="where">{useLocation().pathname}</p>;
+  const { pathname, search, hash } = useLocation();
+  return <p data-testid="where">{`${pathname}${search}${hash}`}</p>;
 }
 
 function renderAt(path: string): void {
@@ -79,12 +93,39 @@ describe('AppShell', () => {
     expect(boot.dataset.open).toBe('true');
   });
 
-  it('signed out elsewhere, shows the boot screen closed on login', () => {
+  it('signed out on /, shows the story with the auth panel closed', () => {
     auth = { isPending: false, user: null };
-    renderAt('/repos');
+    renderAt('/');
     const boot = screen.getByTestId('boot');
     expect(boot.dataset.mode).toBe('login');
     expect(boot.dataset.open).toBe('false');
+  });
+
+  it('signed out on a deep link, opens login and remembers the destination', () => {
+    auth = { isPending: false, user: null };
+    renderAt('/repos/jeryu/jeryu/jeryu-deploy/pulls/7?tab=files#c3');
+    const boot = screen.getByTestId('boot');
+    expect(boot.dataset.open).toBe('true');
+    expect(boot.dataset.mode).toBe('login');
+    expect(boot.dataset.return).toBe('/repos/jeryu/jeryu/jeryu-deploy/pulls/7?tab=files#c3');
+  });
+
+  it('signed in on /login?next=, lands on the remembered page', () => {
+    auth = { isPending: false, user: { role: 'user' } };
+    renderAt(`/login?next=${encodeURIComponent('/work?family=jeryu#add')}`);
+    expect(screen.getByTestId('where').textContent).toBe('/work?family=jeryu#add');
+  });
+
+  it('ignores a next that would leave the app or loop to login', () => {
+    expect(returnPathFrom('?next=//evil.example/x')).toBeNull();
+    expect(returnPathFrom('?next=%2F%5Cevil.example')).toBeNull();
+    expect(returnPathFrom('?next=https://evil.example')).toBeNull();
+    expect(returnPathFrom('?next=/login?next=/x')).toBeNull();
+    expect(returnPathFrom('')).toBeNull();
+    expect(returnPathFrom('?next=%2Factivity')).toBe('/activity');
+    auth = { isPending: false, user: { role: 'admin' } };
+    renderAt('/login?next=//evil.example');
+    expect(screen.getByTestId('where').textContent).toBe('/needs-you');
   });
 
   it('signed in, sends /login home', () => {

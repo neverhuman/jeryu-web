@@ -19,9 +19,12 @@ const SPLASH_MS = 950;
 export function BootScreen({
   initialMode = 'login',
   initialAuthOpen = false,
+  returnTo = null,
 }: {
   initialMode?: Mode;
   initialAuthOpen?: boolean;
+  /** The page a deep link was headed to; login lands there. */
+  returnTo?: string | null;
 }): JSX.Element {
   const prefersReduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<'splash' | 'gate'>(
@@ -122,6 +125,11 @@ export function BootScreen({
 
         {authOpen ? (
           <aside className="boot__auth-panel">
+            {returnTo ? (
+              <p className="boot__return-to" role="status">
+                Log in to continue to <code>{returnTo}</code>
+              </p>
+            ) : null}
             <LoginPanel initialMode={mode} firstFieldRef={usernameRef} />
           </aside>
         ) : null}
