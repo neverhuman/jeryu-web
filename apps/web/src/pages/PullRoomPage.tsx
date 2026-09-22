@@ -24,7 +24,7 @@ import {
   isBoardView,
   pullListState,
   repoOptions,
-  reposToLoad,
+  timelineRepos,
   scopeToFamily,
   type PullRoomFilters,
 } from './pullRoomModel';
@@ -121,9 +121,21 @@ export function PullRoomPage(): JSX.Element {
   const repos = useMemo(() => repoOptions(items), [items]);
   // The snapshot says which repositories hold a matching pull request; only
   // those are asked for their lists, which carry review and merge state.
+  // With a history filter every repository in scope is asked, as its own
+  // Pull requests page would be; the snapshot alone only knows open ones.
   const wanted = useMemo(
-    () => reposToLoad(filterPullRequests(items, viewFilters)),
-    [items, viewFilters]
+    () =>
+      timelineRepos(
+        filterPullRequests(items, viewFilters),
+        Array.from(families.keys()),
+        {
+          repo: filters.repo,
+          family,
+          history: pullListState(viewFilters.state) === undefined,
+        },
+        families
+      ),
+    [items, viewFilters, families, filters.repo, family]
   );
   const lists = useRepoPullLists(
     board ? [] : wanted.repos,
