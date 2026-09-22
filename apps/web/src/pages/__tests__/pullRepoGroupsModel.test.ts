@@ -6,6 +6,7 @@ import {
   buildRepoGroups,
   linkSupersessions,
   countsSentence,
+  pullRowHint,
   pullRowStatus,
   pullStateOf,
   type BranchRow,
@@ -91,7 +92,9 @@ describe('pullStateOf', () => {
       uncertain: true,
     };
     const { groups } = buildRepoGroups([pull(81, 'merged')], { ladderFor: () => capped });
-    expect(groups[0]?.states[0]).toMatchObject({ state: 'unknown', hint: 'prod v2.3 compare capped' });
+    const first = groups[0]?.rows[0];
+    expect(first?.kind === 'pr' && first.state).toBe('unknown');
+    expect(first?.kind === 'pr' && pullRowHint(first)).toBe('prod v2.3 compare capped');
   });
 
   it('places a closed pull request where nothing moves again', () => {
