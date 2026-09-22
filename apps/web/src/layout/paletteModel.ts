@@ -71,4 +71,4 @@ export function pullTargets(query: string, rows: readonly RepositoryRow[]): Pale
 }
 
 /** Palette group headings, in display order. */
-export const PALETTE_GROUPS = ['Go to', 'Repositories', 'Pull request', 'Theme'] as const;
+export const PALETTE_GROUPS = ['Go to', 'Repositories', 'Pull request', 'Search', 'Theme'] as const;

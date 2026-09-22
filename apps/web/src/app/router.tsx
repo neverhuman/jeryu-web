@@ -26,6 +26,7 @@ import { ProposalsPage } from '../pages/ProposalsPage';
 import { NeedsYouPage } from '../pages/needsYou';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RepositoriesPage } from '../pages/RepositoriesPage';
+import { SearchPage } from '../pages/search/SearchPage';
 import { RepositoryAgentsPage } from '../pages/RepositoryAgentsPage';
 import { RepositoryFamilyPage } from '../pages/RepositoryFamilyPage';
 import { RepositoryPullRequestsPage } from '../pages/RepositoryPullRequestsPage';
@@ -74,6 +75,7 @@ export const router = createBrowserRouter([
       { path: 'signup', element: <HomeRedirect /> },
       { path: 'needs-you', element: <NeedsYouPage /> },
       { path: 'activity', element: <ActivityPage /> },
+      { path: 'search', element: <SearchPage /> },
       { path: 'repos', element: <RepositoriesPage /> },
       { path: 'repos/new', element: <RepositoriesPage mode="create" /> },
       // Family drill-down. Declared before the `repos/:provider/*` catch-all
