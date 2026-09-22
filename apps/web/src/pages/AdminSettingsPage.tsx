@@ -148,18 +148,35 @@ function AdminAccessPanel(): JSX.Element {
         <ErrorState title="Could not load users" error={users.error} />
       ) : (
         <div className="page__card">
-          {(users.data ?? []).map((account) => (
-            <div className="page__inline-actions" key={account.login}>
-              <span className="page__pill">{account.role}</span>
-              <strong>{account.login}</strong>
-              <ActionButton
-                variant="default"
-                onClick={() => reset.mutate(account.login)}
-              >
-                Reset password
-              </ActionButton>
-            </div>
-          ))}
+          <table className="admin-users__table" data-testid="admin-users-table">
+            <thead>
+              <tr>
+                <th scope="col">User</th>
+                <th scope="col">Role</th>
+                <th scope="col">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(users.data ?? []).map((account) => (
+                <tr key={account.login}>
+                  <th scope="row">{account.login}</th>
+                  <td>
+                    <span className="page__pill">{account.role}</span>
+                  </td>
+                  <td className="admin-users__actions">
+                    <ActionButton
+                      variant="default"
+                      onClick={() => reset.mutate(account.login)}
+                    >
+                      Reset password
+                    </ActionButton>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {receipt ? (
             <p className="page__roadmap-note">
               {receipt.login}: {receipt.password}
