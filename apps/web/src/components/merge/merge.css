@@ -709,15 +709,25 @@
 
 .checks-panel__name {
   font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
   font-weight: var(--font-weight-medium);
 }
 
 .checks-panel__description {
   font-size: var(--font-size-xs);
   color: var(--color-fg-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* The reason a check failed is read in full: wrap it, never clip it. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.checks-panel__status {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-fg-muted);
+}
+.checks-panel__status--failing {
+  color: var(--color-accent-danger);
 }
 
 .checks-panel__link {
