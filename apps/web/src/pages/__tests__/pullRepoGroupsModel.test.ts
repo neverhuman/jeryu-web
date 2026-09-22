@@ -5,10 +5,14 @@ import {
   awaitingReleaseCount,
   buildRepoGroups,
   linkSupersessions,
+  countsSentence,
+  pullRowStatus,
   pullStateOf,
-  stateHeading,
+  type BranchRow,
+  type FlowRow,
   type TimelineRow,
 } from '../pullRepoGroupsModel';
+import type { GhostRow } from '../pullGhostsModel';
 import {
   CHANNEL_ORDER,
   UNKNOWN_LADDER,
@@ -84,9 +88,10 @@ describe('pullStateOf', () => {
 describe('buildRepoGroups', () => {
   const ladders = new Map<number, ReleaseLadder>();
   const ladderFor = (pr: PullRequestSummary) => ladders.get(pr.number) ?? UNKNOWN_LADDER;
-  const labels = (states: { label: string }[]) => states.map((state) => state.label);
+  const numbers = (rows: FlowRow[]) =>
+    rows.map((r) => (r.kind === 'pr' ? r.row.pr.number : r.key));
 
-  it('groups by repository and orders states least far first', () => {
+  it('lists a repository as one run of rows, furthest from done first', () => {
     ladders.clear();
     ladders.set(30, ladder(null));
     ladders.set(31, ladder('dev', 'v9'));
@@ -104,17 +109,20 @@ describe('buildRepoGroups', () => {
     );
     expect(groups).toHaveLength(1);
     expect(groups[0]?.repo).toBe('jeryu/jeryu-web');
-    expect(labels(groups[0]?.states ?? [])).toEqual([
+    expect(numbers(groups[0]?.rows ?? [])).toEqual([33, 34, 30, 31, 32, 35]);
+    expect(
+      (groups[0]?.rows ?? []).map((r) => (r.kind === 'pr' ? pullRowStatus(r) : r.label))
+    ).toEqual([
       'Waiting on checks',
       'Mergeable',
       'Merged · not yet released',
-      'In dev',
-      'In prod',
+      'In dev · v9',
+      'In prod · v6',
       'Closed',
     ]);
   });
 
-  it('shows one row per state — the newest — and folds the older ones', () => {
+  it('keeps every row at a state in the list, newest first — nothing folds per state', () => {
     ladders.clear();
     for (const number of [40, 41, 42]) ladders.set(number, ladder('dev', 'v9'));
     const { groups } = buildRepoGroups(
@@ -125,28 +133,22 @@ describe('buildRepoGroups', () => {
       ],
       { ladderFor }
     );
-    const dev = groups[0]?.states[0];
-    expect(dev?.state).toBe('dev');
-    expect(dev?.row.pr.number).toBe(41);
-    // Newest first behind the expander, so opening it reads like the page does.
-    expect(dev?.older.map((r) => r.pr.number)).toEqual([42, 40]);
-    expect(groups[0]?.hidden).toBe(2);
-    expect(groups[0]?.total).toBe(3);
+    expect(numbers(groups[0]?.rows ?? [])).toEqual([41, 42, 40]);
+    expect(groups[0]?.older).toEqual([]);
   });
 
-  it('caps how many older rows a state keeps', () => {
+  it('folds only the tail of a long list, and stops listing past the limit', () => {
     ladders.clear();
     const pulls: PullRequestSummary[] = [];
     for (let number = 100; number < 110; number += 1) {
       ladders.set(number, ladder('production', 'v6'));
       pulls.push(pull(number, 'merged', { updated: `2026-09-1${number % 10}T00:00:00Z` }));
     }
-    const { groups } = buildRepoGroups(pulls, { ladderFor, olderCap: 3 });
-    const prod = groups[0]?.states[0];
-    expect(prod?.older).toHaveLength(3);
-    expect(groups[0]?.hidden).toBe(3);
+    const { groups } = buildRepoGroups(pulls, { ladderFor, rowCap: 3, rowLimit: 7 });
+    expect(numbers(groups[0]?.rows ?? [])).toEqual([109, 108, 107]);
+    expect(numbers(groups[0]?.older ?? [])).toEqual([106, 105, 104, 103]);
     // The count still tells the truth about how many there are in total.
-    expect(groups[0]?.total).toBe(10);
+    expect(groups[0]?.counts.released).toBe(10);
   });
 
   it('separates repositories and leads with the one that moved most recently', () => {
@@ -164,26 +166,31 @@ describe('buildRepoGroups', () => {
       'veox/jain-web',
       'jeryu/jeryu-api',
     ]);
-    expect(groups.every((group) => group.states.length === 1)).toBe(true);
   });
 
-  it('counts open pull requests per repository', () => {
+  it('counts a repository in words, leaving out what is zero', () => {
     ladders.clear();
     ladders.set(61, ladder('dev'));
+    ladders.set(63, ladder(null));
     const { groups } = buildRepoGroups(
-      [pull(60, 'open'), pull(61, 'merged'), pull(62, 'closed')],
+      [pull(60, 'open'), pull(61, 'merged'), pull(62, 'closed'), pull(63, 'merged')],
       { ladderFor }
     );
-    expect(groups[0]).toMatchObject({ total: 3, open: 1 });
-  });
-
-  it('names the release that carries a state, and says nothing when none does', () => {
-    ladders.clear();
-    ladders.set(70, ladder('canary', 'v8'));
-    ladders.set(71, ladder(null));
-    const { groups } = buildRepoGroups([pull(70, 'merged'), pull(71, 'merged')], { ladderFor });
-    const headings = (groups[0]?.states ?? []).map(stateHeading);
-    expect(headings).toEqual(['Merged · not yet released', 'In canary · v8']);
+    expect(groups[0]?.counts).toEqual({
+      inFlight: 1,
+      awaitingRelease: 1,
+      released: 1,
+      releaseUnknown: 0,
+      closed: 1,
+    });
+    expect(countsSentence(groups[0]!.counts)).toBe(
+      '1 in flight · 1 awaiting release · 1 released · 1 closed'
+    );
+    expect(
+      countsSentence({ inFlight: 0, awaitingRelease: 0, released: 4, releaseUnknown: 2, closed: 0 })
+    ).toBe(
+      '4 released · 2 merged, release unknown'
+    );
   });
 
   it('counts the release manifest across every repository', () => {
@@ -210,12 +217,12 @@ describe('buildRepoGroups', () => {
       [pull(90, 'closed', { title: 'first go — superseded by #91' }), pull(91, 'merged')],
       { ladderFor }
     );
-    expect(labels(groups[0]?.states ?? [])).toEqual(['In dev']);
-    expect(groups[0]?.states[0]?.row.supersedes).toEqual([90]);
-    expect(groups[0]?.total).toBe(1);
+    const rows = groups[0]?.rows ?? [];
+    expect(numbers(rows)).toEqual([91]);
+    expect(rows[0]?.kind === 'pr' && rows[0].row.supersedes).toEqual([90]);
   });
 
-  it('keeps a tag-released repository on its own single rung', () => {
+  it('names the release on a tag-released row', () => {
     ladders.clear();
     const tagged: ReleaseLadder = {
       kind: 'tag',
@@ -226,77 +233,132 @@ describe('buildRepoGroups', () => {
     };
     ladders.set(95, tagged);
     const { groups } = buildRepoGroups([pull(95, 'merged')], { ladderFor });
-    expect(groups[0]?.states[0]?.state).toBe('tag');
-    expect(stateHeading(groups[0]?.states[0] as never)).toBe('Released · v5.0.0');
+    const first = groups[0]?.rows[0];
+    expect(first?.kind === 'pr' && first.state).toBe('tag');
+    expect(first?.kind === 'pr' && pullRowStatus(first)).toBe('Released · v5.0.0');
   });
 });
 
-describe('filing shift work under its repository', () => {
+describe('shift work as branch rows', () => {
   const ladderFor = () => UNKNOWN_LADDER;
-  const ghost = (id: string, repos: string[], status = 'open') => ({
+  const ghost = (
+    id: string,
+    repos: string[],
+    status = 'claimed',
+    extra: Partial<GhostRow> = {}
+  ): GhostRow => ({
     todoId: id,
     title: `todo ${id}`,
     family: 'jeryu',
     repos,
     status,
-    kind: 'bulletshift' as const,
+    kind: 'bulletshift',
     date: '2026-09-20',
     steps: [],
-    when: 'next up',
+    when: 'hands off in 1h',
     attention: false,
     worker: null,
+    ...extra,
   });
-  const group = (rows: ReturnType<typeof ghost>[], queued = 0) => [
+  const group = (rows: GhostRow[], queued = 0) => [
     { key: 'bulletshift/2026-09-20', label: 'bulletshift 2026-09-20', hint: '', rows, queued },
   ];
+  const keyFor = (repo: string) => `jeryu/${repo}`;
+  const branches = (rows: FlowRow[]) => rows.filter((r): r is BranchRow => r.kind === 'branch');
 
-  it('files a row under every repository it names', () => {
+  it('rolls the todos on one branch into one row, filed under every repository they name', () => {
     const { groups } = buildRepoGroups([pull(1, 'open')], {
       ladderFor,
-      ghosts: group([ghost('t1', ['jeryu-web', 'jeryu-api'])]),
-      repoKeyFor: (repo) => `jeryu/${repo}`,
+      ghosts: group([ghost('t1', ['jeryu-web', 'jeryu-api']), ghost('t2', ['jeryu-web'], 'done')]),
+      repoKeyFor: keyFor,
     });
     const byRepo = new Map(groups.map((g) => [g.repo, g]));
-    expect(byRepo.get('jeryu/jeryu-web')?.incoming.map((r) => r.todoId)).toEqual(['t1']);
-    // The second repository has no pull requests, so the row gives it a section.
-    expect(byRepo.get('jeryu/jeryu-api')).toMatchObject({ total: 0, states: [] });
-    expect(byRepo.get('jeryu/jeryu-api')?.incoming.map((r) => r.todoId)).toEqual(['t1']);
+    const web = branches(byRepo.get('jeryu/jeryu-web')?.rows ?? []);
+    expect(web).toHaveLength(1);
+    expect(web[0]).toMatchObject({ key: 'bulletshift/2026-09-20', status: 'active', detail: '1 working' });
+    expect(web[0]?.todos.map((t) => t.todoId)).toEqual(['t1', 't2']);
+    // The branch leads the pull request: it is further from done.
+    expect(byRepo.get('jeryu/jeryu-web')?.rows[0]?.kind).toBe('branch');
+    // The second repository has no pull requests, so the branch gives it a section.
+    expect(branches(byRepo.get('jeryu/jeryu-api')?.rows ?? [])[0]?.todos.map((t) => t.todoId)).toEqual([
+      't1',
+    ]);
   });
 
-  it('returns a row naming nothing placeable instead of dropping it', () => {
+  it('puts unscheduled work on the batch branch and says when it waits on its PR', () => {
+    const { groups } = buildRepoGroups([], {
+      ladderFor,
+      ghosts: group([ghost('t3', ['jeryu-web'], 'done', { kind: 'unscheduled', date: null })]),
+      repoKeyFor: keyFor,
+    });
+    expect(groups[0]?.rows[0]).toMatchObject({
+      kind: 'branch',
+      key: 'batch',
+      label: 'batch branch',
+      status: 'done',
+      detail: 'no PR yet',
+    });
+  });
+
+  it('lifts a stuck branch to the top of its repository', () => {
+    const { groups } = buildRepoGroups([pull(1, 'open', { draft: true })], {
+      ladderFor,
+      ghosts: [
+        ...group([ghost('t4', ['jeryu-web'])]),
+        {
+          key: 'nightshift/2026-09-21',
+          label: 'nightshift 2026-09-21',
+          hint: '',
+          queued: 0,
+          rows: [
+            ghost('t5', ['jeryu-web'], 'blocked', {
+              kind: 'nightshift',
+              date: '2026-09-21',
+              attention: true,
+            }),
+          ],
+        },
+      ],
+      repoKeyFor: keyFor,
+    });
+    const rows = groups[0]?.rows ?? [];
+    expect(rows.map((r) => (r.kind === 'branch' ? r.key : r.row.pr.number))).toEqual([
+      'nightshift/2026-09-21',
+      'bulletshift/2026-09-20',
+      1,
+    ]);
+    expect(rows[0]).toMatchObject({ status: 'blocked', detail: '1 needs a human' });
+  });
+
+  it('leaves queued todos to the Work page and only counts them', () => {
+    const { groups, shift } = buildRepoGroups([], {
+      ladderFor,
+      ghosts: group([ghost('t6', ['jeryu-web'], 'open'), ghost('t7', ['jeryu-web'], 'done')], 7),
+      repoKeyFor: keyFor,
+    });
+    const todos = branches(groups[0]?.rows ?? []).flatMap((b) => b.todos.map((t) => t.todoId));
+    expect(todos).toEqual(['t7']);
+    // One on a branch; the shown queued one plus the seven behind it are queued.
+    expect(shift).toEqual({ inFlight: 1, queued: 8, family: 'jeryu' });
+  });
+
+  it('returns work naming nothing placeable instead of dropping it', () => {
     const { groups, unassigned } = buildRepoGroups([pull(1, 'open')], {
       ladderFor,
-      ghosts: group([ghost('t2', []), ghost('t3', ['who-knows'])]),
-      repoKeyFor: (repo) => (repo === 'who-knows' ? null : `jeryu/${repo}`),
+      ghosts: group([ghost('t8', []), ghost('t9', ['who-knows'])]),
+      repoKeyFor: (repo) => (repo === 'who-knows' ? null : keyFor(repo)),
     });
-    expect(unassigned.map((r) => r.todoId)).toEqual(['t2', 't3']);
-    expect(groups.every((g) => g.incoming.length === 0)).toBe(true);
+    expect(unassigned.flatMap((b) => b.todos.map((t) => t.todoId))).toEqual(['t8', 't9']);
+    expect(groups.every((g) => branches(g.rows).length === 0)).toBe(true);
   });
 
-  it('counts the queue once, across repositories', () => {
-    const { shift } = buildRepoGroups([pull(1, 'open')], {
-      ladderFor,
-      ghosts: group(
-        [ghost('t4', ['jeryu-web'], 'claimed'), ghost('t5', ['jeryu-web']), ghost('t6', ['jeryu-api'], 'done')],
-        7
-      ),
-      repoKeyFor: (repo) => `jeryu/${repo}`,
-    });
-    // Two are in flight (claimed, done-without-a-PR); one is merely queued.
-    expect(shift).toEqual({ inFlight: 2, queued: 7, family: 'jeryu' });
-  });
-
-  it('leads with a repository that has incoming work', () => {
+  it('leads with a repository that has work in flight', () => {
     const { groups } = buildRepoGroups(
       [
-        pull(1, 'open', { repo: 'jeryu/jeryu-web', updated: '2026-09-19T00:00:00Z' }),
-        pull(2, 'open', { repo: 'jeryu/jeryu-api', updated: '2026-09-11T00:00:00Z' }),
+        pull(1, 'merged', { repo: 'jeryu/jeryu-web', updated: '2026-09-19T00:00:00Z' }),
+        pull(2, 'merged', { repo: 'jeryu/jeryu-api', updated: '2026-09-11T00:00:00Z' }),
       ],
-      {
-        ladderFor,
-        ghosts: group([ghost('t7', ['jeryu-api'])]),
-        repoKeyFor: (repo) => `jeryu/${repo}`,
-      }
+      { ladderFor, ghosts: group([ghost('t10', ['jeryu-api'])]), repoKeyFor: keyFor }
     );
     expect(groups.map((g) => g.repo)).toEqual(['jeryu/jeryu-api', 'jeryu/jeryu-web']);
   });

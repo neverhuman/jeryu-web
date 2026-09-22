@@ -348,7 +348,7 @@
 }
 
 .pull-timeline {
-  --pull-timeline-cols: minmax(220px, 2fr) repeat(6, minmax(96px, 1fr));
+  --pull-timeline-cols: minmax(240px, 2fr) repeat(7, minmax(88px, 1fr));
   overflow-x: auto;
 }
 
@@ -358,7 +358,7 @@
   grid-template-columns: var(--pull-timeline-cols);
   gap: 0 var(--space-2);
   align-items: center;
-  min-width: 880px;
+  min-width: 960px;
 }
 
 .pull-timeline__head {
@@ -423,7 +423,7 @@
   white-space: nowrap;
 }
 
-/* The track spans the five stage columns; subgrid keeps it aligned to the header. */
+/* The track spans the Branch and PR stage columns; subgrid keeps it aligned to the header. */
 .pull-timeline__track {
   grid-column: 2 / -1;
   display: grid;
@@ -597,9 +597,7 @@
 }
 
 /* ------------------------------------------------- repositories and states
-   One section per repository; inside it one row per state of the pipeline,
-   least far first, each showing the newest pull request that has got that far.
-   Older work at the same state folds behind that state's expander. */
+   One section per repository, and inside it one unbroken list of rows. */
 
 .pull-repo {
   margin-top: var(--space-4);
@@ -627,43 +625,25 @@
   font-weight: var(--font-weight-regular);
 }
 
-.pull-state {
+/* One expander per repository, at the bottom: the list above it is never broken up. */
+.pull-repo__older {
   margin-top: var(--space-2);
 }
 
-.pull-state__label {
-  margin: 0 0 2px var(--space-3);
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-/* Work that will never move again is quieter than work still on its way. */
-.pull-state.is-closed .pull-state__label,
-.pull-state.is-closed .pull-timeline__rows {
-  opacity: 0.7;
-}
-
-.pull-state__hint {
-  margin: 0 0 2px var(--space-3);
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-xs);
-}
-
-.pull-state__older {
-  margin: var(--space-1) 0 0 var(--space-3);
-}
-
-.pull-state__older > summary {
+.pull-repo__older > summary {
+  margin-left: var(--space-3);
   color: var(--color-fg-muted);
   font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
-.pull-state__older[open] > summary {
+.pull-repo__older[open] > summary {
   margin-bottom: var(--space-2);
+}
+
+.pull-timeline__status {
+  color: var(--color-fg-secondary);
+  font-family: var(--font-sans);
 }
 
 /* ----------------------------------------------------------- the ladder
@@ -726,26 +706,67 @@
   font-style: italic;
 }
 
-/* --------------------------------------------------------------- ghosts
-   Work that will become a pull request. Dashed, not faded: a closed pull
-   request is dim because it will never move again, a ghost because it has not
-   started. The two must not look alike. */
+/* ------------------------------------------------------------- branches
+   A branch in flight with no pull request yet. Dashed, not faded: a closed pull
+   request is dim because it will never move again, a branch because it has not
+   reached review. The two must not look alike. */
 
-.pull-timeline__row.is-ghost {
+.pull-timeline__row.is-branch {
   border-style: dashed;
   background: transparent;
 }
 
-.pull-timeline__row.is-ghost.needs-human {
+.pull-timeline__row.is-branch.needs-human {
   border-color: var(--color-accent-warning);
 }
 
-.pull-ghost__title {
-  color: var(--color-fg-secondary);
+.pull-branch {
+  min-width: 0;
 }
 
-.pull-timeline__track--ghost .pull-stage__label {
+.pull-branch > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.pull-branch > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pull-branch__name {
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+/* An opened branch grows downward; its track stays level with its name. */
+.pull-timeline__row.is-branch {
+  align-items: start;
+}
+
+.pull-branch__name::before {
+  content: '▸ ';
   color: var(--color-fg-muted);
+}
+
+.pull-branch[open] .pull-branch__name::before {
+  content: '▾ ';
+}
+
+.pull-branch__todos {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.pull-branch__todos .needs-human {
+  color: var(--color-accent-warning);
+}
+
+.pull-stage.is-pending .pull-stage__label:empty {
+  display: none;
 }
 
 .pull-timeline__supersedes {
@@ -761,9 +782,4 @@
 
 .pull-shift-queue a {
   text-decoration: underline;
-}
-
-/* Incoming shift work leads a repository: the states before a PR exists. */
-.pull-state.is-incoming .pull-state__label {
-  color: var(--color-fg-secondary);
 }

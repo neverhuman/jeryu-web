@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 
 import type { PullRequestSummary } from '../api/types';
-import type { GhostGroup, GhostRow } from './pullGhostsModel';
+import type { GhostGroup } from './pullGhostsModel';
 import {
   buildRepoGroups,
-  stateHeading,
+  countsSentence,
+  PULL_STATE_HINTS,
+  pullRowStatus,
+  type BranchRow,
+  type FlowRow,
+  type PullRow,
   type RepoGroup,
-  type StateRow,
-  type TimelineRow,
 } from './pullRepoGroupsModel';
 import { pullRequestPath } from './pullRoomModel';
 import { UNKNOWN_LADDER, type ReleaseLadder } from './releaseChannelsModel';
@@ -16,17 +19,14 @@ import { PULL_STAGE_LABELS, pullStages } from './pullTimelineModel';
 import './PullRoomPage.css';
 
 /**
- * One section per repository; inside it one row per state of the pipeline,
- * least far first, each showing the most recent pull request that has got that
- * far. Older work at the same state sits behind that state's expander, because
- * between the newest change at a state and the ones before it there is usually
- * nothing to act on.
+ * One section per repository, and inside it one unbroken list: every branch in
+ * flight on the same track. A branch that has not opened a pull request yet
+ * fills the Branch column; a pull request carries on through the PR stages. The
+ * list runs from work furthest from done down to what production runs, and only
+ * its tail folds away, behind one "show older" at the bottom.
  *
- * Shift work with no pull request yet is filed under the repository it names,
- * as the states BEFORE `draft` — queued, claimed, done-without-a-PR — so a
- * repository's whole pipeline reads in one place. Only the queue's own numbers
- * and work that names no repository stay above the sections, since neither
- * belongs to any one of them.
+ * Queued todos have no branch yet and belong to the Work page; only the queue's
+ * numbers are said here, once, above the sections.
  */
 export function PullRequestTimeline({
   pulls,
@@ -47,18 +47,19 @@ export function PullRequestTimeline({
   /** Resolves a todo's bare repo name to an `owner/name` section key. */
   repoKeyFor?: (repo: string) => string | null;
 }): JSX.Element {
-  if (pulls.length === 0 && ghosts.length === 0) {
-    return <p className="pull-list__empty">{emptyMessage}</p>;
-  }
   const timeline = buildRepoGroups(pulls, {
     ladderFor: ladderFor ?? (() => UNKNOWN_LADDER),
     ghosts,
     repoKeyFor,
   });
+  if (timeline.groups.length === 0 && timeline.unassigned.length === 0) {
+    return <p className="pull-list__empty">{emptyMessage}</p>;
+  }
   return (
     <div className="pull-timeline" data-testid="pull-timeline">
       <div className="pull-timeline__head" aria-hidden="true">
         <span />
+        <span>Branch</span>
         {Object.values(PULL_STAGE_LABELS).map((label) => (
           <span key={label}>{label}</span>
         ))}
@@ -80,16 +81,14 @@ export function PullRequestTimeline({
       ) : null}
 
       {timeline.unassigned.length > 0 ? (
-        <section className="pull-band is-ghost" data-testid="pull-ghosts-unassigned">
-          <div className="pull-band__summary">
-            <span className="pull-band__label">Shift work not tied to a repository</span>
-            <span className="pull-band__hint">
-              {timeline.unassigned.length} waiting on triage
-            </span>
-          </div>
+        <section className="pull-repo" data-testid="pull-ghosts-unassigned">
+          <h2 className="pull-repo__head">
+            Shift work not tied to a repository
+            <span className="pull-repo__count">waiting on triage</span>
+          </h2>
           <ol className="pull-timeline__rows">
             {timeline.unassigned.map((row) => (
-              <GhostRowView key={row.todoId} row={row} />
+              <BranchRowView key={row.key} row={row} scope="unassigned" />
             ))}
           </ol>
         </section>
@@ -108,94 +107,93 @@ function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean 
       {showRepo ? (
         <h2 className="pull-repo__head">
           <Link to={`/repos/${group.host}/${group.repo}/pulls`}>{group.repo}</Link>
-          <span className="pull-repo__count">
-            {group.total} PR{group.total === 1 ? '' : 's'} · {group.open} open
-            {group.hidden > 0 ? ` · ${group.hidden} older behind the states` : ''}
-          </span>
+          <span className="pull-repo__count">{countsSentence(group.counts)}</span>
         </h2>
       ) : null}
-      {group.incoming.length > 0 ? (
-        <div className="pull-state is-incoming" data-testid={`pull-incoming-${group.repo}`}>
-          <p className="pull-state__label">Queued / in flight</p>
-          <p className="pull-state__hint">no pull request yet</p>
-          <ol className="pull-timeline__rows">
-            {group.incoming.map((row) => (
-              <GhostRowView key={row.todoId} row={row} />
-            ))}
-          </ol>
-        </div>
-      ) : null}
-      {group.states.map((stateRow) => (
-        <State key={stateRow.state} repo={group.repo} stateRow={stateRow} showRepo={showRepo} />
-      ))}
-    </section>
-  );
-}
-
-/** One state of one repository: its frontier row, then the older ones folded. */
-function State({
-  repo,
-  stateRow,
-  showRepo,
-}: {
-  repo: string;
-  stateRow: StateRow;
-  showRepo: boolean;
-}): JSX.Element {
-  return (
-    <div
-      className={`pull-state is-${stateRow.state}`}
-      data-testid={`pull-state-${repo}-${stateRow.state}`}
-    >
-      <p className="pull-state__label">{stateHeading(stateRow)}</p>
-      {/* Why this state exists, where the label alone would leave a guess. */}
-      {stateRow.hint ? <p className="pull-state__hint">{stateRow.hint}</p> : null}
       <ol className="pull-timeline__rows">
-        <Row row={stateRow.row} showRepo={showRepo} />
+        {group.rows.map((row) => (
+          <FlowRowView key={flowKey(row)} row={row} repo={group.repo} showRepo={showRepo} />
+        ))}
       </ol>
-      {stateRow.older.length > 0 ? (
-        <details className="pull-state__older" data-testid={`pull-older-${repo}-${stateRow.state}`}>
-          <summary>
-            + {stateRow.older.length} older at this state
-          </summary>
+      {group.older.length > 0 ? (
+        <details className="pull-repo__older" data-testid={`pull-older-${group.repo}`}>
+          <summary>Show {group.older.length} older</summary>
           <ol className="pull-timeline__rows">
-            {stateRow.older.map((row) => (
-              <Row key={rowId(row, showRepo)} row={row} showRepo={showRepo} />
+            {group.older.map((row) => (
+              <FlowRowView key={flowKey(row)} row={row} repo={group.repo} showRepo={showRepo} />
             ))}
           </ol>
         </details>
       ) : null}
-    </div>
+    </section>
   );
 }
 
-function rowId(row: TimelineRow, showRepo: boolean): string {
-  const repo = `${row.pr.repo.owner}/${row.pr.repo.name}`;
-  // Numbers repeat across repositories; a row is one repo's number.
-  return showRepo ? `${repo}-${row.pr.number}` : String(row.pr.number);
+function flowKey(row: FlowRow): string {
+  return row.kind === 'branch' ? `branch-${row.key}` : `pr-${row.row.pr.number}`;
 }
 
-function Row({ row, showRepo }: { row: TimelineRow; showRepo: boolean }): JSX.Element {
-  const { pr, ladder } = row;
+function FlowRowView({
+  row,
+  repo,
+  showRepo,
+}: {
+  row: FlowRow;
+  repo: string;
+  showRepo: boolean;
+}): JSX.Element {
+  return row.kind === 'branch' ? (
+    <BranchRowView row={row} scope={repo} />
+  ) : (
+    <PullRowView row={row} showRepo={showRepo} />
+  );
+}
+
+function rowId(row: PullRow, showRepo: boolean): string {
+  const { pr } = row.row;
+  // Numbers repeat across repositories; a row is one repo's number.
+  return showRepo ? `${pr.repo.owner}/${pr.repo.name}-${pr.number}` : String(pr.number);
+}
+
+function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JSX.Element {
+  const { pr, ladder, supersedes } = row.row;
   const repo = `${pr.repo.owner}/${pr.repo.name}`;
   const id = rowId(row, showRepo);
   return (
-    <li className={`pull-timeline__row is-${pr.state}`} data-testid={`pull-timeline-${id}`}>
+    <li
+      className={`pull-timeline__row is-${pr.state}`}
+      data-testid={`pull-timeline-${id}`}
+      data-state={row.state}
+    >
       <div className="pull-timeline__pr">
         <Link to={pullRequestPath(pr.repo.host, repo, pr.number)}>
           <span className="pull-timeline__number">#{pr.number}</span> {pr.title}
         </Link>
         <span className="pull-timeline__meta">
-          <code>{pr.head_ref}</code> → <code>{pr.base_ref}</code> · {pr.author}
-          {row.supersedes.length > 0 ? (
+          <span
+            className="pull-timeline__status"
+            data-testid={`pull-status-${id}`}
+            title={PULL_STATE_HINTS[row.state]}
+          >
+            {pullRowStatus(row)}
+          </span>{' '}
+          · <code>{pr.head_ref}</code> · {pr.author}
+          {supersedes.length > 0 ? (
             <span className="pull-timeline__supersedes">
               {' '}
-              · supersedes {row.supersedes.map((number) => `#${number}`).join(', ')}
+              · supersedes {supersedes.map((number) => `#${number}`).join(', ')}
             </span>
           ) : null}
         </span>
       </div>
       <ol className="pull-timeline__track" aria-label={`Status of ${repo}#${pr.number}`}>
+        {/* A pull request exists, so its branch is pushed: the Branch column is behind it. */}
+        <li className="pull-stage is-done" data-status="done">
+          <span className="pull-stage__dot" aria-hidden="true" />
+          <span className="pull-stage__label">
+            <span className="pull-timeline__sr">Branch: </span>pushed
+          </span>
+        </li>
         {pullStages(pr, ladder).map((stage) => (
           <li
             key={stage.id}
@@ -209,6 +207,62 @@ function Row({ row, showRepo }: { row: TimelineRow; showRepo: boolean }): JSX.El
               {stage.detail}
             </span>
             {stage.id === 'released' ? <Ladder ladder={ladder} rowId={id} /> : null}
+          </li>
+        ))}
+      </ol>
+    </li>
+  );
+}
+
+/** A branch whose work has not opened a pull request yet; its todos fold under it. */
+function BranchRowView({ row, scope }: { row: BranchRow; scope: string }): JSX.Element {
+  const id = `${scope}-${row.key}`;
+  const workers = Array.from(
+    new Set(row.todos.map((todo) => todo.worker).filter((worker): worker is string => !!worker))
+  );
+  return (
+    <li
+      className={`pull-timeline__row is-branch${row.status === 'blocked' ? ' needs-human' : ''}`}
+      data-testid={`pull-branch-${id}`}
+      data-status={row.status}
+    >
+      <details className="pull-branch">
+        <summary className="pull-timeline__pr">
+          <span className="pull-branch__name">
+            {row.status === 'blocked' ? <span aria-label="needs a human">⚠ </span> : null}
+            <code>{row.label}</code> · {row.todos.length} todo{row.todos.length === 1 ? '' : 's'}
+          </span>
+          <span className="pull-timeline__meta">
+            {row.status === 'done' ? 'done, no pull request yet' : row.detail}
+            {workers.length > 0 ? ` · ${workers.join(', ')}` : ''}
+          </span>
+        </summary>
+        <ul className="pull-branch__todos">
+          {row.todos.map((todo) => (
+            <li
+              key={todo.todoId}
+              className={todo.attention ? 'needs-human' : undefined}
+              data-testid={`pull-ghost-${todo.todoId}`}
+            >
+              {todo.title} <span className="pull-timeline__meta">· {todo.when}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
+      <ol className="pull-timeline__track" aria-label={`Status of ${row.label}`}>
+        <li className={`pull-stage is-${row.status}`} data-status={row.status}>
+          <span className="pull-stage__dot" aria-hidden="true" />
+          <span className="pull-stage__label">
+            <span className="pull-timeline__sr">Branch: </span>
+            {row.detail}
+          </span>
+        </li>
+        {Object.entries(PULL_STAGE_LABELS).map(([stage, label]) => (
+          <li key={stage} className="pull-stage is-pending" data-status="pending">
+            <span className="pull-stage__dot" aria-hidden="true" />
+            <span className="pull-stage__label">
+              <span className="pull-timeline__sr">{label}: not yet</span>
+            </span>
           </li>
         ))}
       </ol>
@@ -241,41 +295,4 @@ function pipTitle(label: string, membership: string, release: string | null): st
   if (membership === 'in') return release ? `${label}: ${release}` : `in ${label}`;
   if (membership === 'out') return `not in ${label}`;
   return `${label}: unknown`;
-}
-
-function GhostRowView({ row }: { row: GhostRow }): JSX.Element {
-  return (
-    <li
-      className={`pull-timeline__row is-ghost${row.attention ? ' needs-human' : ''}`}
-      data-testid={`pull-ghost-${row.todoId}`}
-    >
-      <div className="pull-timeline__pr">
-        <span className="pull-ghost__title">
-          <span className="pull-timeline__number">{row.repos.join(', ') || row.family}</span>{' '}
-          {row.title}
-        </span>
-        <span className="pull-timeline__meta">
-          {row.date ? `${row.kind} ${row.date}` : row.kind} · {row.when}
-          {row.worker ? ` · ${row.worker}` : ''}
-        </span>
-      </div>
-      {/* The todo's own lifecycle, which the PR stages continue once it opens. */}
-      <ol
-        className="pull-timeline__track pull-timeline__track--ghost"
-        aria-label={`Status of ${row.title}`}
-      >
-        {row.steps.map((step) => (
-          <li
-            key={step.key}
-            className={`pull-stage is-${step.state}`}
-            data-testid={`pull-ghost-step-${row.todoId}-${step.key}`}
-            data-status={step.state}
-          >
-            <span className="pull-stage__dot" aria-hidden="true" />
-            <span className="pull-stage__label">{step.label}</span>
-          </li>
-        ))}
-      </ol>
-    </li>
-  );
 }

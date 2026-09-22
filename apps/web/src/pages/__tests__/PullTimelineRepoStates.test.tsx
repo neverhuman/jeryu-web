@@ -16,7 +16,7 @@ import { renderAt } from './shiftPageHelpers';
 const sha = (c: string) => c.repeat(40);
 
 describe('the Pull requests timeline', () => {
-  it('heads a section per repository and orders its states least far first', () => {
+  it('heads a section per repository and lists it as one run, furthest from done first', () => {
     const ladders = new Map<number, ReleaseLadder>([
       [3, ladder(null)],
       [4, ladder('canary', 'v8')],
@@ -35,12 +35,14 @@ describe('the Pull requests timeline', () => {
     );
 
     const section = screen.getByTestId('pull-repo-jeryu/jeryu-web');
-    expect(section).toHaveTextContent('6 PRs · 2 open');
+    expect(section).toHaveTextContent('2 in flight · 1 awaiting release · 2 released · 1 closed');
     expect(within(section).getByRole('link', { name: 'jeryu/jeryu-web' })).toHaveAttribute(
       'href',
       '/repos/jeryu/jeryu/jeryu-web/pulls'
     );
-    expect(labelsIn(section)).toEqual([
+    // No state headings: each row says where it is.
+    expect(section.querySelector('.pull-state__label')).toBeNull();
+    expect(statusesIn(section)).toEqual([
       'Waiting on checks',
       'Mergeable',
       'Merged · not yet released',
@@ -50,7 +52,7 @@ describe('the Pull requests timeline', () => {
     ]);
   });
 
-  it('shows only the newest pull request at a state until its expander is opened', async () => {
+  it('keeps every row at the same state in view, with no per-state expander', () => {
     const ladders = new Map<number, ReleaseLadder>([
       [10, ladder('dev', 'v9')],
       [11, ladder('dev', 'v9')],
@@ -64,22 +66,25 @@ describe('the Pull requests timeline', () => {
       ],
       (pr) => ladders.get(pr.number) ?? ladder(null)
     );
-
-    // The frontier row is visible; the two behind it are not.
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-11')).toBeVisible();
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-12')).not.toBeVisible();
-    const older = screen.getByTestId('pull-older-jeryu/jeryu-web-dev');
-    expect(older).toHaveTextContent('2 older at this state');
-
-    await userEvent.click(within(older).getByText(/older at this state/));
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-12')).toBeVisible();
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-10')).toBeVisible();
+    for (const number of [11, 12, 10]) {
+      expect(screen.getByTestId(`pull-timeline-jeryu/jeryu-web-${number}`)).toBeVisible();
+    }
+    expect(screen.queryByText(/older at this state/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pull-older-jeryu/jeryu-web')).not.toBeInTheDocument();
   });
 
-  it('gives a state no expander when nothing older sits at it', () => {
-    render([pull(20, 'open')], () => ladder(null));
-    expect(screen.getByTestId('pull-state-jeryu/jeryu-web-mergeable')).toBeInTheDocument();
-    expect(screen.queryByTestId('pull-older-jeryu/jeryu-web-mergeable')).not.toBeInTheDocument();
+  it('folds only the tail of a long repository behind one "show older"', async () => {
+    const pulls = Array.from({ length: 11 }, (_, index) =>
+      pull(100 + index, 'merged', { updated: `2026-09-${String(10 + index)}T00:00:00Z` })
+    );
+    render(pulls, () => ladder('production', 'v6'));
+    const older = screen.getByTestId('pull-older-jeryu/jeryu-web');
+    expect(older).toHaveTextContent('Show 3 older');
+    // Newest eight are the list; the three oldest wait at the bottom.
+    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-110')).toBeVisible();
+    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-100')).not.toBeVisible();
+    await userEvent.click(within(older).getByText('Show 3 older'));
+    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-100')).toBeVisible();
   });
 
   it('separates repositories, newest activity first', () => {
@@ -121,15 +126,20 @@ describe('the Pull requests timeline', () => {
       'supersedes #50'
     );
     expect(screen.queryByTestId('pull-timeline-jeryu/jeryu-web-50')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('pull-state-jeryu/jeryu-web-closed')).not.toBeInTheDocument();
   });
 
-  it('files shift work with no pull request under the repository it names', () => {
+  it('shows shift work on a branch as one row per branch, and leaves queued todos to Work', async () => {
     const ghosts = pullGhostGroups(
       [
-        todo('t1', { status: 'claimed', lease_until: '2026-09-20T03:00:00Z', lease_live: true }),
+        todo('t1', {
+          status: 'claimed',
+          lease_until: '2026-09-20T03:00:00Z',
+          lease_live: true,
+          claim_by: 'alton@xbabe0/w1',
+        }),
         todo('t2', { status: 'done' }),
-        todo('t3', { status: 'open', repos: ['jeryu-api'] }),
+        todo('t3', { status: 'claimed', repos: ['jeryu-api'] }),
+        todo('t4', { status: 'open' }),
       ],
       { now: new Date('2026-09-20T02:46:00Z'), openLimit: 1 }
     );
@@ -145,24 +155,29 @@ describe('the Pull requests timeline', () => {
       />
     );
 
-    // The rows sit inside their repository's section, before its PR states.
-    const incoming = screen.getByTestId('pull-incoming-jeryu/jeryu-web');
-    expect(incoming).toHaveTextContent('Queued / in flight');
-    expect(within(incoming).getByTestId('pull-ghost-t1')).toHaveTextContent('hands off in');
-    expect(within(incoming).getByTestId('pull-ghost-t2')).toHaveTextContent('PR pending');
-    // A row carries its own shift now that the shift is not a heading.
-    expect(within(incoming).getByTestId('pull-ghost-t1')).toHaveTextContent('bulletshift 2026-09-20');
+    const branch = screen.getByTestId('pull-branch-jeryu/jeryu-web-bulletshift/2026-09-20');
+    expect(screen.getByTestId('pull-repo-jeryu/jeryu-web')).toContainElement(branch);
+    expect(branch).toHaveTextContent('bulletshift/2026-09-20 · 2 todos');
+    expect(branch).toHaveTextContent('1 working · alton@xbabe0/w1');
+    // The branch sits on the same track as the PR below it, ahead of it.
+    const rows = screen.getAllByTestId(/^pull-(branch|timeline)-jeryu\/jeryu-web/);
+    expect(rows[0]).toBe(branch);
 
-    // A todo for a repository with no pull requests still gets a section.
-    expect(screen.getByTestId('pull-incoming-jeryu/jeryu-api')).toHaveTextContent('todo t3');
+    // Its todos fold under it.
+    expect(within(branch).getByTestId('pull-ghost-t2')).not.toBeVisible();
+    await userEvent.click(within(branch).getByText(/2 todos/));
+    expect(within(branch).getByTestId('pull-ghost-t1')).toHaveTextContent('hands off in');
+    expect(within(branch).getByTestId('pull-ghost-t2')).toHaveTextContent('PR pending');
 
-    // The queue's own numbers are said once, not per repository.
-    expect(screen.getByTestId('pull-shift-queue')).toHaveTextContent('2 in flight');
-    expect(screen.getByTestId('pull-repo-jeryu/jeryu-web')).toContainElement(incoming);
+    // A repository with no pull requests still gets a section for its branch.
+    expect(screen.getByTestId('pull-repo-jeryu/jeryu-api')).toHaveTextContent('todo t3');
+    // Queued work is only counted, once, not listed.
+    expect(screen.queryByTestId('pull-ghost-t4')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pull-shift-queue')).toHaveTextContent('3 in flight · 1 queued');
   });
 
   it('keeps shift work that names no repository visible above the sections', () => {
-    const ghosts = pullGhostGroups([todo('t9', { status: 'open', repos: [] })], {
+    const ghosts = pullGhostGroups([todo('t9', { status: 'claimed', repos: [] })], {
       now: new Date('2026-09-20T02:46:00Z'),
     });
     renderAt(
@@ -188,7 +203,7 @@ describe('the Pull requests timeline', () => {
       <PullRequestTimeline pulls={[pull(70, 'open')]} emptyMessage="none" />
     );
     expect(screen.queryByRole('link', { name: 'jeryu/jeryu-web' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('pull-state-jeryu/jeryu-web-mergeable')).toBeInTheDocument();
+    expect(screen.getByTestId('pull-status-70')).toHaveTextContent('Mergeable');
     expect(screen.getByTestId('pull-timeline-70')).toBeInTheDocument();
   });
 });
@@ -204,9 +219,9 @@ function render(
   );
 }
 
-/** Every state heading of a section, in DOM order. */
-function labelsIn(section: HTMLElement): string[] {
-  return [...section.querySelectorAll('.pull-state__label')].map((node) =>
+/** Every row's status line in a section, in DOM order. */
+function statusesIn(section: HTMLElement): string[] {
+  return [...section.querySelectorAll('.pull-timeline__status')].map((node) =>
     (node.textContent ?? '').trim()
   );
 }

@@ -19,15 +19,14 @@ test('Pull requests shows every open pull request as a timeline row, filters, an
   await shell.assertShellLoaded();
 
   await expect(page.getByTestId('pull-room-page')).toBeVisible();
-  // The timeline is the page: one section per repository, and inside it the
-  // newest pull request at each state of the pipeline. Both open PRs are
-  // waiting on checks, so #8 is the frontier and #7 sits behind the expander.
+  // The timeline is the page: one section per repository, and inside it one
+  // list of every pull request, furthest from done first. Both open PRs are
+  // waiting on checks, and both are in view without opening anything.
   const section = page.getByTestId('pull-repo-alice/jeryu');
   await expect(section.getByRole('link', { name: 'alice/jeryu' })).toHaveAttribute(
     'href',
     '/repos/jeryu/alice/jeryu/pulls'
   );
-  await page.getByTestId('pull-older-alice/jeryu-checks').locator('summary').click();
   const row = page.getByTestId('pull-timeline-alice/jeryu-7');
   await expect(row).toContainText('#7');
   await expect(row).toContainText('Fix BFF PR list');

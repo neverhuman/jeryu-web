@@ -1,18 +1,14 @@
 // pullRepoGroupsModel.ts — the Pull requests timeline grouped the way work is
-// actually owned: one section per repository, and inside it one row per state
-// of the pipeline, least far first.
+// actually owned: one section per repository, and inside it ONE list of rows.
 //
-// A repository's pull requests pile up at a handful of states, and between the
-// newest change at a state and the older ones there is usually nothing an
-// operator needs. So each state shows its FRONTIER — the most recent pull
-// request that has got that far — and the rest sit behind one expander. The
-// frontier rows read top to bottom as the pipeline itself: still opening,
-// waiting on checks, waiting on review, mergeable, merged, then out through
-// dev, canary, stable and production.
+// A row is a branch in flight: either shift work that has reached a branch but
+// not yet a pull request, or a pull request. Both sit on the same track —
+// Branch, then the PR's stages — so the list reads top to bottom from work
+// furthest from done to work already shipped, with no headings between states.
+// Only the tail of a long list folds away, behind one "show older" at the bottom.
 //
 // States are derived, not stored: a pull request's state is the furthest point
-// it has reached (see `pullStateOf`), which is what makes "the last one at each
-// state" well defined without the server keeping a status column.
+// it has reached (see `pullStateOf`).
 
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
@@ -53,8 +49,8 @@ export const PULL_STATE_LABELS: Record<string, string> = {
 };
 
 /**
- * Why a state exists, where the label alone would leave an operator guessing.
- * The states on the happy path need no explanation; these three do.
+ * Why a state exists, where the label alone would leave an operator guessing:
+ * the row's status carries it as a tooltip. The happy path needs none.
  */
 export const PULL_STATE_HINTS: Record<string, string> = {
   merged: 'ready for the next release',
@@ -71,39 +67,61 @@ export interface TimelineRow {
   supersededBy: number | null;
 }
 
-export interface StateRow {
-  state: PullStateId;
+/** A shift branch's rolled-up state: someone is working, it waits on a PR, or it is stuck. */
+export type BranchStatus = 'active' | 'done' | 'blocked';
+
+/**
+ * Shift work that has reached a branch but not a pull request: one row per
+ * branch, carrying the todos on it. A todo lands on its shift's branch
+ * (`nightshift/2026-09-21`), or on the family's batch branch when unscheduled.
+ * Todos still queued are the Work page's; they never make a row here.
+ */
+export interface BranchRow {
+  kind: 'branch';
+  /** `nightshift/2026-09-21`, or `batch` for unscheduled work. */
+  key: string;
   label: string;
-  /** One clause on why this state exists, or null for the happy path. */
-  hint: string | null;
-  /** The most recent pull request at this state. */
+  todos: GhostRow[];
+  status: BranchStatus;
+  /** One clause for the Branch column: "2 working", "1 needs a human". */
+  detail: string;
+}
+
+export interface PullRow {
+  kind: 'pr';
   row: TimelineRow;
-  /** The rest at the same state, newest first, behind the expander. */
-  older: TimelineRow[];
+  state: PullStateId;
+}
+
+/** A repository's rows in one list: branches, then pull requests from least far to shipped. */
+export type FlowRow = BranchRow | PullRow;
+
+export interface RepoCounts {
+  inFlight: number;
+  awaitingRelease: number;
+  released: number;
+  /** Merged, but where it shipped is unknown or never recorded. */
+  releaseUnknown: number;
+  closed: number;
 }
 
 export interface RepoGroup {
   /** `owner/name`. */
   repo: string;
   host: string;
-  /**
-   * Shift work for this repository that has not opened a pull request yet: the
-   * states before `draft`, so it leads the section rather than the page.
-   */
-  incoming: GhostRow[];
-  /** Pull requests this group covers, superseded ones excluded. */
-  total: number;
-  open: number;
-  /** One row per state the repository has work at, least far first. */
-  states: StateRow[];
-  /** How many rows the expanders hold across every state. */
-  hidden: number;
+  /** Rows shown before the one "show older" at the bottom. */
+  rows: FlowRow[];
+  /** The rest, same order, behind that expander. */
+  older: FlowRow[];
+  counts: RepoCounts;
 }
 
 export interface RepoGroupsOptions {
   ladderFor: (pr: PullRequestSummary) => ReleaseLadder;
-  /** Most `older` rows kept per state; the rest are dropped from the page. */
-  olderCap?: number;
+  /** Rows a repository shows before "show older". */
+  rowCap?: number;
+  /** Most rows a repository lists at all; the rest are dropped from the page. */
+  rowLimit?: number;
   /** Shift work with no pull request yet, to file under the repos it names. */
   ghosts?: readonly GhostGroup[];
   /**
@@ -114,15 +132,17 @@ export interface RepoGroupsOptions {
   repoKeyFor?: (repo: string) => string | null;
 }
 
-/** Older rows kept per state before the page stops listing them. */
-export const OLDER_CAP = 25;
+/** Rows a repository shows before its "show older". */
+export const ROW_CAP = 8;
+/** Rows a repository lists at all. */
+export const ROW_LIMIT = 60;
 
 export interface RepoTimeline {
   groups: RepoGroup[];
   /** Merged work that decidedly shipped nowhere: the release manifest. */
   awaitingRelease: number;
-  /** Shift rows that name no repository this page can place. */
-  unassigned: GhostRow[];
+  /** Branch rows whose todos name no repository this page can place. */
+  unassigned: BranchRow[];
   /** The queue itself is cross-repo, so it is said once, above the sections. */
   shift: { inFlight: number; queued: number; family: string | null } | null;
 }
@@ -131,7 +151,8 @@ export function buildRepoGroups(
   pulls: readonly PullRequestSummary[],
   options: RepoGroupsOptions
 ): RepoTimeline {
-  const olderCap = options.olderCap ?? OLDER_CAP;
+  const rowCap = options.rowCap ?? ROW_CAP;
+  const rowLimit = options.rowLimit ?? ROW_LIMIT;
   const rows: TimelineRow[] = pulls.map((pr) => ({
     pr,
     ladder: options.ladderFor(pr),
@@ -140,80 +161,111 @@ export function buildRepoGroups(
   }));
   linkSupersessions(rows);
 
-  const byRepo = new Map<string, TimelineRow[]>();
+  const pullsByRepo = new Map<string, PullRow[]>();
+  let awaitingRelease = 0;
   for (const row of rows) {
     // A closed pull request another one carried is a line on its successor.
     if (row.pr.state === 'closed' && row.supersededBy !== null) continue;
+    const state = pullStateOf(row);
+    if (state === 'merged') awaitingRelease += 1;
     const repo = repoOf(row.pr);
-    const existing = byRepo.get(repo);
-    if (existing) existing.push(row);
-    else byRepo.set(repo, [row]);
+    const list = pullsByRepo.get(repo) ?? [];
+    list.push({ kind: 'pr', row, state });
+    pullsByRepo.set(repo, list);
   }
 
-  const groups = new Map<string, RepoGroup>();
-  let awaitingRelease = 0;
-  for (const [repo, members] of byRepo) {
-    const grouped = new Map<PullStateId, TimelineRow[]>();
-    for (const row of members) {
-      const state = pullStateOf(row);
-      if (state === 'merged') awaitingRelease += 1;
-      const existing = grouped.get(state);
-      if (existing) existing.push(row);
-      else grouped.set(state, [row]);
-    }
-    const states: StateRow[] = [];
-    let hidden = 0;
-    for (const state of stateOrder(members)) {
-      const atState = (grouped.get(state) ?? []).sort(newestFirst);
-      const [newest, ...older] = atState;
-      if (!newest) continue;
-      const kept = older.slice(0, olderCap);
-      hidden += kept.length;
-      states.push({
-        state,
-        label: PULL_STATE_LABELS[state] ?? state,
-        hint: PULL_STATE_HINTS[state] ?? null,
-        row: newest,
-        older: kept,
-      });
-    }
-    groups.set(repo, {
+  const { branchesByRepo, unassigned, shift } = fileGhosts(options);
+  const repos = new Set([...pullsByRepo.keys(), ...branchesByRepo.keys()]);
+  const groups: RepoGroup[] = [];
+  for (const repo of repos) {
+    const prs = pullsByRepo.get(repo) ?? [];
+    const branches = branchesByRepo.get(repo) ?? [];
+    const order = stateOrder(prs.map((row) => row.row));
+    const all: FlowRow[] = [...branches, ...prs]
+      .sort((a, b) => compareFlow(a, b, order))
+      .slice(0, rowLimit);
+    groups.push({
       repo,
-      host: members[0]?.pr.repo.host ?? 'jeryu',
-      incoming: [],
-      total: members.length,
-      open: members.filter((row) => row.pr.state === 'open').length,
-      states,
-      hidden,
+      host: prs[0]?.row.pr.repo.host ?? 'jeryu',
+      rows: all.slice(0, rowCap),
+      older: all.slice(rowCap),
+      counts: countRows(branches, prs),
     });
   }
-
-  const { unassigned, shift } = fileGhosts(groups, options);
   return {
-    groups: [...groups.values()].sort(byNewestActivity),
+    groups: groups.sort(byNewestActivity),
     awaitingRelease,
     unassigned,
     shift,
   };
 }
 
+function countRows(branches: BranchRow[], prs: PullRow[]): RepoCounts {
+  const open = prs.filter((row) => OPEN_STATES.includes(row.state)).length;
+  const closed = prs.filter((row) => row.state === 'closed').length;
+  const awaiting = prs.filter((row) => row.state === 'merged').length;
+  // Merged work the page cannot place is not "released": saying so would be a
+  // claim about a release this repository may not record.
+  const unplaced = prs.filter((row) => row.state === 'unknown' || row.state === 'unrecorded').length;
+  return {
+    inFlight: branches.length + open,
+    awaitingRelease: awaiting,
+    released: prs.length - open - closed - awaiting - unplaced,
+    releaseUnknown: unplaced,
+    closed,
+  };
+}
+
+/** "3 in flight · 1 awaiting release · 82 released", zero parts left out. */
+export function countsSentence(counts: RepoCounts): string {
+  const parts: string[] = [];
+  if (counts.inFlight > 0) parts.push(`${counts.inFlight} in flight`);
+  if (counts.awaitingRelease > 0) parts.push(`${counts.awaitingRelease} awaiting release`);
+  if (counts.released > 0) parts.push(`${counts.released} released`);
+  if (counts.releaseUnknown > 0) parts.push(`${counts.releaseUnknown} merged, release unknown`);
+  if (counts.closed > 0) parts.push(`${counts.closed} closed`);
+  return parts.join(' · ') || 'nothing yet';
+}
+
 /**
- * File each shift row under every repository it names, creating a section for a
- * repository that has incoming work but no pull requests yet. A row naming
- * nothing this page can place is returned rather than dropped — untriaged work
- * is exactly what someone needs to see.
+ * One list, furthest from done first: a stuck branch, then branches being
+ * worked, then pull requests by state (draft → shipped → closed), newest first
+ * within a state.
+ */
+function compareFlow(a: FlowRow, b: FlowRow, order: PullStateId[]): number {
+  return rankOf(a, order) - rankOf(b, order) || activityOf(b).localeCompare(activityOf(a));
+}
+
+function rankOf(row: FlowRow, order: PullStateId[]): number {
+  if (row.kind === 'branch') return row.status === 'blocked' ? -2 : -1;
+  const index = order.indexOf(row.state);
+  return index === -1 ? order.length : index;
+}
+
+function activityOf(row: FlowRow): string {
+  if (row.kind === 'pr') return `${row.row.pr.updated_at}#${String(row.row.pr.number).padStart(9, '0')}`;
+  return row.key;
+}
+
+/**
+ * File each todo that has reached a branch under every repository it names,
+ * one row per branch. A todo naming nothing this page can place is returned
+ * rather than dropped — untriaged work is exactly what someone needs to see.
  *
  * The queue's own numbers stay cross-repo: they are counted once here and said
  * once above the sections, because `+12 queued` cannot be attributed to a repo.
  */
-function fileGhosts(
-  groups: Map<string, RepoGroup>,
-  options: RepoGroupsOptions
-): { unassigned: GhostRow[]; shift: RepoTimeline['shift'] } {
+function fileGhosts(options: RepoGroupsOptions): {
+  branchesByRepo: Map<string, BranchRow[]>;
+  unassigned: BranchRow[];
+  shift: RepoTimeline['shift'];
+} {
+  const branchesByRepo = new Map<string, BranchRow[]>();
   const ghostGroups = options.ghosts ?? [];
-  if (ghostGroups.length === 0) return { unassigned: [], shift: null };
+  if (ghostGroups.length === 0) return { branchesByRepo, unassigned: [], shift: null };
   const keyFor = options.repoKeyFor ?? ((repo: string) => (repo.includes('/') ? repo : null));
-  const unassigned: GhostRow[] = [];
+  const todosByRepo = new Map<string, GhostRow[]>();
+  const unplaced: GhostRow[] = [];
   let inFlight = 0;
   let queued = 0;
   let family: string | null = null;
@@ -221,26 +273,63 @@ function fileGhosts(
     queued += ghostGroup.queued;
     for (const row of ghostGroup.rows) {
       family ??= row.family;
-      if (row.status !== 'open') inFlight += 1;
-      const keys = row.repos.map(keyFor).filter((key): key is string => key !== null);
-      if (keys.length === 0) {
-        unassigned.push(row);
+      // Queued work has no branch yet: it belongs to the Work page, counted above.
+      if (row.status === 'open') {
+        queued += 1;
         continue;
       }
-      // A todo naming three repos opens a pull request in each, so it belongs
-      // in each section rather than only the first.
+      inFlight += 1;
+      const keys = row.repos.map(keyFor).filter((key): key is string => key !== null);
+      if (keys.length === 0) {
+        unplaced.push(row);
+        continue;
+      }
+      // A todo naming three repos lands on the branch in each of them.
       for (const key of new Set(keys)) {
-        const group = groups.get(key) ?? emptyGroup(key);
-        groups.set(key, group);
-        group.incoming.push(row);
+        const list = todosByRepo.get(key) ?? [];
+        list.push(row);
+        todosByRepo.set(key, list);
       }
     }
   }
-  return { unassigned, shift: { inFlight, queued, family } };
+  for (const [repo, todos] of todosByRepo) branchesByRepo.set(repo, branchRows(todos));
+  return { branchesByRepo, unassigned: branchRows(unplaced), shift: { inFlight, queued, family } };
 }
 
-function emptyGroup(repo: string): RepoGroup {
-  return { repo, host: 'jeryu', incoming: [], total: 0, open: 0, states: [], hidden: 0 };
+/** Group todos by the branch they land on, one row each. */
+export function branchRows(todos: readonly GhostRow[]): BranchRow[] {
+  const byBranch = new Map<string, GhostRow[]>();
+  for (const todo of todos) {
+    const key = branchKey(todo);
+    const list = byBranch.get(key) ?? [];
+    list.push(todo);
+    byBranch.set(key, list);
+  }
+  return [...byBranch].map(([key, members]) => branchRow(key, members));
+}
+
+function branchKey(todo: GhostRow): string {
+  return todo.kind === 'unscheduled' || !todo.date ? 'batch' : `${todo.kind}/${todo.date}`;
+}
+
+function branchRow(key: string, todos: GhostRow[]): BranchRow {
+  const stuck = todos.filter((todo) => todo.attention).length;
+  const working = todos.filter((todo) => todo.status === 'claimed').length;
+  const status: BranchStatus = stuck > 0 ? 'blocked' : working > 0 ? 'active' : 'done';
+  const detail =
+    status === 'blocked'
+      ? `${stuck} ${stuck === 1 ? 'needs' : 'need'} a human`
+      : status === 'active'
+        ? `${working} working`
+        : 'no PR yet';
+  return {
+    kind: 'branch',
+    key,
+    label: key === 'batch' ? 'batch branch' : key,
+    todos,
+    status,
+    detail,
+  };
 }
 
 /**
@@ -279,19 +368,15 @@ function channelsPresent(rows: readonly TimelineRow[]): PipId[] {
   return seen;
 }
 
-/** The release carrying a row at its deepest channel, for the state's summary. */
-export function stateRelease(stateRow: StateRow): string | null {
-  return stateRow.row.ladder.release;
-}
-
 /**
- * `In canary · v8`, or just the label. Only a state past the merge has a
- * release to name, and there the release is the new information — the label
- * already says which channel.
+ * `In canary · v8`, or just the state's label: the row's one line of status.
+ * Only a state past the merge has a release to name, and there the release is
+ * the new information — the label already says which channel.
  */
-export function stateHeading(stateRow: StateRow): string {
-  const release = stateRelease(stateRow);
-  return release ? `${stateRow.label} · ${release}` : stateRow.label;
+export function pullRowStatus(row: PullRow): string {
+  const label = PULL_STATE_LABELS[row.state] ?? row.state;
+  const release = row.row.ladder.release;
+  return release ? `${label} · ${release}` : label;
 }
 
 export function repoOf(pr: PullRequestSummary): string {
@@ -358,13 +443,10 @@ function newestFirst(a: TimelineRow, b: TimelineRow): number {
   return b.pr.updated_at.localeCompare(a.pr.updated_at) || b.pr.number - a.pr.number;
 }
 
-/**
- * Repositories with incoming shift work lead — that is the work about to
- * arrive — then the one something happened in most recently.
- */
+/** Repositories with work in flight lead, then the one something happened in most recently. */
 function byNewestActivity(a: RepoGroup, b: RepoGroup): number {
   return (
-    Number(b.incoming.length > 0) - Number(a.incoming.length > 0) ||
+    Number(b.counts.inFlight > 0) - Number(a.counts.inFlight > 0) ||
     lastActivity(b).localeCompare(lastActivity(a)) ||
     a.repo.localeCompare(b.repo)
   );
@@ -372,10 +454,8 @@ function byNewestActivity(a: RepoGroup, b: RepoGroup): number {
 
 function lastActivity(group: RepoGroup): string {
   let newest = '';
-  for (const state of group.states) {
-    for (const row of [state.row, ...state.older]) {
-      if (row.pr.updated_at > newest) newest = row.pr.updated_at;
-    }
+  for (const row of [...group.rows, ...group.older]) {
+    if (row.kind === 'pr' && row.row.pr.updated_at > newest) newest = row.row.pr.updated_at;
   }
   return newest;
 }
