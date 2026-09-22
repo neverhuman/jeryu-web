@@ -106,7 +106,7 @@ describe('releaseLadder', () => {
     expect(ladder.furthest).toBeNull();
     expect(ladder.uncertain).toBe(false);
     expect(ladderReach(ladder)).toBe('pending');
-    expect(ladderDetail(ladder, 'merged')).toBe('awaiting dev');
+    expect(ladderDetail(ladder, 'merged')).toBe('next release');
   });
 
   it('will not call a capped compare released', () => {

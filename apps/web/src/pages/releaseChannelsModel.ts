@@ -223,8 +223,9 @@ export function ladderDetail(ladder: ReleaseLadder, state: string): string {
       : label;
   }
   if (ladder.uncertain) return 'release unknown';
-  const shallowest = ladder.pips[0];
-  return shallowest ? `awaiting ${shallowest.label}` : 'unreleased';
+  // Not "awaiting <release>": a pip names the release a channel runs NOW,
+  // which is exactly the one this change is not in.
+  return 'next release';
 }
 
 /**

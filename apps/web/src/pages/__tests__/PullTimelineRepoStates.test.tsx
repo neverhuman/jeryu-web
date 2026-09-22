@@ -52,39 +52,58 @@ describe('the Pull requests timeline', () => {
     ]);
   });
 
-  it('keeps every row at the same state in view, with no per-state expander', () => {
+  it('shows the newest row at a state only a release moves, with how many wait behind it', async () => {
     const ladders = new Map<number, ReleaseLadder>([
-      [10, ladder('dev', 'v9')],
-      [11, ladder('dev', 'v9')],
-      [12, ladder('dev', 'v9')],
+      [10, ladder(null)],
+      [11, ladder(null)],
+      [12, ladder(null)],
+      [13, ladder('production', 'v6')],
+      [14, ladder('production', 'v6')],
     ]);
     render(
       [
         pull(10, 'merged', { updated: '2026-09-10T00:00:00Z' }),
         pull(11, 'merged', { updated: '2026-09-19T00:00:00Z' }),
         pull(12, 'merged', { updated: '2026-09-15T00:00:00Z' }),
+        pull(13, 'merged', { updated: '2026-09-05T00:00:00Z' }),
+        pull(14, 'merged', { updated: '2026-09-06T00:00:00Z' }),
       ],
       (pr) => ladders.get(pr.number) ?? ladder(null)
     );
-    for (const number of [11, 12, 10]) {
-      expect(screen.getByTestId(`pull-timeline-jeryu/jeryu-web-${number}`)).toBeVisible();
+    // #11 stands for the three waiting; #14 is what prod runs.
+    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-11')).toBeVisible();
+    expect(screen.getByTestId('pull-waiting-jeryu/jeryu-web-11')).toHaveTextContent('+ 2 more waiting');
+    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-14')).toBeVisible();
+    for (const number of [12, 10, 13]) {
+      expect(screen.getByTestId(`pull-timeline-jeryu/jeryu-web-${number}`)).not.toBeVisible();
     }
-    expect(screen.queryByText(/older at this state/)).not.toBeInTheDocument();
-    expect(screen.queryByTestId('pull-older-jeryu/jeryu-web')).not.toBeInTheDocument();
+    const history = screen.getByTestId('pull-older-jeryu/jeryu-web');
+    expect(history).toHaveTextContent('History (3)');
+    await userEvent.click(within(history).getByText('History (3)'));
+    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-13')).toBeVisible();
   });
 
-  it('folds only the tail of a long repository behind one "show older"', async () => {
-    const pulls = Array.from({ length: 11 }, (_, index) =>
-      pull(100 + index, 'merged', { updated: `2026-09-${String(10 + index)}T00:00:00Z` })
+  it('says prod once: only the newest row an environment runs carries its pill', () => {
+    render(
+      [
+        pull(20, 'merged', { updated: '2026-09-19T00:00:00Z' }),
+        pull(21, 'merged', { updated: '2026-09-10T00:00:00Z' }),
+      ],
+      () => ladder('production', 'v6')
     );
-    render(pulls, () => ladder('production', 'v6'));
-    const older = screen.getByTestId('pull-older-jeryu/jeryu-web');
-    expect(older).toHaveTextContent('Show 3 older');
-    // Newest eight are the list; the three oldest wait at the bottom.
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-110')).toBeVisible();
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-100')).not.toBeVisible();
-    await userEvent.click(within(older).getByText('Show 3 older'));
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-100')).toBeVisible();
+    expect(screen.getAllByTestId(/^pull-ladder-.*-production$/)).toHaveLength(1);
+    expect(pip('jeryu/jeryu-web-20', 'production')).toBe('in');
+    // The pill is the environment alone, not the whole ladder.
+    expect(screen.queryByTestId('pull-ladder-jeryu/jeryu-web-20-dev')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pull-ladder-jeryu/jeryu-web-21')).not.toBeInTheDocument();
+  });
+
+  it('says a merged row has passed open and mergeable, and names failing checks as of the merge', () => {
+    render([pull(30, 'merged', { checks: { failing: 2 } })], () => ladder(null));
+    expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-opened')).not.toHaveTextContent('open');
+    expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-mergeable')).not.toHaveTextContent('merged');
+    expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-checks')).toHaveTextContent('2 failing at merge');
+    expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-released')).toHaveTextContent('next release');
   });
 
   it('separates repositories, newest activity first', () => {
@@ -102,10 +121,9 @@ describe('the Pull requests timeline', () => {
     ]);
   });
 
-  it('keeps the release ladder on each row and reads an unknown release as unknown', () => {
+  it('names where a merged row is, and reads an unknown release as unknown', () => {
     render([pull(40, 'merged')], (pr) => (pr.number === 40 ? ladder('canary', 'v8') : ladder(null)));
     expect(pip('jeryu/jeryu-web-40', 'canary')).toBe('in');
-    expect(pip('jeryu/jeryu-web-40', 'stable')).toBe('out');
     expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-40-released')).toHaveTextContent(
       'canary · v8'
     );

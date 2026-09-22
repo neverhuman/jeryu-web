@@ -109,7 +109,9 @@ describe('buildRepoGroups', () => {
     );
     expect(groups).toHaveLength(1);
     expect(groups[0]?.repo).toBe('jeryu/jeryu-web');
-    expect(numbers(groups[0]?.rows ?? [])).toEqual([33, 34, 30, 31, 32, 35]);
+    expect(numbers(groups[0]?.rows ?? [])).toEqual([33, 34, 30, 31, 32]);
+    // Closed work never moves again: it is history, not a row.
+    expect(numbers(groups[0]?.older ?? [])).toEqual([35]);
     expect(
       (groups[0]?.rows ?? []).map((r) => (r.kind === 'pr' ? pullRowStatus(r) : r.label))
     ).toEqual([
@@ -118,36 +120,51 @@ describe('buildRepoGroups', () => {
       'Merged · not yet released',
       'In dev · v9',
       'In prod · v6',
-      'Closed',
     ]);
   });
 
-  it('keeps every row at a state in the list, newest first — nothing folds per state', () => {
+  it('keeps in-flight work in view and one row for each state only a release moves', () => {
     ladders.clear();
-    for (const number of [40, 41, 42]) ladders.set(number, ladder('dev', 'v9'));
+    for (const number of [40, 41, 42]) ladders.set(number, ladder(null));
+    for (const number of [43, 44]) ladders.set(number, ladder('production', 'v6'));
+    ladders.set(45, ladder('dev', 'v9'));
     const { groups } = buildRepoGroups(
       [
+        pull(38, 'open', { checks: { failing: 1 } }),
+        pull(39, 'open', { checks: { failing: 1 }, updated: '2026-09-11T00:00:00Z' }),
         pull(40, 'merged', { updated: '2026-09-10T00:00:00Z' }),
         pull(41, 'merged', { updated: '2026-09-19T00:00:00Z' }),
         pull(42, 'merged', { updated: '2026-09-15T00:00:00Z' }),
+        pull(43, 'merged', { updated: '2026-09-08T00:00:00Z' }),
+        pull(44, 'merged', { updated: '2026-09-09T00:00:00Z' }),
+        pull(45, 'merged', { updated: '2026-09-09T00:00:00Z' }),
+        pull(46, 'closed'),
       ],
       { ladderFor }
     );
-    expect(numbers(groups[0]?.rows ?? [])).toEqual([41, 42, 40]);
-    expect(groups[0]?.older).toEqual([]);
+    const group = groups[0]!;
+    // Both open PRs can stall on their own, so both show; merged work shows its
+    // newest per state — #41 for the three waiting, #45 in dev, #44 in prod.
+    expect(numbers(group.rows)).toEqual([38, 39, 41, 45, 44]);
+    expect(numbers(group.older)).toEqual([42, 40, 43, 46]);
+    const waiting = group.rows[2];
+    expect(waiting?.kind === 'pr' && [waiting.frontier, waiting.alsoWaiting]).toEqual([true, 2]);
+    const prod = group.rows[4];
+    expect(prod?.kind === 'pr' && [prod.frontier, prod.alsoWaiting]).toEqual([true, 0]);
+    // Open rows are never a frontier: they carry no pill and stand for nothing.
+    expect(group.rows[0]?.kind === 'pr' && group.rows[0].frontier).toBe(false);
   });
 
-  it('folds only the tail of a long list, and stops listing past the limit', () => {
+  it('stops listing past the limit but counts everything', () => {
     ladders.clear();
     const pulls: PullRequestSummary[] = [];
     for (let number = 100; number < 110; number += 1) {
       ladders.set(number, ladder('production', 'v6'));
       pulls.push(pull(number, 'merged', { updated: `2026-09-1${number % 10}T00:00:00Z` }));
     }
-    const { groups } = buildRepoGroups(pulls, { ladderFor, rowCap: 3, rowLimit: 7 });
-    expect(numbers(groups[0]?.rows ?? [])).toEqual([109, 108, 107]);
-    expect(numbers(groups[0]?.older ?? [])).toEqual([106, 105, 104, 103]);
-    // The count still tells the truth about how many there are in total.
+    const { groups } = buildRepoGroups(pulls, { ladderFor, rowLimit: 7 });
+    expect(numbers(groups[0]?.rows ?? [])).toEqual([109]);
+    expect(numbers(groups[0]?.older ?? [])).toEqual([108, 107, 106, 105, 104, 103]);
     expect(groups[0]?.counts.released).toBe(10);
   });
 

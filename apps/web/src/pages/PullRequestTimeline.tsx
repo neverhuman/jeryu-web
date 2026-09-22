@@ -22,8 +22,9 @@ import './PullRoomPage.css';
  * One section per repository, and inside it one unbroken list: every branch in
  * flight on the same track. A branch that has not opened a pull request yet
  * fills the Branch column; a pull request carries on through the PR stages. The
- * list runs from work furthest from done down to what production runs, and only
- * its tail folds away, behind one "show older" at the bottom.
+ * list runs from work furthest from done down to what production runs. Work
+ * that only a release will move is one row per state — the newest, standing for
+ * the rest — and everything it stands for folds into one History at the bottom.
  *
  * Queued todos have no branch yet and belong to the Work page; only the queue's
  * numbers are said here, once, above the sections.
@@ -117,7 +118,7 @@ function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean 
       </ol>
       {group.older.length > 0 ? (
         <details className="pull-repo__older" data-testid={`pull-older-${group.repo}`}>
-          <summary>Show {group.older.length} older</summary>
+          <summary>History ({group.older.length})</summary>
           <ol className="pull-timeline__rows">
             {group.older.map((row) => (
               <FlowRowView key={flowKey(row)} row={row} repo={group.repo} showRepo={showRepo} />
@@ -177,6 +178,12 @@ function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JS
           >
             {pullRowStatus(row)}
           </span>{' '}
+          {row.alsoWaiting > 0 ? (
+            <span className="pull-timeline__waiting" data-testid={`pull-waiting-${id}`}>
+              {' '}
+              + {row.alsoWaiting} more waiting
+            </span>
+          ) : null}{' '}
           · <code>{pr.head_ref}</code> · {pr.author}
           {supersedes.length > 0 ? (
             <span className="pull-timeline__supersedes">
@@ -206,7 +213,9 @@ function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JS
               <span className="pull-timeline__sr">{stage.label}: </span>
               {stage.detail}
             </span>
-            {stage.id === 'released' ? <Ladder ladder={ladder} rowId={id} /> : null}
+            {stage.id === 'released' && row.frontier ? (
+              <EnvironmentPill ladder={ladder} state={row.state} rowId={id} />
+            ) : null}
           </li>
         ))}
       </ol>
@@ -270,23 +279,34 @@ function BranchRowView({ row, scope }: { row: BranchRow; scope: string }): JSX.E
   );
 }
 
-/** dev · canary · stable · prod, filled as far as the change has got. */
-function Ladder({ ladder, rowId: id }: { ladder: ReleaseLadder; rowId: string }): JSX.Element | null {
-  if (ladder.pips.length === 0) return null;
+/**
+ * The environment this row marks, said once: history is linear, so the newest
+ * PR an environment runs stands for every PR merged before it, and only that
+ * row carries the pill. A tag-released repository needs none — the Released
+ * stage already names the tag.
+ */
+function EnvironmentPill({
+  ladder,
+  state,
+  rowId: id,
+}: {
+  ladder: ReleaseLadder;
+  state: string;
+  rowId: string;
+}): JSX.Element | null {
+  const pip = ladder.kind === 'channels' ? ladder.pips.find((p) => p.id === state) : undefined;
+  if (!pip) return null;
   return (
     <ol className="pull-ladder" data-testid={`pull-ladder-${id}`}>
-      {ladder.pips.map((pip) => (
-        <li
-          key={pip.id}
-          className={`pull-ladder__pip is-${pip.membership}`}
-          data-testid={`pull-ladder-${id}-${pip.id}`}
-          data-membership={pip.membership}
-          title={pipTitle(pip.label, pip.membership, pip.release)}
-        >
-          <span aria-hidden="true" className="pull-ladder__dot" />
-          <span className="pull-ladder__label">{pip.label}</span>
-        </li>
-      ))}
+      <li
+        className={`pull-ladder__pip is-${pip.membership}`}
+        data-testid={`pull-ladder-${id}-${pip.id}`}
+        data-membership={pip.membership}
+        title={pipTitle(pip.label, pip.membership, pip.release)}
+      >
+        <span aria-hidden="true" className="pull-ladder__dot" />
+        <span className="pull-ladder__label">{pip.label}</span>
+      </li>
     </ol>
   );
 }

@@ -5,7 +5,10 @@
 // not yet a pull request, or a pull request. Both sit on the same track —
 // Branch, then the PR's stages — so the list reads top to bottom from work
 // furthest from done to work already shipped, with no headings between states.
-// Only the tail of a long list folds away, behind one "show older" at the bottom.
+// Rows that only a release will move are not listed one by one: the newest
+// merged-not-released PR stands for the rest, and the newest PR each
+// environment runs stands for everything below it (history is linear). The
+// rest folds into one "History" at the bottom.
 //
 // States are derived, not stored: a pull request's state is the furthest point
 // it has reached (see `pullStateOf`).
@@ -28,6 +31,9 @@ export type PullStateId =
 
 /** The open states, before anything has merged. */
 const OPEN_STATES: PullStateId[] = ['draft', 'checks', 'review', 'mergeable'];
+
+/** Merged, but in no environment the page knows of: they wait together. */
+const WAITING_STATES: PullStateId[] = ['merged', 'unknown', 'unrecorded'];
 
 /** States after the channels: cannot be placed, then work that will never move. */
 const TAIL_STATES: PullStateId[] = ['unknown', 'unrecorded', 'closed'];
@@ -91,6 +97,13 @@ export interface PullRow {
   kind: 'pr';
   row: TimelineRow;
   state: PullStateId;
+  /**
+   * The newest row at a state only a release moves (merged, or an
+   * environment): it stands for the rest, and carries the environment's pill.
+   */
+  frontier: boolean;
+  /** On a not-yet-released frontier: how many more merged PRs wait with it. */
+  alsoWaiting: number;
 }
 
 /** A repository's rows in one list: branches, then pull requests from least far to shipped. */
@@ -109,17 +122,15 @@ export interface RepoGroup {
   /** `owner/name`. */
   repo: string;
   host: string;
-  /** Rows shown before the one "show older" at the bottom. */
+  /** In flight, plus one row per state only a release moves. */
   rows: FlowRow[];
-  /** The rest, same order, behind that expander. */
+  /** Everything those rows stand for, and closed work: the History expander. */
   older: FlowRow[];
   counts: RepoCounts;
 }
 
 export interface RepoGroupsOptions {
   ladderFor: (pr: PullRequestSummary) => ReleaseLadder;
-  /** Rows a repository shows before "show older". */
-  rowCap?: number;
   /** Most rows a repository lists at all; the rest are dropped from the page. */
   rowLimit?: number;
   /** Shift work with no pull request yet, to file under the repos it names. */
@@ -132,8 +143,6 @@ export interface RepoGroupsOptions {
   repoKeyFor?: (repo: string) => string | null;
 }
 
-/** Rows a repository shows before its "show older". */
-export const ROW_CAP = 8;
 /** Rows a repository lists at all. */
 export const ROW_LIMIT = 60;
 
@@ -151,7 +160,6 @@ export function buildRepoGroups(
   pulls: readonly PullRequestSummary[],
   options: RepoGroupsOptions
 ): RepoTimeline {
-  const rowCap = options.rowCap ?? ROW_CAP;
   const rowLimit = options.rowLimit ?? ROW_LIMIT;
   const rows: TimelineRow[] = pulls.map((pr) => ({
     pr,
@@ -170,7 +178,7 @@ export function buildRepoGroups(
     if (state === 'merged') awaitingRelease += 1;
     const repo = repoOf(row.pr);
     const list = pullsByRepo.get(repo) ?? [];
-    list.push({ kind: 'pr', row, state });
+    list.push({ kind: 'pr', row, state, frontier: false, alsoWaiting: 0 });
     pullsByRepo.set(repo, list);
   }
 
@@ -184,11 +192,12 @@ export function buildRepoGroups(
     const all: FlowRow[] = [...branches, ...prs]
       .sort((a, b) => compareFlow(a, b, order))
       .slice(0, rowLimit);
+    const { rows: shown, older } = foldSettled(all);
     groups.push({
       repo,
       host: prs[0]?.row.pr.repo.host ?? 'jeryu',
-      rows: all.slice(0, rowCap),
-      older: all.slice(rowCap),
+      rows: shown,
+      older,
       counts: countRows(branches, prs),
     });
   }
@@ -198,6 +207,35 @@ export function buildRepoGroups(
     unassigned,
     shift,
   };
+}
+
+/**
+ * What stays in view: every row that can still move on its own (a branch, an
+ * open pull request), and ONE row for each state that only a release moves —
+ * the newest merged-not-released PR, and the newest PR each environment runs.
+ * History is linear, so an environment's newest PR stands for everything
+ * merged before it; the rest, and closed work, fold into history.
+ */
+function foldSettled(all: FlowRow[]): { rows: FlowRow[]; older: FlowRow[] } {
+  const rows: FlowRow[] = [];
+  const older: FlowRow[] = [];
+  const lead = new Map<PullStateId, PullRow>();
+  for (const row of all) {
+    if (row.kind === 'branch' || OPEN_STATES.includes(row.state)) {
+      rows.push(row);
+      continue;
+    }
+    const first = lead.get(row.state);
+    if (row.state === 'closed' || first) {
+      if (first && WAITING_STATES.includes(row.state)) first.alsoWaiting += 1;
+      older.push(row);
+      continue;
+    }
+    row.frontier = true;
+    lead.set(row.state, row);
+    rows.push(row);
+  }
+  return { rows, older };
 }
 
 function countRows(branches: BranchRow[], prs: PullRow[]): RepoCounts {

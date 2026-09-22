@@ -55,11 +55,14 @@ export function pullStages(pr: PullRequestSummary, ladder?: ReleaseLadder): Pull
   if (pr.state === 'merged') {
     const settled = (status: PullStageStatus): PullStageStatus =>
       status === 'pending' || status === 'active' ? 'skipped' : status;
+    // Past the merge, "open" and "mergeable" are history, not status: they are
+    // simply passed. Checks keep their verdict, said as of the merge.
+    const checks = settled(checksStage(pr));
     return [
-      stage('opened', 'done', 'open'),
-      stage('checks', settled(checksStage(pr)), checksDetail(pr)),
+      stage('opened', 'done', ''),
+      stage('checks', checks, checks === 'blocked' ? `${checksDetail(pr)} at merge` : checksDetail(pr)),
       stage('review', settled(reviewStage(pr)), reviewDetail(pr)),
-      stage('mergeable', 'done', 'merged'),
+      stage('mergeable', 'done', ''),
       stage('merged', 'done', 'merged'),
       releaseStage(pr, ladder),
     ];

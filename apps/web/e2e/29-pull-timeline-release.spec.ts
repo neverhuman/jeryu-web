@@ -73,15 +73,14 @@ test('The timeline lists each repository as one run of rows, furthest from done 
   // Seven rows fit: nothing is folded.
   await expect(page.getByTestId('pull-older-alice/jeryu')).toHaveCount(0);
 
-  // The released stage is a ladder: filled as far as the change has got.
+  // Each environment's pill is said once, on the newest row it runs: #9 marks
+  // stable and carries only that pill, not the whole ladder.
   await expect(page.getByTestId('pull-ladder-alice/jeryu-9-stable')).toHaveAttribute(
     'data-membership',
     'in'
   );
-  await expect(page.getByTestId('pull-ladder-alice/jeryu-9-production')).toHaveAttribute(
-    'data-membership',
-    'out'
-  );
+  await expect(page.getByTestId('pull-ladder-alice/jeryu-9-production')).toHaveCount(0);
+  await expect(section.locator('[data-testid$="-production"].pull-ladder__pip')).toHaveCount(1);
   await expect(page.getByTestId('pull-stage-alice/jeryu-9-released')).toContainText('stable · v7');
 
   // The page says how big the release manifest is.
@@ -128,6 +127,11 @@ test('A repository that records no release says so instead of calling merged wor
     'title',
     'no deployment and no release tag'
   );
+  // The newest stands for the five, which only a release would move; the other
+  // four are history.
+  await expect(page.getByTestId('pull-waiting-alice/jeryu-9')).toHaveText(' + 4 more waiting');
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeHidden();
+  await page.getByTestId('pull-older-alice/jeryu').locator('summary').click();
   await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeVisible();
 
   // Still folded into its successor, release history or not.
