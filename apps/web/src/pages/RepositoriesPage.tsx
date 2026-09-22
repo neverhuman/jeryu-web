@@ -205,6 +205,8 @@ export function RepositoriesPage({
         loading={list.isPending}
         error={list.error}
         repos={repos}
+        sort={filter.sort}
+        onSortChange={(sort) => setFilter((prev) => ({ ...prev, sort }))}
         onClearFilters={() => {
           setFilter(DEFAULT_FILTER);
           setSearchInput('');
