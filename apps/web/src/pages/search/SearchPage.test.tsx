@@ -23,10 +23,23 @@ const jeryu = {
 };
 const jeryuWeb = { id: { host: 'jeryu', owner: 'fam', name: 'jeryu-web' }, description: null };
 
-const repoState = vi.hoisted(() => ({
-  search: null as null | ((query: { search?: string }) => RepoResult),
-  calls: [] as { query: { search?: string }; enabled?: boolean }[],
-}));
+interface RepoQuery {
+  search?: string;
+}
+
+interface RepoCall {
+  query: RepoQuery;
+  enabled?: boolean;
+}
+
+interface RepoState {
+  search: ((query: RepoQuery) => RepoResult) | null;
+  calls: RepoCall[];
+}
+
+// Declared, not cast: an `as` on the initialiser types the boundary by
+// assertion, which is the shape the auditor reads as an any-boundary.
+const repoState = vi.hoisted((): RepoState => ({ search: null, calls: [] }));
 
 vi.mock('../../hooks/useRepositories', () => ({
   useRepositories: (query: { search?: string }, options?: { enabled?: boolean }) => {
