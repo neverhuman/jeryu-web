@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   busySparkline,
+  groupLive,
   liveFamilyCounts,
+  nightWindow,
   todoFamily,
   todosOfFamily,
   workersLine,
@@ -67,5 +69,54 @@ describe('workPageModel', () => {
     expect(busySparkline(points, 100, 20)).toBe('0.0,20.0 50.0,10.0 100.0,0.0');
     expect(busySparkline(points.slice(0, 1), 100, 20)).toBe('');
     expect(busySparkline([], 100, 20)).toBe('');
+  });
+
+  it('separates queued todos from those in progress and those waiting on a human', () => {
+    const groups = groupLive([
+      todo({ id: 'q', status: 'open', attempts: 0 }),
+      todo({ id: 'c', status: 'claimed' }),
+      todo({ id: 'l', status: 'open', lease_live: true }),
+      todo({ id: 'b', status: 'blocked' }),
+      todo({ id: 'h', status: 'handoff' }),
+    ]);
+    expect(groups.map((g) => [g.title, g.todos.map((t) => t.id)])).toEqual([
+      ['Waiting on a human', ['b', 'h']],
+      ['In progress', ['c', 'l']],
+      ['Queued', ['q']],
+    ]);
+    expect(groupLive([todo({ id: 'q', status: 'open' })]).map((g) => g.key)).toEqual(['queued']);
+  });
+
+  it('says whether the night window is open, in the schedule zone', () => {
+    const schedule = {
+      always: 0,
+      day: { hours: '07:00-22:00', slots: 1 },
+      night: { hours: '22:00-07:00', slots: 4 },
+      tz: 'America/Los_Angeles',
+    };
+    const workers = WORKERS.workers.map((w) => ({ ...w, schedule }));
+    const todos = [
+      todo({ id: 'n1', mode: 'night', status: 'open' }),
+      todo({ id: 'n2', mode: 'night', status: 'open' }),
+      todo({ id: 'n3', mode: 'now', status: 'open' }),
+    ];
+    // 16:00 in Los Angeles (PDT, UTC-7): closed, and two night todos wait for it.
+    const closed = nightWindow(workers, todos, new Date('2026-09-21T23:00:00Z'));
+    expect(closed).toMatchObject({ open: false, waiting: 2 });
+    expect(closed?.text).toBe(
+      'night window closed (22:00–07:00 America/Los_Angeles) · 2 night todos wait for it'
+    );
+    // 23:30 and 06:59 local are inside a window that crosses midnight; 07:00 is not.
+    expect(nightWindow(workers, todos, new Date('2026-09-22T06:30:00Z'))?.open).toBe(true);
+    expect(nightWindow(workers, todos, new Date('2026-09-22T13:59:00Z'))?.open).toBe(true);
+    expect(nightWindow(workers, todos, new Date('2026-09-22T14:00:00Z'))?.open).toBe(false);
+    expect(nightWindow(workers, [], new Date('2026-09-22T06:30:00Z'))?.text).toBe(
+      'night window open (22:00–07:00 America/Los_Angeles)'
+    );
+    // No schedule reported, or one that cannot be read: say nothing rather than guess.
+    expect(nightWindow(WORKERS.workers.map((w) => ({ ...w, schedule: null })), todos, new Date())).toBeNull();
+    expect(
+      nightWindow(workers.map((w) => ({ ...w, schedule: { ...schedule, night: { hours: 'nights', slots: 4 } } })), todos, new Date())
+    ).toBeNull();
   });
 });

@@ -45,8 +45,12 @@ describe('ShiftQueuePage', () => {
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy'
     );
-    // One table for what is live, one folded away for what is finished.
-    expect(screen.getAllByRole('columnheader', { name: 'Cost' })).toHaveLength(2);
+    // Live todos stand in one table per state (queued is not in progress), finished fold away.
+    expect(screen.getByRole('heading', { name: /^In progress · \d+$/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Queued · \d+$/ })).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader', { name: 'Cost' }).length).toBeGreaterThan(2);
+    // Only the table that holds landed commits has a Commits column.
+    expect(screen.getAllByRole('columnheader', { name: 'Commits' })).toHaveLength(1);
     expect(screen.getByTestId('shift-finished-todos')).toContainElement(done);
     expect(screen.queryByRole('columnheader', { name: 'Requested by' })).toBeNull();
     expect(within(done).getByText('$1.25')).toBeInTheDocument();
@@ -309,7 +313,10 @@ describe('ShiftQueuePage', () => {
     // All families by default: three live rows, each led by its family pill.
     const jain = await screen.findByTestId('shift-todo-n-1');
     expect(screen.getByTestId('shift-todo-j-1')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'In progress · 3' })).toBeInTheDocument();
+    // Two open todos are queued, not in progress; the blocked one waits on a human.
+    expect(screen.getByRole('heading', { name: 'Queued · 2' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Waiting on a human · 1' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^In progress/ })).toBeNull();
     const strip = screen.getByRole('group', { name: 'Filter by family' });
     expect(within(strip).getByRole('button', { name: /^All 3$/ })).toHaveAttribute('aria-pressed', 'true');
     expect(within(strip).getByRole('button', { name: /^jeryu 2$/ })).toBeInTheDocument();
@@ -323,7 +330,8 @@ describe('ShiftQueuePage', () => {
     // The pill at the far left of a row filters the whole page to that family.
     fireEvent.click(within(jain).getByRole('button', { name: 'Show only jain' }));
     expect(screen.queryByTestId('shift-todo-j-1')).toBeNull();
-    expect(screen.getByRole('heading', { name: 'In progress · 1' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Waiting on a human · 1' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^Queued/ })).toBeNull();
     expect(within(strip).getByRole('button', { name: /^jain 1$/ })).toHaveAttribute('aria-pressed', 'true');
     await waitFor(() =>
       expect(screen.getAllByTestId('shift-branch-nightshift/2026-09-18')).toHaveLength(1)
