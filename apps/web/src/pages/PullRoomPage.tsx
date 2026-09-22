@@ -156,22 +156,25 @@ export function PullRoomPage(): JSX.Element {
 
   /**
    * A todo names its repos bare (`jeryu-web`); a section is keyed `owner/name`.
-   * Two repositories can share a name under different owners, so a repository
-   * this page is already showing wins over one it is not.
+   * Two repositories can share a name under different owners, so one that
+   * holds a pull request wins over one that merely exists. The repositories
+   * asked for their lists cannot break the tie any more: with a history filter
+   * that is every repository in scope, which would make the winner whichever
+   * sorted last.
    */
   const repoKeyFor = useMemo(() => {
     const byName = new Map<string, string>();
+    for (const full of repoOptions(items)) {
+      const name = full.split('/')[1];
+      if (name && !byName.has(name)) byName.set(name, full);
+    }
     for (const member of repositories.data?.repositories ?? []) {
       const full = `${member.id.owner}/${member.id.name}`;
       if (!byName.has(member.id.name)) byName.set(member.id.name, full);
     }
-    for (const full of wanted.repos) {
-      const name = full.split('/')[1];
-      if (name) byName.set(name, full);
-    }
     return (repo: string): string | null =>
       repo.includes('/') ? repo : byName.get(repo) ?? null;
-  }, [repositories.data, wanted.repos]);
+  }, [repositories.data, items]);
 
   // Shift work that has not opened a pull request yet, filed under its repo.
   const todos = useShiftTodos(undefined);
