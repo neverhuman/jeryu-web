@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
-import { IntelligencePage } from '../IntelligencePage';
+import { IntelligencePage, snapshotState } from '../IntelligencePage';
 import { CONTROL_PLANE_QUERY_KEY } from '../../hooks/useControlPlane';
 import type {
   ControlPlaneSnapshot,
@@ -28,6 +28,23 @@ function renderIntelligence(snapshot: ControlPlaneSnapshot): void {
     </QueryClientProvider>
   );
 }
+
+describe('snapshotState', () => {
+  it('is fresh only when every displayed source is fresh', () => {
+    const base = sampleSnapshot();
+    expect(snapshotState(base)).toBe('missing');
+    const fresh: ControlPlaneSnapshot = {
+      ...base,
+      mirror: { ...base.mirror, state: 'fresh' },
+      artifacts: { ...base.artifacts, state: 'fresh' },
+      mcp: { ...base.mcp, state: 'fresh' },
+      codegraph: { ...base.codegraph, state: 'fresh' },
+      agentRuns: [{} as ControlPlaneSnapshot['agentRuns'][number]],
+    };
+    expect(snapshotState(fresh)).toBe('fresh');
+    expect(snapshotState({ ...fresh, mcp: { ...fresh.mcp, state: 'failed' } })).toBe('failed');
+  });
+});
 
 describe('IntelligencePage', () => {
   it('renders absence evidence, graph clusters and tool dossiers, and leaves priorities to Needs you', () => {
@@ -55,6 +72,8 @@ describe('IntelligencePage', () => {
     expect(screen.getByTestId('tool-build-dossiers')).toHaveTextContent(
       'tb-routing'
     );
+    // Sources are missing, so the header must not claim the snapshot is fresh.
+    expect(screen.getByTestId('intelligence-snapshot-state')).toHaveTextContent('snapshot: missing');
     expect(screen.getByText('Mirror evidence')).toBeInTheDocument();
     expect(
       screen.getAllByText(/GitHub mirror evidence unavailable/i).length
