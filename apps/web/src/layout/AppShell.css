@@ -10,6 +10,7 @@
   grid-template-rows: var(--app-header-height) 1fr auto auto;
   grid-template-columns: var(--app-leftnav-width) minmax(0, 1fr);
   min-height: 100vh;
+  padding-bottom: var(--app-status-height);
 }
 
 :root {
@@ -21,6 +22,9 @@
 .app-shell__header {
   grid-area: header;
   z-index: var(--z-sticky);
+  /* The document scrolls, so the header pins itself to stay in view. */
+  position: sticky;
+  top: 0;
 }
 
 .app-shell__leftnav {
@@ -29,7 +33,12 @@
   background-color: var(--color-bg-1);
   overflow-y: auto;
   overflow-x: hidden;
-  position: relative;
+  /* Pinned under the header for the same reason, and never taller than the
+     space left beside it. */
+  position: sticky;
+  top: var(--app-header-height);
+  align-self: start;
+  height: calc(100vh - var(--app-header-height) - var(--app-status-height));
   transition: width 0.2s ease, min-width 0.2s ease;
 }
 
@@ -98,11 +107,8 @@
 
 .app-shell__main {
   grid-area: main;
-  /* The scrollbar is always there, so a page that grows past the fold (or a
-     list that loads) never shifts the layout sideways. */
-  overflow-x: auto;
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
+  /* No scroll container here: the document scrolls (see `html` in app.css), so
+     there is one vertical scrollbar on the page instead of two. */
   background-color: var(--color-bg-0);
 }
 
@@ -111,6 +117,12 @@
 .app-shell__status {
   grid-area: status;
   z-index: var(--z-sticky);
+  /* Out of flow at the foot of the viewport; `.app-shell` reserves its height
+     so the last row of content is never underneath it. */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 @media (max-width: 1024px) {

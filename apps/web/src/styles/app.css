@@ -95,6 +95,10 @@ hr {
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* The document owns the one vertical scrollbar, and keeps it even on a page
+     that fits: navigating between a short and a long page never shifts the
+     content sideways. */
+  overflow-y: scroll;
 }
 
 body {
