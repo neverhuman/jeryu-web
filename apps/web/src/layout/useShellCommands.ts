@@ -107,8 +107,9 @@ export function useShellCommands(): void {
       },
       {
         id: 'nav.settings',
-        title: 'Go to Admin Settings',
-        keywords: ['settings', 'admin', 'preferences'],
+        // The nav calls this page Settings; the palette says the same name.
+        title: 'Go to Settings',
+        keywords: ['settings', 'admin', 'preferences', 'account'],
         icon: 'cog',
         target: { kind: 'route', path: '/settings' },
         shortcut: 'g s',

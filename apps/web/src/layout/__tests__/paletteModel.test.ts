@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  paletteScore,
   parsePullQuery,
   pullTargets,
   repoFrontPage,
   repositoryTargets,
+  SEARCH_ALL_VALUE,
   type RepositoryRow,
 } from '../paletteModel';
 
@@ -57,5 +59,45 @@ describe('paletteModel', () => {
     ]);
     expect(pullTargets('nope#1', repos)).toEqual([]);
     expect(pullTargets('jeryu-web', repos)).toEqual([]);
+  });
+});
+
+describe('paletteScore', () => {
+  const WORK = ['work', 'shift', 'queue', 'todo', 'todoq', 'tasks', 'workers', 'slots'];
+  const SETTINGS = ['settings', 'admin', 'preferences', 'account'];
+
+  it('keeps everything while nothing is typed', () => {
+    expect(paletteScore('Go to Work', '', WORK)).toBe(1);
+    expect(paletteScore('Go to Work', '   ', WORK)).toBe(1);
+  });
+
+  it('ranks the page that is named above the pages that merely share letters', () => {
+    const settings = paletteScore('Go to Settings', 'settings', SETTINGS);
+    expect(settings).toBeGreaterThan(0);
+    // "s-e-t-t-i-n-g-s" is a subsequence of these titles and keywords; none of
+    // them is what "settings" means, so none of them is offered at all.
+    expect(paletteScore('Go to Work', 'settings', WORK)).toBe(0);
+    expect(paletteScore('Go to Needs you', 'settings', ['needs you', 'attention'])).toBe(0);
+    expect(paletteScore('Go to Releases', 'settings', ['release', 'deploy', 'staged'])).toBe(0);
+  });
+
+  it('puts the title before a keyword, and a whole word before a fragment', () => {
+    expect(paletteScore('Add work', 'add work')).toBe(1);
+    expect(paletteScore('Go to Work', 'work', WORK)).toBeGreaterThan(
+      paletteScore('Go to Shared tools', 'work', ['fleet', 'workbench'])
+    );
+    expect(paletteScore('alice/jeryu-web', 'alice/je')).toBeGreaterThan(
+      paletteScore('alice/jeryu-web', 'web')
+    );
+  });
+
+  it('matches a repository by the half of its name that was typed', () => {
+    expect(paletteScore('veox-ai/ai-veox-app', 'ai-veox')).toBeGreaterThan(0);
+    expect(paletteScore('veox-ai/ai-veox-app', 'zzz')).toBe(0);
+  });
+
+  it('never scores the hand-off to the search page', () => {
+    expect(paletteScore(SEARCH_ALL_VALUE, 'search')).toBe(0);
+    expect(paletteScore(SEARCH_ALL_VALUE, 'all results')).toBe(0);
   });
 });

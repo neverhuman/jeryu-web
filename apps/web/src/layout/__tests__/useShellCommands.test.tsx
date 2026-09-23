@@ -37,6 +37,16 @@ describe('useShellCommands', () => {
     expect(useCommandStore.getState().commands).toEqual([]);
   });
 
+  it('names each page the way the nav names it', () => {
+    renderHook(() => useShellCommands());
+    const title = (id: string): string | undefined =>
+      useCommandStore.getState().commands.find((c) => c.id === id)?.title;
+    // The account control says "Settings", so the palette does not say something else.
+    expect(title('nav.settings')).toBe('Go to Settings');
+    expect(title('nav.pull-room')).toBe('Go to Pull requests');
+    expect(title('nav.fleet')).toBe('Go to Runners');
+  });
+
   it('keeps commands registered by other surfaces when it unmounts', () => {
     useCommandStore.getState().register([
       { id: 'repo.open', title: 'Open repo', keywords: [], target: { kind: 'route', path: '/repos/x' } },

@@ -81,6 +81,15 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await page.getByText('Go to Repositories').click();
   await expect(page).toHaveURL(/\/repos$/);
 
+  // The page that is named ranks first, and the pages that only share letters
+  // with the query are not offered at all.
+  await jump.click();
+  await search.fill('settings');
+  const options = page.getByRole('listbox').getByRole('option');
+  await expect(options.first()).toHaveText(/^Go to Settings/);
+  await expect(options.filter({ hasText: /Go to (Work|Needs you|Releases)/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
   await jump.click();
   await search.fill('alice/je');
   await page.getByRole('option', { name: 'alice/jeryu' }).click();

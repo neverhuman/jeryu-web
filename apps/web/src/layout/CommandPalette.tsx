@@ -13,7 +13,13 @@ import { useNavigate } from 'react-router-dom';
 import { useRepositories } from '../hooks/useRepositories';
 import { searchUrl } from '../pages/search/searchModel';
 import { useCommandStore } from '../stores/commandStore';
-import { pullTargets, repositoryTargets, type PaletteTarget } from './paletteModel';
+import {
+  paletteScore,
+  pullTargets,
+  repositoryTargets,
+  SEARCH_ALL_VALUE,
+  type PaletteTarget,
+} from './paletteModel';
 
 const NO_REPOS: never[] = [];
 
@@ -81,7 +87,12 @@ export function CommandPalette(): JSX.Element {
         if (e.target === e.currentTarget) close();
       }}
     >
-      <Command className="command-palette__panel" label="Command palette" loop>
+      <Command
+        className="command-palette__panel"
+        label="Command palette"
+        filter={paletteScore}
+        loop
+      >
         <Command.Input
           className="command-palette__input"
           aria-label="Command search"
@@ -111,7 +122,8 @@ export function CommandPalette(): JSX.Element {
             {pages.map((cmd) => (
               <Command.Item
                 key={cmd.id}
-                value={`${cmd.title} ${cmd.keywords.join(' ')}`}
+                value={cmd.title}
+                keywords={cmd.keywords}
                 className="command-palette__item"
                 onSelect={() => execute(cmd.id, (path) => navigate(path))}
               >
@@ -145,9 +157,9 @@ export function CommandPalette(): JSX.Element {
               forceMount
             >
               <Command.Item
-                // Always shown, but its value never matches the typed text, so it
-                // ranks last and Enter still picks the best jump.
-                value="search:all-results"
+                // Always shown, but it never scores, so it ranks last and Enter
+                // still picks the best jump.
+                value={SEARCH_ALL_VALUE}
                 forceMount
                 className="command-palette__item"
                 onSelect={() => {
@@ -163,7 +175,8 @@ export function CommandPalette(): JSX.Element {
             {themes.map((cmd) => (
               <Command.Item
                 key={cmd.id}
-                value={`${cmd.title} ${cmd.keywords.join(' ')}`}
+                value={cmd.title}
+                keywords={cmd.keywords}
                 className="command-palette__item"
                 onSelect={() => execute(cmd.id, (path) => navigate(path))}
               >
