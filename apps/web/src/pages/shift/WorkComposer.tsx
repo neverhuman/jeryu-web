@@ -2,8 +2,11 @@
 //
 // One row: the family, Now or Night (Night by default: most work is for the
 // night shift), one line of text and one filled button. Focusing the text or
-// pressing More opens the full form in place: several lines, "paste many" (one
-// todo per blank-line-separated paragraph), repos, priority, blocked by. Without
+// pressing "More options" opens the full form in place: several lines, "paste
+// many" (one
+// todo per blank-line-separated paragraph), repos, priority, blocked by. The
+// family starts at the page's family filter, so work is filed where the operator
+// is looking. Without
 // a title and repos the server files the todo untriaged and a worker triages
 // it. Filing is admin-only; after filing the composer clears and closes, and
 // the page highlights the new todos in the queue below.
@@ -32,7 +35,7 @@ export function WorkComposer({
   const file = useFileShiftTodos();
   const { hash } = useLocation();
   const [open, setOpen] = useState(false);
-  const [chosen, setChosen] = useState('');
+  const [pick, setPick] = useState<{ under: string; name: string } | null>(null);
   const [many, setMany] = useState(false);
   const [text, setText] = useState('');
   const [mode, setMode] = useState<ShiftMode>('night');
@@ -42,11 +45,15 @@ export function WorkComposer({
   const lineRef = useRef<HTMLInputElement>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
-  // The page's family filter preselects the composer; the select still changes it.
-  useEffect(() => {
-    if (family) setChosen(family);
-  }, [family]);
-  const target = families.find((f) => f.name === chosen) ?? families[0];
+  // The page's family filter is the composer's family, from the first paint on:
+  // work is filed where the operator is looking. The select still changes it,
+  // and that pick stands until the filter moves; with no filter, the first
+  // family of the list does.
+  if (pick && pick.under !== family) setPick(null);
+  const target =
+    families.find((f) => f.name === pick?.name) ??
+    families.find((f) => f.name === family) ??
+    families[0];
 
   // `/work#add` ("Add work" in the palette, the old Add tab) lands in the text.
   useEffect(() => {
@@ -117,7 +124,7 @@ export function WorkComposer({
             <select
               aria-label="Family"
               value={target.name}
-              onChange={(event) => setChosen(event.target.value)}
+              onChange={(event) => setPick({ under: family, name: event.target.value })}
             >
               {families.map((f) => (
                 <option key={f.name} value={f.name}>
@@ -163,7 +170,7 @@ export function WorkComposer({
             aria-controls="work-composer-more"
             onClick={() => setOpen((v) => !v)}
           >
-            {open ? 'Less' : 'More'}
+            {open ? 'Fewer options' : 'More options'}
           </button>
         </div>
 

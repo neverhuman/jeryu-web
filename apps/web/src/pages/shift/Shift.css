@@ -151,7 +151,7 @@
   gap: 10px;
 }
 
-/* One row: family, Now/Night, the line of text, the one filled button, More. */
+/* One row: family, Now/Night, the line of text, the filled button, More options. */
 .work-composer__row {
   display: flex;
   flex-wrap: wrap;

@@ -7,7 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ShiftQueuePage } from '../shift/ShiftQueuePage';
 import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
-import { todo } from './shiftTestData';
+import { FAMILIES, todo } from './shiftTestData';
+
+/** Two families, the page's filter second, so first-in-the-list is not the answer. */
+const TWO_FAMILIES = {
+  families: [
+    { ...FAMILIES.families[0], name: 'jain', queue_repo: 'jeryu/jain-todo' },
+    ...FAMILIES.families,
+  ],
+};
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
@@ -36,7 +44,7 @@ describe('WorkComposer', () => {
     expect(file).toBeDisabled();
     // Collapsed: no textarea, no optional fields.
     expect(within(composer).queryByLabelText('Todo')).toBeNull();
-    expect(within(composer).getByRole('button', { name: 'More' })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(composer).getByRole('button', { name: 'More options' })).toHaveAttribute('aria-expanded', 'false');
 
     // Focusing the line opens the full form in place and keeps what was typed.
     const line = within(composer).getByLabelText('What should be done?');
@@ -77,7 +85,7 @@ describe('WorkComposer', () => {
     );
     renderWork();
     const composer = await screen.findByRole('region', { name: 'Add work' });
-    fireEvent.click(within(composer).getByRole('button', { name: 'More' }));
+    fireEvent.click(within(composer).getByRole('button', { name: 'More options' }));
     fireEvent.click(within(composer).getByLabelText('Now'));
     fireEvent.click(within(composer).getByLabelText(/Paste many/));
     fireEvent.change(within(composer).getByLabelText('Todos'), { target: { value: 'one\n\ntwo\n\n' } });
@@ -91,6 +99,36 @@ describe('WorkComposer', () => {
       texts: ['one', 'two'],
       mode: 'now',
     });
+  });
+
+  it('files into the family the page is filtered to, and keeps a pick under it', async () => {
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/families' ? json(TWO_FAMILIES) : undefined
+    );
+    renderWork('/work?family=jeryu');
+    const composer = await screen.findByRole('region', { name: 'Add work' });
+    // The filtered family from the first paint, not the first of the list.
+    expect(within(composer).getByLabelText('Family')).toHaveValue('jeryu');
+
+    // The select still overrides the filter, and that pick stands.
+    fireEvent.change(within(composer).getByLabelText('Family'), { target: { value: 'jain' } });
+    expect(within(composer).getByLabelText('Family')).toHaveValue('jain');
+    fireEvent.click(within(composer).getByRole('button', { name: 'More options' }));
+    fireEvent.change(within(composer).getByLabelText('Todo'), { target: { value: 'x' } });
+    expect(within(composer).getByTestId('shift-add-count')).toHaveTextContent('for jain.');
+
+    // Dropping the filter drops the pick with it; filtering again follows.
+    const strip = screen.getByRole('group', { name: 'Filter by family' });
+    fireEvent.click(within(strip).getByRole('button', { name: /^jeryu/ }));
+    await waitFor(() =>
+      expect(within(strip).getByRole('button', { name: /^All/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    );
+    expect(within(composer).getByLabelText('Family')).toHaveValue('jain');
+    fireEvent.click(within(strip).getByRole('button', { name: /^jeryu/ }));
+    await waitFor(() => expect(within(composer).getByLabelText('Family')).toHaveValue('jeryu'));
   });
 
   it('shows the server error and keeps the text', async () => {

@@ -176,6 +176,11 @@ test.describe('Work, one page', () => {
 
     // One row: family, night by default, one line, one filled button that waits for text.
     await expect(composer.getByLabel('Family', { exact: true })).toHaveValue('jeryu');
+    // Filtering the page to a family files into it: the composer follows.
+    await page.goto('/work?family=jain');
+    await expect(composer.getByLabel('Family', { exact: true })).toHaveValue('jain');
+    await page.goto('/work');
+    await expect(composer.getByLabel('Family', { exact: true })).toHaveValue('jeryu');
     await expect(composer.getByLabel('Night')).toBeChecked();
     const file = composer.getByRole('button', { name: 'File todo' });
     await expect(file).toBeDisabled();
@@ -191,7 +196,7 @@ test.describe('Work, one page', () => {
     await expect(composer.getByLabel('What should be done?')).toHaveValue('');
     await expect(composer.getByLabel(/Paste many/)).toBeHidden();
 
-    await composer.getByRole('button', { name: 'More' }).click();
+    await composer.getByRole('button', { name: 'More options' }).click();
     await composer.getByLabel('Family', { exact: true }).selectOption('jain');
     await composer.getByLabel(/Paste many/).check();
     await composer.getByLabel('Todos', { exact: true }).fill('one\n\ntwo\n\nthree');
