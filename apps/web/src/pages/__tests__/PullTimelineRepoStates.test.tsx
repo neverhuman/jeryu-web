@@ -98,6 +98,28 @@ describe('the Pull requests timeline', () => {
     expect(screen.queryByTestId('pull-ladder-jeryu/jeryu-web-21')).not.toBeInTheDocument();
   });
 
+  it("opens the repository's releases from its heading, its pill and its frontier rows", () => {
+    const ladders = new Map<number, ReleaseLadder>([
+      [22, ladder(null)],
+      [23, ladder('production', 'v6')],
+    ]);
+    render(
+      [pull(22, 'merged'), pull(23, 'merged'), pull(24, 'open')],
+      (pr) => ladders.get(pr.number) ?? ladder(null)
+    );
+    const releases = '/releases?repo=jeryu%2Fjeryu-web';
+    const section = screen.getByTestId('pull-repo-jeryu/jeryu-web');
+    expect(within(section).getByRole('link', { name: 'Releases' })).toHaveAttribute('href', releases);
+    expect(
+      within(screen.getByTestId('pull-ladder-jeryu/jeryu-web-23-production')).getByRole('link')
+    ).toHaveAttribute('href', releases);
+    expect(screen.getByTestId('pull-releases-jeryu/jeryu-web-23')).toHaveAttribute('href', releases);
+    // Merged, not yet released: the next release is the Releases page's to show.
+    expect(screen.getByTestId('pull-releases-jeryu/jeryu-web-22')).toHaveTextContent('next release');
+    // An open PR has no release to open.
+    expect(screen.queryByTestId('pull-releases-jeryu/jeryu-web-24')).not.toBeInTheDocument();
+  });
+
   it('says a merged row has passed open and mergeable, and names failing checks as of the merge', () => {
     render([pull(30, 'merged', { checks: { failing: 2 } })], () => ladder(null));
     expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-opened')).not.toHaveTextContent('open');
@@ -180,6 +202,10 @@ describe('the Pull requests timeline', () => {
     // The branch sits on the same track as the PR below it, ahead of it.
     const rows = screen.getAllByTestId(/^pull-(branch|timeline)-jeryu\/jeryu-web/);
     expect(rows[0]).toBe(branch);
+    // It opens the Work page on exactly its todos.
+    expect(
+      screen.getByTestId('pull-branch-work-jeryu/jeryu-web-dayshift/2026-09-20')
+    ).toHaveAttribute('href', '/work?family=jeryu&todo=t1%2Ct2');
 
     // Its todos fold under it.
     expect(within(branch).getByTestId('pull-ghost-t2')).not.toBeVisible();

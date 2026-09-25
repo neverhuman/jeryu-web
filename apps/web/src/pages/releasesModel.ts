@@ -203,3 +203,8 @@ export function timelineHref(scope: { repo?: string | null; family?: string | nu
   return `/pull-room${query}`;
 }
 
+/** The Releases page scoped to one repository: what each environment runs, and what waits. */
+export function releasesHref(repo: string): string {
+  return `/releases?repo=${encodeURIComponent(repo)}`;
+}
+

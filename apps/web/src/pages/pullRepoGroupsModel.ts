@@ -15,6 +15,7 @@
 
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
+import { WORK_PATH } from './shift/workPaths';
 import { ladderUndecided, type PipId, type ReleaseLadder } from './releaseChannelsModel';
 
 /** Every state a row can sit at, pipeline order: least far first. */
@@ -381,6 +382,20 @@ function branchRow(key: string, todos: GhostRow[]): BranchRow {
     status,
     detail,
   };
+}
+
+/**
+ * The Work page showing exactly this branch's todos. `?todo=` focuses them;
+ * `?family=` is added only when they share one, since the Work page narrows to
+ * a family before it looks for the ids.
+ */
+export function branchWorkHref(row: BranchRow): string {
+  const params = new URLSearchParams();
+  const families = new Set(row.todos.map((todo) => todo.family));
+  const [family] = families;
+  if (families.size === 1 && family) params.set('family', family);
+  params.set('todo', row.todos.map((todo) => todo.todoId).join(','));
+  return `${WORK_PATH}?${params.toString()}`;
 }
 
 /**

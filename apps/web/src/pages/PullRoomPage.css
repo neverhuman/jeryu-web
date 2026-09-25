@@ -633,6 +633,13 @@
   font-weight: var(--font-weight-regular);
 }
 
+/* Where this repository's merged work goes next: its Releases page. */
+.pull-repo__releases {
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
 /* One expander per repository, at the bottom: the list above it is never broken up. */
 .pull-repo__older {
   margin-top: var(--space-2);
@@ -678,6 +685,19 @@
   height: 6px;
   border: 1px solid var(--color-border-strong);
   border-radius: 50%;
+}
+
+.pull-ladder__link {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pull-ladder__link:hover .pull-ladder__label,
+.pull-ladder__link:focus-visible .pull-ladder__label {
+  text-decoration: underline;
 }
 
 .pull-ladder__pip.is-in {
@@ -728,8 +748,17 @@
   border-color: var(--color-accent-warning);
 }
 
+.pull-branch__col {
+  min-width: 0;
+}
+
 .pull-branch {
   min-width: 0;
+}
+
+/* The branch's todos on the Work page, where they are queued and worked. */
+.pull-branch__work {
+  font-size: var(--font-size-xs);
 }
 
 .pull-branch > summary {

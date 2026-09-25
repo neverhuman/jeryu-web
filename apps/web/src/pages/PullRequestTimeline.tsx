@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup } from './pullGhostsModel';
 import {
+  branchWorkHref,
   buildRepoGroups,
   countsSentence,
   pullRowHint,
@@ -14,6 +15,7 @@ import {
 } from './pullRepoGroupsModel';
 import { pullRequestPath } from './pullRoomModel';
 import { UNKNOWN_LADDER, type ReleaseLadder } from './releaseChannelsModel';
+import { releasesHref } from './releasesModel';
 import { PULL_STAGE_LABELS, pullStages } from './pullTimelineModel';
 
 import './PullRoomPage.css';
@@ -109,6 +111,9 @@ function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean 
         <h2 className="pull-repo__head">
           <Link to={`/repos/${group.host}/${group.repo}/pulls`}>{group.repo}</Link>
           <span className="pull-repo__count">{countsSentence(group.counts)}</span>
+          <Link className="pull-repo__releases" to={releasesHref(group.repo)}>
+            Releases
+          </Link>
         </h2>
       ) : null}
       <ol className="pull-timeline__rows">
@@ -211,10 +216,18 @@ function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JS
             <span className="pull-stage__dot" aria-hidden="true" />
             <span className="pull-stage__label">
               <span className="pull-timeline__sr">{stage.label}: </span>
-              {stage.detail}
+              {/* The newest row at a release state stands for its repository's
+                  releases: where it shipped, or what the next one will carry. */}
+              {stage.id === 'released' && row.frontier ? (
+                <Link to={releasesHref(repo)} data-testid={`pull-releases-${id}`}>
+                  {stage.detail}
+                </Link>
+              ) : (
+                stage.detail
+              )}
             </span>
             {stage.id === 'released' && row.frontier ? (
-              <EnvironmentPill ladder={ladder} state={row.state} rowId={id} />
+              <EnvironmentPill ladder={ladder} state={row.state} rowId={id} repo={repo} />
             ) : null}
           </li>
         ))}
@@ -235,29 +248,40 @@ function BranchRowView({ row, scope }: { row: BranchRow; scope: string }): JSX.E
       data-testid={`pull-branch-${id}`}
       data-status={row.status}
     >
-      <details className="pull-branch">
-        <summary className="pull-timeline__pr">
-          <span className="pull-branch__name">
-            {row.status === 'blocked' ? <span aria-label="needs a human">⚠ </span> : null}
-            <code>{row.label}</code> · {row.todos.length} todo{row.todos.length === 1 ? '' : 's'}
-          </span>
-          <span className="pull-timeline__meta">
-            {row.status === 'done' ? 'done, no pull request yet' : row.detail}
-            {workers.length > 0 ? ` · ${workers.join(', ')}` : ''}
-          </span>
-        </summary>
-        <ul className="pull-branch__todos">
-          {row.todos.map((todo) => (
-            <li
-              key={todo.todoId}
-              className={todo.attention ? 'needs-human' : undefined}
-              data-testid={`pull-ghost-${todo.todoId}`}
-            >
-              {todo.title} <span className="pull-timeline__meta">· {todo.when}</span>
-            </li>
-          ))}
-        </ul>
-      </details>
+      <div className="pull-branch__col">
+        <details className="pull-branch">
+          <summary className="pull-timeline__pr">
+            <span className="pull-branch__name">
+              {row.status === 'blocked' ? <span aria-label="needs a human">⚠ </span> : null}
+              <code>{row.label}</code> · {row.todos.length} todo{row.todos.length === 1 ? '' : 's'}
+            </span>
+            <span className="pull-timeline__meta">
+              {row.status === 'done' ? 'done, no pull request yet' : row.detail}
+              {workers.length > 0 ? ` · ${workers.join(', ')}` : ''}
+            </span>
+          </summary>
+          <ul className="pull-branch__todos">
+            {row.todos.map((todo) => (
+              <li
+                key={todo.todoId}
+                className={todo.attention ? 'needs-human' : undefined}
+                data-testid={`pull-ghost-${todo.todoId}`}
+              >
+                {todo.title} <span className="pull-timeline__meta">· {todo.when}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+        {/* Outside the summary: a link inside the expander's own control is a
+            nested interactive element. */}
+        <Link
+          className="pull-branch__work"
+          to={branchWorkHref(row)}
+          data-testid={`pull-branch-work-${id}`}
+        >
+          Open in Work
+        </Link>
+      </div>
       <ol className="pull-timeline__track" aria-label={`Status of ${row.label}`}>
         <li className={`pull-stage is-${row.status}`} data-status={row.status}>
           <span className="pull-stage__dot" aria-hidden="true" />
@@ -289,10 +313,13 @@ function EnvironmentPill({
   ladder,
   state,
   rowId: id,
+  repo,
 }: {
   ladder: ReleaseLadder;
   state: string;
   rowId: string;
+  /** `owner/name`: the pill opens that repository's releases. */
+  repo: string;
 }): JSX.Element | null {
   const pip = ladder.kind === 'channels' ? ladder.pips.find((p) => p.id === state) : undefined;
   if (!pip) return null;
@@ -304,8 +331,10 @@ function EnvironmentPill({
         data-membership={pip.membership}
         title={pipTitle(pip.label, pip.membership, pip.release)}
       >
-        <span aria-hidden="true" className="pull-ladder__dot" />
-        <span className="pull-ladder__label">{pip.label}</span>
+        <Link className="pull-ladder__link" to={releasesHref(repo)}>
+          <span aria-hidden="true" className="pull-ladder__dot" />
+          <span className="pull-ladder__label">{pip.label}</span>
+        </Link>
       </li>
     </ol>
   );
