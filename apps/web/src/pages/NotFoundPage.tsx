@@ -8,9 +8,32 @@ import { EmptyState } from '../components/state';
 
 import './page.css';
 
-export function NotFoundPage(): JSX.Element {
+/** A retired page that docs still link to: the 404 names where it went. */
+export interface MovedTo {
+  what: string;
+  label: string;
+  to: string;
+}
+
+export function NotFoundPage({ movedTo }: { movedTo?: MovedTo } = {}): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
+  if (movedTo) {
+    return (
+      <div className="page">
+        <EmptyState
+          icon={MapPinOff}
+          title="Page not found"
+          description={`${location.pathname} no longer has its own page. ${movedTo.what}`}
+          action={
+            <ActionButton variant="primary" onClick={() => navigate(movedTo.to)}>
+              {movedTo.label}
+            </ActionButton>
+          }
+        />
+      </div>
+    );
+  }
   return (
     <div className="page">
       <EmptyState

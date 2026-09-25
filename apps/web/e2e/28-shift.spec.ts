@@ -207,7 +207,7 @@ test.describe('Work, one page', () => {
     await page.goto('/needs-you');
     await page.getByRole('button', { name: /^Search or jump to/ }).click();
     await page.getByRole('combobox', { name: 'Command palette' }).fill('Add work');
-    await page.getByRole('option', { name: 'Add work' }).click();
+    await page.getByRole('option', { name: 'Add work', exact: true }).click();
     await expect(page).toHaveURL(/\/work#add$/);
     await expect(page.getByRole('region', { name: 'Add work' }).getByLabel('Todo', { exact: true })).toBeFocused();
   });

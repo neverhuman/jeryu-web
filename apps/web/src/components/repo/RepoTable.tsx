@@ -26,6 +26,8 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 
 import type { RepositorySummary } from '../../api/types';
+import type { RepoSort } from '../../hooks/useRepositories';
+import { QUALITY_GATE_PATH } from '../../pages/qualityGate/qualityGateModel';
 import {
   attentionRank,
   failingLabel,
@@ -35,7 +37,11 @@ import {
   type NewerCopy
 } from '../../pages/repoStatusModel';
 
-import { JankuraiScoreBadge } from './JankuraiScoreBadge';
+import {
+  JankuraiScoreBadge,
+  JANKURAI_GOOD_THRESHOLD
+} from './JankuraiScoreBadge';
+import { distinctDescriptions } from './repoDescription';
 import { RepoFailingChecks } from './RepoFailingChecks';
 import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoRoleBadge } from './RepoRoleBadge';
@@ -49,6 +55,28 @@ import './repo.css';
 
 export interface RepoTableProps {
   repos: RepositorySummary[];
+  /** The order the sort control names; the header follows it. */
+  sort?: RepoSort;
+  /** A header click that matches a sort the control offers reports it here. */
+  onSortChange?: (sort: RepoSort) => void;
+}
+
+/** The column and direction each sort of the sort control means. */
+const SORT_COLUMNS: Record<RepoSort, { id: string; desc: boolean }> = {
+  recent_activity: { id: 'updated_at', desc: true },
+  name: { id: 'name', desc: false },
+  open_prs: { id: 'open_prs', desc: true },
+  failing_checks: { id: 'status', desc: true }
+};
+
+/** The control's sort for a header state, when it offers one. */
+export function sortForColumns(sorting: SortingState): RepoSort | undefined {
+  const [first] = sorting;
+  if (!first || sorting.length !== 1) return undefined;
+  return (Object.keys(SORT_COLUMNS) as RepoSort[]).find(
+    (key) =>
+      SORT_COLUMNS[key].id === first.id && SORT_COLUMNS[key].desc === first.desc
+  );
 }
 
 /**
@@ -160,8 +188,16 @@ function NewerCopyChip({
   );
 }
 
-export function RepoTable({ repos }: RepoTableProps): JSX.Element {
+export function RepoTable({
+  repos,
+  sort = 'name',
+  onSortChange
+}: RepoTableProps): JSX.Element {
   const copies = useMemo(() => newerCopies(repos), [repos]);
+  const descriptions = useMemo(
+    () => distinctDescriptions(repos.map((repo) => repo.description)),
+    [repos]
+  );
   const navigate = useNavigate();
   // Repositories whose failing checks are shown under their row.
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -173,9 +209,22 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
     });
   }, []);
   const rows = useMemo(() => ({ open, toggle }), [open, toggle]);
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'name', desc: false }
-  ]);
+  const [sorting, setSorting] = useState<SortingState>([SORT_COLUMNS[sort]]);
+  // The control changed: the header shows the order it names.
+  const [shownSort, setShownSort] = useState(sort);
+  if (shownSort !== sort) {
+    setShownSort(sort);
+    setSorting([SORT_COLUMNS[sort]]);
+  }
+  const onSortingChange = useCallback(
+    (updater: SortingState | ((old: SortingState) => SortingState)): void => {
+      const next = typeof updater === 'function' ? updater(sorting) : updater;
+      setSorting(next);
+      const named = sortForColumns(next);
+      if (named && named !== sort) onSortChange?.(named);
+    },
+    [sorting, sort, onSortChange]
+  );
 
   const columns = useMemo<ColumnDef<RepositorySummary>[]>(
     () => [
@@ -227,10 +276,21 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
         id: 'description',
         header: 'Description',
         accessorFn: (row) => row.description ?? '',
-        cell: ({ row }) =>
-          row.original.description ?? (
-            <span className="text-muted">No description</span>
-          )
+        // Only the part that differs from the other rows; the full text on hover.
+        cell: ({ row }) => {
+          const full = row.original.description;
+          if (!full) return <span className="text-muted">No description</span>;
+          const distinct = descriptions.get(full) ?? full;
+          return (
+            <span
+              className={distinct ? 'repo-table__description' : 'text-muted'}
+              title={full}
+              data-testid={`repo-description-${row.original.id.owner}/${row.original.id.name}`}
+            >
+              {distinct || '—'}
+            </span>
+          );
+        }
       },
       {
         id: 'status',
@@ -242,16 +302,31 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
       },
       {
         id: 'score',
-        header: 'Score',
+        header: () => (
+          <span
+            title={`jankurai/proof audit of the default branch; ${JANKURAI_GOOD_THRESHOLD} is the floor, below it needs work`}
+          >
+            Score <span className="text-muted">(floor {JANKURAI_GOOD_THRESHOLD})</span>
+          </span>
+        ),
         // Unscored repos sort below every real score (worst-first when
         // ascending) instead of throwing the comparator off with nulls.
         accessorFn: (row) => row.jankurai_score ?? -1,
+        // The score links to the quality gate: the rules and findings behind it.
         cell: ({ row }) => (
-          <JankuraiScoreBadge
-            score={row.original.jankurai_score}
-            decision={row.original.jankurai_decision}
-            scoredAt={row.original.jankurai_scored_at}
-          />
+          <Link
+            to={QUALITY_GATE_PATH}
+            className="repo-table__score-link"
+            onClick={(e) => e.stopPropagation()}
+            title="See what produced this score"
+            data-testid={`repo-score-${row.original.id.owner}/${row.original.id.name}`}
+          >
+            <JankuraiScoreBadge
+              score={row.original.jankurai_score}
+              decision={row.original.jankurai_decision}
+              scoredAt={row.original.jankurai_scored_at}
+            />
+          </Link>
         )
       },
       {
@@ -288,14 +363,14 @@ export function RepoTable({ repos }: RepoTableProps): JSX.Element {
         }
       }
     ],
-    []
+    [copies, descriptions]
   );
 
   const table = useReactTable({
     data: repos,
     columns,
     state: { sorting },
-    onSortingChange: setSorting,
+    onSortingChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel()
   });

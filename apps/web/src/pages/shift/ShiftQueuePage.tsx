@@ -59,7 +59,7 @@ import {
 } from './shiftModel';
 import { WorkComposer } from './WorkComposer';
 import { WorkersStrip } from './WorkersStrip';
-import { liveFamilyCounts, todoFamily, todosOfFamily } from './workPageModel';
+import { groupLive, liveFamilyCounts, todoFamily, todosOfFamily } from './workPageModel';
 
 import '../page.css';
 import './Shift.css';
@@ -233,9 +233,7 @@ function FamilyQueue({
           ) : null}
         </div>
 
-        <h2 className="page__section-title">
-          {asked ? 'Todos' : 'In progress'} · {live.length}
-        </h2>
+        {asked ? <h2 className="page__section-title">Todos · {live.length}</h2> : null}
         {todos.isPending ? (
           <LoadingState title="Loading todos…" variant="message" />
         ) : todos.isError ? (
@@ -254,8 +252,18 @@ function FamilyQueue({
               <p className="shift__muted" data-testid="shift-nothing-live">
                 Nothing is queued, being worked or waiting on anyone.
               </p>
-            ) : (
+            ) : asked ? (
               <TodoTable todos={live} {...tableProps} />
+            ) : (
+              // Queued is not in progress: each stands under its own heading.
+              groupLive(live).map((group) => (
+                <Fragment key={group.key}>
+                  <h2 className="page__section-title" data-testid={`shift-live-${group.key}`}>
+                    {group.title} · {group.todos.length}
+                  </h2>
+                  <TodoTable todos={group.todos} {...tableProps} />
+                </Fragment>
+              ))
             )}
             {finished.length > 0 ? (
               <details className="shift__finished" open={showFinished || undefined} data-testid="shift-finished-todos">
@@ -299,6 +307,8 @@ function TodoTable({
   isAdmin: boolean;
   focusIds: string[];
 } & RowFamilyProps): JSX.Element {
+  // Todos carry commits only once they land: a column of dashes says nothing.
+  const showCommits = todos.some((todo) => Object.keys(todo.commits).length > 0);
   return (
     <div className="shift__table-wrap">
       <table className="shift__table">
@@ -310,7 +320,7 @@ function TodoTable({
             <th scope="col">Repos</th>
             <th scope="col">Attempts</th>
             <th scope="col">Cost</th>
-            <th scope="col">Commits</th>
+            {showCommits ? <th scope="col">Commits</th> : null}
             {isAdmin ? <th scope="col">Action</th> : null}
           </tr>
         </thead>
@@ -322,6 +332,7 @@ function TodoTable({
               owners={ownersFor(todo.family)}
               isAdmin={isAdmin}
               initiallyOpen={focusIds.includes(todo.id)}
+              showCommits={showCommits}
               picked={picked}
               onPick={onPick}
             />
@@ -363,6 +374,7 @@ function TodoRow({
   owners,
   isAdmin,
   initiallyOpen,
+  showCommits,
   picked,
   onPick,
 }: {
@@ -370,6 +382,7 @@ function TodoRow({
   owners: RepoOwners;
   isAdmin: boolean;
   initiallyOpen: boolean;
+  showCommits: boolean;
   picked: string;
   onPick: (family: string) => void;
 }): JSX.Element {
@@ -431,27 +444,29 @@ function TodoRow({
           )}
         </td>
         <td className="shift__cost">{formatCost(todoCost(todo))}</td>
-        <td>
-          {commits.length === 0 ? (
-            '—'
-          ) : (
-            <span className="shift__commits">
-              {commits.map(([repo, sha]) => {
-                const href = commitHref(todo, owners, repo);
-                const label = `${repo}@${shortSha(sha)}`;
-                return href ? (
-                  <Link key={repo} to={href} title={`${repo}@${sha}`}>
-                    {label}
-                  </Link>
-                ) : (
-                  <span key={repo} title={`${repo}@${sha}`}>
-                    {label}
-                  </span>
-                );
-              })}
-            </span>
-          )}
-        </td>
+        {showCommits ? (
+          <td>
+            {commits.length === 0 ? (
+              '—'
+            ) : (
+              <span className="shift__commits">
+                {commits.map(([repo, sha]) => {
+                  const href = commitHref(todo, owners, repo);
+                  const label = `${repo}@${shortSha(sha)}`;
+                  return href ? (
+                    <Link key={repo} to={href} title={`${repo}@${sha}`}>
+                      {label}
+                    </Link>
+                  ) : (
+                    <span key={repo} title={`${repo}@${sha}`}>
+                      {label}
+                    </span>
+                  );
+                })}
+              </span>
+            )}
+          </td>
+        ) : null}
         {isAdmin ? (
           <td>
             <TodoPrimaryAction todo={todo} />
@@ -460,7 +475,7 @@ function TodoRow({
       </tr>
       {open ? (
         <tr className="shift__detail" id={detailId}>
-          <td colSpan={isAdmin ? 8 : 7}>
+          <td colSpan={6 + (showCommits ? 1 : 0) + (isAdmin ? 1 : 0)}>
             <TodoDetail todo={todo} isAdmin={isAdmin} />
           </td>
         </tr>

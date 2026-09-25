@@ -15,6 +15,7 @@ import {
   OTHER_FAMILY,
   pullListState,
   reposToLoad,
+  timelineRepos,
   scopeToFamily,
   TIMELINE_REPO_LIMIT,
   stateWords,
@@ -171,6 +172,31 @@ describe('pullRoomModel', () => {
     const wanted = reposToLoad(many);
     expect(wanted.repos).toHaveLength(TIMELINE_REPO_LIMIT);
     expect(wanted.skipped).toBe(3);
+  });
+
+  it('reads every repository in scope for history, as a repo page does', () => {
+    const families = new Map<string, string | null>([
+      ['a/one', 'fam'],
+      ['b/two', 'fam'],
+      ['c/three', null],
+    ]);
+    const known = Array.from(families.keys());
+    // Nothing open: the snapshot names no repo, the history still loads.
+    expect(timelineRepos([], known, { repo: 'all', family: '', history: true }, families)).toEqual({
+      repos: ['a/one', 'b/two', 'c/three'],
+      skipped: 0,
+    });
+    expect(
+      timelineRepos([], known, { repo: 'all', family: 'fam', history: true }, families).repos
+    ).toEqual(['a/one', 'b/two']);
+    expect(
+      timelineRepos([], known, { repo: 'c/three', family: '', history: true }, families).repos
+    ).toEqual(['c/three']);
+    // Open-only filters keep the snapshot's answer.
+    const open = [fromControlPullRequest(pr({ repo: 'b/two', number: 1 }))];
+    expect(
+      timelineRepos(open, known, { repo: 'all', family: '', history: false }, families).repos
+    ).toEqual(['b/two']);
   });
 
   it('loads open lists unless the state filter asks for finished pull requests', () => {

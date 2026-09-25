@@ -103,3 +103,93 @@ export function busySparkline(points: ShiftCapacityPoint[], width: number, heigh
     .map((p, i) => `${(i * step).toFixed(1)},${(height - (p.busy / peak) * height).toFixed(1)}`)
     .join(' ');
 }
+
+export interface NightWindow {
+  open: boolean;
+  /** `22:00–07:00 America/Los_Angeles`. */
+  span: string;
+  /** Night-mode todos still open: they wait for the window while it is closed. */
+  waiting: number;
+  text: string;
+}
+
+function clockMinutes(part: string): number | null {
+  const m = /^(\d{1,2})(?::(\d{2}))?$/.exec(part.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2] ?? '0');
+  return h <= 24 && min < 60 ? (h % 24) * 60 + min : null;
+}
+
+function clockText(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+/** Minutes past midnight of `at` in `tz`, or null when the zone is unknown. */
+export function minutesInTz(at: Date, tz: string): number | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(at);
+    const hour = Number(parts.find((p) => p.type === 'hour')?.value);
+    const minute = Number(parts.find((p) => p.type === 'minute')?.value);
+    return Number.isNaN(hour) || Number.isNaN(minute) ? null : hour * 60 + minute;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether the night window the workers report (`schedule.night.hours`, e.g.
+ * `22:00-07:00`, in `schedule.tz`) is open now, so a quiet strip can say why
+ * nothing runs. Null when no worker reports a schedule.
+ */
+export function nightWindow(workers: ShiftWorker[], todos: ShiftTodo[], now: Date): NightWindow | null {
+  const schedule = workers.find((w) => w.schedule?.night?.hours && w.schedule.tz)?.schedule;
+  if (!schedule) return null;
+  const [from, to] = schedule.night.hours.split(/\s*[-–—]\s*/).map(clockMinutes);
+  const at = minutesInTz(now, schedule.tz);
+  if (from === null || from === undefined || to === null || to === undefined || at === null) return null;
+  const open = from <= to ? at >= from && at < to : at >= from || at < to;
+  const span = `${clockText(from)}–${clockText(to)} ${schedule.tz}`;
+  const waiting = todos.filter((t) => t.mode === 'night' && t.status === 'open').length;
+  const text = open
+    ? `night window open (${span})`
+    : `night window closed (${span})${waiting > 0 ? ` · ${waiting} night todo${waiting === 1 ? '' : 's'} wait for it` : ''}`;
+  return { open, span, waiting, text };
+}
+
+export type LiveGroupKey = 'progress' | 'human' | 'queued';
+
+export interface LiveGroup {
+  key: LiveGroupKey;
+  title: string;
+  todos: ShiftTodo[];
+}
+
+/**
+ * Live todos by where they stand, in the queue's order: waiting on a
+ * person (on top, as before), being worked (claimed or holding a live
+ * lease), or queued (open, nobody on it). Empty groups
+ * are left out.
+ */
+export function groupLive(todos: ShiftTodo[]): LiveGroup[] {
+  const groups: LiveGroup[] = [
+    { key: 'human', title: 'Waiting on a human', todos: [] },
+    { key: 'progress', title: 'In progress', todos: [] },
+    { key: 'queued', title: 'Queued', todos: [] },
+  ];
+  for (const todo of todos) {
+    const key: LiveGroupKey =
+      todo.status === 'claimed' || todo.lease_live
+        ? 'progress'
+        : todo.status === 'blocked' || todo.status === 'handoff'
+          ? 'human'
+          : 'queued';
+    groups.find((g) => g.key === key)?.todos.push(todo);
+  }
+  return groups.filter((g) => g.todos.length > 0);
+}

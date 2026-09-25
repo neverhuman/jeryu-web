@@ -56,11 +56,11 @@ export function pullStages(pr: PullRequestSummary, ladder?: ReleaseLadder): Pull
     const settled = (status: PullStageStatus): PullStageStatus =>
       status === 'pending' || status === 'active' ? 'skipped' : status;
     // Past the merge, "open" and "mergeable" are history, not status: they are
-    // simply passed. Checks keep their verdict, said as of the merge.
-    const checks = settled(checksStage(pr));
+    // simply passed. Checks keep their verdict, which `checksDetail` already
+    // qualifies as "not required" for the red ones that did not stop the merge.
     return [
       stage('opened', 'done', ''),
-      stage('checks', checks, checks === 'blocked' ? `${checksDetail(pr)} at merge` : checksDetail(pr)),
+      stage('checks', settled(checksStage(pr)), checksDetail(pr)),
       stage('review', settled(reviewStage(pr)), reviewDetail(pr)),
       stage('mergeable', 'done', ''),
       stage('merged', 'done', 'merged'),
@@ -115,10 +115,19 @@ function releasePending(pr: PullRequestSummary): string {
   return pr.state === 'merged' ? 'release unknown' : 'not yet';
 }
 
+/**
+ * Red checks that did not stop the merge: the forge says the pull request can
+ * merge, or it has merged. Those failures are on checks the base branch does
+ * not require (`jankurai/proof`, a mirror), so they read qualified, not red.
+ */
+function failuresNotRequired(pr: PullRequestSummary): boolean {
+  return pr.checks.failing > 0 && (pr.state === 'merged' || pr.mergeable.can_merge);
+}
+
 function checksStage(pr: PullRequestSummary): PullStageStatus {
   const { total, failing, pending } = pr.checks;
   if (total === 0) return 'pending';
-  if (failing > 0) return 'blocked';
+  if (failing > 0 && !failuresNotRequired(pr)) return 'blocked';
   if (pending > 0) return 'active';
   return 'done';
 }
@@ -133,7 +142,9 @@ function reviewStage(pr: PullRequestSummary): PullStageStatus {
 function checksDetail(pr: PullRequestSummary): string {
   const { total, passing, failing, pending } = pr.checks;
   if (total === 0) return 'no checks';
-  if (failing > 0) return `${failing} failing`;
+  if (failing > 0) {
+    return failuresNotRequired(pr) ? `${failing} failing, not required` : `${failing} failing`;
+  }
   if (pending > 0) return `${pending} running`;
   return `${passing}/${total} passing`;
 }

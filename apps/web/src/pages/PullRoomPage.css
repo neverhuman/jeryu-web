@@ -389,8 +389,16 @@
   padding: var(--space-3);
 }
 
-.pull-timeline__row.is-closed,
-.pull-timeline__row.is-merged {
+/* Finished rows are dimmed without `opacity` on the row: that blends every
+   label into the background and (stacked with the closed block's) pushed the muted "#81" number below AA
+   contrast. The title steps down a tone and only the track fades. */
+.pull-timeline__row.is-closed .pull-timeline__pr a,
+.pull-timeline__row.is-merged .pull-timeline__pr a {
+  color: var(--color-fg-secondary);
+}
+
+.pull-timeline__row.is-closed .pull-timeline__track,
+.pull-timeline__row.is-merged .pull-timeline__track {
   opacity: 0.72;
 }
 

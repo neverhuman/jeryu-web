@@ -29,11 +29,17 @@ function makeStorage(): Storage {
 
 const FRONT = '/repos/jeryu/neverhuman/jeryu';
 
+let authUser: { role: string } | null = { role: 'user' };
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({ isPending: false, user: authUser }),
+}));
+
 describe('RepositoryBrowserPage (one repository page)', () => {
   let hasCode = true;
   let treeOnlyMissing = false;
 
   beforeEach(() => {
+    authUser = { role: 'user' };
     hasCode = true;
     treeOnlyMissing = false;
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
@@ -190,6 +196,27 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(await screen.findByText('No code on this forge')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Files' })).toBeNull();
     expect(screen.queryByText('No README found')).toBeNull();
+  });
+
+  it('signed out, shows a public repository', async () => {
+    authUser = null;
+    renderAt(FRONT);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Portal' })).toBeInTheDocument();
+  });
+
+  it('signed out, sends a repository the public list lacks to login and back', async () => {
+    authUser = null;
+    renderAt('/repos/jeryu/neverhuman/secret');
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        `/login?next=${encodeURIComponent('/repos/jeryu/neverhuman/secret')}`
+      )
+    );
+  });
+
+  it('signed in, says a missing repository is not found', async () => {
+    renderAt('/repos/jeryu/neverhuman/secret');
+    expect(await screen.findByText('Repository not found')).toBeInTheDocument();
   });
 
   it('still shows a README when only the tree is missing', async () => {

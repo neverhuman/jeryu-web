@@ -53,7 +53,13 @@ export interface ChannelPip {
   /** The release that carries the change here; null unless `membership` is `in`. */
   release: string | null;
   at: string | null;
+  /** The release this pip was compared against (the baseline's name). */
+  baseline?: string;
+  /** Why an `unknown` pip stayed undecided: its compare was capped, or never answered. */
+  undecided?: Undecided | null;
 }
+
+export type Undecided = 'capped' | 'unanswered';
 
 /** `channels`: deployment records. `tag`: released by tag. `none`: neither. */
 export type LadderKind = 'channels' | 'tag' | 'none';
@@ -182,6 +188,9 @@ export function releaseLadder(
       membership,
       release: membership === 'in' ? baseline.name : null,
       at: membership === 'in' ? baseline.at : null,
+      baseline: baseline.name,
+      undecided:
+        membership === 'unknown' ? (compares.get(baseline.id) ? 'capped' : 'unanswered') : null,
     };
   });
   const deepestIn = [...pips].reverse().find((pip) => pip.membership === 'in') ?? null;
@@ -222,10 +231,32 @@ export function ladderDetail(ladder: ReleaseLadder, state: string): string {
       ? `${label} · ${ladder.release}`
       : label;
   }
-  if (ladder.uncertain) return 'release unknown';
+  if (ladder.uncertain) {
+    const gaveUp = ladderUndecided(ladder);
+    return gaveUp ? `release unknown · ${gaveUp}` : 'release unknown';
+  }
   // Not "awaiting <release>": a pip names the release a channel runs NOW,
   // which is exactly the one this change is not in.
   return 'next release';
+}
+
+/**
+ * Which release an undecided ladder gave up comparing against, and why, in a
+ * few words: `prod v2.3 compare capped`. Null when every pip is decided; a
+ * ladder that never looked (no pips at all) says it was not compared.
+ */
+export function ladderUndecided(ladder: ReleaseLadder): string | null {
+  if (!ladder.uncertain) return null;
+  if (ladder.pips.length === 0) return 'not compared';
+  const pip = ladder.pips.find((candidate) => candidate.membership === 'unknown');
+  if (!pip) return null;
+  const against =
+    pip.baseline && pip.baseline !== pip.label && pip.baseline !== pip.id
+      ? `${pip.label} ${pip.baseline}`
+      : pip.label;
+  return pip.undecided === 'unanswered'
+    ? `${against} compare did not answer`
+    : `${against} compare capped`;
 }
 
 /**

@@ -19,9 +19,12 @@ const SPLASH_MS = 950;
 export function BootScreen({
   initialMode = 'login',
   initialAuthOpen = false,
+  returnTo = null,
 }: {
   initialMode?: Mode;
   initialAuthOpen?: boolean;
+  /** The page a deep link was headed to; login lands there. */
+  returnTo?: string | null;
 }): JSX.Element {
   const prefersReduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<'splash' | 'gate'>(
@@ -81,6 +84,8 @@ export function BootScreen({
             <JeryuLogo variant="mark" className="boot__brand-mark" decorative />
             <span>JeRyu</span>
           </span>
+          {/* No Sign up here: this is a single-operator forge and accounts are
+              created by the operator, not self-service. */}
           <nav className="boot__auth-controls" aria-label="Account access">
             <button
               type="button"
@@ -89,14 +94,6 @@ export function BootScreen({
               onClick={() => openAuth('login')}
             >
               Log in
-            </button>
-            <button
-              type="button"
-              className="boot__auth-link"
-              aria-pressed={authOpen && mode === 'signup'}
-              onClick={() => openAuth('signup')}
-            >
-              Sign up
             </button>
           </nav>
         </header>
@@ -122,6 +119,11 @@ export function BootScreen({
 
         {authOpen ? (
           <aside className="boot__auth-panel">
+            {returnTo ? (
+              <p className="boot__return-to" role="status">
+                Log in to continue to <code>{returnTo}</code>
+              </p>
+            ) : null}
             <LoginPanel initialMode={mode} firstFieldRef={usernameRef} />
           </aside>
         ) : null}

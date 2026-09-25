@@ -30,8 +30,36 @@ import { useAuth } from '../hooks/useAuth';
 import { AuthPage } from '../pages/AuthPage';
 import { BootScreen } from '../pages/boot/BootScreen';
 import { NEEDS_YOU_PATH, homePathFor } from './HomeRedirect';
+import { PublicRepoShell } from './PublicRepoShell';
 
 import './AppShell.css';
+
+const AUTH_PATHS = new Set(['/login', '/signup']);
+
+/**
+ * The in-app path a `?next=` names, or null when it is missing or could leave
+ * the app (`//host`, `/\\host`, an absolute URL) or would loop back to login.
+ */
+export function returnPathFrom(search: string): string | null {
+  const next = new URLSearchParams(search).get('next');
+  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) {
+    return null;
+  }
+  const pathname = next.split(/[?#]/, 1)[0];
+  return AUTH_PATHS.has(pathname) ? null : next;
+}
+
+/**
+ * A repository page a signed-out visitor may open: the front page and its
+ * files (`blob`, `tree`, `code`). The API serves those for public
+ * repositories; a private one sends the visitor on to login.
+ */
+export function isPublicRepoPath(pathname: string): boolean {
+  const match = /^\/repos\/([^/]+)\/[^/]+\/[^/]+(?:\/([^/]+)(?:\/.*)?)?\/?$/.exec(pathname);
+  if (!match || match[1] === 'family') return false;
+  const sub = match[2];
+  return sub === undefined || sub === 'blob' || sub === 'tree' || sub === 'code';
+}
 
 export function AppShell(): JSX.Element {
   const navigate = useNavigate();
@@ -40,7 +68,8 @@ export function AppShell(): JSX.Element {
   const openPalette = useCommandStore((s) => s.open);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const authRouteMode = location.pathname === '/signup' ? 'signup' : 'login';
-  const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup';
+  const isAuthRoute = AUTH_PATHS.has(location.pathname);
+  const returnTo = isAuthRoute ? returnPathFrom(location.search) : null;
 
   // Register navigation commands so the palette is non-empty on first render.
   useShellCommands();
@@ -136,11 +165,27 @@ export function AppShell(): JSX.Element {
   }
 
   if (!auth.user) {
-    return <BootScreen initialMode={authRouteMode} initialAuthOpen={isAuthRoute} />;
+    // A public repository reads without an account.
+    if (isPublicRepoPath(location.pathname)) {
+      return <PublicRepoShell />;
+    }
+    // Any other deep link opened signed out goes to login and remembers where
+    // it was headed; `/` keeps the story landing.
+    if (!isAuthRoute && location.pathname !== '/') {
+      const next = `${location.pathname}${location.search}${location.hash}`;
+      return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
+    }
+    return (
+      <BootScreen
+        initialMode={authRouteMode}
+        initialAuthOpen={isAuthRoute}
+        returnTo={returnTo}
+      />
+    );
   }
 
   if (isAuthRoute) {
-    return <Navigate to={homePathFor(auth.user)} replace />;
+    return <Navigate to={returnTo ?? homePathFor(auth.user)} replace />;
   }
 
   if (auth.user.mustChangePassword) {

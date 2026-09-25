@@ -405,6 +405,34 @@ export function reposToLoad(items: PullListItem[]): { repos: string[]; skipped: 
   };
 }
 
+/**
+ * The repos the timeline reads, the way one repository's Pull requests page
+ * reads its own: every repository in scope, not only the ones the snapshot
+ * names. The snapshot holds open pull requests only, so a history view built
+ * from it alone is empty whenever nothing is open. `history` false keeps the
+ * snapshot's answer, which is already right for open-only filters.
+ */
+export function timelineRepos(
+  snapshotItems: PullListItem[],
+  known: string[],
+  scope: { repo: string; family: string; history: boolean },
+  families: ReadonlyMap<string, string | null>
+): { repos: string[]; skipped: number } {
+  const all = new Set(repoOptions(snapshotItems));
+  if (scope.history) {
+    for (const repo of known) {
+      if (scope.repo !== 'all' && repo !== scope.repo) continue;
+      if (scope.family && familyOfRepo(repo, families) !== scope.family) continue;
+      all.add(repo);
+    }
+  }
+  const repos = Array.from(all).sort();
+  return {
+    repos: repos.slice(0, TIMELINE_REPO_LIMIT),
+    skipped: Math.max(0, repos.length - TIMELINE_REPO_LIMIT),
+  };
+}
+
 /** `state` for the per-repo list: only open ones unless the filter asks for finished ones. */
 export function pullListState(stateFilter: string): 'open' | undefined {
   return stateFilter === 'all' || stateFilter === 'merged' || stateFilter === 'closed'

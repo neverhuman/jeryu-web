@@ -265,7 +265,8 @@ export interface MockRepoSummary {
  */
 export async function mockRepoList(
   page: Page,
-  repos: MockRepoSummary[]
+  repos: MockRepoSummary[],
+  options: { search?: boolean } = {}
 ): Promise<void> {
   const repositories = repos.map((r) => normalizeRepo(r));
   const hosts = Array.from(new Set(repos.map((r) => r.id.host)));
@@ -295,13 +296,21 @@ export async function mockRepoList(
     // And `?archived=1` like the real backend: the Archived filter lists only
     // archived repositories, the default list only unarchived ones.
     const archivedOnly = url.searchParams.get('archived') === '1';
+    // With `search`, `?q=` matches name and description like the real search.
+    const q = options.search ? (url.searchParams.get('q') ?? '').toLowerCase() : '';
     const filtered = (
       familyFilter
         ? repositories.filter(
             (r) => (r as { family: string | null }).family === familyFilter
           )
         : repositories
-    ).filter((r) => (r as { archived: boolean }).archived === archivedOnly);
+    )
+      .filter((r) => (r as { archived: boolean }).archived === archivedOnly)
+      .filter((r) => {
+        if (!q) return true;
+        const row = r as { id: { owner: string; name: string }; description?: string | null };
+        return `${row.id.owner}/${row.id.name} ${row.description ?? ''}`.toLowerCase().includes(q);
+      });
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

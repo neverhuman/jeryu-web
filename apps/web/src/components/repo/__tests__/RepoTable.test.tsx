@@ -152,7 +152,7 @@ describe('RepoTable', () => {
       'Repository',
       'Description',
       'Status',
-      'Score',
+      'Score (floor 85)',
       'Open PRs',
       'Updated',
     ]);
@@ -222,5 +222,46 @@ describe('RepoTable', () => {
     await user.click(chip);
     expect(chip).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('jankurai/proof')).toBeNull();
+  });
+
+  it('starts in the order the sort control names and reports matching header clicks', async () => {
+    const user = userEvent.setup();
+    const old: RepositorySummary = { ...REPO, updated_at: '2026-01-01T00:00:00Z' };
+    const fresh: RepositorySummary = {
+      ...REPO,
+      id: { ...REPO.id, id: 'repo-uuid-2', name: 'a-fresh' },
+      updated_at: '2026-09-01T00:00:00Z',
+    };
+    const onSortChange = vi.fn();
+    render(
+      withQueries(
+        <MemoryRouter>
+          <RepoTable repos={[old, fresh]} sort="recent_activity" onSortChange={onSortChange} />
+        </MemoryRouter>
+      )
+    );
+    expect(screen.getByRole('columnheader', { name: 'Updated' })).toHaveAttribute('aria-sort', 'descending');
+    expect(screen.getByRole('columnheader', { name: 'Repository' })).toHaveAttribute('aria-sort', 'none');
+    expect(Array.from(document.querySelectorAll('tbody tr strong')).map((n) => n.textContent)).toEqual([
+      'a-fresh',
+      'jeryu-core',
+    ]);
+    await user.click(screen.getByRole('columnheader', { name: 'Repository' }));
+    expect(onSortChange).toHaveBeenCalledWith('name');
+  });
+
+  it('shows only the distinct part of a description and links the score to its evidence', () => {
+    const rows = ['a', 'b', 'c'].map((name, i) => ({
+      ...REPO,
+      id: { ...REPO.id, id: `repo-${i}`, name },
+      description: 'Primary shared Git authority (jain)',
+      jankurai_score: 44,
+    }));
+    renderTable([...rows, { ...REPO, description: 'Core split' }]);
+    const boiler = screen.getByTestId('repo-description-neverhuman/a');
+    expect(boiler).toHaveTextContent('—');
+    expect(boiler).toHaveAttribute('title', 'Primary shared Git authority (jain)');
+    expect(screen.getByTestId('repo-description-neverhuman/jeryu-core')).toHaveTextContent('Core split');
+    expect(screen.getByTestId('repo-score-neverhuman/a')).toHaveAttribute('href', '/quality-gate');
   });
 });

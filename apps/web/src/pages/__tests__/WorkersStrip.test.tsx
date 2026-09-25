@@ -6,8 +6,8 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkersStrip } from '../shift/WorkersStrip';
-import { mockShiftApi, renderAt } from './shiftPageHelpers';
-import { TODOS } from './shiftTestData';
+import { json, mockShiftApi, renderAt } from './shiftPageHelpers';
+import { TODOS, WORKERS } from './shiftTestData';
 
 // Node's global localStorage is undefined without a backing file and shadows
 // jsdom's: the strip goes through the storage adapter, so the test brings its own.
@@ -77,5 +77,24 @@ describe('WorkersStrip', () => {
     mockShiftApi();
     renderStrip('/work#workers');
     expect(await screen.findByTestId('shift-workers-panel')).toBeInTheDocument();
+  });
+
+  it('puts the night window state next to the worker count', async () => {
+    const schedule = {
+      always: 0,
+      day: { hours: '07:00-22:00', slots: 1 },
+      night: { hours: '22:00-07:00', slots: 4 },
+      tz: 'America/Los_Angeles',
+    };
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/workers'
+        ? json({ ...WORKERS, workers: WORKERS.workers.map((w) => ({ ...w, schedule })) })
+        : undefined
+    );
+    renderStrip();
+    // 09:05 UTC is 02:05 in Los Angeles: inside the window.
+    expect(await screen.findByTestId('work-night-window')).toHaveTextContent(
+      'night window open (22:00–07:00 America/Los_Angeles)'
+    );
   });
 });

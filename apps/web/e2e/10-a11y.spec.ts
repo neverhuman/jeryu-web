@@ -340,6 +340,25 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
     await scanAndAssert(page, 'pull-requests');
   });
 
+  test('axe scan: closed and merged timeline rows keep their number legible', async ({
+    page,
+  }) => {
+    // Finished rows are dimmed; the "#7" number on them must still clear AA.
+    await mockBootstrap(page);
+    const snapshot = controlPlane();
+    snapshot.pullRequests[0].state = 'closed';
+    snapshot.pullRequests[1].state = 'merged';
+    await mockPullRoom(page, snapshot);
+    await page.goto('/pull-room');
+    await expect(page.locator('.pull-timeline__number').first()).toBeVisible({
+      timeout: 15_000,
+    });
+    const contrast = (
+      await runAxe(page, { include: '.pull-timeline__number' })
+    ).violations.filter((v) => v.id === 'color-contrast');
+    expect(contrast.flatMap((v) => v.nodes.map((n) => n.failureSummary))).toEqual([]);
+  });
+
   test('axe scan: timeline repository sections, pull request rows and shift branch rows', async ({
     page,
   }) => {

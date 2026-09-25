@@ -42,6 +42,16 @@ const STATUS_LABELS: Record<PullRequestFileStatus, string> = {
   renamed: 'Renamed',
 };
 
+/**
+ * Split a path into its directory prefix (with trailing slash) and basename,
+ * so the prefix can ellipsize while the basename always stays visible.
+ */
+export function splitPath(path: string): { dir: string; base: string } {
+  const cut = path.lastIndexOf('/');
+  if (cut < 0) return { dir: '', base: path };
+  return { dir: path.slice(0, cut + 1), base: path.slice(cut + 1) };
+}
+
 function riskTier(file: PullRequestDiffFile): RiskTier | undefined {
   if (!file.risk) return;
   return file.risk;
@@ -108,7 +118,7 @@ export function DiffFileTree({
                   >
                     <Icon aria-hidden="true" size={12} />
                   </span>
-                  <span className="diff-file-tree__path">
+                  <span className="diff-file-tree__path" title={file.path}>
                     {file.status === 'renamed' && file.old_path ? (
                       <>
                         <span className="diff-file-tree__prior-path">
@@ -117,7 +127,12 @@ export function DiffFileTree({
                         <span aria-hidden="true"> → </span>
                       </>
                     ) : null}
-                    {file.path}
+                    <span className="diff-file-tree__dir">
+                      {splitPath(file.path).dir}
+                    </span>
+                    <span className="diff-file-tree__base">
+                      {splitPath(file.path).base}
+                    </span>
                   </span>
                   <span className="diff-file-tree__counts">
                     <span className="diff-file-tree__additions">

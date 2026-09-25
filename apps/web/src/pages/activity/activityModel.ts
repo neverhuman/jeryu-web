@@ -424,3 +424,33 @@ export function summaryParts(event: PipelineEvent): SummaryParts {
   };
 }
 
+
+function sameSubject(a: PipelineEvent, b: PipelineEvent): boolean {
+  if (a.kind.split('.')[0] !== b.kind.split('.')[0]) return false;
+  if (a.repo !== b.repo) return false;
+  if (a.pr !== null && a.pr !== b.pr) return false;
+  if (a.todo_id !== null && a.todo_id !== b.todo_id) return false;
+  return true;
+}
+
+/**
+ * Seqs of rows that once needed a person but whose cause has since cleared: a
+ * later event about the same subject (same kind family, repo, PR, todo)
+ * finished clean. Needs you already drops these; history must not keep
+ * calling for attention, or the pill stops meaning anything.
+ */
+export function resolvedSeqs(events: PipelineEvent[]): Set<number> {
+  const resolved = new Set<number>();
+  for (const event of events) {
+    if (!event.needs_human) continue;
+    const cleared = events.some(
+      (later) =>
+        later.seq > event.seq &&
+        !later.needs_human &&
+        GOOD.has((later.outcome ?? '').toLowerCase()) &&
+        sameSubject(event, later)
+    );
+    if (cleared) resolved.add(event.seq);
+  }
+  return resolved;
+}

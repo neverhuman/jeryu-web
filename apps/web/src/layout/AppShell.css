@@ -747,3 +747,24 @@ a.global-header__live:hover {
   background-color: var(--color-accent-danger);
   border-radius: var(--radius-full);
 }
+
+/* ── Signed-out frame for a public repository ─────────────────────────── */
+.public-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.public-shell__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--app-header-height);
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-1);
+}
+
+.public-shell__signin {
+  color: var(--color-fg-muted);
+}

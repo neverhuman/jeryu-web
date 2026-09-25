@@ -102,7 +102,7 @@ describe('the Pull requests timeline', () => {
     render([pull(30, 'merged', { checks: { failing: 2 } })], () => ladder(null));
     expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-opened')).not.toHaveTextContent('open');
     expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-mergeable')).not.toHaveTextContent('merged');
-    expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-checks')).toHaveTextContent('2 failing at merge');
+    expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-checks')).toHaveTextContent('2 failing, not required');
     expect(screen.getByTestId('pull-stage-jeryu/jeryu-web-30-released')).toHaveTextContent('next release');
   });
 

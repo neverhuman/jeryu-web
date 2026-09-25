@@ -58,6 +58,19 @@ const TONE_LABELS: Record<Tone, string> = {
   neutral: 'neutral',
 };
 
+/**
+ * The status word shown next to every check. A check whose status is not one
+ * of the known tones keeps the word the forge reported, and a check with no
+ * status at all says so, so no row is left with a bare icon.
+ */
+export function checkStatusWord(check: PullRequestCheck, notRequired = false): string {
+  const tone = toneFor(check);
+  if (notRequired) return 'failing, not required';
+  if (tone !== 'neutral') return TONE_LABELS[tone];
+  const raw = check.status?.trim();
+  return raw ? raw.toLowerCase() : 'no status reported';
+}
+
 export interface ChecksPanelProps {
   checks: PullRequestChecks | null;
   isLoading?: boolean;
@@ -140,6 +153,7 @@ export function ChecksPanel({
             const notRequired = rawTone === 'failing' && !failuresBlockMerge;
             const tone: Tone = notRequired ? 'neutral' : rawTone;
             const Icon = TONE_ICONS[rawTone];
+            const statusWord = checkStatusWord(check, notRequired);
             return (
               <li
                 key={check.id}
@@ -148,15 +162,22 @@ export function ChecksPanel({
               >
                 <span
                   className={`checks-panel__badge checks-panel__badge--${tone}`}
-                  aria-label={TONE_LABELS[rawTone]}
+                  aria-hidden="true"
                 >
                   <Icon aria-hidden="true" size={14} />
                 </span>
                 <div className="checks-panel__body">
-                  <div className="checks-panel__name">{check.name}</div>
+                  <div className="checks-panel__name">
+                    {check.name}{' '}
+                    <span
+                      className={`checks-panel__status checks-panel__status--${tone}`}
+                    >
+                      {statusWord}
+                    </span>
+                  </div>
                   {notRequired ? (
                     <div className="checks-panel__description">
-                      Failing, not required: it does not block the merge.
+                      It does not block the merge.
                     </div>
                   ) : null}
                   {check.description ? (

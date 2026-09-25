@@ -46,6 +46,26 @@ describe('ActivityPage', () => {
     expect(screen.getByText('That is every stored event (30-day retention).')).toBeInTheDocument();
   });
 
+  it('drops the needs-you pill from a failure a later success cleared', async () => {
+    const repo = 'jeryu/jeryu-deploy';
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events'
+        ? json({
+            events: [
+              pipelineEvent({ seq: 31, kind: 'deploy.status', repo, outcome: 'success' }),
+              pipelineEvent({ seq: 30, kind: 'deploy.status', repo, outcome: 'failure', needs_human: true }),
+            ],
+            latest_seq: 31,
+          })
+        : undefined
+    );
+    renderPage();
+    const failed = await screen.findByTestId('activity-event-30');
+    expect(failed).not.toHaveClass('is-needs-human');
+    expect(within(failed).queryByText('needs you')).toBeNull();
+    expect(within(failed).getByText('resolved')).toBeInTheDocument();
+  });
+
   it('sends URL filters to the server and commits a typed filter on Enter', async () => {
     const calls = mockPipelineApi();
     renderPage('/activity?family=jeryu&needs_human=1');

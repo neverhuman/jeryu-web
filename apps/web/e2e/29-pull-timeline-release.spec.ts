@@ -106,6 +106,10 @@ test('A repository that records no release says so instead of calling merged wor
   await shell.goto('/pull-room');
   await shell.assertShellLoaded();
 
+  // The rows arrive from each repository's own list, an async hop after the
+  // snapshot, so wait for one before reading them all.
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-9')).toBeVisible();
+
   // With no release to place them by, every merged row says exactly that —
   // not "merged, not yet released", which would be a claim about a release
   // process this repository does not have — and the count does not call it

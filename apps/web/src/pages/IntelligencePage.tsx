@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom';
 import { DEPENDENCIES_PATH } from './DependenciesPage';
 import { useControlPlane } from '../hooks/useControlPlane';
 import { useEcosystem, useToolBuildClusters } from '../hooks/useToolingEvidence';
-import type { ControlPlaneSnapshot } from '../api/types';
+import type { ControlPlaneSnapshot, EvidenceState } from '../api/types';
 import { buildOperatorGraph, type GraphFilters } from './intelligenceGraphModel';
 import {
   EvidencePanel,
@@ -57,6 +57,28 @@ export function IntelligencePage(): JSX.Element {
   return <IntelligenceSnapshot snapshot={query.data} />;
 }
 
+// Worst first: the header badge takes the worst state among its sources.
+const STATE_RANK: EvidenceState[] = ['failed', 'missing', 'unknown', 'queued', 'fresh'];
+
+export function evidenceStates(
+  snapshot: ControlPlaneSnapshot
+): EvidenceState[] {
+  return [
+    snapshot.localAuthority.state,
+    snapshot.mirror.state,
+    snapshot.artifacts.state,
+    snapshot.mcp.state,
+    snapshot.agentRuns.length > 0 ? 'fresh' : 'missing',
+    snapshot.codegraph.state,
+  ];
+}
+
+/** The snapshot badge, derived from the same evidence the page displays. */
+export function snapshotState(snapshot: ControlPlaneSnapshot): EvidenceState {
+  const states = evidenceStates(snapshot);
+  return STATE_RANK.find((state) => states.includes(state)) ?? 'unknown';
+}
+
 function IntelligenceSnapshot({
   snapshot,
 }: {
@@ -87,7 +109,9 @@ function IntelligenceSnapshot({
       <header className="page__header intelligence__header">
         <div className="intelligence__title-line">
           <h1 className="page__title">Intelligence</h1>
-          <StatePill state={snapshot.localAuthority.state} label="snapshot" />
+          <span data-testid="intelligence-snapshot-state">
+            <StatePill state={snapshotState(snapshot)} label="snapshot" />
+          </span>
         </div>
         <p className="page__roadmap-note intelligence__header-note">
           Operational snapshot of the repository graph and its evidence.

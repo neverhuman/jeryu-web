@@ -4,10 +4,10 @@
 // through typed HTTP endpoints.
 
 import { LogOut, Moon, Monitor, Sun, ToggleRight } from 'lucide-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { apiGet, apiSend } from '../api/client';
+import { apiDelete, apiGet, apiSend } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import { ActionButton } from '../components/action/ActionButton';
 import { ErrorState, LoadingState } from '../components/state';
@@ -74,7 +74,12 @@ export function AdminSettingsPage(): JSX.Element {
         </div>
       </section>
 
-      {user?.role === 'admin' ? <AdminAccessPanel /> : null}
+      {user?.role === 'admin' ? (
+        <>
+          <AdminAccessPanel />
+          <RepoAccessPanel />
+        </>
+      ) : null}
 
       <SessionPanel login={user?.login ?? null} />
     </div>
@@ -119,10 +124,6 @@ interface ResetReceipt {
 
 function AdminAccessPanel(): JSX.Element {
   const [receipt, setReceipt] = useState<ResetReceipt | null>(null);
-  const [owner, setOwner] = useState('jeryu');
-  const [repo, setRepo] = useState('jeryu');
-  const [login, setLogin] = useState('');
-  const [access, setAccess] = useState<'read' | 'write' | 'admin'>('read');
   const users = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: ({ signal }) => apiGet<AdminUser[]>(endpoints.adminUsers(), { signal }),
@@ -132,15 +133,10 @@ function AdminAccessPanel(): JSX.Element {
       apiSend<ResetReceipt>(endpoints.adminResetPassword(target), {}),
     onSuccess: setReceipt,
   });
-  const grant = useMutation({
-    mutationFn: () =>
-      apiSend(endpoints.adminRepoGrant(owner, repo, login), { access }),
-  });
-
   return (
     <section className="page__section" aria-labelledby="admin-users">
       <h2 className="page__section-title" id="admin-users">
-        Users and repository access
+        Users
       </h2>
       {users.isPending ? (
         <LoadingState title="Loading users..." variant="message" />
@@ -148,18 +144,35 @@ function AdminAccessPanel(): JSX.Element {
         <ErrorState title="Could not load users" error={users.error} />
       ) : (
         <div className="page__card">
-          {(users.data ?? []).map((account) => (
-            <div className="page__inline-actions" key={account.login}>
-              <span className="page__pill">{account.role}</span>
-              <strong>{account.login}</strong>
-              <ActionButton
-                variant="default"
-                onClick={() => reset.mutate(account.login)}
-              >
-                Reset password
-              </ActionButton>
-            </div>
-          ))}
+          <table className="admin-users__table" data-testid="admin-users-table">
+            <thead>
+              <tr>
+                <th scope="col">User</th>
+                <th scope="col">Role</th>
+                <th scope="col">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(users.data ?? []).map((account) => (
+                <tr key={account.login}>
+                  <th scope="row">{account.login}</th>
+                  <td>
+                    <span className="page__pill">{account.role}</span>
+                  </td>
+                  <td className="admin-users__actions">
+                    <ActionButton
+                      variant="default"
+                      onClick={() => reset.mutate(account.login)}
+                    >
+                      Reset password
+                    </ActionButton>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {receipt ? (
             <p className="page__roadmap-note">
               {receipt.login}: {receipt.password}
@@ -167,22 +180,129 @@ function AdminAccessPanel(): JSX.Element {
           ) : null}
         </div>
       )}
+    </section>
+  );
+}
+
+type AccessLevel = 'read' | 'write' | 'admin';
+
+interface RepoAccessGrant {
+  login: string;
+  owner: string;
+  repo: string;
+  access: AccessLevel;
+  granted_by: string;
+  granted_at: string;
+}
+
+/**
+ * Who can reach one repository, with a way to take access back. Granting is
+ * the secondary action: a small form under the list, not the page's headline.
+ */
+function RepoAccessPanel(): JSX.Element {
+  const queryClient = useQueryClient();
+  const [owner, setOwner] = useState('jeryu');
+  const [repo, setRepo] = useState('jeryu');
+  const [login, setLogin] = useState('');
+  const [access, setAccess] = useState<AccessLevel>('read');
+  const hasRepo = owner.trim() !== '' && repo.trim() !== '';
+  const grantsKey = ['admin', 'repo-grants', owner, repo];
+  const grants = useQuery({
+    queryKey: grantsKey,
+    enabled: hasRepo,
+    queryFn: ({ signal }) =>
+      apiGet<RepoAccessGrant[]>(endpoints.adminRepoGrants(owner, repo), { signal }),
+  });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: grantsKey });
+  const grant = useMutation({
+    mutationFn: () =>
+      apiSend(endpoints.adminRepoGrant(owner, repo, login.trim()), { access }),
+    onSuccess: () => {
+      setLogin('');
+      return refresh();
+    },
+  });
+  const revoke = useMutation({
+    mutationFn: (target: string) => apiDelete(endpoints.adminRepoGrant(owner, repo, target)),
+    onSuccess: refresh,
+  });
+  const rows = grants.data ?? [];
+
+  return (
+    <section className="page__section" aria-labelledby="repo-access">
+      <h2 className="page__section-title" id="repo-access">
+        Repository access
+      </h2>
+      <div className="admin-grant-grid">
+        <label>
+          Owner
+          <input value={owner} onChange={(event) => setOwner(event.currentTarget.value)} />
+        </label>
+        <label>
+          Repo
+          <input value={repo} onChange={(event) => setRepo(event.currentTarget.value)} />
+        </label>
+      </div>
+      {!hasRepo ? null : grants.isPending ? (
+        <LoadingState title="Loading access..." variant="message" />
+      ) : grants.error ? (
+        <ErrorState title="Could not load access" error={grants.error} />
+      ) : (
+        <div className="page__card">
+          {rows.length === 0 ? (
+            <p className="page__roadmap-note">
+              No one has been granted access to {owner}/{repo}.
+            </p>
+          ) : (
+            <table className="admin-users__table" data-testid="repo-grants-table">
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Access</th>
+                  <th scope="col">Granted by</th>
+                  <th scope="col">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((entry) => (
+                  <tr key={entry.login}>
+                    <th scope="row">{entry.login}</th>
+                    <td>
+                      <span className="page__pill">{entry.access}</span>
+                    </td>
+                    <td>{entry.granted_by}</td>
+                    <td className="admin-users__actions">
+                      <ActionButton
+                        actionId="admin.revoke_repo"
+                        variant="danger"
+                        aria-label={`Revoke ${entry.login}`}
+                        disabled={revoke.isPending}
+                        onClick={() => revoke.mutate(entry.login)}
+                      >
+                        Revoke
+                      </ActionButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {revoke.error ? (
+            <ErrorState title="Could not revoke access" error={revoke.error} />
+          ) : null}
+        </div>
+      )}
       <form
         className="page__card"
+        aria-label="Grant access"
         onSubmit={(event) => {
           event.preventDefault();
           grant.mutate();
         }}
       >
         <div className="admin-grant-grid">
-          <label>
-            Owner
-            <input value={owner} onChange={(event) => setOwner(event.currentTarget.value)} />
-          </label>
-          <label>
-            Repo
-            <input value={repo} onChange={(event) => setRepo(event.currentTarget.value)} />
-          </label>
           <label>
             User
             <input value={login} onChange={(event) => setLogin(event.currentTarget.value)} />
@@ -205,10 +325,16 @@ function AdminAccessPanel(): JSX.Element {
             </div>
           </div>
         </div>
-        <ActionButton type="submit" variant="primary" disabled={grant.isPending}>
-          Grant access
-        </ActionButton>
-        {grant.isSuccess ? <span className="page__pill page__pill--success">Granted</span> : null}
+        <div className="page__inline-actions">
+          <ActionButton
+            type="submit"
+            variant="default"
+            disabled={!hasRepo || login.trim() === '' || grant.isPending}
+          >
+            Grant access
+          </ActionButton>
+          {grant.isSuccess ? <span className="page__pill page__pill--success">Granted</span> : null}
+        </div>
         {grant.error ? <ErrorState title="Could not grant access" error={grant.error} /> : null}
       </form>
     </section>

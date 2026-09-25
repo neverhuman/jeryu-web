@@ -6,6 +6,7 @@ import {
   buildRepoGroups,
   linkSupersessions,
   countsSentence,
+  pullRowHint,
   pullRowStatus,
   pullStateOf,
   type BranchRow,
@@ -78,6 +79,22 @@ describe('pullStateOf', () => {
     // Undecided is its own state: it is not the same as "shipped nowhere".
     expect(pullStateOf(row(pull(11, 'merged'), UNKNOWN_LADDER))).toBe('unknown');
     expect(pullStateOf(row(pull(12, 'merged'), NO_RELEASES))).toBe('unrecorded');
+  });
+
+  it('heads an undecided release with the compare it gave up on', () => {
+    const capped: ReleaseLadder = {
+      kind: 'channels',
+      pips: [
+        { id: 'production', label: 'prod', membership: 'unknown', release: null, at: null, baseline: 'v2.3', undecided: 'capped' },
+      ],
+      furthest: null,
+      release: null,
+      uncertain: true,
+    };
+    const { groups } = buildRepoGroups([pull(81, 'merged')], { ladderFor: () => capped });
+    const first = groups[0]?.rows[0];
+    expect(first?.kind === 'pr' && first.state).toBe('unknown');
+    expect(first?.kind === 'pr' && pullRowHint(first)).toBe('prod v2.3 compare capped');
   });
 
   it('places a closed pull request where nothing moves again', () => {

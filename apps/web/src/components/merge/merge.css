@@ -12,7 +12,7 @@
   display: grid;
   gap: var(--space-3);
   grid-template-columns:
-    minmax(220px, 280px)
+    minmax(180px, 240px)
     minmax(0, 1fr)
     minmax(260px, 320px);
   align-items: start;
@@ -230,12 +230,29 @@
 
 .diff-file-tree__path {
   flex: 1 1 auto;
+  display: flex;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
+}
+
+.diff-file-tree__prior-path,
+.diff-file-tree__dir {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The basename never shrinks: the directory prefix gives way first. */
+.diff-file-tree__base {
+  flex: 0 0 auto;
+}
+
+.diff-file-tree__dir {
+  color: var(--color-fg-muted);
 }
 
 .diff-file-tree__prior-path {
@@ -332,6 +349,9 @@
 
 .diff-viewer__row {
   display: flex;
+  /* Long lines widen the row so the scroll container scrolls sideways. */
+  min-width: 100%;
+  width: max-content;
   align-items: center;
   height: 20px;
   white-space: pre;
@@ -372,8 +392,7 @@
 }
 
 .diff-viewer__text {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 0 auto;
 }
 
 .diff-viewer__add-comment {
@@ -690,15 +709,25 @@
 
 .checks-panel__name {
   font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
   font-weight: var(--font-weight-medium);
 }
 
 .checks-panel__description {
   font-size: var(--font-size-xs);
   color: var(--color-fg-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* The reason a check failed is read in full: wrap it, never clip it. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.checks-panel__status {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-fg-muted);
+}
+.checks-panel__status--failing {
+  color: var(--color-accent-danger);
 }
 
 .checks-panel__link {

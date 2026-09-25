@@ -1,7 +1,8 @@
 // CommandPalette.tsx — the one search-or-jump control (W-FE-14).
 //
-// Four groups: Go to (pages), Repositories (by `owner/name`), Pull request
-// (typed as `owner/name#12` or `name#12`) and Theme. The repository list is
+// Five groups: Go to (pages), Repositories (by `owner/name`), Pull request
+// (typed as `owner/name#12` or `name#12`), Search (hands the typed text to the
+// linkable /search?q= page) and Theme. The repository list is
 // loaded the first time the palette opens, not with the shell. Focus returns
 // to whatever opened the palette when it closes.
 
@@ -10,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useRepositories } from '../hooks/useRepositories';
+import { searchUrl } from '../pages/search/searchModel';
 import { useCommandStore } from '../stores/commandStore';
 import { pullTargets, repositoryTargets, type PaletteTarget } from './paletteModel';
 
@@ -135,6 +137,26 @@ export function CommandPalette(): JSX.Element {
                   <span>{target.label}</span>
                 </Command.Item>
               ))}
+            </Command.Group>
+          ) : null}
+          {typed ? (
+            <Command.Group
+              heading={<span className="command-palette__group">Search</span>}
+              forceMount
+            >
+              <Command.Item
+                // Always shown, but its value never matches the typed text, so it
+                // ranks last and Enter still picks the best jump.
+                value="search:all-results"
+                forceMount
+                className="command-palette__item"
+                onSelect={() => {
+                  close();
+                  navigate(searchUrl(query));
+                }}
+              >
+                <span>See all results for “{query.trim()}”</span>
+              </Command.Item>
             </Command.Group>
           ) : null}
           <Command.Group heading={<span className="command-palette__group">Theme</span>}>

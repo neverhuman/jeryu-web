@@ -127,6 +127,8 @@ interface RepositoriesBodyProps {
   error: Error | null;
   repos: RepositorySummary[];
   onClearFilters: () => void;
+  sort?: RepoSort;
+  onSortChange?: (sort: RepoSort) => void;
 }
 
 export function RepositoriesBody({
@@ -134,6 +136,8 @@ export function RepositoriesBody({
   error,
   repos,
   onClearFilters,
+  sort,
+  onSortChange,
 }: RepositoriesBodyProps): JSX.Element {
   if (loading) {
     return <LoadingState title="Loading repositories…" rows={6} />;
@@ -177,5 +181,5 @@ export function RepositoriesBody({
     );
   }
 
-  return <RepoTable repos={repos} />;
+  return <RepoTable repos={repos} sort={sort} onSortChange={onSortChange} />;
 }

@@ -9,7 +9,7 @@
 
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
@@ -30,6 +30,7 @@ import {
   LoadingState,
   PermissionDeniedState,
 } from '../components/state';
+import { useAuth } from '../hooks/useAuth';
 import { useKeyboardShortcut } from '../hooks/useKeyboard';
 import { useMarkdown } from '../hooks/useMarkdown';
 import { useRealtime } from '../hooks/useRealtime';
@@ -74,6 +75,7 @@ export function RepositoryBrowserPage({
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const resolved = useResolveRepo(provider, fullName);
+  const { user } = useAuth();
   const setRepo = useSelectionStore((s) => s.setCurrentRepo);
 
   const onFile = blobSplat !== undefined;
@@ -165,6 +167,12 @@ export function RepositoryBrowserPage({
     );
   }
   if (!summary || !repoId) {
+    // Signed out, only public repositories are listed: this one may be
+    // private, so ask for a login and come back.
+    if (!user) {
+      const next = `${location.pathname}${location.search}${location.hash}`;
+      return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
+    }
     return (
       <div className="page" data-testid={testId}>
         <ErrorState
