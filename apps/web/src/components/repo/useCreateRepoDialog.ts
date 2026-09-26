@@ -3,9 +3,10 @@
 //
 // Owns the draft request, topics text, wizard step, in-flight/error state, and
 // the panel ref, plus the preview → create submission flow against
-// `/api/v1/repos/preview` (dry_run) and `/api/v1/repos` (with a fresh
-// idempotency key). It also resets on close and wires the Escape-to-cancel
-// shortcut. The dialog component renders the result; this hook keeps the flow
+// `/api/v1/repos/preview` (dry_run) and `/api/v1/repos` (retaining one
+// idempotency key per request body, so a retry after a failed attempt cannot
+// create the repository twice). It also resets on close and wires the
+// Escape-to-cancel shortcut. The dialog component renders the result; this hook keeps the flow
 // out of the view body.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -94,6 +95,8 @@ export function useCreateRepoDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const creation = useRef<{ request: string; key: string } | null>(null);
+  const creating = useRef(false);
 
   useEffect(() => {
     if (!open) return () => {};
@@ -151,15 +154,22 @@ export function useCreateRepoDialog({
   }, [buildRequest]);
 
   const handleCreate = useCallback(async () => {
+    if (creating.current) return;
+    creating.current = true;
     setSubmitting(true);
     setError(null);
     try {
       const body = buildRequest(false);
+      const serialized = JSON.stringify(body);
+      if (creation.current?.request !== serialized) {
+        creation.current = { request: serialized, key: randomUuid() };
+      }
       const result = await apiSend<RepositorySummary>(
         endpoints.repos(),
         body,
-        { idempotencyKey: randomUuid() }
+        { idempotencyKey: creation.current.key }
       );
+      creation.current = null;
       onCreated?.(result);
       onCancel();
     } catch (cause) {
@@ -171,6 +181,7 @@ export function useCreateRepoDialog({
         );
       }
     } finally {
+      creating.current = false;
       setSubmitting(false);
     }
   }, [buildRequest, onCreated, onCancel]);

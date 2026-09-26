@@ -2,14 +2,16 @@
 //
 // Workflow (§35.1.3):
 //   Step 1 (form): user fills in host/owner/name/description/visibility/
-//     initialize_readme/default_branch/topics. On "Preview" we POST to
+//     initialize_readme/default_branch. Options the forge cannot honour
+//     (`local` host, `internal` visibility, topics) are marked unavailable. On "Preview" we POST to
 //     `/api/v1/repos/preview` with `dry_run: true` — the backend computes the
 //     normalized side effects and returns a `CreateRepositoryPreview` we
 //     mirror back to the user.
 //   Step 2 (preview): user reviews the planned side effects and clicks
 //     "Create". We send the same payload to `/api/v1/repos` with
-//     `dry_run: false` and a fresh `Idempotency-Key` (UUIDv4) so retries are
-//     safe.
+//     `dry_run: false` and the `Idempotency-Key` (UUIDv4) minted for that
+//     payload, reused while the request keeps failing so a retry cannot
+//     create the repository twice.
 //
 // On success the dialog calls `onCreated` with the returned summary so the
 // list can refetch.
