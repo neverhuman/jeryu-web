@@ -197,6 +197,54 @@ describe('FleetPage render', () => {
     expect(local).toHaveAttribute('title', 'TTY preview unavailable.');
   });
 
+  it('says runner availability is unknown instead of counting idle slots', () => {
+    useRealtimeStore.setState({ events: [], status: 'open' });
+    const now = new Date().toISOString();
+    renderFleet(
+      {
+        generated_at: now,
+        pool_activity: { repos: [], pools: [], unplaceable: [] },
+        system: {},
+      },
+      {
+        ...EMPTY_RUNNERS,
+        local: {
+          ...EMPTY_RUNNERS.local,
+          state: 'unknown',
+          lastUpdated: now,
+          nodeDetails: [
+            {
+              runnerId: 'xbabe0/slot0',
+              source: 'runnerd',
+              state: 'registering',
+              capacity: 4,
+              inFlight: 0,
+              labels: ['pr-gate'],
+              classes: [],
+              activeTaskCount: 0,
+              lastUpdated: now,
+              activeTasks: [],
+            },
+          ],
+        },
+      }
+    );
+
+    expect(screen.getByTestId('fleet-availability-unknown')).toHaveTextContent(
+      'Runner availability unknown'
+    );
+    expect(screen.getByTestId('fleet-metrics')).toHaveTextContent(
+      '1 gate runner on xbabe0: availability unknown'
+    );
+    expect(screen.getByTestId('fleet-metrics')).not.toHaveTextContent('idle');
+    expect(
+      screen.getByTestId('fleet-node-now-xbabe0_slot0')
+    ).toHaveTextContent('availability unknown');
+    expect(screen.getByTestId('fleet-node-xbabe0_slot0').className).toContain(
+      'is-unknown'
+    );
+  });
+
   it('titles the page Runners and shows each gate runner\'s last gate', () => {
     useRealtimeStore.setState({ events: [], status: 'open' });
     renderFleet(

@@ -31,9 +31,18 @@ export const RUNNER_STALE_AFTER_MS = 3 * 60_000;
 export function FleetPage(): JSX.Element {
   const runnersQuery = useControlPlaneRunners();
   const runnerNetwork = useMemo(
-    () => runnerNetworkFromResponse(runnersQuery.data),
-    [runnersQuery.data]
+    () =>
+      runnerNetworkFromResponse(
+        runnersQuery.data,
+        !runnersQuery.isError && !runnersQuery.isStale
+      ),
+    [runnersQuery.data, runnersQuery.isError, runnersQuery.isStale]
   );
+  // Evidence we can stand behind: a fresh snapshot in which every runner
+  // reported a state we recognise. Anything less and the counts are guesses.
+  const availabilityKnown =
+    runnerNetwork.state === 'fresh' &&
+    runnerNetwork.nodes.every((node) => node.availability !== 'unknown');
   const sentence = networkSentence(runnerNetwork.nodes);
   // Measured against when we fetched the snapshot, so render stays pure.
   const stale =
@@ -61,6 +70,14 @@ export function FleetPage(): JSX.Element {
               stale
             </span>
           ) : null}
+          {availabilityKnown ? null : (
+            <span
+              className="page__pill page__pill--warning"
+              data-testid="fleet-availability-unknown"
+            >
+              Runner availability unknown
+            </span>
+          )}
         </div>
         <p className="page__subtitle">
           The machines that gate pull requests and the agents that review and

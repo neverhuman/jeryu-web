@@ -366,4 +366,58 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-automation')).toHaveCount(0);
   });
 
+  test('keeps observed tasks but does not invent runner availability @action:fleet.availability_unknown', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockFleetBootstrap(page, []);
+    const fabric = runnerFabric(false);
+    fabric.local = {
+      ...fabric.local,
+      state: 'unknown',
+      onlineRunners: 0,
+      offlineRunners: 0,
+      busyRunners: 0,
+      idleRunners: 0,
+      totalSlots: 0,
+      activeSlots: 0,
+      utilization: 0,
+      nodeDetails: fabric.local.nodeDetails.map((node) => ({
+        ...node,
+        source: 'workcell',
+        state: 'unknown',
+        capacity: 0,
+        inFlight: 0,
+      })),
+    };
+    await mockControlPlaneRunners(page, fabric);
+
+    const shell = new AppShellPage(page);
+    await shell.goto('/runners');
+    await shell.assertShellLoaded();
+
+    const fleet = page.getByTestId('fleet-page');
+    await expect(fleet).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('fleet-availability-unknown')).toContainText(
+      'Runner availability unknown'
+    );
+    await expect(page.getByTestId('fleet-metrics')).toContainText(
+      'availability unknown'
+    );
+    // No invented capacity: neither an idle slot nor an offline count.
+    await expect(page.getByTestId('fleet-metrics')).not.toContainText(
+      /idle|busy|offline/
+    );
+    await expect(page.getByTestId('fleet-node-now-xbabe1')).toContainText(
+      'availability unknown'
+    );
+    // The work actually observed on the node stays visible.
+    const task = page.getByTestId('fleet-task-ar-000001');
+    await expect(task).toContainText('editbot');
+    await expect(task).toHaveAttribute(
+      'href',
+      '/repos/jeryu/jeryu%2Fveox/agents/ar-000001'
+    );
+  });
+
 });

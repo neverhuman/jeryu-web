@@ -15,7 +15,7 @@ export function MetricCard({
 }: {
   icon: ReactNode;
   label: string;
-  value: number;
+  value: number | string;
   detail: string;
   state: EvidenceState;
   /** When set, the whole card links to this route. */

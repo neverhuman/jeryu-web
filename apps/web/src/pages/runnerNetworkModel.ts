@@ -151,10 +151,13 @@ function availabilityFromState(state: string): RunnerAvailability {
     case 'offline':
     case 'quarantined':
       return 'offline';
-    case '':
-      return 'unknown';
-    default:
+    case 'active':
+    case 'busy':
+    case 'idle':
+    case 'online':
       return 'online';
+    default:
+      return 'unknown';
   }
 }
 
@@ -189,9 +192,15 @@ function taskFromRaw(raw: RunnerTaskSummary): RunnerNetworkTask {
   };
 }
 
-function nodeFromRaw(raw: RunnerNodeSummary): RunnerNetworkNode {
+function nodeFromRaw(
+  raw: RunnerNodeSummary,
+  capacityKnown: boolean
+): RunnerNetworkNode {
   const tasks = raw.activeTasks.map(taskFromRaw);
-  const availability = availabilityFromState(raw.state);
+  const availability =
+    capacityKnown && raw.source !== 'workcell'
+      ? availabilityFromState(raw.state)
+      : 'unknown';
   const activeTaskCount = tasks.length || raw.activeTaskCount;
   const lastUpdated =
     raw.lastUpdated ??
@@ -310,10 +319,12 @@ function lastActivityFromRaw(value: unknown): RunnerLastActivity | null {
 }
 
 export function runnerNetworkFromResponse(
-  response: RunnerFabricResponse | null | undefined
+  response: RunnerFabricResponse | null | undefined,
+  snapshotAvailable = true
 ): RunnerNetworkState {
   const raw = asRecord(response);
   const local = asRecord(raw?.local);
+  const capacityKnown = snapshotAvailable && local?.state === 'fresh';
   const nodeDetails = Array.isArray(local?.nodeDetails) ? local.nodeDetails : [];
   const allNodes = nodeDetails
     .map((node) => {
@@ -363,7 +374,10 @@ export function runnerNetworkFromResponse(
             } satisfies RunnerTaskSummary;
           })
           .filter((task): task is RunnerTaskSummary => task !== undefined),
-      });
+      }, capacityKnown &&
+        typeof record.capacity === 'number' &&
+        Number.isFinite(record.capacity) &&
+        record.capacity >= 0);
     })
     .filter((node): node is RunnerNetworkNode => node !== undefined)
     .sort((a, b) => a.runnerId.localeCompare(b.runnerId));
@@ -383,7 +397,7 @@ export function runnerNetworkFromResponse(
 
   return {
     state:
-      typeof local?.state === 'string'
+      snapshotAvailable && typeof local?.state === 'string'
         ? (local.state as EvidenceState)
         : 'unknown',
     nodes,
@@ -492,6 +506,18 @@ export function rowNow(node: RunnerNetworkNode, nowMs: number): RowNow {
     };
   }
   const task = node.tasks[0];
+  if (!task && node.availability === 'unknown') {
+    // The snapshot carries no usable state for this runner: say so rather
+    // than read the absence of a task as an idle, available slot.
+    return {
+      text: 'availability unknown',
+      subject: null,
+      pull: null,
+      elapsed: null,
+      draining: false,
+      tone: 'warning',
+    };
+  }
   if (!task) {
     return {
       text: draining ? 'draining' : 'idle',
@@ -628,6 +654,14 @@ export function networkSentence(
   const hosts = hostsOf(nodes);
   const where =
     hosts.length > 0 && hosts.length <= 3 ? ` on ${hosts.join(', ')}` : '';
+  if (nodes.every((node) => node.availability === 'unknown')) {
+    // Busy/idle/offline counts would be invented: the snapshot says nothing
+    // about whether these runners are there at all.
+    return {
+      text: `${nodes.length} gate runner${nodes.length === 1 ? '' : 's'}${where}: availability unknown`,
+      tone: 'warning'
+    };
+  }
   const doing =
     busy === 0 && offline === 0
       ? 'all idle'

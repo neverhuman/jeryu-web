@@ -54,7 +54,9 @@ export function IntelligencePage(): JSX.Element {
     );
   }
 
-  return <IntelligenceSnapshot snapshot={query.data} />;
+  return (
+    <IntelligenceSnapshot snapshot={query.data} outOfDate={query.isStale} />
+  );
 }
 
 // Worst first: the header badge takes the worst state among its sources.
@@ -81,8 +83,11 @@ export function snapshotState(snapshot: ControlPlaneSnapshot): EvidenceState {
 
 function IntelligenceSnapshot({
   snapshot,
+  outOfDate,
 }: {
   snapshot: ControlPlaneSnapshot;
+  /** The runner snapshot is past its refresh window: its counts are not evidence. */
+  outOfDate: boolean;
 }): JSX.Element {
   const ecosystem = useEcosystem();
   const toolClusters = useToolBuildClusters(10);
@@ -92,6 +97,8 @@ function IntelligenceSnapshot({
     query: '',
   });
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const runners = snapshot.runners.local;
+  const runnerCapacityKnown = runners.state === 'fresh' && !outOfDate;
   const operatorGraph = useMemo(
     () =>
       buildOperatorGraph(
@@ -131,10 +138,24 @@ function IntelligenceSnapshot({
             icon={<ServerCog size={18} aria-hidden="true" />}
             label="Runners"
             to="/runners"
-            value={snapshot.runners.local.onlineRunners}
-            detail={`${snapshot.runners.local.offlineRunners} offline`}
+            value={runnerCapacityKnown ? runners.onlineRunners : '—'}
+            detail={
+              runnerCapacityKnown
+                ? `${runners.offlineRunners} offline`
+                : runners.state === 'fresh'
+                  ? 'Runner snapshot out of date'
+                  : runners.state === 'unknown'
+                    ? 'Runner capacity unknown'
+                    : 'Runner capacity unavailable'
+            }
             state={
-              snapshot.runners.local.offlineRunners > 0 ? 'failed' : 'fresh'
+              runners.state !== 'fresh'
+                ? runners.state
+                : outOfDate
+                  ? 'unknown'
+                  : runners.offlineRunners > 0
+                    ? 'failed'
+                    : 'fresh'
             }
           />
           <MetricCard
