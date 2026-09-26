@@ -67,6 +67,7 @@ export default [
       'no-unused-vars': 'off',
       'no-empty': ['warn', { allowEmptyCatch: true }],
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-restricted-globals': ['error', 'localStorage', 'sessionStorage'],
       // Dynamic code execution is the canonical XSS/RCE sink in a browser
       // SPA. We have no `eslint-plugin-security`, but these core rules cover
       // the high-value cases (`eval`, `new Function`, string `setTimeout`)
@@ -83,6 +84,10 @@ export default [
       'jsx-a11y/role-has-required-aria-props': 'warn',
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/no-noninteractive-element-interactions': 'warn',
+      // Preserve the effective .js configuration when consolidating into .mjs.
+      // Scrollable diff/review panes need keyboard focus for the maintained
+      // axe scrollable-region-focusable check; ESLint cannot inspect overflow.
+      'jsx-a11y/no-noninteractive-tabindex': 'warn',
       'react-hooks/set-state-in-effect': 'warn',
       // react-hooks' purity / static-components / refs rules report
       // render-phase patterns (creating components or reading refs during

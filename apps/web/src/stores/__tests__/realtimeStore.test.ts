@@ -77,7 +77,7 @@ describe('realtime store', () => {
   beforeEach(() => {
     FakeWebSocket.instances = [];
     vi.stubGlobal('WebSocket', FakeWebSocket as unknown as typeof WebSocket);
-    sessionStorage.clear();
+    window.sessionStorage.clear();
     useRealtimeStore.setState({ subscriptions: new Map(), lastSeq: null, status: 'idle' });
     useRealtimeStore.getState().flush();
   });
@@ -124,7 +124,7 @@ describe('realtime store', () => {
     const state = useRealtimeStore.getState();
     expect(state.events.map((e) => e.seq)).toEqual([2n, 1n]);
     expect(state.lastSeq).toBe(2n);
-    expect(sessionStorage.getItem(SEQ_KEY)).toBe('2');
+    expect(window.sessionStorage.getItem(SEQ_KEY)).toBe('2');
   });
 
   it('keeps only the latest 200 events', () => {
@@ -179,7 +179,7 @@ describe('realtime store', () => {
       }),
     });
     expect(useRealtimeStore.getState().lastSeq).toBe(30n);
-    expect(sessionStorage.getItem(SEQ_KEY)).toBe('30');
+    expect(window.sessionStorage.getItem(SEQ_KEY)).toBe('30');
   });
 
   it('tells snapshot listeners to refetch and stops after they unsubscribe', () => {
