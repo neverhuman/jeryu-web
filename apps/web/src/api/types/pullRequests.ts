@@ -56,14 +56,39 @@ export interface PullRequestDiff {
 export interface PullRequestCheck {
   id: string;
   name: string;
+  /** `check_run`, or `status` for a commit status such as `<repo>/required`. */
+  kind?: string | null;
   /** `success`, `failure`, `pending`, `skipped`, `cancelled`, `neutral`. */
   status: string;
   conclusion: string | null;
   details_url: string | null;
+  /** The check run's `output.title`; absent for a commit status. */
+  title?: string | null;
+  /** The check run's `output.summary`, or the commit status description. */
   description: string | null;
+  /**
+   * The human page that explains this check: the Quality gate head view for
+   * `jankurai/proof`, the gate run log for a commit status. Never an `/api/`
+   * route.
+   */
+  web_url?: string | null;
+  /** Whether the base branch waits for this context before a merge. */
+  required?: boolean;
+  /** Why a check does not block the merge; absent when it is required. */
+  advisory?: CheckAdvisory | null;
   /** RFC3339 timestamps. */
   started_at: string | null;
   completed_at: string | null;
+}
+
+/** Why a check is not required, said on its own row. */
+export interface CheckAdvisory {
+  /** Short row label, e.g. `advisory - shadow mode`. */
+  label: string;
+  /** A sentence a reader can act on. */
+  reason: string;
+  /** A web page that says more, when there is one. */
+  url?: string | null;
 }
 
 /** Wire shape of `GET /pulls/{number}/checks`. */

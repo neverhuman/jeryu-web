@@ -1,12 +1,22 @@
 // ChecksPanel.tsx — list of CI status checks (W-FE-11).
 //
 // Each row shows the check name, a status badge (success / failing /
-// pending / skipped / cancelled / neutral), and a chevron link to
-// `details_url` when present. The panel header doubles as a summary
+// pending / skipped / cancelled / neutral), and whether the merge waits for
+// it: `required`, or the advisory label that says why it does not (e.g.
+// `advisory - shadow mode` for `jankurai/proof`). Every row expands in place
+// to the check's title, its full output summary, that advisory reason, and a
+// link to the human page behind it — the Quality gate view for
+// `jankurai/proof`, the gate run log for a commit status. So a red check is
+// two clicks from its reason, without leaving the pull request page.
+//
+// The panel header doubles as a summary
 // (e.g. "3 passing · 1 failing · 0 pending").
 
+import { useState } from 'react';
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Circle,
   CircleAlert,
   CircleDashed,
@@ -65,10 +75,53 @@ const TONE_LABELS: Record<Tone, string> = {
  */
 export function checkStatusWord(check: PullRequestCheck, notRequired = false): string {
   const tone = toneFor(check);
-  if (notRequired) return 'failing, not required';
+  if (notRequired) {
+    // Say WHY it does not block, not just that it does not.
+    return `failing, ${check.advisory?.label ?? 'not required'}`;
+  }
   if (tone !== 'neutral') return TONE_LABELS[tone];
   const raw = check.status?.trim();
   return raw ? raw.toLowerCase() : 'no status reported';
+}
+
+/**
+ * Whether `url` is a page a person can read. A raw `/api/` route serves JSON
+ * and plain `http://` is not a link this app hands to a reader, so neither is
+ * offered as the check's details page — the server sends `web_url` for that.
+ */
+export function isReadablePageUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (trimmed.length === 0) return false;
+  if (trimmed.startsWith('/')) return !trimmed.startsWith('/api/');
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'https:') return false;
+  return !parsed.pathname.startsWith('/api/') && parsed.pathname !== '/api';
+}
+
+/**
+ * The page a row links to: the server's human `web_url`, falling back to
+ * `details_url` only when that is itself readable.
+ */
+export function checkPageUrl(check: PullRequestCheck): string | null {
+  for (const candidate of [check.web_url, check.details_url]) {
+    if (typeof candidate === 'string' && isReadablePageUrl(candidate)) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
+
+/** What the row says about whether the merge waits for this check. */
+function requirementNote(check: PullRequestCheck): string | null {
+  if (check.required === true) return 'required to merge';
+  if (check.advisory) return check.advisory.label;
+  if (check.required === false) return 'not required to merge';
+  return null;
 }
 
 export interface ChecksPanelProps {
@@ -89,6 +142,8 @@ export function ChecksPanel({
   failuresBlockMerge = true,
   className,
 }: ChecksPanelProps): JSX.Element {
+  const [expanded, setExpanded] = useState<readonly string[]>([]);
+
   if (isLoading) {
     return (
       <section
@@ -104,6 +159,10 @@ export function ChecksPanel({
   }
 
   const list = checks?.checks ?? [];
+  const toggle = (id: string): void =>
+    setExpanded((open) =>
+      open.includes(id) ? open.filter((each) => each !== id) : [...open, id]
+    );
 
   return (
     <section
@@ -124,7 +183,9 @@ export function ChecksPanel({
               }`}
             >
               {checks.failing} failing
-              {!failuresBlockMerge && checks.failing > 0 ? ' (not required)' : ''}
+              {!failuresBlockMerge && checks.failing > 0
+                ? ' (advisory — open a row for why)'
+                : ''}
             </span>
             <span aria-hidden="true"> · </span>
             <span className="checks-panel__count checks-panel__count--pending">
@@ -150,53 +211,113 @@ export function ChecksPanel({
         <ul className="checks-panel__list">
           {list.map((check) => {
             const rawTone = toneFor(check);
-            const notRequired = rawTone === 'failing' && !failuresBlockMerge;
+            // A required check stays red even when the merge is already
+            // settled: only a check the merge does not wait for is calmed.
+            const notRequired =
+              rawTone === 'failing' && !failuresBlockMerge && check.required !== true;
             const tone: Tone = notRequired ? 'neutral' : rawTone;
             const Icon = TONE_ICONS[rawTone];
             const statusWord = checkStatusWord(check, notRequired);
+            const note = requirementNote(check);
+            const pageUrl = checkPageUrl(check);
+            const isOpen = expanded.includes(check.id);
+            const bodyId = `check-detail-${check.id}`;
+            const Chevron = isOpen ? ChevronDown : ChevronRight;
             return (
               <li
                 key={check.id}
                 className="checks-panel__item"
                 data-tone={tone}
+                data-testid={`check-row-${check.name}`}
               >
-                <span
-                  className={`checks-panel__badge checks-panel__badge--${tone}`}
-                  aria-hidden="true"
-                >
-                  <Icon aria-hidden="true" size={14} />
-                </span>
-                <div className="checks-panel__body">
-                  <div className="checks-panel__name">
-                    {check.name}{' '}
-                    <span
-                      className={`checks-panel__status checks-panel__status--${tone}`}
-                    >
-                      {statusWord}
+                <div className="checks-panel__row">
+                  <span
+                    className={`checks-panel__badge checks-panel__badge--${tone}`}
+                    aria-hidden="true"
+                  >
+                    <Icon aria-hidden="true" size={14} />
+                  </span>
+                  <button
+                    type="button"
+                    className="checks-panel__toggle"
+                    aria-expanded={isOpen}
+                    aria-controls={bodyId}
+                    onClick={() => toggle(check.id)}
+                  >
+                    <Chevron aria-hidden="true" size={12} />
+                    <span className="checks-panel__name">
+                      {check.name}{' '}
+                      <span
+                        className={`checks-panel__status checks-panel__status--${tone}`}
+                      >
+                        {statusWord}
+                      </span>
                     </span>
-                  </div>
-                  {notRequired ? (
-                    <div className="checks-panel__description">
-                      It does not block the merge.
+                  </button>
+                  {note ? (
+                    <span
+                      className={`checks-panel__requirement checks-panel__requirement--${
+                        check.required === true ? 'required' : 'advisory'
+                      }`}
+                    >
+                      {note}
+                    </span>
+                  ) : null}
+                </div>
+                <div
+                  id={bodyId}
+                  className="checks-panel__detail"
+                  hidden={!isOpen}
+                >
+                  {check.title ? (
+                    <div className="checks-panel__detail-title">
+                      {check.title}
                     </div>
                   ) : null}
                   {check.description ? (
                     <div className="checks-panel__description">
                       {check.description}
                     </div>
+                  ) : (
+                    <div className="checks-panel__description">
+                      This check reported no summary.
+                    </div>
+                  )}
+                  {check.advisory ? (
+                    <div className="checks-panel__description">
+                      {check.advisory.reason}
+                      {check.advisory.url ? (
+                        <>
+                          {' '}
+                          <a
+                            className="checks-panel__page-link"
+                            href={check.advisory.url}
+                          >
+                            Why it is not required
+                          </a>
+                        </>
+                      ) : null}
+                    </div>
                   ) : null}
+                  {pageUrl ? (
+                    <a
+                      className="checks-panel__page-link"
+                      href={pageUrl}
+                      {...(pageUrl.startsWith('/')
+                        ? {}
+                        : { target: '_blank', rel: 'noopener noreferrer' })}
+                    >
+                      {check.kind === 'status'
+                        ? `Open the ${check.name} run log`
+                        : `Open the ${check.name} report`}
+                      <ExternalLink aria-hidden="true" size={12} />
+                    </a>
+                  ) : (
+                    <div className="checks-panel__description">
+                      This check reported no page to open.
+                    </div>
+                  )}
                 </div>
-                {check.details_url ? (
-                  <a
-                    href={check.details_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="checks-panel__link"
-                    aria-label={`Open ${check.name} details`}
-                  >
-                    <ExternalLink aria-hidden="true" size={12} />
-                  </a>
-                ) : null}
               </li>
             );
           })}

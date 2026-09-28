@@ -93,6 +93,23 @@ export function headBody(): Record<string, unknown> {
     score: 71,
     threshold: 85,
     passed: false,
+    caps: [
+      {
+        id: 'stale-naming',
+        meaning:
+          'The auditor applied the `stale-naming` cap: the score is held under a ceiling while a name no longer says what the thing is.',
+        how_to_clear:
+          'Fix the 1 `stale-naming` finding(s) listed below (or dispute one that is wrong) and push.',
+        findings: 1,
+      },
+      {
+        id: 'thin-tests',
+        meaning:
+          'The auditor applied the `thin-tests` cap: the change is not proven by a test that would fail without it.',
+        how_to_clear: 'Add the test that fails without the change and push.',
+        findings: 0,
+      },
+    ],
     findings: [
       {
         id: 'f-1',

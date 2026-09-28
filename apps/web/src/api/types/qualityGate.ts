@@ -89,6 +89,15 @@ export interface QualityGateFinding {
   disputed_at: string | null;
 }
 
+/** One cap the auditor applied: what it means and what clears it. */
+export interface QualityGateAppliedCap {
+  id: string;
+  meaning: string;
+  how_to_clear: string;
+  /** Findings on this head that the cap comes from; 0 when it has none. */
+  findings: number;
+}
+
 export interface QualityGateHeadDetail {
   schema_version: number;
   repo: string;
@@ -98,6 +107,8 @@ export interface QualityGateHeadDetail {
   score: number;
   threshold: number;
   passed: boolean;
+  /** Every applied cap, explained; absent on an older server. */
+  caps?: QualityGateAppliedCap[];
   findings: QualityGateFinding[];
 }
 

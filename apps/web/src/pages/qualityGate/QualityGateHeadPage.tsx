@@ -14,7 +14,7 @@ import { ChevronLeft, ShieldCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import type { QualityGateFinding } from '../../api/types';
+import type { QualityGateAppliedCap, QualityGateFinding } from '../../api/types';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useDisputeFinding, useQualityGateHead } from '../../hooks/useQualityGate';
@@ -74,6 +74,23 @@ export function QualityGateHeadPage(): JSX.Element {
             </p>
           </section>
 
+          <section className="page__section" aria-labelledby="quality-gate-caps">
+            <h2 className="page__section-title" id="quality-gate-caps">
+              Applied caps
+            </h2>
+            {(data.caps ?? []).length === 0 ? (
+              <p className="quality-gate__cap-none" data-testid="quality-gate-no-caps">
+                No cap held this score down.
+              </p>
+            ) : (
+              <ul className="quality-gate__caps" data-testid="quality-gate-caps">
+                {(data.caps ?? []).map((cap) => (
+                  <CapRow key={cap.id} cap={cap} />
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section className="page__section" aria-labelledby="quality-gate-findings">
             <h2 className="page__section-title" id="quality-gate-findings">
               Findings
@@ -117,6 +134,19 @@ export function QualityGateHeadPage(): JSX.Element {
         </>
       )}
     </div>
+  );
+}
+
+/** One applied cap: the rule, what it means, and what clears it. */
+function CapRow({ cap }: { cap: QualityGateAppliedCap }): JSX.Element {
+  return (
+    <li className="quality-gate__cap" data-testid={`quality-gate-cap-${cap.id}`}>
+      <div className="quality-gate__finding-head">
+        <span className="page__pill">{cap.id}</span>
+        <span className="quality-gate__finding-title">{cap.meaning}</span>
+      </div>
+      <p className="quality-gate__cap-clear">{cap.how_to_clear}</p>
+    </li>
   );
 }
 

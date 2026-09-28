@@ -658,11 +658,67 @@
 
 .checks-panel__item {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: 4px;
   padding: var(--space-2);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-1);
+}
+
+.checks-panel__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The whole name is the expander: a wide target, and it reads as a row. */
+.checks-panel__toggle {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.checks-panel__requirement {
+  flex: 0 0 auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.checks-panel__requirement--required {
+  color: var(--color-accent-warning);
+}
+
+.checks-panel__detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: calc(20px + var(--space-2));
+}
+
+.checks-panel__detail[hidden] {
+  display: none;
+}
+
+.checks-panel__detail-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-secondary);
+}
+
+.checks-panel__page-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-primary);
 }
 
 .checks-panel__badge {

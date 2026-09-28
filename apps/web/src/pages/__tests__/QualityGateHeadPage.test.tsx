@@ -51,6 +51,34 @@ describe('QualityGateHeadPage', () => {
     );
   });
 
+  it('lists every applied cap with what it means and how to clear it', async () => {
+    mockQualityGateApi();
+    renderHead();
+
+    // The red check has no finding of its own for `thin-tests`, so the cap is
+    // the only thing that explains the score: it must be on the page.
+    const cap = await screen.findByTestId('quality-gate-cap-thin-tests');
+    expect(within(cap).getByText('thin-tests')).toBeInTheDocument();
+    expect(within(cap).getByText(/not proven by a test/)).toBeInTheDocument();
+    expect(
+      within(cap).getByText('Add the test that fails without the change and push.')
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('quality-gate-cap-stale-naming')).toBeInTheDocument();
+  });
+
+  it('says so when no cap held the score down', async () => {
+    mockQualityGateApi((req) =>
+      req.pathname.startsWith('/api/v1/quality-gate/heads/')
+        ? json({ ...HEAD, caps: [] })
+        : undefined
+    );
+    renderHead();
+
+    expect(await screen.findByTestId('quality-gate-no-caps')).toHaveTextContent(
+      'No cap held this score down.'
+    );
+  });
+
   it('records a dispute with its reason and shows the finding as disputed', async () => {
     const calls = mockQualityGateApi((req) =>
       req.method === 'POST'
