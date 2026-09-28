@@ -14,6 +14,7 @@ import type {
   DeploymentWithStatus,
   EnvironmentSummary,
 } from '../api/types/deployments';
+import { queueHref, repoWorkHref, WORK_PATH } from './shift/workPaths';
 
 /** Conventional environments shown even before they have a deployment. */
 export const EXPECTED_ENVIRONMENTS = ['production', 'stable', 'canary', 'dev'] as const;
@@ -201,6 +202,12 @@ export function timelineHref(scope: { repo?: string | null; family?: string | nu
       ? `?repo=${encodeURIComponent(scope.repo)}`
       : '';
   return `/pull-room${query}`;
+}
+
+/** Work scoped as the Releases page is: to the family, or to the repository's todos. */
+export function workHref(scope: { repo?: string | null; family?: string | null }): string {
+  if (scope.family) return queueHref(scope.family);
+  return scope.repo ? repoWorkHref(scope.repo) : WORK_PATH;
 }
 
 /** The Releases page scoped to one repository: what each environment runs, and what waits. */

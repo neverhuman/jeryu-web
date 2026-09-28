@@ -98,7 +98,7 @@ describe('the Pull requests timeline', () => {
     expect(screen.queryByTestId('pull-ladder-jeryu/jeryu-web-21')).not.toBeInTheDocument();
   });
 
-  it("opens the repository's releases from its heading, its pill and its frontier rows", () => {
+  it("opens the repository's releases from its counts, its pill and its frontier rows", () => {
     const ladders = new Map<number, ReleaseLadder>([
       [22, ladder(null)],
       [23, ladder('production', 'v6')],
@@ -108,8 +108,17 @@ describe('the Pull requests timeline', () => {
       (pr) => ladders.get(pr.number) ?? ladder(null)
     );
     const releases = '/releases?repo=jeryu%2Fjeryu-web';
-    const section = screen.getByTestId('pull-repo-jeryu/jeryu-web');
-    expect(within(section).getByRole('link', { name: 'Releases' })).toHaveAttribute('href', releases);
+    const counts = screen.getByTestId('pull-counts-jeryu/jeryu-web');
+    expect(counts).toHaveTextContent('1 in flight · 1 awaiting release · 1 released');
+    expect(within(counts).getByRole('link', { name: '1 in flight' })).toHaveAttribute(
+      'href',
+      '/work?repo=jeryu-web'
+    );
+    expect(within(counts).getByRole('link', { name: '1 awaiting release' })).toHaveAttribute(
+      'href',
+      releases
+    );
+    expect(within(counts).getByRole('link', { name: '1 released' })).toHaveAttribute('href', releases);
     expect(
       within(screen.getByTestId('pull-ladder-jeryu/jeryu-web-23-production')).getByRole('link')
     ).toHaveAttribute('href', releases);
@@ -118,6 +127,14 @@ describe('the Pull requests timeline', () => {
     expect(screen.getByTestId('pull-releases-jeryu/jeryu-web-22')).toHaveTextContent('next release');
     // An open PR has no release to open.
     expect(screen.queryByTestId('pull-releases-jeryu/jeryu-web-24')).not.toBeInTheDocument();
+  });
+
+  it('opens History from the closed count', async () => {
+    render([pull(25, 'open'), pull(26, 'closed')], () => ladder(null));
+    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-26')).not.toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: '1 closed' }));
+    expect(screen.getByTestId('pull-older-jeryu/jeryu-web')).toHaveAttribute('open');
+    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-26')).toBeVisible();
   });
 
   it('says a merged row has passed open and mergeable, and names failing checks as of the merge', () => {
@@ -206,6 +223,11 @@ describe('the Pull requests timeline', () => {
     expect(
       screen.getByTestId('pull-branch-work-jeryu/jeryu-web-dayshift/2026-09-20')
     ).toHaveAttribute('href', '/work?family=jeryu&todo=t1%2Ct2');
+    // So does its Branch column: the branch's state is Work's to show.
+    expect(within(branch).getByRole('link', { name: '1 working' })).toHaveAttribute(
+      'href',
+      '/work?family=jeryu&todo=t1%2Ct2'
+    );
 
     // Its todos fold under it.
     expect(within(branch).getByTestId('pull-ghost-t2')).not.toBeVisible();

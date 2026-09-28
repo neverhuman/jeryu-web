@@ -36,6 +36,7 @@ import {
   scopeParams,
   splitEnvironments,
   timelineHref,
+  workHref,
   type DeployedRef,
   type EnvironmentRow,
 } from './releasesModel';
@@ -100,7 +101,8 @@ export function ReleasesPage(): JSX.Element {
         </p>
         <p className="releases__muted">
           For how far one change has got on its way here, see the{' '}
-          <Link to={timelineHref({ repo: repoId, family })}>Pull requests timeline</Link>.
+          <Link to={timelineHref({ repo: repoId, family })}>Pull requests timeline</Link>; for
+          work not yet on a pull request, see <Link to={workHref({ repo: repoId, family })}>Work</Link>.
         </p>
         <p className="releases__repo">
           <label htmlFor="releases-scope">Repository or family</label>

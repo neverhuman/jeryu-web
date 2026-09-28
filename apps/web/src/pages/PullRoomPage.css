@@ -633,11 +633,26 @@
   font-weight: var(--font-weight-regular);
 }
 
-/* Where this repository's merged work goes next: its Releases page. */
-.pull-repo__releases {
-  margin-left: auto;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-regular);
+/* Each count opens the page that owns it; they read as the sentence they were. */
+.pull-repo__head .pull-repo__count-link {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+button.pull-repo__count-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pull-repo__head .pull-repo__count-link:hover,
+.pull-repo__head .pull-repo__count-link:focus-visible {
+  color: var(--color-fg-primary);
+  text-decoration-style: solid;
 }
 
 /* One expander per repository, at the bottom: the list above it is never broken up. */

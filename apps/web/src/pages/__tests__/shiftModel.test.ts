@@ -48,6 +48,11 @@ describe('shiftModel', () => {
     expect(filterShiftTodos(TODOS, f).map((t) => t.status)).toEqual(['claimed', 'open', 'done']);
     expect(filterShiftTodos(TODOS, { ...f, mode: 'night' })).toHaveLength(1);
     expect(filterShiftTodos(TODOS, { ...f, repo: 'jeryu-deploy' })[0].id).toBe('20260918-2201-a9z');
+    // A todo naming `owner/name` answers to its bare name, and the reverse.
+    const owned = todo({ id: 'owned', repos: ['jeryu/jeryu-api'] });
+    expect(filterShiftTodos([owned], { ...f, repo: 'jeryu-api' })).toHaveLength(1);
+    expect(filterShiftTodos(TODOS, { ...f, repo: 'jeryu/jeryu-deploy' })[0].id).toBe('20260918-2201-a9z');
+    expect(filterShiftTodos([owned], { ...f, repo: 'other/jeryu-api' })).toHaveLength(0);
     expect(filterShiftTodos(TODOS, { ...f, requested_by: 'jeryu' })).toHaveLength(1);
     expect(filterShiftTodos(TODOS, { ...f, worked_by: 'bob' })[0].status).toBe('claimed');
     expect(filterShiftTodos(TODOS, { ...f, shift: 'nightshift/2026-09-18' })).toHaveLength(1);

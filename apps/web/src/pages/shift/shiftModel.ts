@@ -71,10 +71,17 @@ export function filterShiftTodos(todos: ShiftTodo[], filters: QueueFilters): Shi
         keep(todo.requested_by, filters.requested_by) &&
         keep(todo.shift ?? '', filters.shift) &&
         (filters.attention !== 'human' || needsHuman(todo)) &&
-        (filters.repo === 'all' || todo.repos.includes(filters.repo)) &&
+        (filters.repo === 'all' || todo.repos.some((repo) => sameRepo(repo, filters.repo))) &&
         (filters.worked_by === 'all' || todoWorkers(todo).includes(filters.worked_by))
     )
     .sort(compareTodos);
+}
+
+/** A todo may name `owner/name` where the filter says `name`, or the reverse. */
+function sameRepo(named: string, wanted: string): boolean {
+  if (named === wanted) return true;
+  const bare = (repo: string) => repo.split('/').pop() ?? repo;
+  return (!named.includes('/') || !wanted.includes('/')) && bare(named) === bare(wanted);
 }
 
 const STATUS_RANK: Record<string, number> = {

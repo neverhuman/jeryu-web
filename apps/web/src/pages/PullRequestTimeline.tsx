@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { PullRequestSummary } from '../api/types';
@@ -5,10 +6,11 @@ import type { GhostGroup } from './pullGhostsModel';
 import {
   branchWorkHref,
   buildRepoGroups,
-  countsSentence,
+  countParts,
   pullRowHint,
   pullRowStatus,
   type BranchRow,
+  type CountPart,
   type FlowRow,
   type PullRow,
   type RepoGroup,
@@ -16,6 +18,7 @@ import {
 import { pullRequestPath } from './pullRoomModel';
 import { UNKNOWN_LADDER, type ReleaseLadder } from './releaseChannelsModel';
 import { releasesHref } from './releasesModel';
+import { repoWorkHref } from './shift/workPaths';
 import { PULL_STAGE_LABELS, pullStages } from './pullTimelineModel';
 
 import './PullRoomPage.css';
@@ -105,15 +108,19 @@ export function PullRequestTimeline({
 }
 
 function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean }): JSX.Element {
+  // "16 closed" in the heading opens History, where closed work lives.
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const history = useRef<HTMLDetailsElement>(null);
+  const openHistory = (): void => {
+    setHistoryOpen(true);
+    history.current?.scrollIntoView?.({ block: 'nearest' });
+  };
   return (
     <section className="pull-repo" data-testid={`pull-repo-${group.repo}`}>
       {showRepo ? (
         <h2 className="pull-repo__head">
           <Link to={`/repos/${group.host}/${group.repo}/pulls`}>{group.repo}</Link>
-          <span className="pull-repo__count">{countsSentence(group.counts)}</span>
-          <Link className="pull-repo__releases" to={releasesHref(group.repo)}>
-            Releases
-          </Link>
+          <RepoCounts group={group} onHistory={openHistory} />
         </h2>
       ) : null}
       <ol className="pull-timeline__rows">
@@ -122,7 +129,13 @@ function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean 
         ))}
       </ol>
       {group.older.length > 0 ? (
-        <details className="pull-repo__older" data-testid={`pull-older-${group.repo}`}>
+        <details
+          ref={history}
+          className="pull-repo__older"
+          data-testid={`pull-older-${group.repo}`}
+          open={historyOpen}
+          onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
+        >
           <summary>History ({group.older.length})</summary>
           <ol className="pull-timeline__rows">
             {group.older.map((row) => (
@@ -132,6 +145,43 @@ function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean 
         </details>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * The counts line, each part opening the page that owns it: work in flight is
+ * Work's, merged work is Releases', and closed work is the History below.
+ */
+function RepoCounts({ group, onHistory }: { group: RepoGroup; onHistory: () => void }): JSX.Element {
+  const parts = countParts(group.counts);
+  if (parts.length === 0) return <span className="pull-repo__count">nothing yet</span>;
+  const target = (part: CountPart): JSX.Element => {
+    if (part.target === 'history') {
+      // Past the row limit a repository may have no History to open.
+      return group.older.length > 0 ? (
+        <button type="button" className="pull-repo__count-link" onClick={onHistory}>
+          {part.text}
+        </button>
+      ) : (
+        <>{part.text}</>
+      );
+    }
+    const to = part.target === 'work' ? repoWorkHref(group.repo) : releasesHref(group.repo);
+    return (
+      <Link className="pull-repo__count-link" to={to}>
+        {part.text}
+      </Link>
+    );
+  };
+  return (
+    <span className="pull-repo__count" data-testid={`pull-counts-${group.repo}`}>
+      {parts.map((part, index) => (
+        <span key={part.text}>
+          {index > 0 ? ' · ' : null}
+          {target(part)}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -287,7 +337,7 @@ function BranchRowView({ row, scope }: { row: BranchRow; scope: string }): JSX.E
           <span className="pull-stage__dot" aria-hidden="true" />
           <span className="pull-stage__label">
             <span className="pull-timeline__sr">Branch: </span>
-            {row.detail}
+            <Link to={branchWorkHref(row)}>{row.detail}</Link>
           </span>
         </li>
         {Object.entries(PULL_STAGE_LABELS).map(([stage, label]) => (

@@ -17,6 +17,7 @@ import {
   scopeParams,
   splitEnvironments,
   timelineHref,
+  workHref,
   unshippedPulls,
 } from '../releasesModel';
 
@@ -200,5 +201,11 @@ describe('one Releases page', () => {
     expect(timelineHref({ repo: 'jeryu/jeryu-web' })).toBe('/pull-room?repo=jeryu%2Fjeryu-web');
     expect(timelineHref({ family: 'jeryu' })).toBe('/pull-room?family=jeryu');
     expect(timelineHref({})).toBe('/pull-room');
+  });
+
+  it('sends work not yet on a pull request to Work, scoped the same way', () => {
+    expect(workHref({ repo: 'jeryu/jeryu-web' })).toBe('/work?repo=jeryu-web');
+    expect(workHref({ family: 'jeryu' })).toBe('/work?family=jeryu');
+    expect(workHref({})).toBe('/work');
   });
 });

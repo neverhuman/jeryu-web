@@ -157,15 +157,24 @@ function FamilyQueue({
   all: ShiftTodo[];
   isAdmin: boolean;
 }): JSX.Element {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const focusIds = useMemo(
     () => (params.get('todo') ?? '').split(',').filter(Boolean),
     [params]
   );
-  const [filters, setFilters] = useState<QueueFilters>(DEFAULT_QUEUE_FILTERS);
+  const [localFilters, setFilters] = useState<QueueFilters>(DEFAULT_QUEUE_FILTERS);
+  // `?repo=` is the repository filter, so other pages can link to one repo's work.
+  const repo = params.get('repo') || 'all';
+  const filters = useMemo(() => ({ ...localFilters, repo }), [localFilters, repo]);
   const scoped = useMemo(() => todosOfFamily(all, family), [all, family]);
   const counts = useMemo(() => liveFamilyCounts(all), [all]);
-  const options = useMemo(() => queueOptions(scoped), [scoped]);
+  const options = useMemo(() => {
+    const found = queueOptions(scoped);
+    // A linked repo with nothing queued still shows as the filter in use.
+    return repo === 'all' || found.repos.includes(repo)
+      ? found
+      : { ...found, repos: [...found.repos, repo].sort() };
+  }, [scoped, repo]);
   const filtered = useMemo(() => {
     const shown = filterShiftTodos(scoped, filters);
     return focusIds.length > 0 ? shown.filter((t) => focusIds.includes(t.id)) : shown;
@@ -189,8 +198,21 @@ function FamilyQueue({
   );
   const inScope = family ? families.filter((f) => f.name === family) : families;
 
-  const set = (key: keyof QueueFilters) => (value: string) =>
-    setFilters((current) => ({ ...current, [key]: value }));
+  const set = (key: keyof QueueFilters) => (value: string) => {
+    if (key !== 'repo') {
+      setFilters((current) => ({ ...current, [key]: value }));
+      return;
+    }
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (value === 'all') next.delete('repo');
+        else next.set('repo', value);
+        return next;
+      },
+      { replace: true }
+    );
+  };
   const tableProps = { ownersFor, isAdmin, focusIds, picked: family, onPick: onFamily };
 
   return (

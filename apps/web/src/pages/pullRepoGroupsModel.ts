@@ -15,7 +15,7 @@
 
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
-import { WORK_PATH } from './shift/workPaths';
+import { queueHref } from './shift/workPaths';
 import { ladderUndecided, type PipId, type ReleaseLadder } from './releaseChannelsModel';
 
 /** Every state a row can sit at, pipeline order: least far first. */
@@ -268,15 +268,32 @@ function countRows(branches: BranchRow[], prs: PullRow[]): RepoCounts {
   };
 }
 
+/** Which page answers a part of the counts line: Work, Releases, or the History fold. */
+export type CountTarget = 'work' | 'releases' | 'history';
+
+export interface CountPart {
+  text: string;
+  target: CountTarget;
+}
+
+/** The counts line's parts, zero parts left out, each with the page that owns it. */
+export function countParts(counts: RepoCounts): CountPart[] {
+  const parts: CountPart[] = [];
+  if (counts.inFlight > 0) parts.push({ text: `${counts.inFlight} in flight`, target: 'work' });
+  if (counts.awaitingRelease > 0) {
+    parts.push({ text: `${counts.awaitingRelease} awaiting release`, target: 'releases' });
+  }
+  if (counts.released > 0) parts.push({ text: `${counts.released} released`, target: 'releases' });
+  if (counts.releaseUnknown > 0) {
+    parts.push({ text: `${counts.releaseUnknown} merged, release unknown`, target: 'releases' });
+  }
+  if (counts.closed > 0) parts.push({ text: `${counts.closed} closed`, target: 'history' });
+  return parts;
+}
+
 /** "3 in flight · 1 awaiting release · 82 released", zero parts left out. */
 export function countsSentence(counts: RepoCounts): string {
-  const parts: string[] = [];
-  if (counts.inFlight > 0) parts.push(`${counts.inFlight} in flight`);
-  if (counts.awaitingRelease > 0) parts.push(`${counts.awaitingRelease} awaiting release`);
-  if (counts.released > 0) parts.push(`${counts.released} released`);
-  if (counts.releaseUnknown > 0) parts.push(`${counts.releaseUnknown} merged, release unknown`);
-  if (counts.closed > 0) parts.push(`${counts.closed} closed`);
-  return parts.join(' · ') || 'nothing yet';
+  return countParts(counts).map((part) => part.text).join(' · ') || 'nothing yet';
 }
 
 /**
@@ -390,12 +407,9 @@ function branchRow(key: string, todos: GhostRow[]): BranchRow {
  * a family before it looks for the ids.
  */
 export function branchWorkHref(row: BranchRow): string {
-  const params = new URLSearchParams();
   const families = new Set(row.todos.map((todo) => todo.family));
-  const [family] = families;
-  if (families.size === 1 && family) params.set('family', family);
-  params.set('todo', row.todos.map((todo) => todo.todoId).join(','));
-  return `${WORK_PATH}?${params.toString()}`;
+  const [family = ''] = families;
+  return queueHref(families.size === 1 ? family : '', row.todos.map((todo) => todo.todoId));
 }
 
 /**

@@ -81,6 +81,14 @@ describe('ShiftQueuePage', () => {
     expect(screen.queryByTestId('shift-todo-20260918-2201-a9z')).toBeNull();
   });
 
+  it('filters to one repository from ?repo=, as the Pull requests counts link it', async () => {
+    mockShiftApi();
+    renderQueue('/work?repo=jeryu-deploy');
+    expect(await screen.findByTestId('shift-todo-20260918-2201-a9z')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-todo-20260918-1832-k3f')).toBeNull();
+    expect(screen.getByLabelText('Repo')).toHaveValue('jeryu-deploy');
+  });
+
   it('posts admin row actions and opens a review PR', async () => {
     const prompt = vi.spyOn(window, 'prompt');
     const calls = mockShiftApi((req) => {
