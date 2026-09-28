@@ -18,6 +18,7 @@ import { expect, test } from './fixtures/test';
 
 import {
   mockBootstrap,
+  mockPullRequestCommits,
   mockPullRequestDetail,
   mockRepoLookup,
 } from './fixtures/mocks';
@@ -32,6 +33,15 @@ test.describe('PR cockpit (W-T-13)', () => {
   test('mocked PR detail renders the cockpit @action:pr.detail', async ({ page }) => {
     await mockBootstrap(page);
     await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
+    // The page's Commits section reads the PR's commits; without a fixture the
+    // failed read would add its own alert to the page.
+    await mockPullRequestCommits(page, [
+      {
+        sha: PR_SHA,
+        message: 'Add JeRyu Phase 3 backend',
+        date: '2026-05-26T00:00:00Z',
+      },
+    ]);
     await mockPullRequestDetail(page, {
       repoId: `${REPO.host}:${REPO.owner}/${REPO.name}`,
       number: PR_NUMBER,
@@ -64,6 +74,15 @@ test.describe('PR cockpit (W-T-13)', () => {
   }) => {
     await mockBootstrap(page);
     await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
+    // The page's Commits section reads the PR's commits; without a fixture the
+    // failed read would add its own alert to the page.
+    await mockPullRequestCommits(page, [
+      {
+        sha: PR_SHA,
+        message: 'Add JeRyu Phase 3 backend',
+        date: '2026-05-26T00:00:00Z',
+      },
+    ]);
     // The server still reports the passport of a merged PR as blocked ("merged").
     await mockPullRequestDetail(page, {
       repoId: `${REPO.host}:${REPO.owner}/${REPO.name}`,

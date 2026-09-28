@@ -112,6 +112,23 @@ export const endpoints = {
   /** GitHub-shaped check runs of one commit-ish (a branch name works). */
   commitCheckRuns: (owner: string, repo: string, ref: string): string =>
     `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(ref)}/check-runs`,
+  /**
+   * GitHub-shaped commits of one pull request, oldest first. `perPage`/`page`
+   * page the list the way the server's `Link` header does.
+   */
+  pullCommits: (
+    owner: string,
+    repo: string,
+    prNumber: string,
+    params?: { perPage?: number; page?: number }
+  ): string => {
+    const base = `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${encodeURIComponent(prNumber)}/commits`;
+    const qs = new URLSearchParams();
+    if (params?.perPage !== undefined) qs.set('per_page', String(params.perPage));
+    if (params?.page !== undefined) qs.set('page', String(params.page));
+    const suffix = qs.toString();
+    return suffix ? `${base}?${suffix}` : base;
+  },
   /** GitHub-shaped branch protection rule; 404 when the branch is unprotected. */
   branchProtection: (owner: string, repo: string, branch: string): string =>
     `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches/${encodeURIComponent(branch)}/protection`,

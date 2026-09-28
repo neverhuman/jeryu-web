@@ -83,6 +83,18 @@ export function RepoRouter(): JSX.Element {
         />
       );
     }
+    case 'commit':
+      // A commit link (the PR page's Commits section builds these): the
+      // repository browsed at that commit, so the sha is a live destination.
+      return (
+        <Navigate
+          to={{
+            pathname: front,
+            search: subTail ? `?ref=${encodeURIComponent(subTail)}` : '',
+          }}
+          replace
+        />
+      );
     case 'blob':
       // The same component as the front page, in the same position, so the
       // Files panel keeps its state while the reader moves between files.

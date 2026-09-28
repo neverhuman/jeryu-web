@@ -674,6 +674,56 @@ export async function mockPullRequestDetail(
   return detail;
 }
 
+/** One commit of the GitHub-shaped `pulls/{n}/commits` list. */
+export interface MockPullCommit {
+  sha: string;
+  message: string;
+  date: string;
+  author?: string;
+}
+
+/**
+ * Mock the commits of a pull request (`GET /api/v3/.../pulls/{n}/commits`).
+ * Pass `status` to rehearse the failure the Commits section must survive.
+ */
+export async function mockPullRequestCommits(
+  page: Page,
+  commits: MockPullCommit[],
+  status = 200
+): Promise<void> {
+  const body = commits.map((commit) => ({
+    sha: commit.sha,
+    url: `/repos/neverhuman/jeryu/commits/${commit.sha}`,
+    html_url: `/repos/jeryu/neverhuman/jeryu/commit/${commit.sha}`,
+    commit: {
+      message: commit.message,
+      author: {
+        name: commit.author ?? 'Shift Worker',
+        email: 'worker@example.invalid',
+        date: commit.date,
+      },
+      committer: {
+        name: commit.author ?? 'Shift Worker',
+        email: 'worker@example.invalid',
+        date: commit.date,
+      },
+    },
+    parents: [{ sha: 'parent000000000000000000000000000000000' }],
+  }));
+  await page.route(
+    /\/api\/v3\/repos\/[^/]+\/[^/]+\/pulls\/[^/]+\/commits(\?.*)?$/,
+    async (route: Route) => {
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          status === 200 ? body : { message: 'Not Found' }
+        ),
+      });
+    }
+  );
+}
+
 /**
  * Mock the PR list endpoint with a single PR so list-driven UIs can hydrate.
  */

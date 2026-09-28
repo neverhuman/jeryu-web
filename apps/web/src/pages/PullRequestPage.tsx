@@ -40,6 +40,7 @@ import { usePullRequest } from '../hooks/usePullRequest';
 import { usePrChecks } from '../hooks/usePrChecks';
 import { usePrDiff } from '../hooks/usePrDiff';
 import { usePrThreads } from '../hooks/usePrThreads';
+import { usePullCommits } from '../hooks/usePullCommits';
 import { useRealtime } from '../hooks/useRealtime';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { usePreferencesStore } from '../stores/preferencesStore';
@@ -52,6 +53,7 @@ import {
 } from '../components/merge/pullReviewModel';
 import { relativeTime } from '../components/repo/relativeTime';
 import { PullRequestCockpit } from './PullRequestCockpit';
+import { PullRequestCommits } from './PullRequestCommits';
 import {
   extractDrift,
   type HeadDriftInfo,
@@ -98,6 +100,10 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const diff = usePrDiff(repoId, prNumber);
   const checks = usePrChecks(repoId, prNumber);
   const threads = usePrThreads(repoId, prNumber);
+  // The commits come from the GitHub-shaped edge, which addresses the
+  // repository by owner/name rather than by the resolved repo id.
+  const [prOwner = '', prRepo = ''] = fullName.split('/');
+  const commits = usePullCommits(prOwner, prRepo, prNumber);
 
   const approve = useApprovePr(repoId, prNumber);
   const mergeMutation = useMergePr(repoId, prNumber);
@@ -204,7 +210,8 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     void diff.refetch();
     void checks.refetch();
     void threads.refetch();
-  }, [approve, mergeMutation, review, detail, diff, checks, threads]);
+    void commits.refetch();
+  }, [approve, mergeMutation, review, detail, diff, checks, threads, commits]);
 
   // ── Loading + error guards. ────────────────────────────────────────
   if (resolved.isPending) {
@@ -386,6 +393,12 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         onDiffModeChange={(m: DiffViewerMode) => setDiffMode(m)}
         onApprove={handleApprove}
         onMerge={handleMerge}
+      />
+
+      <PullRequestCommits
+        commits={commits.data}
+        isPending={commits.isPending}
+        error={commits.error}
       />
     </div>
   );
