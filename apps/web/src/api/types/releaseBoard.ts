@@ -72,7 +72,7 @@ export interface BoardStage {
   /** Runs beside the previous stage instead of after it. */
   parallel?: boolean;
   /** Declared but never deployed. */
-  unused?: boolean;
+  never_deployed?: boolean;
   targets: BoardTarget[];
   promote?: BoardPromote;
   /** What promoting into this stage would ship. */

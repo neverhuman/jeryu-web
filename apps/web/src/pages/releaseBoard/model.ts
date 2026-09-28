@@ -91,7 +91,7 @@ export function connectorLabel(connector: '→' | '‖'): string {
  * only read of that wire flag, whose name the contract fixes.
  */
 export function neverDeployed(stage: BoardStage): boolean {
-  return stage.unused === true;
+  return stage.never_deployed === true;
 }
 
 /** The CSS modifiers of a stage cell. */

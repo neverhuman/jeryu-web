@@ -230,7 +230,7 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
 
   test('axe scan: Fleet operator dashboard', async ({ page }) => {
     // /runners renders from the control-plane runners snapshot; the bootstrap
-    // pool mock is unused by the page but harmless.
+    // pool mock is never read by the page but harmless.
     await mockFleetBootstrap(page, [
       { pool: 'trusted', running_jobs: 1, active_slots: 4, online_runners: 4 },
       {

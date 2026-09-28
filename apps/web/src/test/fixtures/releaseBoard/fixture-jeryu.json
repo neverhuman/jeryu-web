@@ -82,12 +82,12 @@
         {
           "id": "dev-canary-stable",
           "name": "dev · canary · stable",
-          "version": "never deployed",
+          "version": "no deployment yet",
           "state": "none",
-          "status": "unused",
+          "status": "never deployed",
           "known_by": "reported",
           "targets": [],
-          "unused": true
+          "never_deployed": true
         }
       ]
     },
