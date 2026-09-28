@@ -1,8 +1,8 @@
 // releaseBoardMocks.ts — route mocks for the family release board on
 // /releases: `GET /api/v1/release-board` (the families that reported),
 // `GET /api/v1/release-board/{family}` (one snapshot) and the forge
-// environments the live overlay reads. The snapshots are the 2026-09-28 audit
-// fixtures, read from the same files the unit tests import.
+// environments the live overlay reads. The snapshots are the invented acme,
+// globex and initech fixtures, read from the same files the unit tests import.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -37,7 +37,7 @@ function snapshot(family: string): BoardSnapshot {
 }
 
 /** Sorted by family, as the server lists them. */
-export const BOARD_SNAPSHOTS: BoardSnapshot[] = ['jain', 'jeryu', 'veox-ai'].map(snapshot);
+export const BOARD_SNAPSHOTS: BoardSnapshot[] = ['acme', 'globex', 'initech'].map(snapshot);
 
 async function fulfillJson(route: Route, body: unknown, status = 200): Promise<void> {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -84,7 +84,7 @@ export async function mockBoards(
 
 /**
  * Forge environments for every repository: empty (nothing newer than the
- * snapshots) unless `production` is given, which veox-ai/ai-veox-app then
+ * snapshots) unless `production` is given, which acme/app then
  * reports as deployed just now.
  */
 export async function mockEnvironments(
@@ -92,7 +92,7 @@ export async function mockEnvironments(
   production?: { sha: string; ref: string }
 ): Promise<void> {
   await page.route('**/api/v3/repos/*/*/environments', async (route) => {
-    if (!production || !route.request().url().includes('/veox-ai/ai-veox-app/')) {
+    if (!production || !route.request().url().includes('/acme/app/')) {
       await fulfillJson(route, { total_count: 0, environments: [] });
       return;
     }
@@ -105,7 +105,7 @@ export async function mockEnvironments(
         environment: 'production',
         description: null,
         payload: {},
-        creator: { login: 'alton2' },
+        creator: { login: 'deployer' },
         created_at: new Date().toISOString(),
         production_environment: true,
         transient_environment: false,

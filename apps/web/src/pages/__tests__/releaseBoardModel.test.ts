@@ -7,10 +7,10 @@ import { describe, expect, it } from 'vitest';
 import type { EnvironmentSummary } from '../../api/types/deployments';
 import type { BoardStage, BoardState, BoardWork } from '../../api/types/releaseBoard';
 import {
-  JAIN_BOARD,
-  JERYU_BOARD,
+  ACME_BOARD,
+  GLOBEX_BOARD,
+  INITECH_BOARD,
   listResponse,
-  VEOX_AI_BOARD,
 } from '../../test/fixtures/releaseBoard';
 import {
   agoText,
@@ -35,17 +35,17 @@ import {
   workSummary,
 } from '../releaseBoard/model';
 
-const OBSERVED = VEOX_AI_BOARD.observed_at; // 2026-09-28T15:40:00Z
+const OBSERVED = ACME_BOARD.observed_at; // 2026-09-28T15:40:00Z
 
-function stage(laneId: string, stageId: string, board = VEOX_AI_BOARD): BoardStage {
+function stage(laneId: string, stageId: string, board = ACME_BOARD): BoardStage {
   const found = board.lanes.find((l) => l.id === laneId)?.stages.find((s) => s.id === stageId);
   if (!found) throw new Error(`no stage ${laneId}/${stageId}`);
   return found;
 }
 
-function veoxWork(): BoardWork {
-  const work = VEOX_AI_BOARD.work;
-  if (!work) throw new Error('the veox-ai fixture carries a work bar');
+function acmeWork(): BoardWork {
+  const work = ACME_BOARD.work;
+  if (!work) throw new Error('the acme fixture carries a work bar');
   return work;
 }
 
@@ -59,7 +59,7 @@ function environment(name: string, sha: string, createdAt: string, ref = 'main')
       environment: name,
       description: null,
       payload: {},
-      creator: { login: 'gatebot' },
+      creator: { login: 'deployer' },
       created_at: createdAt,
       production_environment: name === 'production',
       transient_environment: false,
@@ -128,15 +128,15 @@ describe('stageOverlay', () => {
   });
 
   it('lists each linked forge repository once', () => {
-    expect(forgeRepos(VEOX_AI_BOARD)).toEqual(['veox-ai/ai-veox-app']);
-    expect(forgeRepos(JERYU_BOARD)).toEqual(['jeryu/jeryu-deploy']);
-    expect(forgeRepos(JAIN_BOARD)).toEqual([]);
+    expect(forgeRepos(ACME_BOARD)).toEqual(['acme/app']);
+    expect(forgeRepos(GLOBEX_BOARD)).toEqual(['globex/server']);
+    expect(forgeRepos(INITECH_BOARD)).toEqual([]);
   });
 });
 
 describe('workShares', () => {
   it('rounds each part to a whole percent of the total, zeros included', () => {
-    const shares = workShares(veoxWork());
+    const shares = workShares(acmeWork());
     expect(shares.map((s) => [s.key, s.count, s.percent])).toEqual([
       ['live', 3, 43],
       ['merged', 0, 0],
@@ -155,7 +155,7 @@ describe('workShares', () => {
   });
 
   it('describes the bar in words for assistive tech', () => {
-    expect(workSummary(veoxWork())).toBe(
+    expect(workSummary(acmeWork())).toBe(
       '7 todos. Live: 3, Merged, not released: 0, Stranded in open shift PRs #11, #12: 2, Untraceable: 0, Blocked: 2, Open: 0.'
     );
   });
@@ -179,14 +179,14 @@ describe('freshness', () => {
   });
 
   it('names the trigger and host of the snapshot', () => {
-    expect(observedLine(VEOX_AI_BOARD, observed + 5 * 60_000)).toBe(
-      'observed 5 min ago · manual run on xbabe0'
+    expect(observedLine(ACME_BOARD, observed + 5 * 60_000)).toBe(
+      'observed 5 min ago · manual run on collector-1'
     );
   });
 });
 
 describe('stage track', () => {
-  const lane = VEOX_AI_BOARD.lanes[0];
+  const lane = ACME_BOARD.lanes[0];
 
   it('puts an arrow between stages that follow, a double bar beside a parallel one', () => {
     expect(lane?.stages.map((s, i) => stageConnector(s, i))).toEqual([null, '→', '‖', '→']);
@@ -195,7 +195,7 @@ describe('stage track', () => {
   });
 
   it('dashes a never-deployed stage and says it was never deployed to', () => {
-    const idle = stage('forge-server', 'dev-canary-stable', JERYU_BOARD);
+    const idle = stage('forge-server', 'dev-canary-stable', GLOBEX_BOARD);
     expect(stageCellClass(idle, false)).toBe(
       'release-board__cell release-board__cell--neutral release-board__cell--never-deployed'
     );
@@ -229,7 +229,7 @@ describe('stage track', () => {
 
 describe('pins', () => {
   it('splits the header row into repo, cell and behind columns', () => {
-    expect(pinColumns(JERYU_BOARD.pins ?? { note: '', columns: [], rows: [] })).toEqual({
+    expect(pinColumns(GLOBEX_BOARD.pins ?? { note: '', columns: [], rows: [] })).toEqual({
       repo: 'Repo',
       cells: ['Main', 'Pinned', 'In prod'],
       behind: 'Behind',
@@ -245,10 +245,10 @@ describe('pickFamily', () => {
   const { boards } = listResponse();
 
   it('prefers the URL, then the remembered family, then the first reported', () => {
-    expect(pickFamily(boards, 'veox-ai', 'jeryu')).toBe('veox-ai');
-    expect(pickFamily(boards, null, 'jeryu')).toBe('jeryu');
-    expect(pickFamily(boards, null, 'gone')).toBe('jain');
-    expect(pickFamily(boards, null, null)).toBe('jain');
-    expect(pickFamily([], null, 'jeryu')).toBeNull();
+    expect(pickFamily(boards, 'initech', 'globex')).toBe('initech');
+    expect(pickFamily(boards, null, 'globex')).toBe('globex');
+    expect(pickFamily(boards, null, 'gone')).toBe('acme');
+    expect(pickFamily(boards, null, null)).toBe('acme');
+    expect(pickFamily([], null, 'globex')).toBeNull();
   });
 });

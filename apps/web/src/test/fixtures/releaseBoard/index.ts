@@ -1,15 +1,16 @@
-// index.ts — the release board fixtures from the 2026-09-28 audit (real
-// data, the exact shape the collector emits), typed for tests. The JSON files
-// are the contract's fixtures copied as-is; the e2e mocks read the same files.
+// index.ts — the release board fixtures, typed for tests. Three invented
+// families (acme, globex, initech) in the exact shape the collector emits:
+// a parallel stage, target skew, a never-deployed stage, a read-only lane
+// shared from another family, and pins. The e2e mocks read the same files.
 
 import type {
   ReleaseBoard,
   ReleaseBoardListEntry,
   ReleaseBoardListResponse,
 } from '../../../api/types/releaseBoard';
-import jainJson from './fixture-jain.json';
-import jeryuJson from './fixture-jeryu.json';
-import veoxJson from './fixture-veox-ai.json';
+import acmeJson from './fixture-acme.json';
+import globexJson from './fixture-globex.json';
+import initechJson from './fixture-initech.json';
 
 function isReleaseBoard(value: unknown): value is ReleaseBoard {
   if (typeof value !== 'object' || value === null) return false;
@@ -26,11 +27,11 @@ function board(value: unknown): ReleaseBoard {
   return value;
 }
 
-export const VEOX_AI_BOARD = board(veoxJson);
-export const JERYU_BOARD = board(jeryuJson);
-export const JAIN_BOARD = board(jainJson);
+export const ACME_BOARD = board(acmeJson);
+export const GLOBEX_BOARD = board(globexJson);
+export const INITECH_BOARD = board(initechJson);
 
-export const ALL_BOARDS: ReleaseBoard[] = [JAIN_BOARD, JERYU_BOARD, VEOX_AI_BOARD];
+export const ALL_BOARDS: ReleaseBoard[] = [ACME_BOARD, GLOBEX_BOARD, INITECH_BOARD];
 
 /** A list entry for `GET /api/v1/release-board`, as the server derives it. */
 export function listEntry(snapshot: ReleaseBoard): ReleaseBoardListEntry {

@@ -40,7 +40,7 @@ import './ReleaseBoard.css';
 
 export const BOARD_NEEDS_ADMIN = 'The release board needs an admin session.';
 export const BOARD_NONE_REPORTED =
-  'No family has reported a board yet — the collector on xbabe0 posts one every 5 minutes and after every release.';
+  'No family has reported a board yet — the collector posts one every 5 minutes and after every release.';
 
 function statusOf(error: unknown): number | null {
   return error instanceof ApiError ? error.status : null;
@@ -149,7 +149,7 @@ function FamilyBoard({ family }: { family: string }): JSX.Element {
     return (
       <p className="page__roadmap-note" role="status" data-testid="release-board-family-error">
         {statusOf(query.error) === 404
-          ? `No board has been reported for ${family} yet. The collector on xbabe0 posts one every 5 minutes and after every release.`
+          ? `No board has been reported for ${family} yet. The collector posts one every 5 minutes and after every release.`
           : `The ${family} board could not be read: ${query.error.message}`}
       </p>
     );

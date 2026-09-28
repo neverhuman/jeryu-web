@@ -150,7 +150,7 @@ const TRIGGER_TEXT: Record<ReleaseBoard['collector']['trigger'], string> = {
   manual: 'manual run',
 };
 
-/** "observed 12 min ago · timer run on xbabe0". */
+/** "observed 12 min ago · timer run on collector-1". */
 export function observedLine(board: ReleaseBoard, nowMs: number): string {
   const { ago } = boardFreshness(board.observed_at, nowMs);
   const trigger = TRIGGER_TEXT[board.collector.trigger] ?? board.collector.trigger;

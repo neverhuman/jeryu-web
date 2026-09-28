@@ -1,7 +1,7 @@
 // releaseBoard.ts — wire shapes for the family release board
 // (`jeryu.release_board.v1`): `GET /api/v1/release-board` lists the families
 // that have reported, `GET /api/v1/release-board/{family}` returns one
-// snapshot. A collector on xbabe0 builds each snapshot and PUTs it; the
+// snapshot. A collector builds each snapshot and PUTs it; the
 // server keeps the newest per family in memory. Both reads are admin-only.
 
 /** `none` is neutral: unknown, or nothing to judge. */

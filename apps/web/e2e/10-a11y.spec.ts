@@ -418,7 +418,7 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
     await mockPipelineApi(page);
     await mockEnvironments(page);
     await mockBoards(page);
-    await page.goto('/releases?family=veox-ai');
+    await page.goto('/releases?family=acme');
     const prod = page.getByTestId('release-board-stage-cloud-app-prod');
     await expect(prod).toBeVisible({ timeout: 15_000 });
     await prod.click();
@@ -436,7 +436,7 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
     await mockPipelineApi(page);
     await mockEnvironments(page);
     await mockBoards(page);
-    await page.goto('/releases?family=jeryu');
+    await page.goto('/releases?family=globex');
     await page.getByRole('tab', { name: 'Pinned vs released' }).click({ timeout: 15_000 });
     await expect(page.getByTestId('release-board-pins')).toBeVisible();
     await scanAndAssert(page, 'releases-board-pins');

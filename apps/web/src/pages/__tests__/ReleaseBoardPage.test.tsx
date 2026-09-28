@@ -10,10 +10,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReleaseBoard } from '../../api/types/releaseBoard';
 import { removeBrowserText } from '../../storage/browserStorage';
 import {
+  ACME_BOARD,
   ALL_BOARDS,
-  JERYU_BOARD,
+  GLOBEX_BOARD,
   listResponse,
-  VEOX_AI_BOARD,
 } from '../../test/fixtures/releaseBoard';
 import { BOARD_FAMILY_STORAGE_KEY } from '../releaseBoard/model';
 import { ReleasesPage } from '../ReleasesPage';
@@ -22,7 +22,7 @@ import { errorResponse, json, renderAt, type Override } from './shiftPageHelpers
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role }, isPending: false }),
+  useAuth: () => ({ user: { login: 'operator', role }, isPending: false }),
 }));
 
 function serveBoards(boards: ReleaseBoard[] = ALL_BOARDS, extra?: Override) {
@@ -95,15 +95,15 @@ describe('ReleasesPage — family release board', () => {
     expect(await screen.findByTestId('release-board-summary')).toHaveTextContent(
       ALL_BOARDS[0]?.summary ?? ''
     );
-    expect(screen.getByRole('button', { name: 'jain' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'veox-ai' }));
-    expect(await screen.findByText(VEOX_AI_BOARD.summary)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'veox-ai' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'acme' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'globex' }));
+    expect(await screen.findByText(GLOBEX_BOARD.summary)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'globex' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('opens a stage into its targets, what promoting ships, the rollback and the command', async () => {
     serveBoards();
-    open('/releases?family=veox-ai');
+    open('/releases?family=acme');
     const prod = await screen.findByTestId('release-board-stage-cloud-app-prod');
     expect(prod).toHaveTextContent('v0.8.12 · 96d8374');
     expect(prod).toHaveTextContent('known by reported');
@@ -115,7 +115,7 @@ describe('ReleasesPage — family release board', () => {
     expect(within(detail).getByRole('heading', { name: 'Cloud app · prod' })).toBeInTheDocument();
     const rows = within(detail).getAllByRole('row');
     expect(rows).toHaveLength(6); // header + five targets
-    expect(within(detail).getByRole('rowheader', { name: 'xbabe1 · prod worker' })).toBeInTheDocument();
+    expect(within(detail).getByRole('rowheader', { name: 'node-b · prod worker' })).toBeInTheDocument();
     expect(within(detail).getAllByText('behind')).toHaveLength(4);
     expect(within(detail).getByText('Promoting ships')).toBeInTheDocument();
     expect(within(detail).getByText(/a275def · deploy: report each deploy/)).toBeInTheDocument();
@@ -136,51 +136,60 @@ describe('ReleasesPage — family release board', () => {
 
   it('draws a never-deployed stage the way the design does', async () => {
     serveBoards();
-    open('/releases?family=jeryu');
+    open('/releases?family=globex');
     const idle = await screen.findByTestId('release-board-stage-forge-server-dev-canary-stable');
     expect(idle).toHaveClass('release-board__cell--never-deployed');
     fireEvent.click(idle);
     expect(screen.getByTestId('release-board-detail-forge-server')).toHaveTextContent(
       'Declared but never deployed to'
     );
-    // jeryu production ships nothing: it already runs main.
+    // globex production ships nothing: it already runs main.
     fireEvent.click(screen.getByTestId('release-board-stage-forge-server-production'));
     expect(screen.getByTestId('release-board-detail-forge-server')).toHaveTextContent(
       'Nothing to ship'
     );
   });
 
+  it('marks a lane shared from another family as read-only and names its owner', async () => {
+    serveBoards();
+    open('/releases?family=initech');
+    expect(await screen.findByTestId('release-board-read-only-cloud-appliance')).toHaveTextContent(
+      'read-only here · owned by acme'
+    );
+    expect(screen.queryByTestId('release-board-read-only-free-download')).toBeNull();
+  });
+
   it('shows how much work reached each point, with counts and percentages', async () => {
     serveBoards();
-    open('/releases?family=veox-ai');
+    open('/releases?family=acme');
     const work = await screen.findByTestId('release-board-work');
     expect(within(work).getByRole('img')).toHaveAccessibleName(/^7 todos\. Live: 3/);
     expect(screen.getByTestId('release-board-work-live')).toHaveTextContent('Live 3 (43%)');
     expect(screen.getByTestId('release-board-work-blocked')).toHaveTextContent('Blocked 2 (29%)');
-    expect(work).toHaveTextContent(VEOX_AI_BOARD.work?.method ?? 'x');
-    expect(work).toHaveTextContent(VEOX_AI_BOARD.work?.unlinked ?? 'x');
+    expect(work).toHaveTextContent(ACME_BOARD.work?.method ?? 'x');
+    expect(work).toHaveTextContent(ACME_BOARD.work?.unlinked ?? 'x');
   });
 
   it('switches to pinned vs released and release notes', async () => {
     serveBoards();
-    open('/releases?family=jeryu');
+    open('/releases?family=globex');
     fireEvent.click(await screen.findByRole('tab', { name: 'Pinned vs released' }));
     const pins = screen.getByTestId('release-board-pins');
     expect(within(pins).getByRole('columnheader', { name: 'In prod' })).toBeInTheDocument();
-    const releaseOps = screen.getByTestId('release-board-pin-jeryu-release-ops');
+    const releaseOps = screen.getByTestId('release-board-pin-release-ops');
     expect(releaseOps).toHaveTextContent('42');
     expect(releaseOps).toHaveTextContent('the pin policy blocks the bump');
     expect(screen.getByRole('tab', { name: 'Pinned vs released' })).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.click(screen.getByRole('tab', { name: 'Release notes' }));
     const notes = screen.getByTestId('release-board-notes');
-    expect(notes).toHaveTextContent(JERYU_BOARD.notes?.title ?? 'x');
+    expect(notes).toHaveTextContent(GLOBEX_BOARD.notes?.title ?? 'x');
     expect(notes).toHaveTextContent('Nothing is waiting.');
   });
 
   it('overlays a deployment the forge reported after the snapshot', async () => {
     serveBoards(ALL_BOARDS, (req) => {
-      if (req.pathname !== '/api/v3/repos/veox-ai/ai-veox-app/environments') return undefined;
+      if (req.pathname !== '/api/v3/repos/acme/app/environments') return undefined;
       const sha = '1a2b3c4d5e6f70819a2b3c4d5e6f70819a2b3c4d';
       const current = {
         deployment: {
@@ -191,7 +200,7 @@ describe('ReleasesPage — family release board', () => {
           environment: 'production',
           description: null,
           payload: {},
-          creator: { login: 'alton2' },
+          creator: { login: 'deployer' },
           created_at: '2026-09-28T15:55:00Z',
           production_environment: true,
           transient_environment: false,
@@ -204,7 +213,7 @@ describe('ReleasesPage — family release board', () => {
         environments: [{ name: 'production', latest: current, current, previous: null }],
       });
     });
-    open('/releases?family=veox-ai');
+    open('/releases?family=acme');
     const prod = await screen.findByTestId('release-board-stage-cloud-app-prod');
     expect(await within(prod).findByTestId('release-board-overlay')).toHaveTextContent(
       'reported after this snapshot'
@@ -222,25 +231,25 @@ describe('ReleasesPage — family release board', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-28T16:00:00Z'));
     const broken: ReleaseBoard = {
-      ...VEOX_AI_BOARD,
-      problems: [{ source: 'ssh xbabe3', message: 'connection timed out' }],
+      ...ACME_BOARD,
+      problems: [{ source: 'ssh node-c', message: 'connection timed out' }],
     };
     serveBoards([broken]);
-    open('/releases?family=veox-ai');
+    open('/releases?family=acme');
     expect(await screen.findByTestId('release-board-stale')).toHaveTextContent('stale');
     expect(screen.getByTestId('release-board-observed')).toHaveTextContent(
-      'observed 20 min ago · manual run on xbabe0'
+      'observed 20 min ago · manual run on collector-1'
     );
     const problems = screen.getByTestId('release-board-problems');
     expect(problems).toHaveTextContent('could not read 1 source');
-    expect(problems).toHaveTextContent('ssh xbabe3: connection timed out');
+    expect(problems).toHaveTextContent('ssh node-c: connection timed out');
   });
 
   it('does not flag a snapshot taken a few minutes ago', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-28T15:45:00Z'));
     serveBoards();
-    open('/releases?family=veox-ai');
+    open('/releases?family=acme');
     expect(await screen.findByTestId('release-board-observed')).toHaveTextContent('observed 5 min ago');
     expect(screen.queryByTestId('release-board-stale')).toBeNull();
   });
@@ -260,7 +269,7 @@ describe('ReleasesPage — family release board', () => {
     serveBoards([]);
     open('/releases');
     expect(await screen.findByTestId('release-board-none')).toHaveTextContent(
-      'No family has reported a board yet — the collector on xbabe0 posts one every 5 minutes and after every release.'
+      'No family has reported a board yet — the collector posts one every 5 minutes and after every release.'
     );
     expect(screen.getByLabelText('Repository or family')).toBeInTheDocument();
   });
@@ -276,8 +285,8 @@ describe('ReleasesPage — family release board', () => {
 
   it('keeps ?repo= as the per-repository view, without reading the board', async () => {
     const calls = serveBoards();
-    open('/releases?repo=veox-ai%2Fai-veox-app');
-    expect(await screen.findByLabelText('Repository or family')).toHaveValue('repo:veox-ai/ai-veox-app');
+    open('/releases?repo=acme%2Fapp');
+    expect(await screen.findByLabelText('Repository or family')).toHaveValue('repo:acme/app');
     expect(screen.getByRole('link', { name: 'Per repository' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByTestId('release-board')).toBeNull();
     expect(calls.some((c) => c.pathname.startsWith('/api/v1/release-board'))).toBe(false);
