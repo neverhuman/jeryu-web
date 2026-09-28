@@ -137,7 +137,7 @@ describe('ReleasesPage — family release board', () => {
   it('draws a never-deployed stage the way the design does', async () => {
     serveBoards();
     open('/releases?family=globex');
-    const idle = await screen.findByTestId('release-board-stage-forge-server-dev-canary-stable');
+    const idle = await screen.findByTestId('release-board-stage-forge-server-dev');
     expect(idle).toHaveClass('release-board__cell--never-deployed');
     fireEvent.click(idle);
     expect(screen.getByTestId('release-board-detail-forge-server')).toHaveTextContent(
@@ -148,6 +148,38 @@ describe('ReleasesPage — family release board', () => {
     expect(screen.getByTestId('release-board-detail-forge-server')).toHaveTextContent(
       'Nothing to ship'
     );
+  });
+
+  it('lays every lane on the declared columns, with unused columns and tool rows shown', async () => {
+    serveBoards();
+    open('/releases?family=globex');
+    const head = await screen.findByTestId('release-board-columns');
+    expect(head).toHaveTextContent('maindevstageprod');
+    // A column the lane skips says so rather than vanishing.
+    expect(screen.getByTestId('release-board-slot-web-ui-dev')).toHaveTextContent('not used');
+    expect(screen.getByTestId('release-board-slot-web-ui-stage')).toHaveTextContent('pinned');
+    // Shift work sits with main; a stage in no column follows the grid.
+    const main = screen.getByTestId('release-board-slot-forge-server-main');
+    expect(within(main).getByTestId('release-board-stage-forge-server-shift')).toBeInTheDocument();
+    expect(within(main).getByTestId('release-board-stage-forge-server-main')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Forge server by stage' })).not.toContainElement(
+      screen.getByTestId('release-board-stage-forge-server-canary-stable')
+    );
+    // Each tool is its own row under one Tools heading.
+    const tools = screen.getByRole('group', { name: 'Tools' });
+    for (const id of ['gate-runner', 'reviewer', 'scorer']) {
+      expect(within(tools).getByTestId(`release-board-lane-${id}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`release-board-slot-${id}-stage`)).toHaveTextContent('not used');
+    }
+    expect(screen.getByTestId('release-board-slot-reviewer-prod')).toHaveTextContent('local fork');
+  });
+
+  it('keeps the free stage track for a board that declares no columns', async () => {
+    serveBoards();
+    open('/releases?family=acme');
+    await screen.findByTestId('release-board-lane-cloud-app');
+    expect(screen.queryByTestId('release-board-columns')).toBeNull();
+    expect(screen.getByRole('list', { name: 'Cloud app stages, in order' })).toBeInTheDocument();
   });
 
   it('marks a lane shared from another family as read-only and names its owner', async () => {

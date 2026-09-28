@@ -431,6 +431,24 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
     expect(blockers.map((v) => v.id)).toEqual([]);
   });
 
+  test('axe scan: Releases family board on fixed columns, with tool rows', async ({ page }) => {
+    // A board that declares main/dev/stage/prod: one header row, every lane
+    // on the same grid, "not used" cells, and tools grouped as their own rows.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    await mockEnvironments(page);
+    await mockBoards(page);
+    await page.goto('/releases?family=globex');
+    await expect(page.getByTestId('release-board-columns')).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('release-board-stage-reviewer-installed').click();
+    await expect(page.getByTestId('release-board-stage-detail')).toBeVisible();
+    await scanAndAssert(page, 'releases-board-columns');
+    const blockers = blockingViolations(
+      await runAxe(page, { disableRules: ['color-contrast'] })
+    );
+    expect(blockers.map((v) => v.id)).toEqual([]);
+  });
+
   test('axe scan: Releases family board, pinned vs released', async ({ page }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockPipelineApi(page);

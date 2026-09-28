@@ -1,19 +1,31 @@
-// BoardLanes.tsx — one lane per deliverable: a horizontal track of stage
-// cells (→ when a stage follows the previous one, ‖ when it runs beside it,
-// dashed when it was declared but never used). Pressing a cell opens its
-// detail under the lane: every target and what it runs, what promoting would
-// ship, the rollback, and the promote command to copy. One cell per lane is
-// open at a time; pressing it again closes it.
+// BoardLanes.tsx — one lane per deliverable. When the board declares its
+// columns (main, dev, stage, prod…) every lane sits on the same grid under one
+// header row: a cell per column, holding the lane's stages there or a dashed
+// "not used". Without columns a lane is a free track of stage cells (→ when a
+// stage follows the previous one, ‖ when it runs beside it). Either way a
+// never-deployed stage is dashed, lanes sharing a group sit under its name,
+// and pressing a cell opens its detail under the lane: every target and what
+// it runs, what promoting would ship, the rollback, and the promote command to
+// copy. One cell per lane is open at a time; pressing it again closes it.
 
 import { useId, useState } from 'react';
 
 import type { EnvironmentSummary } from '../../api/types/deployments';
-import type { BoardLane, BoardStage, ReleaseBoard } from '../../api/types/releaseBoard';
+import type {
+  BoardColumn,
+  BoardLane,
+  BoardStage,
+  ReleaseBoard,
+} from '../../api/types/releaseBoard';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import {
+  boardColumns,
   connectorLabel,
   knownByText,
+  laneGroups,
+  laneLayout,
   noPromoteText,
+  NOT_USED_TEXT,
   pillClass,
   promoteWho,
   stageCellClass,
@@ -30,22 +42,70 @@ export function BoardLanes({
   board: ReleaseBoard;
   environments: ReadonlyMap<string, EnvironmentSummary[]>;
 }): JSX.Element {
+  const columns = boardColumns(board);
   return (
     <div className="release-board__lanes">
-      {board.lanes.map((lane) => (
-        <LaneView key={lane.id} lane={lane} board={board} environments={environments} />
+      {columns.length > 0 ? <ColumnHeader columns={columns} /> : null}
+      {laneGroups(board.lanes).map((group) => {
+        const lanes = group.lanes.map((lane) => (
+          <LaneView
+            key={lane.id}
+            lane={lane}
+            board={board}
+            columns={columns}
+            environments={environments}
+          />
+        ));
+        return group.name === null ? (
+          lanes
+        ) : (
+          <div
+            key={`group-${group.lanes[0]?.id ?? group.name}`}
+            className="release-board__group"
+            role="group"
+            aria-label={group.name}
+            data-testid={`release-board-group-${group.name}`}
+          >
+            <p className="release-board__group-name">{group.name}</p>
+            {lanes}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Column names once above every lane; each cell also names its column for narrow screens. */
+function ColumnHeader({ columns }: { columns: readonly BoardColumn[] }): JSX.Element {
+  return (
+    <div
+      className="release-board__grid release-board__column-head"
+      style={gridStyle(columns.length)}
+      aria-hidden="true"
+      data-testid="release-board-columns"
+    >
+      {columns.map((column) => (
+        <span key={column.id} className="release-board__column-name">
+          {column.name}
+        </span>
       ))}
     </div>
   );
 }
 
+function gridStyle(count: number): { gridTemplateColumns: string } {
+  return { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` };
+}
+
 function LaneView({
   lane,
   board,
+  columns,
   environments,
 }: {
   lane: BoardLane;
   board: ReleaseBoard;
+  columns: readonly BoardColumn[];
   environments: ReadonlyMap<string, EnvironmentSummary[]>;
 }): JSX.Element {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -58,6 +118,17 @@ function LaneView({
     if (overlay) overlays.set(stage.id, overlay);
   }
   const open = lane.stages.find((stage) => stage.id === openId) ?? null;
+  const cellFor = (stage: BoardStage): JSX.Element => (
+    <StageCell
+      key={stage.id}
+      lane={lane}
+      stage={stage}
+      overlay={overlays.get(stage.id) ?? null}
+      open={openId === stage.id}
+      controls={detailId}
+      onToggle={() => setOpenId(openId === stage.id ? null : stage.id)}
+    />
+  );
 
   return (
     <section
@@ -76,37 +147,86 @@ function LaneView({
         ) : null}
         <span className="release-board__muted">{lane.source}</span>
       </div>
-      <ol className="release-board__track" aria-label={`${lane.name} stages, in order`}>
-        {lane.stages.map((stage, index) => {
-          const connector = stageConnector(stage, index);
-          return (
-            <li key={stage.id} className="release-board__step">
-              {connector ? (
-                <span
-                  className={`release-board__connector${connector === '‖' ? ' release-board__connector--parallel' : ''}`}
-                >
-                  <span aria-hidden="true">{connector}</span>
-                  <span className="sr-only">{connectorLabel(connector)}</span>
-                </span>
-              ) : null}
-              <StageCell
-                lane={lane}
-                stage={stage}
-                overlay={overlays.get(stage.id) ?? null}
-                open={openId === stage.id}
-                controls={detailId}
-                onToggle={() => setOpenId(openId === stage.id ? null : stage.id)}
-              />
-            </li>
-          );
-        })}
-      </ol>
+      {columns.length > 0 ? (
+        <ColumnTrack
+          lane={lane}
+          columns={columns}
+          renderCell={cellFor}
+        />
+      ) : (
+        <ol className="release-board__track" aria-label={`${lane.name} stages, in order`}>
+          {lane.stages.map((stage, index) => {
+            const connector = stageConnector(stage, index);
+            return (
+              <li key={stage.id} className="release-board__step">
+                {connector ? (
+                  <span
+                    className={`release-board__connector${connector === '‖' ? ' release-board__connector--parallel' : ''}`}
+                  >
+                    <span aria-hidden="true">{connector}</span>
+                    <span className="sr-only">{connectorLabel(connector)}</span>
+                  </span>
+                ) : null}
+                {cellFor(stage)}
+              </li>
+            );
+          })}
+        </ol>
+      )}
       <div id={detailId} data-testid={`release-board-detail-${lane.id}`}>
         {open ? (
           <StageDetail lane={lane} stage={open} overlay={overlays.get(open.id) ?? null} />
         ) : null}
       </div>
     </section>
+  );
+}
+
+/** A lane on the board's grid: one cell per column, then any stage placed in no column. */
+function ColumnTrack({
+  lane,
+  columns,
+  renderCell,
+}: {
+  lane: BoardLane;
+  columns: readonly BoardColumn[];
+  renderCell: (stage: BoardStage) => JSX.Element;
+}): JSX.Element {
+  const layout = laneLayout(lane, columns);
+  return (
+    <>
+      <ol
+        className="release-board__grid"
+        style={gridStyle(columns.length)}
+        aria-label={`${lane.name} by stage`}
+      >
+        {layout.cells.map(({ column, stages }) => (
+          <li
+            key={column.id}
+            className="release-board__slot"
+            aria-label={column.name}
+            data-testid={`release-board-slot-${lane.id}-${column.id}`}
+          >
+            <span className="release-board__slot-name" aria-hidden="true">
+              {column.name}
+            </span>
+            {stages.length > 0 ? (
+              stages.map(renderCell)
+            ) : (
+              <span className="release-board__cell release-board__cell--not-used">
+                {NOT_USED_TEXT}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+      {layout.unplaced.length > 0 ? (
+        <div className="release-board__unplaced" aria-label={`${lane.name}, other stages`}>
+          <span className="release-board__muted">other stages</span>
+          {layout.unplaced.map(renderCell)}
+        </div>
+      ) : null}
+    </>
   );
 }
 

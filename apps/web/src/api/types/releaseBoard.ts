@@ -29,6 +29,13 @@ export interface ReleaseBoard {
   /** One line for the family header. */
   summary: string;
   collector: BoardCollector;
+  /**
+   * The family's fixed stage columns, left to right (e.g. main, dev, stage,
+   * prod). When present every lane is drawn on the same grid, one cell per
+   * column, and a column a lane does not use shows as "not used". Absent or
+   * empty: each lane is its own track of stages, as before.
+   */
+  columns?: BoardColumn[];
   lanes: BoardLane[];
   work?: BoardWork;
   pins?: BoardPins;
@@ -37,9 +44,16 @@ export interface ReleaseBoard {
   problems: BoardProblem[];
 }
 
+export interface BoardColumn {
+  id: string;
+  name: string;
+}
+
 export interface BoardLane {
   id: string;
   name: string;
+  /** Lanes that share a group sit together under its name, e.g. "Tools". */
+  group?: string;
   /** One line: repo(s), and where it is built. */
   source: string;
   owner_family: string;
@@ -73,6 +87,8 @@ export interface BoardStage {
   parallel?: boolean;
   /** Declared but never deployed. */
   never_deployed?: boolean;
+  /** The board column this stage sits in; several stages may share one. */
+  column?: string;
   targets: BoardTarget[];
   promote?: BoardPromote;
   /** What promoting into this stage would ship. */

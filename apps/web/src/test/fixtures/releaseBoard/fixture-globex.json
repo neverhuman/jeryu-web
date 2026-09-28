@@ -9,6 +9,24 @@
     "duration_ms": 0
   },
   "summary": "forge server live on be19083 · 0 behind · 58 done todos stranded on shift branches",
+  "columns": [
+    {
+      "id": "main",
+      "name": "main"
+    },
+    {
+      "id": "dev",
+      "name": "dev"
+    },
+    {
+      "id": "stage",
+      "name": "stage"
+    },
+    {
+      "id": "prod",
+      "name": "prod"
+    }
+  ],
   "lanes": [
     {
       "id": "forge-server",
@@ -28,7 +46,8 @@
             "command": "queue pr globex night/2026-09-25",
             "human_only": false,
             "automatic": false
-          }
+          },
+          "column": "main"
         },
         {
           "id": "main",
@@ -37,7 +56,19 @@
           "state": "none",
           "status": "source",
           "known_by": "derived",
-          "targets": []
+          "targets": [],
+          "column": "main"
+        },
+        {
+          "id": "dev",
+          "name": "dev",
+          "version": "no deployment yet",
+          "state": "none",
+          "status": "never deployed",
+          "known_by": "reported",
+          "targets": [],
+          "never_deployed": true,
+          "column": "dev"
         },
         {
           "id": "staged",
@@ -51,7 +82,8 @@
             "command": "automatic (auto-stage.timer, 5 min, once main is green)",
             "human_only": false,
             "automatic": true
-          }
+          },
+          "column": "stage"
         },
         {
           "id": "production",
@@ -77,11 +109,12 @@
           "forge": {
             "repo": "globex/server",
             "environment": "production"
-          }
+          },
+          "column": "prod"
         },
         {
-          "id": "dev-canary-stable",
-          "name": "dev · canary · stable",
+          "id": "canary-stable",
+          "name": "canary · stable",
           "version": "no deployment yet",
           "state": "none",
           "status": "never deployed",
@@ -104,7 +137,8 @@
           "state": "none",
           "status": "source",
           "known_by": "derived",
-          "targets": []
+          "targets": [],
+          "column": "main"
         },
         {
           "id": "pinned",
@@ -118,7 +152,8 @@
             "command": "auto-pin opens \"release: pin web <sha7>\"; the PR merges like any other",
             "human_only": false,
             "automatic": true
-          }
+          },
+          "column": "stage"
         },
         {
           "id": "production",
@@ -127,19 +162,31 @@
           "state": "ok",
           "status": "in sync",
           "known_by": "reported",
-          "targets": []
+          "targets": [],
+          "column": "prod"
         }
       ]
     },
     {
-      "id": "tools",
-      "name": "Tools",
+      "id": "gate-runner",
+      "name": "Gate runner",
+      "group": "Tools",
+      "source": "globex/gate · installed per host, straight from main",
       "owner_family": "globex",
-      "source": "installed per host · effectively \"main is production\"",
       "stages": [
         {
-          "id": "gate-runner",
-          "name": "gate runner",
+          "id": "main",
+          "name": "main",
+          "version": "aab6147",
+          "state": "none",
+          "status": "source",
+          "known_by": "derived",
+          "targets": [],
+          "column": "main"
+        },
+        {
+          "id": "installed",
+          "name": "installed",
           "version": "aab6147",
           "state": "ok",
           "status": "= main",
@@ -150,11 +197,31 @@
               "running": "aab6147 · auto-installs every 10 min",
               "state": "ok"
             }
-          ]
+          ],
+          "column": "prod"
+        }
+      ]
+    },
+    {
+      "id": "reviewer",
+      "name": "Reviewer",
+      "group": "Tools",
+      "source": "globex/gate · reviewer/ · installed per host, straight from main",
+      "owner_family": "globex",
+      "stages": [
+        {
+          "id": "main",
+          "name": "main",
+          "version": "5c1e2d0",
+          "state": "none",
+          "status": "source",
+          "known_by": "derived",
+          "targets": [],
+          "column": "main"
         },
         {
-          "id": "reviewer",
-          "name": "reviewer",
+          "id": "installed",
+          "name": "installed",
           "version": "03b5609 + edits",
           "state": "bad",
           "status": "local fork",
@@ -170,11 +237,31 @@
             "command": "ops/reviewer/install.sh from runner main (never done)",
             "human_only": true,
             "automatic": false
-          }
+          },
+          "column": "prod"
+        }
+      ]
+    },
+    {
+      "id": "scorer",
+      "name": "Scorer",
+      "group": "Tools",
+      "source": "globex/scorer · installed per host, straight from main",
+      "owner_family": "globex",
+      "stages": [
+        {
+          "id": "main",
+          "name": "main",
+          "version": "split.3 · b88562f",
+          "state": "none",
+          "status": "source",
+          "known_by": "derived",
+          "targets": [],
+          "column": "main"
         },
         {
-          "id": "scorer",
-          "name": "scorer",
+          "id": "installed",
+          "name": "installed",
           "version": "split.3 · b88562f",
           "state": "warn",
           "status": "1 unverified",
@@ -195,7 +282,8 @@
               "running": "unverified",
               "state": "none"
             }
-          ]
+          ],
+          "column": "prod"
         }
       ]
     }

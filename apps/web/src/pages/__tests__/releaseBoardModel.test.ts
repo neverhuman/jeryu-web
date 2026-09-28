@@ -1,6 +1,7 @@
 // releaseBoardModel.test.ts — the pure half of the family release board: the
 // live overlay, work bar percentages, snapshot freshness, the stage track's
-// connectors and the never-deployed styling, and which family is shown.
+// connectors and the never-deployed styling, the fixed-column layout and
+// lane groups, and which family is shown.
 
 import { describe, expect, it } from 'vitest';
 
@@ -15,9 +16,12 @@ import {
 import {
   agoText,
   BOARD_STALE_AFTER_MS,
+  boardColumns,
   boardFreshness,
   connectorLabel,
   forgeRepos,
+  laneGroups,
+  laneLayout,
   noPromoteText,
   observedLine,
   OVERLAY_NOTE,
@@ -195,7 +199,7 @@ describe('stage track', () => {
   });
 
   it('dashes a never-deployed stage and says it was never deployed to', () => {
-    const idle = stage('forge-server', 'dev-canary-stable', GLOBEX_BOARD);
+    const idle = stage('forge-server', 'dev', GLOBEX_BOARD);
     expect(stageCellClass(idle, false)).toBe(
       'release-board__cell release-board__cell--neutral release-board__cell--never-deployed'
     );
@@ -224,6 +228,45 @@ describe('stage track', () => {
     expect(promoteWho({ command: 'x', human_only: true, automatic: false })).toMatch(/^A person runs this/);
     expect(promoteWho({ command: 'x', human_only: false, automatic: true })).toMatch(/^Happens by itself/);
     expect(promoteWho({ command: 'x', human_only: false, automatic: false })).toBe('Anyone with push can run this:');
+  });
+});
+
+describe('fixed columns', () => {
+  const columns = boardColumns(GLOBEX_BOARD);
+  const lane = (id: string) => {
+    const found = GLOBEX_BOARD.lanes.find((l) => l.id === id);
+    if (!found) throw new Error(`no lane ${id}`);
+    return found;
+  };
+  const ids = (id: string) =>
+    laneLayout(lane(id), columns).cells.map((cell) => cell.stages.map((s) => s.id));
+
+  it('reads the columns a board declares, and none when it declares none', () => {
+    expect(columns.map((c) => c.id)).toEqual(['main', 'dev', 'stage', 'prod']);
+    expect(boardColumns(ACME_BOARD)).toEqual([]);
+  });
+
+  it('puts every column in every lane once, stacking stages that share one', () => {
+    expect(ids('forge-server')).toEqual([['shift', 'main'], ['dev'], ['staged'], ['production']]);
+    expect(ids('web-ui')).toEqual([['main'], [], ['pinned'], ['production']]);
+    expect(ids('gate-runner')).toEqual([['main'], [], [], ['installed']]);
+  });
+
+  it('keeps a stage that names no declared column, instead of dropping it', () => {
+    expect(laneLayout(lane('forge-server'), columns).unplaced.map((s) => s.id)).toEqual([
+      'canary-stable',
+    ]);
+    const stray = { ...lane('web-ui'), stages: [{ ...stage('web-ui', 'main', GLOBEX_BOARD), column: 'qa' }] };
+    expect(laneLayout(stray, columns).unplaced.map((s) => s.id)).toEqual(['main']);
+  });
+
+  it('gathers neighbouring lanes of one group and leaves ungrouped lanes alone', () => {
+    const groups = laneGroups(GLOBEX_BOARD.lanes).map((g) => [g.name, g.lanes.map((l) => l.id)]);
+    expect(groups).toEqual([
+      [null, ['forge-server']],
+      [null, ['web-ui']],
+      ['Tools', ['gate-runner', 'reviewer', 'scorer']],
+    ]);
   });
 });
 

@@ -357,6 +357,85 @@
   background-color: var(--color-border-strong);
 }
 
+/* Fixed columns: one header row, and every lane on the same grid under it. */
+.release-board__grid {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.release-board__column-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-0);
+}
+
+.release-board__column-name,
+.release-board__slot-name,
+.release-board__group-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-fg-secondary);
+}
+
+.release-board__slot {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.release-board__slot > .release-board__cell {
+  min-width: 0;
+}
+
+.release-board__slot-name {
+  display: none;
+}
+
+.release-board__cell--not-used {
+  justify-content: center;
+  border-style: dashed;
+  border-top-width: 1px;
+  background-color: transparent;
+  color: var(--color-fg-muted);
+  cursor: default;
+}
+
+.release-board__cell--not-used:hover {
+  background-color: transparent;
+}
+
+.release-board__unplaced {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.release-board__unplaced > .release-board__cell {
+  flex: 0 1 18rem;
+}
+
+.release-board__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.release-board__group-name {
+  margin: 0;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
 @media (max-width: 640px) {
   .release-board__track {
     flex-direction: column;
@@ -370,5 +449,17 @@
   .release-board__connector {
     flex-basis: var(--space-5);
     transform: rotate(90deg);
+  }
+
+  .release-board__column-head {
+    display: none;
+  }
+
+  .release-board__grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .release-board__slot-name {
+    display: block;
   }
 }

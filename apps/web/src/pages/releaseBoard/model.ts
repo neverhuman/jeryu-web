@@ -8,6 +8,8 @@
 
 import type { EnvironmentSummary } from '../../api/types/deployments';
 import type {
+  BoardColumn,
+  BoardLane,
   BoardPins,
   BoardStage,
   BoardState,
@@ -114,6 +116,58 @@ export function promoteWho(promote: NonNullable<BoardStage['promote']>): string 
   if (promote.automatic) return 'Happens by itself. To do it by hand:';
   if (promote.human_only) return 'A person runs this; nothing does it automatically:';
   return 'Anyone with push can run this:';
+}
+
+// ── Columns and groups ───────────────────────────────────────────────────
+
+/** What an empty column cell says: the lane skips that stage. */
+export const NOT_USED_TEXT = 'not used';
+
+/** The board's fixed columns; empty when the board draws free tracks. */
+export function boardColumns(board: ReleaseBoard): BoardColumn[] {
+  return board.columns ?? [];
+}
+
+export interface LaneCell {
+  column: BoardColumn;
+  /** In lane order; empty when the lane does not use this column. */
+  stages: BoardStage[];
+}
+
+export interface LaneLayout {
+  cells: LaneCell[];
+  /** Stages that name no declared column, shown after the grid. */
+  unplaced: BoardStage[];
+}
+
+/** A lane laid out on the board's columns: every column once, in order. */
+export function laneLayout(lane: BoardLane, columns: readonly BoardColumn[]): LaneLayout {
+  const known = new Set(columns.map((column) => column.id));
+  return {
+    cells: columns.map((column) => ({
+      column,
+      stages: lane.stages.filter((stage) => stage.column === column.id),
+    })),
+    unplaced: lane.stages.filter((stage) => !stage.column || !known.has(stage.column)),
+  };
+}
+
+export interface LaneGroup {
+  /** The shared group name, or null for lanes outside any group. */
+  name: string | null;
+  lanes: BoardLane[];
+}
+
+/** Lanes in board order, neighbours with the same group gathered under it. */
+export function laneGroups(lanes: readonly BoardLane[]): LaneGroup[] {
+  const groups: LaneGroup[] = [];
+  for (const lane of lanes) {
+    const name = lane.group?.trim() || null;
+    const last = groups[groups.length - 1];
+    if (last && name !== null && last.name === name) last.lanes.push(lane);
+    else groups.push({ name, lanes: [lane] });
+  }
+  return groups;
 }
 
 // ── Freshness ────────────────────────────────────────────────────────────

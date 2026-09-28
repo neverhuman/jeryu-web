@@ -121,9 +121,19 @@ test('a stage opens into its targets, what promoting ships and the command @acti
   await expect(prod).toHaveAttribute('aria-expanded', 'false');
   await expect(detail.getByRole('heading')).toHaveCount(0);
 
-  // A never-deployed stage is dashed and says so.
+  // A board with fixed columns lines every lane up under one header; a column a
+  // lane skips says "not used", and each tool is its own row.
   await page.getByRole('button', { name: 'globex', exact: true }).click();
-  const idle = page.getByTestId('release-board-stage-forge-server-dev-canary-stable');
+  await expect(page.getByTestId('release-board-columns')).toHaveText(/main\s*dev\s*stage\s*prod/i);
+  await expect(page.getByTestId('release-board-slot-gate-runner-dev')).toHaveText(/not used/);
+  await expect(page.getByRole('group', { name: 'Tools' }).getByRole('heading', { level: 3 })).toHaveText([
+    'Gate runner',
+    'Reviewer',
+    'Scorer',
+  ]);
+
+  // A never-deployed stage is dashed and says so.
+  const idle = page.getByTestId('release-board-stage-forge-server-dev');
   await expect(idle).toHaveClass(/release-board__cell--never-deployed/);
   await idle.click();
   await expect(page.getByTestId('release-board-detail-forge-server')).toContainText(
