@@ -86,17 +86,25 @@ export function connectorLabel(connector: '→' | '‖'): string {
   return connector === '‖' ? 'runs beside the previous stage' : 'then';
 }
 
+/**
+ * True for a stage the lane declares but nothing was ever deployed to. The
+ * only read of that wire flag, whose name the contract fixes.
+ */
+export function neverDeployed(stage: BoardStage): boolean {
+  return stage.unused === true;
+}
+
 /** The CSS modifiers of a stage cell. */
 export function stageCellClass(stage: BoardStage, open: boolean): string {
   const classes = ['release-board__cell', `release-board__cell--${stateTone(stage.state)}`];
-  if (stage.unused) classes.push('release-board__cell--unused');
+  if (neverDeployed(stage)) classes.push('release-board__cell--never-deployed');
   if (open) classes.push('release-board__cell--open');
   return classes.join(' ');
 }
 
 /** What the detail panel says when no promote command is recorded. */
 export function noPromoteText(stage: BoardStage): string {
-  if (stage.unused) return 'Declared but never deployed to, so there is nothing to promote.';
+  if (neverDeployed(stage)) return 'Declared but never deployed to, so there is nothing to promote.';
   if (stage.status === 'source') return "This is the lane's source; nothing promotes into it.";
   return 'No promote command is recorded for this stage.';
 }

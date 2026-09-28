@@ -134,12 +134,12 @@ describe('ReleasesPage — family release board', () => {
     expect(detail).toBeEmptyDOMElement();
   });
 
-  it('draws the parallel and unused stages the way the design does', async () => {
+  it('draws a never-deployed stage the way the design does', async () => {
     serveBoards();
     open('/releases?family=jeryu');
-    const unused = await screen.findByTestId('release-board-stage-forge-server-dev-canary-stable');
-    expect(unused).toHaveClass('release-board__cell--unused');
-    fireEvent.click(unused);
+    const idle = await screen.findByTestId('release-board-stage-forge-server-dev-canary-stable');
+    expect(idle).toHaveClass('release-board__cell--never-deployed');
+    fireEvent.click(idle);
     expect(screen.getByTestId('release-board-detail-forge-server')).toHaveTextContent(
       'Declared but never deployed to'
     );

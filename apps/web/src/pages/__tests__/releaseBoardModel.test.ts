@@ -1,6 +1,6 @@
 // releaseBoardModel.test.ts — the pure half of the family release board: the
 // live overlay, work bar percentages, snapshot freshness, the stage track's
-// connectors and the unused-stage styling, and which family is shown.
+// connectors and the never-deployed styling, and which family is shown.
 
 import { describe, expect, it } from 'vitest';
 
@@ -194,15 +194,15 @@ describe('stage track', () => {
     expect(connectorLabel('→')).toBe('then');
   });
 
-  it('dashes an unused stage and says it was never deployed to', () => {
-    const unused = stage('forge-server', 'dev-canary-stable', JERYU_BOARD);
-    expect(stageCellClass(unused, false)).toBe(
-      'release-board__cell release-board__cell--neutral release-board__cell--unused'
+  it('dashes a never-deployed stage and says it was never deployed to', () => {
+    const idle = stage('forge-server', 'dev-canary-stable', JERYU_BOARD);
+    expect(stageCellClass(idle, false)).toBe(
+      'release-board__cell release-board__cell--neutral release-board__cell--never-deployed'
     );
     expect(stageCellClass(stage('cloud-app', 'prod'), true)).toBe(
       'release-board__cell release-board__cell--danger release-board__cell--open'
     );
-    expect(noPromoteText(unused)).toMatch(/never deployed to/);
+    expect(noPromoteText(idle)).toMatch(/never deployed to/);
     expect(noPromoteText(stage('cloud-app', 'main'))).toBe("This is the lane's source; nothing promotes into it.");
   });
 

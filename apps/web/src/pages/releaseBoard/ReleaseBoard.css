@@ -181,7 +181,7 @@
   border-top-color: var(--color-accent-danger);
 }
 
-.release-board__cell--unused {
+.release-board__cell--never-deployed {
   border-style: dashed;
   border-top-style: solid;
   color: var(--color-fg-secondary);

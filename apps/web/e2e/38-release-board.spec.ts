@@ -117,11 +117,11 @@ test('a stage opens into its targets, what promoting ships and the command @acti
   await expect(prod).toHaveAttribute('aria-expanded', 'false');
   await expect(detail.getByRole('heading')).toHaveCount(0);
 
-  // An unused stage is dashed and says so.
+  // A never-deployed stage is dashed and says so.
   await page.getByRole('button', { name: 'jeryu', exact: true }).click();
-  const unused = page.getByTestId('release-board-stage-forge-server-dev-canary-stable');
-  await expect(unused).toHaveClass(/release-board__cell--unused/);
-  await unused.click();
+  const idle = page.getByTestId('release-board-stage-forge-server-dev-canary-stable');
+  await expect(idle).toHaveClass(/release-board__cell--never-deployed/);
+  await idle.click();
   await expect(page.getByTestId('release-board-detail-forge-server')).toContainText(
     'Declared but never deployed to'
   );

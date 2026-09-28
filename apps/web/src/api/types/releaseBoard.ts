@@ -66,7 +66,7 @@ export interface BoardStage {
   /** Headline of what runs, e.g. "v0.8.12 · 96d8374". */
   version: string | null;
   state: BoardState;
-  /** Short chip text: "in sync", "1 behind", "skew", "unused". */
+  /** Short chip text: "in sync", "1 behind", "skew". */
   status: string;
   known_by: KnownBy;
   /** Runs beside the previous stage instead of after it. */
