@@ -29,6 +29,12 @@ describe('endpoint contract', () => {
     expect(endpoints.pins()).toBe('/api/v1/pins');
   });
 
+  it('reads release boards from /api/v1/release-board', () => {
+    expect(endpoints.releaseBoards()).toBe('/api/v1/release-board');
+    expect(endpoints.releaseBoard('veox-ai')).toBe('/api/v1/release-board/veox-ai');
+    expect(endpoints.releaseBoard('a/b c')).toBe('/api/v1/release-board/a%2Fb%20c');
+  });
+
   it('never calls /api/v1/activity, which the server does not serve', () => {
     for (const path of allPaths()) {
       expect(path).not.toMatch(/^\/api\/v1\/activity(?:[/?]|$)/);

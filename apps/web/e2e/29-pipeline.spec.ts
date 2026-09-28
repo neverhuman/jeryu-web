@@ -256,7 +256,7 @@ test.describe('Pipeline visibility', () => {
       compare: compareBody('a', []),
     });
 
-    await page.goto('/releases');
+    await page.goto('/releases?repo=jeryu%2Fjeryu-deploy');
     const ready = page.getByTestId('ready-to-pin');
     await expect(ready).toBeVisible({ timeout: 15_000 });
     const web = ready.getByTestId('pin-jeryu/jeryu-web');

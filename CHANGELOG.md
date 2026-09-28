@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Releases: `/releases` opens on the family release board (`jeryu.release_board.v1`, admin-only):
+  one lane per deliverable with its stages, what each stage runs on every target and how that is
+  known, the promote command to copy, a "Work reached" bar, and "Pinned vs released" and
+  "Release notes" views. A deployment the forge reports after the snapshot shows at once; a
+  snapshot older than 15 minutes is flagged. The per-repository view stays at `?repo=owner/name`
+  (and `?view=repositories&family=<name>`), and is shown under a note when there is no board.
 - Runners: an Automation section lists the forge's background timers (auto-pin, auto-stage) from
   their `automation`-labelled heartbeats: which timer, where, what it last did (with the one pull
   request link when there is one) and when it was last seen. A timer is offline by the forge's

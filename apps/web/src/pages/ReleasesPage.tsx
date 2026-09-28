@@ -1,5 +1,11 @@
 // ReleasesPage.tsx — one page for "what is released, and what could be".
 //
+// The default view is the family release board (see releaseBoard/): every
+// deliverable of a family as a lane of stages, what each stage runs on each of
+// its targets, and how much of the family's work has reached customers. The
+// per-repository view is reached with `?repo=owner/name`, from the "Per
+// repository" link, or shown under the note when the board cannot be:
+//
 //   1. What runs: one row per CONFIGURED environment (the live commit and
 //      release, who deployed it and when, the rollback target, a failed or
 //      running newer attempt, and how many merged pull requests main has that
@@ -13,8 +19,9 @@
 // requests timeline's job, and the two link to each other rather than each
 // keeping half a list of pull requests.
 //
-// Scope comes from `?repo=owner/name` (default the jeryu deploy repo) or
-// `?family=<family>`. `/unreleased` was a page, then a section here; it is
+// Its scope comes from `?repo=owner/name` (default the jeryu deploy repo) or
+// `?view=repositories&family=<family>`; on the board, `?family=` picks the
+// board instead. `/unreleased` was a page, then a section here; it is
 // neither now, and the route redirects (see UnreleasedRedirect) because the
 // forge's own attention items still link to it.
 
@@ -29,9 +36,11 @@ import { useRepositories } from '../hooks/useRepositories';
 import { commandPlace, findAttention } from './needsYou/needsYouModel';
 import { behindPinLines } from './pinsModel';
 import { ReadyToPin } from './ReadyToPin';
+import { ReleaseBoardView } from './releaseBoard/ReleaseBoardView';
 import {
   behindLabel,
   releasePullHref,
+  releasesHref,
   releaseScopeOptions,
   scopeParams,
   splitEnvironments,
@@ -57,11 +66,79 @@ const STATE_PILL: Record<string, string> = {
 };
 
 export function ReleasesPage(): JSX.Element {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
+  const perRepository = params.has('repo') || params.get('view') === REPOSITORY_VIEW;
+  const repositoryView = (
+    <RepositoryReleases scope={perRepository ? scopeFrom(params) : DEFAULT_SCOPE} />
+  );
+
+  return (
+    <div className="page page--wide" data-testid="releases-page">
+      <header className="page__header">
+        <h1 className="page__title">Releases</h1>
+        <p className="page__subtitle">
+          {perRepository
+            ? 'What every environment runs, and what is holding the next release.'
+            : 'What each family ships, stage by stage, and how much of its work has reached customers.'}
+        </p>
+        <nav className="releases__views" aria-label="Releases view">
+          <Link
+            className="releases__view"
+            to="/releases"
+            aria-current={perRepository ? undefined : 'page'}
+            data-testid="releases-view-board"
+          >
+            Family board
+          </Link>
+          <Link
+            className="releases__view"
+            to={releasesHref(DEFAULT_RELEASE_REPO)}
+            aria-current={perRepository ? 'page' : undefined}
+            data-testid="releases-view-repository"
+          >
+            Per repository
+          </Link>
+        </nav>
+      </header>
+
+      {perRepository ? repositoryView : <ReleaseBoardView fallback={repositoryView} />}
+    </div>
+  );
+}
+
+/** `?view=repositories` keeps the per-repository view when it is scoped to a family. */
+const REPOSITORY_VIEW = 'repositories';
+
+interface RepositoryScope {
+  repo: string | null;
+  family: string | null;
+  branch: string;
+}
+
+const DEFAULT_SCOPE: RepositoryScope = { repo: DEFAULT_RELEASE_REPO, family: null, branch: 'main' };
+
+/**
+ * The per-repository view's scope. On the board `?family=` picks the board;
+ * here it scopes to every repository of the family, which only
+ * `?view=repositories&family=<name>` asks for.
+ */
+function scopeFrom(params: URLSearchParams): RepositoryScope {
+  const family = params.get('view') === REPOSITORY_VIEW ? params.get('family') : null;
+  return {
+    family,
+    repo: family ? null : (params.get('repo') ?? DEFAULT_RELEASE_REPO),
+    branch: params.get('branch') ?? 'main',
+  };
+}
+
+/**
+ * The per-repository view: what each environment of one repository runs, the
+ * staged release, and what its dependencies merged that its pins lack.
+ */
+function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element {
+  const [, setParams] = useSearchParams();
   const { user } = useAuth();
-  const family = params.get('family');
-  const repoId = family ? null : (params.get('repo') ?? DEFAULT_RELEASE_REPO);
-  const branch = params.get('branch') ?? 'main';
+  const { family, repo: repoId, branch } = scope;
 
   const members = useRepositories(
     { family: family ?? undefined, sort: 'name' },
@@ -89,16 +166,15 @@ export function ReleasesPage(): JSX.Element {
   const setScope = (value: string): void => {
     const next = scopeParams(value);
     if (!next) return;
-    setParams(next);
+    setParams('family' in next ? { view: REPOSITORY_VIEW, family: next.family } : next);
   };
 
   return (
-    <div className="page page--wide" data-testid="releases-page">
-      <header className="page__header">
-        <h1 className="page__title">Releases</h1>
-        <p className="page__subtitle">
-          What every environment runs, and what is holding the next release.
-        </p>
+    <>
+      <section className="page__section" aria-labelledby="releases-repository">
+        <h2 className="page__section-title" id="releases-repository">
+          Per repository
+        </h2>
         <p className="releases__muted">
           For how far one change has got on its way here, see the{' '}
           <Link to={timelineHref({ repo: repoId, family })}>Pull requests timeline</Link>; for
@@ -119,7 +195,7 @@ export function ReleasesPage(): JSX.Element {
             ))}
           </select>
         </p>
-      </header>
+      </section>
 
       <StagedRelease />
 
@@ -132,7 +208,7 @@ export function ReleasesPage(): JSX.Element {
           familyRepos: family ? repos.map((repo) => repo.id) : [],
         }}
       />
-    </div>
+    </>
   );
 }
 

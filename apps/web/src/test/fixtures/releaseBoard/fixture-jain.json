@@ -1,0 +1,345 @@
+{
+  "schema": "jeryu.release_board.v1",
+  "family": "jain",
+  "observed_at": "2026-09-28T15:40:00Z",
+  "collector": {
+    "host": "xbabe0",
+    "version": "audit-20260928",
+    "trigger": "manual",
+    "duration_ms": 0
+  },
+  "summary": "Free 10.1.6 published and in sync · appliance runs an older engine tag · no family pin set in use",
+  "lanes": [
+    {
+      "id": "free-download",
+      "name": "Free download",
+      "owner_family": "jain",
+      "source": "newest jain-web tag · built, gated and signed on xbabe2 every 10 min",
+      "stages": [
+        {
+          "id": "tagged",
+          "name": "tagged",
+          "version": "jain-web-v10.1.6-split.6",
+          "state": "warn",
+          "status": "main 13 ahead",
+          "known_by": "derived",
+          "targets": []
+        },
+        {
+          "id": "staged",
+          "name": "staged",
+          "version": "10.1.6 · 703b085a",
+          "state": "ok",
+          "status": "= tag",
+          "known_by": "host",
+          "targets": [],
+          "promote": {
+            "command": "automatic (free-release-watch.timer)",
+            "human_only": false,
+            "automatic": true
+          }
+        },
+        {
+          "id": "published",
+          "name": "published",
+          "version": "10.1.6",
+          "state": "ok",
+          "status": "= staged",
+          "known_by": "host",
+          "targets": [
+            {
+              "name": "downloads.neverhuman.org/jain/",
+              "running": "10.1.6 · 09-16 21:50Z",
+              "state": "ok"
+            }
+          ],
+          "promote": {
+            "command": "ssh xbabe2 '…/deployment/free/deploy-free-release.sh --release ~/free-release-staged/<v>'",
+            "human_only": true,
+            "automatic": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "installers",
+      "name": "Installers",
+      "owner_family": "jain",
+      "source": "jain-deploy deployment/free/install.{sh,ps1}",
+      "stages": [
+        {
+          "id": "main",
+          "name": "main",
+          "version": "2975031 · 8c418c6",
+          "state": "none",
+          "status": "source",
+          "known_by": "derived",
+          "targets": []
+        },
+        {
+          "id": "live",
+          "name": "live",
+          "version": "byte-identical",
+          "state": "ok",
+          "status": "in sync",
+          "known_by": "host",
+          "targets": [],
+          "promote": {
+            "command": "copied by hand via xbabe2 (no script)",
+            "human_only": true,
+            "automatic": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "cloud-appliance",
+      "name": "Cloud appliance (owned by veox-ai)",
+      "source": "veox/cloud-appliance-cuda · engine jain-web v10.1.6-split.3 · moves by channel",
+      "owner_family": "veox-ai",
+      "stages": [
+        {
+          "id": "accepted",
+          "name": "accepted",
+          "version": "c30b5082",
+          "state": "none",
+          "status": "accepted-gpu-20260911",
+          "known_by": "host",
+          "targets": []
+        },
+        {
+          "id": "dev",
+          "name": "dev channel",
+          "version": "c30b5082",
+          "state": "warn",
+          "status": "skew",
+          "known_by": "host",
+          "targets": [
+            {
+              "name": "xbabe0 dev",
+              "running": "c30b5082",
+              "state": "ok"
+            },
+            {
+              "name": "xbabe1, xbabe3 dev workers",
+              "running": "55a4b9ef",
+              "state": "warn"
+            }
+          ],
+          "promote": {
+            "command": "scripts/promote-cloud-appliance.sh gpu=<accepted image>",
+            "human_only": true,
+            "automatic": false
+          }
+        },
+        {
+          "id": "canary",
+          "name": "canary → stage",
+          "version": "c30b5082",
+          "state": "ok",
+          "status": "in sync",
+          "known_by": "host",
+          "targets": [
+            {
+              "name": "xbabe0 stage",
+              "running": "c30b5082",
+              "state": "ok"
+            }
+          ],
+          "promote": {
+            "command": "scripts/promote-cloud-appliance.sh --deploy promote gpu canary",
+            "human_only": true,
+            "automatic": false
+          }
+        },
+        {
+          "id": "stable",
+          "name": "stable → prod",
+          "version": "c30b5082",
+          "state": "bad",
+          "status": "skew",
+          "known_by": "host",
+          "targets": [
+            {
+              "name": "xbabe0 · cloud.veox.ai",
+              "running": "c30b5082",
+              "state": "ok"
+            },
+            {
+              "name": "xbabe1, xbabe3 prod workers",
+              "running": "9eb30bdc (Aug 28)",
+              "state": "bad"
+            }
+          ],
+          "promote": {
+            "command": "VEOX_PROMOTE_DEPLOY_PROD=1 scripts/promote-cloud-appliance.sh --deploy promote gpu stable",
+            "human_only": true,
+            "automatic": false
+          },
+          "rollback": "promote-cloud-appliance.sh rollback gpu stable → previous-stable 55a4b9ef"
+        }
+      ],
+      "read_only": true
+    },
+    {
+      "id": "try-pool",
+      "name": "Try pool",
+      "owner_family": "jain",
+      "source": "www.neverhuman.org · read /healthz only (a GET on /try-free takes a real lease)",
+      "stages": [
+        {
+          "id": "live",
+          "name": "live",
+          "version": "10.0.0",
+          "state": "none",
+          "status": "promote path unknown",
+          "known_by": "host",
+          "targets": [
+            {
+              "name": "www.neverhuman.org /s/g01…g10",
+              "running": "10.0.0 · up ~32.5 days",
+              "state": "none"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "work": {
+    "total": 16,
+    "method": "Matched by Todo: trailer. None has reached a tag, the Free image or the appliance: all were filed after both images were built.",
+    "parts": [
+      {
+        "key": "live",
+        "label": "Live (in the installed gate runner)",
+        "count": 10
+      },
+      {
+        "key": "merged",
+        "label": "Merged, not released",
+        "count": 1
+      },
+      {
+        "key": "stranded",
+        "label": "Stranded on a shift branch",
+        "count": 1
+      },
+      {
+        "key": "untraceable",
+        "label": "Untraceable",
+        "count": 4
+      },
+      {
+        "key": "blocked",
+        "label": "Blocked",
+        "count": 0
+      },
+      {
+        "key": "open",
+        "label": "Open",
+        "count": 0
+      }
+    ],
+    "unlinked": "Not linkable: 8 files in jain-deploy/todo (7 open, 1 blocked)."
+  },
+  "pins": {
+    "note": "There is no family-wide pin set in use: the lock is 17/29 PENDING. Newest tag per repo against main; 27 of 38 Cargo git pins still resolve against the retired loopback forge.",
+    "columns": [
+      "Repo",
+      "Main",
+      "Newest tag",
+      "Tag on main",
+      "Main ahead"
+    ],
+    "rows": [
+      {
+        "repo": "jain-web",
+        "cells": [
+          "f392fe4",
+          "v10.1.6-split.6",
+          "yes"
+        ],
+        "behind": 13,
+        "note": "Free = split.6, appliance = split.3"
+      },
+      {
+        "repo": "jain-deploy",
+        "cells": [
+          "aab6147",
+          "v10.1.5-split.0",
+          "no"
+        ],
+        "behind": 105
+      },
+      {
+        "repo": "jain-core",
+        "cells": [
+          "3692748",
+          "v10.1.5-split.0",
+          "no"
+        ],
+        "behind": 56
+      },
+      {
+        "repo": "jain-report",
+        "cells": [
+          "dbf7d3d",
+          "v10.1.5-split.0",
+          "no"
+        ],
+        "behind": 22
+      },
+      {
+        "repo": "jain-cli",
+        "cells": [
+          "1641160",
+          "v10.1.5-split.0",
+          "yes"
+        ],
+        "behind": 18
+      },
+      {
+        "repo": "jain-starforge",
+        "cells": [
+          "4e27b4c",
+          "v10.1.5-split.0",
+          "yes"
+        ],
+        "behind": 16
+      },
+      {
+        "repo": "jain-contracts",
+        "cells": [
+          "e1bcdb2",
+          "v10.1.5-split.0",
+          "yes"
+        ],
+        "behind": 14
+      },
+      {
+        "repo": "jain-math",
+        "cells": [
+          "31be021",
+          "v10.1.5-split.0",
+          "yes"
+        ],
+        "behind": 10
+      },
+      {
+        "repo": "jain-split-ops",
+        "cells": [
+          "bc4f340",
+          "v10.0.0-split.73",
+          "yes"
+        ],
+        "behind": 0
+      }
+    ]
+  },
+  "notes": {
+    "title": "Free download: what publishing would ship",
+    "items": [],
+    "coverage": "Nothing: staged equals published. CHANGELOGs mostly read \"Unreleased\"; the Free download carries no notes; nothing covers the split.3 appliance engine."
+  },
+  "problems": []
+}

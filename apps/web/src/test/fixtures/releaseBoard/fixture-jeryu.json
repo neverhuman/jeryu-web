@@ -1,0 +1,322 @@
+{
+  "schema": "jeryu.release_board.v1",
+  "family": "jeryu",
+  "observed_at": "2026-09-28T15:40:00Z",
+  "collector": {
+    "host": "xbabe0",
+    "version": "audit-20260928",
+    "trigger": "manual",
+    "duration_ms": 0
+  },
+  "summary": "forge server live on be19083 · 0 behind · 58 done todos stranded on shift branches",
+  "lanes": [
+    {
+      "id": "forge-server",
+      "name": "Forge server",
+      "owner_family": "jeryu",
+      "source": "jeryu/jeryu-deploy + web + 5 crates · built on xbabe2 · served from atomicsoul",
+      "stages": [
+        {
+          "id": "shift",
+          "name": "shift",
+          "version": "nightshift/2026-09-25",
+          "state": "warn",
+          "status": "11 commits, no PR",
+          "known_by": "derived",
+          "targets": [],
+          "promote": {
+            "command": "todoq shift pr jeryu nightshift/2026-09-25",
+            "human_only": false,
+            "automatic": false
+          }
+        },
+        {
+          "id": "main",
+          "name": "main",
+          "version": "be19083",
+          "state": "none",
+          "status": "source",
+          "known_by": "derived",
+          "targets": []
+        },
+        {
+          "id": "staged",
+          "name": "staged",
+          "version": "prod-20260926T051051Z-be19083",
+          "state": "ok",
+          "status": "= prod",
+          "known_by": "host",
+          "targets": [],
+          "promote": {
+            "command": "automatic (jeryu-auto-stage.timer, 5 min, once main is green)",
+            "human_only": false,
+            "automatic": true
+          }
+        },
+        {
+          "id": "production",
+          "name": "production",
+          "version": "be19083 · #33",
+          "state": "ok",
+          "status": "0 behind",
+          "known_by": "reported",
+          "targets": [
+            {
+              "name": "atomicsoul · git.neverhuman.org",
+              "running": "prod-20260926T051051Z-be19083 · 09-28 15:19Z",
+              "state": "ok"
+            }
+          ],
+          "promote": {
+            "command": "scripts/release/deploy-release.sh $(cat ~/.local/state/jeryu-auto-stage/latest)",
+            "human_only": true,
+            "automatic": false
+          },
+          "ships": [],
+          "rollback": "rollback.sh on atomicsoul → prod-20260925T162945Z-6bbe83f (not recorded on the forge)",
+          "forge": {
+            "repo": "jeryu/jeryu-deploy",
+            "environment": "production"
+          }
+        },
+        {
+          "id": "dev-canary-stable",
+          "name": "dev · canary · stable",
+          "version": "never deployed",
+          "state": "none",
+          "status": "unused",
+          "known_by": "reported",
+          "targets": [],
+          "unused": true
+        }
+      ]
+    },
+    {
+      "id": "web-ui",
+      "name": "Web UI",
+      "owner_family": "jeryu",
+      "source": "jeryu/jeryu-web · pinned into the forge server by commit + bundle hash",
+      "stages": [
+        {
+          "id": "main",
+          "name": "main",
+          "version": "229ba8e",
+          "state": "none",
+          "status": "source",
+          "known_by": "derived",
+          "targets": []
+        },
+        {
+          "id": "pinned",
+          "name": "pinned",
+          "version": "229ba8e · 96d4d2d9",
+          "state": "ok",
+          "status": "0 behind",
+          "known_by": "derived",
+          "targets": [],
+          "promote": {
+            "command": "auto-pin opens \"release: pin jeryu-web <sha7>\"; the PR merges like any other",
+            "human_only": false,
+            "automatic": true
+          }
+        },
+        {
+          "id": "production",
+          "name": "production",
+          "version": "229ba8e",
+          "state": "ok",
+          "status": "in sync",
+          "known_by": "reported",
+          "targets": []
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "name": "Tools",
+      "owner_family": "jeryu",
+      "source": "installed per host · effectively \"main is production\"",
+      "stages": [
+        {
+          "id": "gate-runner",
+          "name": "gate runner",
+          "version": "aab6147",
+          "state": "ok",
+          "status": "= main",
+          "known_by": "host",
+          "targets": [
+            {
+              "name": "xbabe2 · pr-gate-runner",
+              "running": "aab6147 · auto-installs every 10 min",
+              "state": "ok"
+            }
+          ]
+        },
+        {
+          "id": "pr-redteam",
+          "name": "pr-redteam",
+          "version": "03b5609 + edits",
+          "state": "bad",
+          "status": "local fork",
+          "known_by": "host",
+          "targets": [
+            {
+              "name": "xbabe0 · ~/pr-redteam",
+              "running": "no remote · 575-line diff vs jeryu-ci-runner",
+              "state": "bad"
+            }
+          ],
+          "promote": {
+            "command": "ops/pr-redteam/install.sh from jeryu-ci-runner main (never done)",
+            "human_only": true,
+            "automatic": false
+          }
+        },
+        {
+          "id": "jankurai",
+          "name": "jankurai",
+          "version": "split.3 · b88562f",
+          "state": "warn",
+          "status": "1 unverified",
+          "known_by": "host",
+          "targets": [
+            {
+              "name": "xbabe0",
+              "running": "9e6b8857 / b88562f",
+              "state": "ok"
+            },
+            {
+              "name": "xbabe2",
+              "running": "9e6b8857 / b88562f",
+              "state": "ok"
+            },
+            {
+              "name": "atomicsoul",
+              "running": "unverified",
+              "state": "none"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "work": {
+    "total": 246,
+    "method": "Matched by Todo: trailer. The todo merged flag is wrong for 10 of these.",
+    "parts": [
+      {
+        "key": "live",
+        "label": "Live",
+        "count": 127
+      },
+      {
+        "key": "merged",
+        "label": "Merged, not released",
+        "count": 5
+      },
+      {
+        "key": "stranded",
+        "label": "Stranded on shift branches",
+        "count": 58
+      },
+      {
+        "key": "untraceable",
+        "label": "Untraceable",
+        "count": 25
+      },
+      {
+        "key": "blocked",
+        "label": "Blocked",
+        "count": 27
+      },
+      {
+        "key": "open",
+        "label": "Open",
+        "count": 4
+      }
+    ]
+  },
+  "pins": {
+    "note": "Read from Cargo.lock and .cargo/hosted-pin-refs.tsv, which is what the build consumes. The lock file's crate rows are stale.",
+    "columns": [
+      "Repo",
+      "Main",
+      "Pinned",
+      "In prod",
+      "Behind"
+    ],
+    "rows": [
+      {
+        "repo": "jeryu-web",
+        "cells": [
+          "229ba8e",
+          "229ba8e",
+          "229ba8e"
+        ],
+        "behind": 0
+      },
+      {
+        "repo": "jeryu-core",
+        "cells": [
+          "762ea81",
+          "split.10",
+          "split.10"
+        ],
+        "behind": 0
+      },
+      {
+        "repo": "jeryu-ci-runner",
+        "cells": [
+          "c6c2498",
+          "split.3",
+          "split.3"
+        ],
+        "behind": 0,
+        "note": "pins API says 54: it ignores [patch]"
+      },
+      {
+        "repo": "jeryu-intelligence",
+        "cells": [
+          "246d024",
+          "split.2",
+          "split.2"
+        ],
+        "behind": 0
+      },
+      {
+        "repo": "jeryu-jira",
+        "cells": [
+          "94d4889",
+          "split.0",
+          "split.0"
+        ],
+        "behind": 4
+      },
+      {
+        "repo": "jeryu-release-ops",
+        "cells": [
+          "1c1d57a",
+          "split.0",
+          "split.0"
+        ],
+        "behind": 42,
+        "note": "split.7 = main exists; the pin policy blocks the bump"
+      },
+      {
+        "repo": "jeryu-deploy",
+        "cells": [
+          "be19083",
+          "—",
+          "be19083"
+        ],
+        "behind": 0
+      }
+    ]
+  },
+  "notes": {
+    "title": "Forge server: what promoting would ship",
+    "items": [],
+    "coverage": "Nothing: production is main. CHANGELOGs are untouched since June and the forge releases list is empty, so generated notes would be the only notes."
+  },
+  "problems": []
+}

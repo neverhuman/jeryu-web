@@ -39,6 +39,38 @@ export function FamilyPill({
   );
 }
 
+/**
+ * One pill per family where exactly one is always shown (no "All"): the
+ * release board picks the family whose board it draws.
+ */
+export function FamilyPicker({
+  families,
+  family,
+  onPick,
+  label,
+}: {
+  families: string[];
+  family: string;
+  onPick: (family: string) => void;
+  label: string;
+}): JSX.Element {
+  return (
+    <div className="family-strip" role="group" aria-label={label}>
+      {families.map((entry) => (
+        <button
+          key={entry}
+          type="button"
+          className="family-pill"
+          aria-pressed={family === entry}
+          onClick={() => onPick(entry)}
+        >
+          {entry}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** "All" plus one pill per family, each with its count. */
 export function FamilyStrip({
   counts,

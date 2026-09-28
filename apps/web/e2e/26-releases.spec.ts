@@ -99,7 +99,7 @@ test('environments show the live release, rollback target and unshipped PRs @act
     },
   ]);
 
-  await page.goto('/releases');
+  await page.goto('/releases?repo=jeryu%2Fjeryu-deploy');
   await expect(page.getByTestId('releases-page')).toBeVisible({ timeout: 15_000 });
 
   const production = page.getByTestId('releases-env-production');
@@ -142,7 +142,7 @@ test('a repository with no recorded deployment says so @action:releases.empty', 
   await mockBootstrap(page);
   await mockReleases(page, []);
 
-  await page.goto('/releases');
+  await page.goto('/releases?repo=jeryu%2Fjeryu-deploy');
   await expect(page.getByTestId('releases-empty')).toContainText(
     'No deployment of jeryu/jeryu-deploy has been recorded yet'
   );
@@ -166,7 +166,7 @@ test('a staged release waits with its deploy command and a failed attempt links 
   ]);
   await mockPipelineApi(page);
 
-  await page.goto('/releases');
+  await page.goto('/releases?repo=jeryu%2Fjeryu-deploy');
   const staged = page.getByTestId('releases-staged');
   await expect(staged).toContainText('Staged, awaiting deploy', { timeout: 15_000 });
   await expect(staged).toContainText(DEPLOY_COMMAND);

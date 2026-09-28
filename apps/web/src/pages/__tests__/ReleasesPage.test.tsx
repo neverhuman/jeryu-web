@@ -86,7 +86,7 @@ describe('ReleasesPage', () => {
 
   it('shows the staged release with its deploy command, the deploy log, and linked unshipped PRs', async () => {
     mockReleases();
-    renderAt('/releases', '/releases', <ReleasesPage />);
+    renderAt('/releases?repo=jeryu%2Fjeryu-deploy', '/releases', <ReleasesPage />);
 
     const staged = await screen.findByTestId('releases-staged');
     expect(within(staged).getByText('Staged, awaiting deploy')).toBeInTheDocument();
@@ -131,7 +131,7 @@ describe('ReleasesPage', () => {
     role = 'user';
     mockReleases();
     const fetchSpy = vi.mocked(globalThis.fetch);
-    renderAt('/releases', '/releases', <ReleasesPage />);
+    renderAt('/releases?repo=jeryu%2Fjeryu-deploy', '/releases', <ReleasesPage />);
     await screen.findByTestId('releases-env-production');
     expect(screen.queryByTestId('releases-staged')).toBeNull();
     expect(fetchSpy.mock.calls.some(([input]) => String(input).includes('/api/v1/attention'))).toBe(false);

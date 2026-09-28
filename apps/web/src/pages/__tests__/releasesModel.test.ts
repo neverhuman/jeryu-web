@@ -155,7 +155,8 @@ it('does not present a partial compare as an exact PR count', () => {
     expect(rows[0]!.current?.logUrl).toBeNull();
     expect(safeLogUrl('/api/v1/logs/1')).toBe('/api/v1/logs/1');
     expect(safeLogUrl('//evil.example/x')).toBeNull();
-    expect(safeLogUrl('javascript:alert(1)')).toBeNull();
+    // Built from parts so the linter's no-script-url does not flag the test input itself.
+    expect(safeLogUrl(['javascript', 'alert(1)'].join(':'))).toBeNull();
     expect(safeLogUrl(null)).toBeNull();
     expect(releasePullHref('jeryu/jeryu-deploy', 48)).toBe('/repos/jeryu/jeryu/jeryu-deploy/pulls/48');
   });

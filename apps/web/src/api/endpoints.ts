@@ -180,6 +180,11 @@ export const endpoints = {
   attention: (): string => '/api/v1/attention',
   /** What each deploy repo pins versus its dependencies' main (admin-only). */
   pins: (): string => '/api/v1/pins',
+  /** Every family that has reported a release board (admin-only). */
+  releaseBoards: (): string => '/api/v1/release-board',
+  /** One family's newest release board (admin-only; 404 until one is reported). */
+  releaseBoard: (family: string): string =>
+    `/api/v1/release-board/${encodeURIComponent(family)}`,
 
   /** How the jankurai/proof gate behaved over the last `days` days. */
   qualityGateOverview: (days: number): string =>

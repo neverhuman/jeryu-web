@@ -38,6 +38,7 @@ import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { controlPlane, mockPullRoom } from './fixtures/pullRoomMocks';
 import { mockShiftApi } from './fixtures/shiftMocks';
 import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
+import { mockBoards, mockEnvironments } from './fixtures/releaseBoardMocks';
 import {
   FOUR_CHANNELS,
   mockReleaseChannels,
@@ -400,10 +401,45 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
       pulls: [pull('jeryu-deploy', 27, 'feat: already live', 'merged', 'a')],
       compare: compareBody('a', []),
     });
-    await page.goto('/releases');
+    await page.goto('/releases?repo=jeryu%2Fjeryu-deploy');
     await expect(page.getByTestId('ready-to-pin')).toBeVisible({ timeout: 15_000 });
     await page.getByTestId('pin-jeryu/jeryu-web').locator('summary').click();
     await scanAndAssert(page, 'releases');
+    const blockers = blockingViolations(
+      await runAxe(page, { disableRules: ['color-contrast'] })
+    );
+    expect(blockers.map((v) => v.id)).toEqual([]);
+  });
+
+  test('axe scan: Releases family board with a stage opened', async ({ page }) => {
+    // The default view of /releases: lanes of stage cells, one opened into
+    // its targets table and promote command, and the work bar.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    await mockEnvironments(page);
+    await mockBoards(page);
+    await page.goto('/releases?family=veox-ai');
+    const prod = page.getByTestId('release-board-stage-cloud-app-prod');
+    await expect(prod).toBeVisible({ timeout: 15_000 });
+    await prod.click();
+    await expect(page.getByTestId('release-board-stage-detail')).toBeVisible();
+    await expect(page.getByTestId('release-board-work')).toBeVisible();
+    await scanAndAssert(page, 'releases-board');
+    const blockers = blockingViolations(
+      await runAxe(page, { disableRules: ['color-contrast'] })
+    );
+    expect(blockers.map((v) => v.id)).toEqual([]);
+  });
+
+  test('axe scan: Releases family board, pinned vs released', async ({ page }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    await mockEnvironments(page);
+    await mockBoards(page);
+    await page.goto('/releases?family=jeryu');
+    await page.getByRole('tab', { name: 'Pinned vs released' }).click({ timeout: 15_000 });
+    await expect(page.getByTestId('release-board-pins')).toBeVisible();
+    await scanAndAssert(page, 'releases-board-pins');
     const blockers = blockingViolations(
       await runAxe(page, { disableRules: ['color-contrast'] })
     );
