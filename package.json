@@ -17,6 +17,8 @@
     "security:sbom": "syft dir:. -o spdx-json=target/security/jeryu-web.spdx.json"
   },
   "devDependencies": {
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.2.3",
     "better-sqlite3": "^12.11.1"
   }
 }

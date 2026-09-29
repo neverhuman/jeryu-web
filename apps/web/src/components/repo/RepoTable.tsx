@@ -11,6 +11,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
+  type CellContext,
   type ColumnDef,
   type SortingState
 } from '@tanstack/react-table';
@@ -60,6 +61,9 @@ export interface RepoTableProps {
   /** A header click that matches a sort the control offers reports it here. */
   onSortChange?: (sort: RepoSort) => void;
 }
+
+/** What a column's `cell` callback receives from Table v8. */
+type RepoCell = CellContext<RepositorySummary, unknown>;
 
 /** The column and direction each sort of the sort control means. */
 const SORT_COLUMNS: Record<RepoSort, { id: string; desc: boolean }> = {
@@ -232,7 +236,7 @@ export function RepoTable({
         id: 'family',
         header: 'Family',
         accessorFn: (row) => row.family ?? '',
-        cell: ({ row }) => {
+        cell: ({ row }: RepoCell) => {
           const family = row.original.family;
           if (!family) return null;
           return (
@@ -251,7 +255,7 @@ export function RepoTable({
         id: 'name',
         header: 'Repository',
         accessorFn: (row) => row.id.name,
-        cell: ({ row }) => (
+        cell: ({ row }: RepoCell) => (
           <span className="repo-table__repo-cell">
             {/* owner/name: three repositories can share a name. The name is
                 the link; the row stays clickable as well. */}
@@ -277,7 +281,7 @@ export function RepoTable({
         header: 'Description',
         accessorFn: (row) => row.description ?? '',
         // Only the part that differs from the other rows; the full text on hover.
-        cell: ({ row }) => {
+        cell: ({ row }: RepoCell) => {
           const full = row.original.description;
           if (!full) return <span className="text-muted">No description</span>;
           const distinct = descriptions.get(full) ?? full;
@@ -298,7 +302,7 @@ export function RepoTable({
         // What needs a person sorts first.
         accessorFn: (row) => attentionRank(row),
         sortDescFirst: true,
-        cell: ({ row }) => <StatusCell repo={row.original} />
+        cell: ({ row }: RepoCell) => <StatusCell repo={row.original} />
       },
       {
         id: 'score',
@@ -313,7 +317,7 @@ export function RepoTable({
         // ascending) instead of throwing the comparator off with nulls.
         accessorFn: (row) => row.jankurai_score ?? -1,
         // The score links to the quality gate: the rules and findings behind it.
-        cell: ({ row }) => (
+        cell: ({ row }: RepoCell) => (
           <Link
             to={QUALITY_GATE_PATH}
             className="repo-table__score-link"
@@ -333,7 +337,7 @@ export function RepoTable({
         id: 'open_prs',
         header: 'Open PRs',
         accessorFn: (row) => row.open_pull_requests,
-        cell: ({ row }) => (
+        cell: ({ row }: RepoCell) => (
           <Link
             to={pullRoomHref(
               `${row.original.id.owner}/${row.original.id.name}`
@@ -350,7 +354,7 @@ export function RepoTable({
         header: 'Updated',
         accessorFn: (row) => activityTime(row).iso,
         // Sort on the raw timestamp; show it abbreviated, full on hover.
-        cell: ({ row }) => {
+        cell: ({ row }: RepoCell) => {
           const { iso, pushed } = activityTime(row.original);
           return (
             <time
