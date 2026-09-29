@@ -144,6 +144,19 @@ describe('IntelligencePage runner capacity', () => {
   });
 });
 
+describe('IntelligencePage accessibility', () => {
+  it('draws the operator graph as a group, so its node marks stay reachable', () => {
+    renderIntelligence(sampleSnapshot());
+
+    // An `svg[role=img]` holds nothing a keyboard can reach, and the marks
+    // inside it are buttons: the graph is a group that names itself instead.
+    const graph = screen.getByLabelText('Operator graph');
+    expect(graph.tagName.toLowerCase()).toBe('svg');
+    expect(graph).toHaveAttribute('role', 'group');
+    expect(within(graph).getAllByRole('button').length).toBeGreaterThan(0);
+  });
+});
+
 function sampleSnapshot(): ControlPlaneSnapshot {
   return {
     schemaVersion: 'jeryu.control_plane/v1',

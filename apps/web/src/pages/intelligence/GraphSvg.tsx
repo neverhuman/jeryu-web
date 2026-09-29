@@ -45,9 +45,11 @@ export function GraphSvg({
   }
   return (
     <div className="intelligence__graph-preview" data-testid="repo-graph-preview">
+      {/* A group, not an image: the node marks inside are buttons, and an
+          image may hold nothing a keyboard or a screen reader can reach. */}
       <svg
         viewBox={`0 0 ${graph.layout.width} ${graph.layout.height}`}
-        role="img"
+        role="group"
         aria-label="Operator graph"
       >
         <rect

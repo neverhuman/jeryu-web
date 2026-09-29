@@ -114,9 +114,11 @@ export function DiffFileTree({
                 >
                   <span
                     className={`diff-file-tree__status diff-file-tree__status--${file.status}`}
-                    aria-label={STATUS_LABELS[file.status]}
                   >
                     <Icon aria-hidden="true" size={12} />
+                    {/* `aria-label` on a span with no role is dropped, which
+                        left the status announced as nothing: say it in text. */}
+                    <span className="sr-only">{STATUS_LABELS[file.status]} </span>
                   </span>
                   <span className="diff-file-tree__path" title={file.path}>
                     {file.status === 'renamed' && file.old_path ? (

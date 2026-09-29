@@ -32,4 +32,27 @@ describe('DiffFileTree', () => {
     expect(base).toHaveClass('diff-file-tree__base');
     expect(base.parentElement).toHaveAttribute('title', 'crates/jeryu-api/src/b.rs');
   });
+
+  it('says a file status in text, so no row is announced by its icon alone', () => {
+    const files = [
+      { path: 'a.rs', status: 'added', additions: 1, deletions: 0 },
+      { path: 'b.rs', status: 'removed', additions: 0, deletions: 2 },
+    ] as unknown as PullRequestDiffFile[];
+    render(
+      <DiffFileTree
+        files={files}
+        activePath={null}
+        viewedPaths={new Set()}
+        onSelect={vi.fn()}
+        onToggleViewed={vi.fn()}
+      />,
+    );
+    // The status is part of the row button's name, not an `aria-label` on a
+    // span with no role, which assistive tech drops.
+    expect(screen.getByRole('button', { name: /Added\s*.*a\.rs/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Removed\s*.*b\.rs/ })).toBeInTheDocument();
+    for (const span of document.querySelectorAll('.diff-file-tree__status')) {
+      expect(span).not.toHaveAttribute('aria-label');
+    }
+  });
 });

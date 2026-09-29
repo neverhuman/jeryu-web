@@ -170,6 +170,13 @@
   color: var(--color-fg-secondary);
 }
 
+/* A repository name sits in a line with what its todos are waiting for, so
+   the link is told apart by more than its colour. */
+.shift-branch__repos a,
+.shift__commits a {
+  text-decoration: underline;
+}
+
 /* Add */
 
 .work-composer {

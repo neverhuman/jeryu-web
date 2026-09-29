@@ -387,7 +387,12 @@ function BranchRowView({ row, scope }: { row: BranchRow; scope: string }): JSX.E
         <details className="pull-branch">
           <summary className="pull-timeline__pr">
             <span className="pull-branch__name">
-              {row.status === 'blocked' ? <span aria-label="needs a human">⚠ </span> : null}
+              {row.status === 'blocked' ? (
+                <>
+                  <span aria-hidden="true">⚠ </span>
+                  <span className="sr-only">needs a human </span>
+                </>
+              ) : null}
               <code>{row.label}</code> · {row.todos.length} todo{row.todos.length === 1 ? '' : 's'}
             </span>
             <span className="pull-timeline__meta">

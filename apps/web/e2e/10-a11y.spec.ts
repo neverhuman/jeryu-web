@@ -35,7 +35,8 @@ import {
   mockRepoList,
   mockRepoLookup,
 } from './fixtures/mocks';
-import { mockPipelineApi } from './fixtures/pipelineMocks';
+import { attentionBody, mockPipelineApi } from './fixtures/pipelineMocks';
+import { mockControlPlane, mockToolingEvidence } from './fixtures/intelligenceMocks';
 import { controlPlane, mockPullRoom, truncatedSnapshot } from './fixtures/pullRoomMocks';
 import { mockShiftApi } from './fixtures/shiftMocks';
 import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
@@ -544,4 +545,138 @@ test.describe('Accessibility scans — pipeline visibility', () => {
       expect(blockers.map((v) => v.id)).toEqual([]);
     });
   }
+});
+
+test.describe('Accessibility scans — Intelligence and Work', () => {
+  test('axe scan: Intelligence, the operator graph and its inline links', async ({ page }) => {
+    // The graph is a group of node marks that are buttons: as an
+    // `svg[role=img]` it reported focusable children inside an image
+    // (`nested-interactive`), and the note above it had a link told apart from
+    // the sentence by its colour alone (`link-in-text-block`).
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockControlPlane(page);
+    await mockToolingEvidence(page);
+    await page.goto('/intelligence');
+    await expect(page.getByTestId('repo-graph-preview')).toBeVisible({ timeout: 15_000 });
+
+    const graph = page.getByRole('group', { name: 'Operator graph' });
+    await expect(graph).toBeVisible();
+    // Every mark is reachable: the first one takes focus from the keyboard.
+    const mark = page.getByTestId('graph-node-check:ci');
+    await mark.focus();
+    await expect(mark).toBeFocused();
+
+    await scanAndAssert(page, 'intelligence');
+    const blockers = blockingViolations(
+      await runAxe(page, { disableRules: ['color-contrast'] })
+    );
+    expect(blockers.map((v) => v.id)).toEqual([]);
+  });
+
+  test('a repository link inside a sentence is underlined, not only coloured', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockRepoList(page, [
+      { id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-deploy' } },
+      { id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-web' } },
+    ]);
+    await mockShiftApi(page);
+    await page.goto('/work?family=jeryu');
+    const link = page.locator('.shift-branch__repos a').first();
+    await expect(link).toBeVisible({ timeout: 15_000 });
+    await expect(link).toHaveCSS('text-decoration-line', 'underline');
+  });
+});
+
+test.describe('Accessibility scans — the rows that must be read', () => {
+  test('a needs-a-human Activity row keeps its pills legible', async ({ page }) => {
+    // The row whose words matter most was the least readable: its danger tint
+    // stacked under the danger pills on it ("Deploy failed"), and their text
+    // fell below AA.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.activity-row.is-needs-human').first()).toBeVisible();
+    const contrast = (await runAxe(page, { include: '.activity-row.is-needs-human' })).violations
+      .filter((v) => v.id === 'color-contrast');
+    expect(contrast.flatMap((v) => v.nodes.map((n) => n.failureSummary))).toEqual([]);
+  });
+
+  test('the Needs you command box can be reached and read without a mouse', async ({ page }) => {
+    // The command the page exists to hand over scrolls inside its own box, so
+    // that box is a tab stop (`scrollable-region-focusable`).
+    const body = attentionBody() as { items: Array<Record<string, unknown>> };
+    for (const item of body.items) {
+      const action = item.action as Record<string, unknown> | undefined;
+      if (action?.command) {
+        action.command = `${action.command as string} --environment production --confirm --wait-for-health`;
+      }
+    }
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page, { attention: body as unknown as Record<string, unknown> });
+    await page.goto('/needs-you');
+    await expect(page.getByTestId('needs-you-action')).toBeVisible({ timeout: 15_000 });
+
+    const box = page.locator('.copy-command__text').first();
+    await expect(box).toHaveAttribute('tabindex', '0');
+    await box.focus();
+    await expect(box).toBeFocused();
+    await scanAndAssert(page, 'needs-you-command');
+    const blockers = blockingViolations(
+      await runAxe(page, { disableRules: ['color-contrast'] })
+    );
+    expect(blockers.map((v) => v.id)).toEqual([]);
+  });
+
+  test('a PR file row says its status in words', async ({ page }) => {
+    // `aria-label` on a span with no role is dropped, which left each changed
+    // file announced by its icon alone (`aria-prohibited-attr`).
+    const repo = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
+    const repoId = `${repo.host}:${repo.owner}/${repo.name}`;
+    await mockBootstrap(page);
+    await mockRepoList(page, [{ id: repo, default_branch: 'main' }]);
+    await mockPullRequestDetail(page, {
+      repoId,
+      number: '99',
+      title: 'A11y file tree scan',
+      head_sha: '1'.repeat(40),
+      passport: 'blocked',
+    });
+    await page.route('**/pulls/99/diff*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          head_sha: '1'.repeat(40),
+          base_sha: '2'.repeat(40),
+          truncated: false,
+          files: [
+            { path: 'src/one.ts', status: 'modified', additions: 2, deletions: 1, hunks: [], patch: '' },
+            { path: 'src/two.ts', status: 'added', additions: 5, deletions: 0, hunks: [], patch: '' },
+            { path: 'src/three.ts', status: 'removed', additions: 0, deletions: 4, hunks: [], patch: '' },
+            { path: 'src/four.ts', status: 'renamed', old_path: 'src/old.ts', additions: 1, deletions: 1, hunks: [], patch: '' },
+          ],
+        }),
+      })
+    );
+    await page.goto(`/repos/${repo.host}/${repo.owner}/${repo.name}/pulls/99`);
+    await expect(
+      page.getByRole('heading', { name: /PR #99: A11y file tree scan/i })
+    ).toBeVisible({ timeout: 15_000 });
+
+    for (const [status, path] of [
+      ['Modified', 'one.ts'],
+      ['Added', 'two.ts'],
+      ['Removed', 'three.ts'],
+      ['Renamed', 'four.ts'],
+    ]) {
+      await expect(
+        page.getByRole('button', { name: new RegExp(`${status}\\s*.*${path}`) })
+      ).toBeVisible();
+    }
+    await expect(page.locator('.diff-file-tree__status[aria-label]')).toHaveCount(0);
+    await scanAndAssert(page, 'pr-cockpit-files');
+  });
 });

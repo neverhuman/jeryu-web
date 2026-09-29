@@ -165,6 +165,11 @@
   border-color: transparent;
 }
 
+/* A link inside a sentence is told apart by more than its colour. */
+.page__roadmap-note a {
+  text-decoration: underline;
+}
+
 .page__feature-list {
   display: flex;
   flex-wrap: wrap;

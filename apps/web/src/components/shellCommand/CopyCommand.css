@@ -39,6 +39,11 @@
   user-select: all;
 }
 
+.copy-command__text:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .copy-command__button {
   display: inline-flex;
   align-items: center;

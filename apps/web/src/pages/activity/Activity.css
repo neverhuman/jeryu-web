@@ -87,8 +87,11 @@
   border-left-color: var(--color-accent-success);
 }
 
+/* A wash, not the pill's own tint: at full strength the row's tint stacked
+   under the danger pills on it, and "Deploy failed" — the words that have to
+   be read — dropped below AA contrast. */
 .activity-row.is-needs-human {
-  background-color: var(--color-accent-danger-bg);
+  background-color: color-mix(in srgb, var(--color-accent-danger-bg) 40%, transparent);
 }
 
 .activity-row.is-needs-human .activity-row__summary {

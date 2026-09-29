@@ -5,6 +5,9 @@
 // clipboard API is unavailable. `where` is one muted line above it naming the
 // machine and directory: it is read before the command, it describes the copy
 // button for assistive tech, and it is never part of what is copied.
+//
+// The command box scrolls when the line is longer than the row it sits in, so
+// it is a tab stop: the command is reachable and readable without a mouse.
 
 import { Check, Copy } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
@@ -41,7 +44,11 @@ export function CopyCommand({ command, label, where }: CopyCommandProps): JSX.El
 
   const box = (
     <span className="copy-command">
-      <code className="copy-command__text">{command}</code>
+      {/* The box scrolls when the command is longer than the row, so it is
+          focusable: the command can be reached and read without a mouse. */}
+      <code className="copy-command__text" tabIndex={0}>
+        {command}
+      </code>
       <button
         type="button"
         className="copy-command__button"
