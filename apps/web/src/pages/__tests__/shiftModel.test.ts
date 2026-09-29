@@ -25,6 +25,7 @@ import {
   canOpenReviewPr,
   repoCodeHref,
   repoNeedsReviewPr,
+  unmergedTodosNote,
   repoOwners,
   repoPath,
   shiftIsLive,
@@ -290,6 +291,19 @@ describe('slotLabel', () => {
     expect(canOpenReviewPr({ repos: [repo({ ahead: 6, unmerged_todos: [], pr: { number: 44, state: 'closed', url: '/x' } })] })).toBe(false);
     expect(repoNeedsReviewPr(repo({ ahead: 1, unmerged_todos: ['t'], pr: { number: 70, state: 'merged', url: '/x' } }))).toBe(true);
     expect(repoNeedsReviewPr(repo({ ahead: 1, unmerged_todos: ['t'], pr: { number: 71, state: 'mergeable', url: '/x' } }))).toBe(false);
+    // The card says what the count means: a review PR to open, or a request to wait on.
+    expect(unmergedTodosNote(repo({ ahead: 1, unmerged_todos: ['t'] }))).toBe(
+      '1 todo needs a review PR to reach the base branch'
+    );
+    expect(unmergedTodosNote(repo({ ahead: 2, unmerged_todos: ['t', 'u'], pr: { number: 70, state: 'merged', url: '/x' } }))).toBe(
+      '2 todos need a review PR to reach the base branch'
+    );
+    expect(unmergedTodosNote(repo({ ahead: 1, unmerged_todos: ['t'], pr: { number: 71, state: 'mergeable', url: '/x' } }))).toBe(
+      '1 todo waiting for PR #71 to merge into the base branch'
+    );
+    // Nothing to say: all of it is on the base branch, or an older server sent no todos.
+    expect(unmergedTodosNote(repo({ ahead: 0, unmerged_todos: [] }))).toBeNull();
+    expect(unmergedTodosNote(repo({ ahead: 2 }))).toBeNull();
     // An older server: commits ahead and no pull request at all.
     expect(canOpenReviewPr({ repos: [repo({ ahead: 2 })] })).toBe(true);
     expect(canOpenReviewPr({ repos: [repo({ ahead: 2, pr: { number: 1, state: 'merged', url: '/x' } })] })).toBe(false);

@@ -294,7 +294,9 @@ describe('ShiftQueuePage', () => {
     renderQueue('/work?family=jain');
     const live = await screen.findByTestId('shift-branch-nightshift/2026-09-18');
     // Work landed after the PR merged: a review PR would carry it.
-    expect(within(live).getByText(/1 todo not on the base branch/)).toBeInTheDocument();
+    expect(
+      within(live).getByText(/1 todo needs a review PR to reach the base branch/)
+    ).toBeInTheDocument();
     expect(within(live).getByRole('button', { name: 'Open review PR for nightshift/2026-09-18' })).toBeInTheDocument();
     expect(within(live).getByRole('link', { name: 'jain-deploy' })).toHaveAttribute(
       'href',

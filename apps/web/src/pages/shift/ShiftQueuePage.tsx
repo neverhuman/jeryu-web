@@ -56,6 +56,7 @@ import {
   todoPrHref,
   todoTrace,
   traceSummary,
+  unmergedTodosNote,
   type QueueFilters,
 } from './shiftModel';
 import { WorkComposer } from './WorkComposer';
@@ -857,20 +858,7 @@ function ShiftCard({
       </span>
       <ul className="shift-branch__repos">
         {shift.repos.map((repo) => (
-          <li key={repo.repo}>
-            <RepoName owners={owners} repo={repo.repo} />
-            {repo.unmerged_todos && repo.unmerged_todos.length > 0
-              ? ` · ${repo.unmerged_todos.length} todo${repo.unmerged_todos.length === 1 ? '' : 's'} not on the base branch`
-              : ''}
-            {repo.pr ? (
-              <>
-                {' · '}
-                <PrLink url={repo.pr.url}>
-                  PR #{repo.pr.number} ({repo.pr.state})
-                </PrLink>
-              </>
-            ) : null}
-          </li>
+          <ShiftCardRepo key={repo.repo} owners={owners} repo={repo} />
         ))}
       </ul>
       {isAdmin && offerPr ? (
@@ -901,6 +889,25 @@ function ShiftCard({
         <span className="shift__error" role="alert">
           {openPr.error.message}
         </span>
+      ) : null}
+    </li>
+  );
+}
+
+/** One repository of a shift: its name, what is not on the base branch yet, its pull request. */
+function ShiftCardRepo({ owners, repo }: { owners: RepoOwners; repo: ShiftBranch['repos'][number] }): JSX.Element {
+  const note = unmergedTodosNote(repo);
+  return (
+    <li>
+      <RepoName owners={owners} repo={repo.repo} />
+      {note ? ` · ${note}` : ''}
+      {repo.pr ? (
+        <>
+          {' · '}
+          <PrLink url={repo.pr.url}>
+            PR #{repo.pr.number} ({repo.pr.state})
+          </PrLink>
+        </>
       ) : null}
     </li>
   );

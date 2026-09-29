@@ -392,6 +392,21 @@ export function repoNeedsReviewPr(repo: ShiftBranchRepo): boolean {
   return repo.ahead > 0 && !repo.pr;
 }
 
+/**
+ * What a repo's unmerged todos mean for whoever reads the card: with no pull
+ * request carrying them, a review PR is the next step; with one open, the work
+ * waits for that request to merge. Nothing to say when the base branch has it
+ * all, or when an older server does not report todos at all.
+ */
+export function unmergedTodosNote(repo: ShiftBranchRepo): string | null {
+  const count = repo.unmerged_todos?.length ?? 0;
+  if (count === 0) return null;
+  const todos = `${count} todo${count === 1 ? '' : 's'}`;
+  return prIsOpen(repo.pr)
+    ? `${todos} waiting for PR #${repo.pr?.number} to merge into the base branch`
+    : `${todos} ${count === 1 ? 'needs' : 'need'} a review PR to reach the base branch`;
+}
+
 /** Offer "Open review PR" only when it would carry something. */
 export function canOpenReviewPr(shift: Pick<ShiftBranch, 'repos'>): boolean {
   return shift.repos.some(repoNeedsReviewPr);
