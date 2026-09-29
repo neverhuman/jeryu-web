@@ -188,6 +188,20 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(screen.getByRole('button', { name: 'Files' }).className).toContain('action-button--primary');
   });
 
+  it('shows one "Find files" affordance: in the panel while it is open, in the header while it is closed', async () => {
+    renderAt(FRONT);
+    const panel = await screen.findByRole('complementary', { name: 'Files' });
+    const openFinders = screen.getAllByRole('button', { name: 'Find files' });
+    expect(openFinders).toHaveLength(1);
+    expect(panel).toContainElement(openFinders[0]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Files' }));
+    const closedFinders = screen.getAllByRole('button', { name: 'Find files' });
+    expect(closedFinders).toHaveLength(1);
+    expect(screen.queryByRole('complementary', { name: 'Files' })).toBeNull();
+    expect(closedFinders[0].closest('.repo-browser__line')).not.toBeNull();
+  });
+
   it('opens a deep link to a file with its folders already open', async () => {
     renderAt(`${FRONT}/blob/main/src/lib.rs`);
     expect(await screen.findByRole('treeitem', { name: 'lib.rs' })).toHaveAttribute(

@@ -218,6 +218,11 @@ export function RepositoryBrowserPage({
       : []),
   ];
   const showPanel = filesOpen && !treeMissing;
+  const findFiles = (
+    <ActionButton variant="ghost" onClick={() => setFinderOpen(true)} aria-label="Find files">
+      Find files (t)
+    </ActionButton>
+  );
 
   return (
     <div className="page" data-testid={testId}>
@@ -266,13 +271,8 @@ export function RepositoryBrowserPage({
           <span className="repo-browser__spacer" aria-hidden="true" />
           {treeMissing ? null : (
             <>
-              <ActionButton
-                variant="ghost"
-                onClick={() => setFinderOpen(true)}
-                aria-label="Find files"
-              >
-                Find files (t)
-              </ActionButton>
+              {/* Beside an open panel the panel carries this; one affordance each. */}
+              {showPanel ? null : findFiles}
               <ActionButton
                 // The page's one filled action, and only while the panel is closed.
                 variant={filesOpen ? 'default' : 'primary'}
@@ -330,6 +330,7 @@ export function RepositoryBrowserPage({
           aria-label="Files"
           hidden={!showPanel}
         >
+          <div className="repo-browser__files-head">{findFiles}</div>
           <FileTree
             repoId={repoId}
             refName={activeRef}
