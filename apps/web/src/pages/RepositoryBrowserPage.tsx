@@ -21,6 +21,7 @@ import {
   ReadmePanel,
 } from '../components/browser';
 import type { BreadcrumbSegment } from '../components/browser';
+import { JankuraiScoreBadge } from '../components/repo/JankuraiScoreBadge';
 import { RepoHealthPill } from '../components/repo/RepoHealthPill';
 import { RepoArchivedBadge } from '../components/repo/RepoArchivedBadge';
 import { RepoRoleBadge } from '../components/repo/RepoRoleBadge';
@@ -41,17 +42,24 @@ import { useSelectionStore } from '../stores/selectionStore';
 import type { TreeEntry } from '../api/types';
 
 import { RepoFileContent } from './RepoFileContent';
+import { QUALITY_GATE_PATH } from './qualityGate/qualityGateModel';
 import {
   FILES_PANEL_KEY,
   asksForFilesOpen,
   blobPath,
   folderToReveal,
+  healthOpensChecks,
   initialPanelOpen,
   openPullsLabel,
   panelChoiceText,
   parseRefAndPath,
   repoFrontPath,
 } from './repoBrowserModel';
+import {
+  RepoCommitSummary,
+  RepoHealthChecks,
+  RepoHealthChip,
+} from './repositoryOverviewFacts';
 import { ClonePopover } from './repositoryOverviewParts';
 
 import '../components/browser/browser.css';
@@ -94,6 +102,8 @@ export function RepositoryBrowserPage({
       initialPanelOpen(readBrowserText('durable', FILES_PANEL_KEY), window.innerWidth)
   );
   const [finderOpen, setFinderOpen] = useState(false);
+  // The header's health chip stands for failing checks; pressing it lists them.
+  const [checksOpen, setChecksOpen] = useState(false);
 
   // A repository whose source is hosted elsewhere has no tree here. The root
   // listing is the same query the panel uses, so this costs no second request.
@@ -216,7 +226,28 @@ export function RepositoryBrowserPage({
       <header className="page__header">
         <div className="repo-overview__head">
           <h1 className="repo-overview__title">{summary.id.name}</h1>
-          <RepoHealthPill health={summary.health} />
+          {healthOpensChecks(summary) ? (
+            <RepoHealthChip
+              repo={summary}
+              open={checksOpen}
+              onToggle={() => setChecksOpen((v) => !v)}
+            />
+          ) : (
+            <RepoHealthPill health={summary.health} />
+          )}
+          {/* The score links to the quality gate, as it does in the table. */}
+          <Link
+            to={QUALITY_GATE_PATH}
+            className="repo-overview__score-link"
+            title="See what produced this score"
+            data-testid="repo-overview-score"
+          >
+            <JankuraiScoreBadge
+              score={summary.jankurai_score}
+              decision={summary.jankurai_decision}
+              scoredAt={summary.jankurai_scored_at}
+            />
+          </Link>
           <RepoRoleBadge role={summary.repo_role} />
           <RepoArchivedBadge archived={summary.archived} />
           <span className="page__pill">{summary.visibility}</span>
@@ -225,6 +256,7 @@ export function RepositoryBrowserPage({
         {!onFile && summary.description ? (
           <p className="page__subtitle">{summary.description}</p>
         ) : null}
+        {onFile ? null : <RepoCommitSummary repoId={repoId} refName={activeRef} />}
         <div className="repo-browser__line">
           <BranchSelector repoId={repoId} value={activeRef} onSelect={selectRef} />
           <Link to={`${front}/pulls`} className="repo-browser__fact">
@@ -260,6 +292,9 @@ export function RepositoryBrowserPage({
             </>
           )}
         </div>
+        {checksOpen && healthOpensChecks(summary) ? (
+          <RepoHealthChecks repo={summary} />
+        ) : null}
       </header>
 
       <section

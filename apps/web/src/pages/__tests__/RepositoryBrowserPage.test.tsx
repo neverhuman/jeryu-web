@@ -30,6 +30,8 @@ function makeStorage(): Storage {
 const FRONT = '/repos/jeryu/neverhuman/jeryu';
 
 let authUser: { role: string } | null = { role: 'user' };
+// The summary builder is module-level, so the failing-check count is too.
+let failingChecks = 0;
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ isPending: false, user: authUser }),
 }));
@@ -42,6 +44,7 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     authUser = { role: 'user' };
     hasCode = true;
     treeOnlyMissing = false;
+    failingChecks = 0;
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
     vi.stubGlobal(
@@ -67,7 +70,37 @@ describe('RepositoryBrowserPage (one repository page)', () => {
             facets: { hosts: ['jeryu'], owners: ['neverhuman'], families: ['jeryu-split'], languages: [] },
           });
         case '/api/v1/repos/repo-1/refs':
-          return json([{ name: 'main', sha: 'abc123', kind: 'branch', protected: true }]);
+          return json([
+            { name: 'main', sha: 'abc123', kind: 'branch', protected: true },
+            { name: 'release', sha: 'abc124', kind: 'branch', protected: false },
+            { name: 'v1.2.0', sha: 'abc125', kind: 'tag', protected: false },
+          ]);
+        case '/api/v1/repos/repo-1/commits':
+          if (!hasCode) return json({ code: 'not_found', message: 'no git data' }, 404);
+          return json({
+            ref: 'main',
+            sha: 'fee1900dcafe0000000000000000000000000000',
+            commits: [
+              {
+                sha: 'fee1900dcafe0000000000000000000000000000',
+                summary: 'Say what the repository page never said',
+                author: 'Ada Lovelace',
+                committed_at: '2026-05-25T09:00:00Z',
+              },
+            ],
+            page: { limit: 1, page: 1, total: 1204, has_more: true },
+          });
+        case '/api/v3/repos/neverhuman/jeryu/commits/main/check-runs':
+          return json({
+            check_runs: [
+              {
+                name: 'jankurai/proof',
+                conclusion: 'failure',
+                completed_at: '2026-05-25T10:00:00Z',
+                output: { title: 'score 84 < floor 85', summary: '- score: 84' },
+              },
+            ],
+          });
         case '/api/v1/repos/repo-1/readme':
           if (!hasCode) return json({ code: 'not_found', message: 'no readme' }, 404);
           return json({
@@ -226,6 +259,45 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(screen.queryByText('No code on this forge')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Files' })).toBeNull();
   });
+
+  it('summarises the commits, branches and tags of the shown ref', async () => {
+    renderAt(FRONT);
+    const facts = await screen.findByTestId('repo-commit-summary');
+    expect(facts).toHaveTextContent('1,204 commits · 2 branches · 1 tag');
+    expect(facts).toHaveTextContent('fee1900d');
+    expect(facts).toHaveTextContent('Say what the repository page never said');
+    expect(facts).toHaveTextContent('Ada Lovelace');
+  });
+
+  it('links the score to the quality gate and opens the check that set the chip', async () => {
+    failingChecks = 1;
+    renderAt(FRONT);
+    expect(await screen.findByTestId('repo-overview-score')).toHaveAttribute(
+      'href',
+      '/quality-gate'
+    );
+    const chip = await screen.findByTestId('repo-health-chip');
+    expect(chip).toHaveTextContent('warning · 1 failing check');
+    expect(chip).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(chip);
+    expect(chip).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByText('jankurai/proof')).toBeInTheDocument();
+    expect(screen.getByText('score 84 < floor 85', { exact: false })).toBeInTheDocument();
+  });
+
+  it('leaves the chip a plain pill when nothing is failing', async () => {
+    renderAt(FRONT);
+    expect(await screen.findByLabelText('Health: healthy')).toBeInTheDocument();
+    expect(screen.queryByTestId('repo-health-chip')).toBeNull();
+  });
+
+  it('says nothing about commits when the repository has no git data here', async () => {
+    hasCode = false;
+    renderAt(FRONT);
+    expect(await screen.findByText('No code on this forge')).toBeInTheDocument();
+    expect(screen.queryByTestId('repo-commit-summary')).toBeNull();
+  });
 });
 
 function Where(): JSX.Element {
@@ -271,9 +343,9 @@ function repoSummary(): Record<string, unknown> {
     repo_role: 'public_portal',
     topics: [],
     language: null,
-    health: 'healthy',
+    health: failingChecks > 0 ? 'warning' : 'healthy',
     open_pull_requests: 2,
-    failing_checks: 0,
+    failing_checks: failingChecks,
     running_jobs: 0,
     active_agents: 0,
     blocked_agents: 0,

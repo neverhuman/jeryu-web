@@ -242,6 +242,8 @@ export interface MockRepoSummary {
   topics?: string[];
   open_pull_requests?: number;
   failing_checks?: number;
+  /** `warning` when the default branch has failing checks, else `healthy`. */
+  health?: string;
   running_jobs?: number;
   active_agents?: number;
   jankurai_score?: number | null;
@@ -923,6 +925,53 @@ export async function mockRefs(
   );
 }
 
+export interface MockCommit {
+  sha?: string;
+  summary: string;
+  author?: string;
+  committed_at?: string;
+}
+
+/**
+ * Mock `GET /api/v1/repos/{id}/commits` so the repository page's commit
+ * summary has a history to name. `total` is the whole history of the ref, of
+ * which only the newest commits are listed, as the real endpoint pages them.
+ */
+export async function mockCommits(
+  page: Page,
+  commits: MockCommit[],
+  options: { total?: number; ref?: string } = {}
+): Promise<void> {
+  const listed = commits.map((commit, index) => ({
+    sha: commit.sha ?? `${index}`.repeat(40).slice(0, 40),
+    summary: commit.summary,
+    author: commit.author ?? 'Ada Lovelace',
+    committed_at: commit.committed_at ?? '2026-05-25T09:00:00Z',
+  }));
+  const total = options.total ?? listed.length;
+  await page.route(
+    /\/api\/v1\/repos\/[^/]+\/commits(\?.*)?$/,
+    async (route: Route, request) => {
+      if (request.method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+      const url = new URL(request.url());
+      const limit = Number(url.searchParams.get('limit') ?? listed.length);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ref: options.ref ?? url.searchParams.get('ref') ?? 'main',
+          sha: listed[0]?.sha ?? '0'.repeat(40),
+          commits: listed.slice(0, limit),
+          page: { limit, page: 1, total, has_more: total > limit },
+        }),
+      });
+    }
+  );
+}
+
 /**
  * Mock `GET /api/v1/repos/{id}/tree` with a small file-tree payload.
  */
@@ -1398,7 +1447,7 @@ function normalizeRepo(repo: MockRepoSummary): Record<string, unknown> {
     repo_role: repo.repo_role ?? null,
     topics: repo.topics ?? [],
     language: null,
-    health: 'green',
+    health: repo.health ?? (repo.failing_checks ? 'warning' : 'healthy'),
     open_pull_requests: repo.open_pull_requests ?? 0,
     failing_checks: repo.failing_checks ?? 0,
     running_jobs: repo.running_jobs ?? 0,

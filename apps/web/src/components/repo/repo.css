@@ -374,6 +374,16 @@
   background-color: var(--color-accent-danger);
 }
 
+/* The chip on the repository page that opens the checks that set it. */
+.repo-health-pill__button {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.repo-health-pill__button:hover {
+  filter: brightness(1.08);
+}
+
 /* CreateRepoDialog -------------------------------------------------------- */
 
 .create-repo-dialog {
@@ -867,6 +877,7 @@
   border: 1px solid var(--color-gold-border);
 }
 
-.repo-table__score-link {
+.repo-table__score-link,
+.repo-overview__score-link {
   text-decoration: none;
 }

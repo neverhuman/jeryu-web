@@ -4,6 +4,8 @@
 // (`…/blob/<ref>/<path>`) are one layout: content on the left, a Files panel on
 // the right that stays put while you move between them.
 
+import { failingLabel } from './repoStatusModel';
+
 export { ancestorsOf } from '../components/browser/fileTreePaths';
 
 /** Where the Files panel choice is remembered (storage adapter, durable). */
@@ -69,4 +71,40 @@ export function folderToReveal(state: unknown): string | null {
 export function openPullsLabel(count: number): string {
   if (count <= 0) return 'No open pull requests';
   return `${count} open pull request${count === 1 ? '' : 's'}`;
+}
+
+/** "1 commit" / "1,204 commits" on the ref the page is showing. */
+export function commitCountLabel(total: number): string {
+  const safe = Math.max(0, Math.trunc(total));
+  return `${safe.toLocaleString('en-US')} commit${safe === 1 ? '' : 's'}`;
+}
+
+/** "12 branches · 3 tags"; a kind with none of them is left out. */
+export function refCountsLabel(refs: { kind: string }[]): string {
+  const branches = refs.filter((ref) => ref.kind === 'branch').length;
+  const tags = refs.filter((ref) => ref.kind === 'tag').length;
+  return [
+    branches > 0 ? `${branches} branch${branches === 1 ? '' : 'es'}` : '',
+    tags > 0 ? `${tags} tag${tags === 1 ? '' : 's'}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/**
+ * True when the header's health chip stands for failing checks, and so can say
+ * so and open them. The server sets `health` to `warning` exactly when the
+ * default branch has failing checks, so a chip with none behind it stays a
+ * plain pill: there would be nothing to show.
+ */
+export function healthOpensChecks(repo: {
+  health: string;
+  failing_checks: number;
+}): boolean {
+  return repo.health !== 'healthy' && repo.failing_checks > 0;
+}
+
+/** "warning · 1 failing check": the chip says what set it. */
+export function healthChipLabel(health: string, failingChecks: number): string {
+  return `${health.replaceAll('_', ' ')} · ${failingLabel(failingChecks)}`;
 }

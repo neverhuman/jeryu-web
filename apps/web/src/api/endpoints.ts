@@ -60,6 +60,18 @@ export const endpoints = {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/readme`;
     return ref ? `${base}?ref=${encodeURIComponent(ref)}` : base;
   },
+  /**
+   * A branch's commits, newest first (`ref` defaults to the default branch).
+   * `limit` caps the page; the response's `page.total` counts all of them.
+   */
+  commits: (id: string, params: { ref?: string; limit?: number } = {}): string => {
+    const qs = new URLSearchParams();
+    if (params.ref) qs.set('ref', params.ref);
+    if (params.limit !== undefined) qs.set('limit', String(params.limit));
+    const suffix = qs.toString();
+    const base = `/api/v1/repos/${encodeURIComponent(id)}/commits`;
+    return suffix ? `${base}?${suffix}` : base;
+  },
   compare: (id: string, base: string, head: string): string => {
     const qs = new URLSearchParams({ base, head });
     return `/api/v1/repos/${encodeURIComponent(id)}/compare?${qs.toString()}`;
