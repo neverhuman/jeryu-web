@@ -9,6 +9,7 @@ import {
   DiffFileTree,
   DiffViewer,
   MergeGatePanel,
+  PullCloseControls,
   ReviewSidebar,
   ThreadList,
   type DiffViewerMode,
@@ -18,6 +19,7 @@ import {
   isSettled,
   type ApproveRefusal,
 } from '../components/merge/pullReviewModel';
+import type { PullCloseViewer } from '../components/merge/pullCloseModel';
 import { ErrorState, LoadingState } from '../components/state';
 import { PullPipelineEvents } from './activity/PullPipelineEvents';
 import type { usePrChecks } from '../hooks/usePrChecks';
@@ -47,6 +49,10 @@ export interface PullRequestCockpitProps {
   approveRefusal?: ApproveRefusal | null;
   /** The signed-in account, so the sidebar can spot a self-approval. */
   viewerLogin?: string | null;
+  /** The server's refusal of a close / reopen, shown verbatim. */
+  closeError?: string | null;
+  /** Who is looking: decides whether Close / Reopen is offered at all. */
+  viewer: PullCloseViewer;
   repoFullName?: string | null;
   prNumber?: string | null;
   onSelectFile: (path: string) => void;
@@ -58,6 +64,10 @@ export interface PullRequestCockpitProps {
     expectedHeadSha: string;
     expectedPassportHash: string | null;
     method: 'merge' | 'squash' | 'rebase';
+  }) => Promise<void>;
+  onSetState: (input: {
+    state: 'open' | 'closed';
+    comment: string | null;
   }) => Promise<void>;
 }
 
@@ -75,6 +85,8 @@ export function PullRequestCockpit({
   mergeError,
   approveRefusal,
   viewerLogin,
+  closeError,
+  viewer,
   repoFullName,
   prNumber,
   onSelectFile,
@@ -83,6 +95,7 @@ export function PullRequestCockpit({
   onApprove,
   onRequestChanges,
   onMerge,
+  onSetState,
 }: PullRequestCockpitProps): JSX.Element {
   const settled = isSettled(data);
   return (
@@ -149,6 +162,13 @@ export function PullRequestCockpit({
             Merge refused: {mergeError}
           </p>
         ) : null}
+        <PullCloseControls
+          detail={data}
+          viewer={viewer}
+          onSetState={onSetState}
+          isBusy={isBusy}
+          error={closeError ?? null}
+        />
         {settled ? null : <MergeGatePanel passport={data.merge_passport} />}
         <ChecksPanel
           checks={checks.data ?? null}

@@ -33,8 +33,10 @@ import {
 } from '../components/state';
 import { useApprovePr } from '../hooks/useApprovePr';
 import { useAuth } from '../hooks/useAuth';
+import { useBootstrap } from '../hooks/useBootstrap';
 import { useMergeAttempt } from '../hooks/useMergeAttempt';
 import { useMergePr } from '../hooks/useMergePr';
+import { useSetPullState } from '../hooks/useSetPullState';
 import { useSubmitReview } from '../hooks/useSubmitReview';
 import { usePullRequest } from '../hooks/usePullRequest';
 import { usePrChecks } from '../hooks/usePrChecks';
@@ -109,6 +111,20 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const mergeMutation = useMergePr(repoId, prNumber);
   const mergeAttempt = useMergeAttempt(repoId, prNumber);
   const review = useSubmitReview(repoId, prNumber);
+  // Close / reopen goes through the forge's GitHub-shaped edge, which keys on
+  // `owner/name` rather than the opaque repository id.
+  const setState = useSetPullState(resolved.data?.summary.id ?? null, prNumber);
+
+  // Who is looking: the bootstrap viewer names the login and the permission
+  // keys the Close / Reopen button is gated on.
+  const bootstrap = useBootstrap();
+  const viewer = useMemo(
+    () => ({
+      login: bootstrap.data?.viewer.login ?? null,
+      permissions: bootstrap.data?.viewer.global_permissions ?? [],
+    }),
+    [bootstrap.data]
+  );
 
   // Diff viewer state.
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
@@ -181,6 +197,15 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         .catch(() => undefined);
     },
     [mergeMutation]
+  );
+
+  const handleSetState = useCallback(
+    async (input: { state: 'open' | 'closed'; comment: string | null }) => {
+      setState.reset();
+      // A refusal lands in `setState.error` and is shown next to the button.
+      await setState.mutateAsync(input).catch(() => undefined);
+    },
+    [setState]
   );
 
   // Aggregate the head-drift signal from either mutation.
@@ -378,13 +403,20 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         activeFile={activeFile}
         viewedPaths={viewedPaths}
         diffMode={diffMode}
-        isBusy={approve.isPending || mergeMutation.isPending || review.isPending}
+        isBusy={
+          approve.isPending ||
+          mergeMutation.isPending ||
+          review.isPending ||
+          setState.isPending
+        }
         reviewError={review.error && !headDrift ? review.error.message : null}
         mergeError={mergeMutation.error && !headDrift ? mergeMutation.error.message : null}
         approveRefusal={
           approve.error && !headDrift ? approveRefusal(approve.error, data) : null
         }
         viewerLogin={viewerLogin}
+        closeError={setState.error ? setState.error.message : null}
+        viewer={viewer}
         repoFullName={fullName}
         prNumber={prNumber}
         onRequestChanges={handleRequestChanges}
@@ -393,6 +425,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         onDiffModeChange={(m: DiffViewerMode) => setDiffMode(m)}
         onApprove={handleApprove}
         onMerge={handleMerge}
+        onSetState={handleSetState}
       />
 
       <PullRequestCommits

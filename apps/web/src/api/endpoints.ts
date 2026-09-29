@@ -157,6 +157,12 @@ export const endpoints = {
     const suffix = qs.toString();
     return suffix ? `${base}?${suffix}` : base;
   },
+  /** GitHub-shaped pull request; `PATCH {state}` closes or reopens it. */
+  githubPull: (owner: string, repo: string, prNumber: string): string =>
+    `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${encodeURIComponent(prNumber)}`,
+  /** GitHub-shaped issue comments; a pull request's number is its issue number. */
+  githubIssueComments: (owner: string, repo: string, number: string): string =>
+    `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${encodeURIComponent(number)}/comments`,
   /** GitHub-shaped branch protection rule; 404 when the branch is unprotected. */
   branchProtection: (owner: string, repo: string, branch: string): string =>
     `/api/v3/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches/${encodeURIComponent(branch)}/protection`,
