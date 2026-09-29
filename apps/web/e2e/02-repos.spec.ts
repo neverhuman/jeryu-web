@@ -9,7 +9,6 @@
 import { expect, test } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
-import { RepositoriesPage } from './pages/RepositoriesPage';
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 
 import type {
@@ -193,9 +192,8 @@ test.describe('Repositories list (W-T-10)', () => {
     // base URL pattern regardless of query string.
 
     const shell = new AppShellPage(page);
-    const repos = new RepositoriesPage(page);
 
-    await repos.goto();
+    await page.goto('/repos');
     await shell.assertShellLoaded();
 
     // 1. List renders in the default table view.

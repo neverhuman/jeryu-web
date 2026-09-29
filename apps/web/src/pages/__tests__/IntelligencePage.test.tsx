@@ -1,4 +1,8 @@
-// IntelligencePage.test.tsx - render smoke for the JMCP page.
+// IntelligencePage.test.tsx - runner-capacity semantics for the JMCP page.
+//
+// What the page renders end to end is proven in e2e/12-intelligence.spec.ts;
+// what stays here is the behaviour that spec cannot reach: which runner
+// counts may be shown at all, and how the snapshot badge is derived.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
@@ -137,41 +141,6 @@ describe('IntelligencePage runner capacity', () => {
     expect(within(card).getByText('0')).toBeInTheDocument();
     expect(card).toHaveTextContent('0 offline');
     expect(within(card).queryByText('—')).not.toBeInTheDocument();
-  });
-});
-
-describe('IntelligencePage', () => {
-  it('renders absence evidence, graph clusters and tool dossiers, and leaves priorities to Needs you', () => {
-    renderIntelligence(sampleSnapshot());
-
-    expect(screen.getByTestId('intelligence-page')).toBeInTheDocument();
-    // One list of what needs a person, in one place: this page links to it and
-    // no longer ranks its own "priorities" from an older rule set.
-    expect(screen.queryByTestId('priority-pr-1-checks-missing')).toBeNull();
-    expect(screen.queryByText('Top priorities')).toBeNull();
-    expect(screen.queryByText('Priorities')).toBeNull();
-    expect(screen.getByRole('link', { name: 'Needs you' })).toHaveAttribute('href', '/needs-you');
-    // Plain words in the header: no protocol strings, schema ids or rule versions.
-    expect(screen.getByText('none recorded yet')).toBeInTheDocument();
-    expect(screen.queryByText('absence=evidence')).toBeNull();
-    expect(screen.queryByText('jeryu.control_plane/v1')).toBeNull();
-    expect(screen.queryByText('rules-v1')).toBeNull();
-    expect(screen.getByRole('link', { name: /^Runners: 4/ })).toHaveAttribute('href', '/runners');
-    expect(screen.getByRole('link', { name: /^Open PRs: 1/ })).toHaveAttribute('href', '/pull-room');
-    expect(screen.getByTestId('repo-graph-preview')).toBeInTheDocument();
-    expect(screen.getByTestId('operator-graph-console')).toBeInTheDocument();
-    expect(screen.getByTestId('node-inspector')).toHaveTextContent(
-      'Selected node'
-    );
-    expect(screen.getByTestId('tool-build-dossiers')).toHaveTextContent(
-      'tb-routing'
-    );
-    // Sources are missing, so the header must not claim the snapshot is fresh.
-    expect(screen.getByTestId('intelligence-snapshot-state')).toHaveTextContent('snapshot: missing');
-    expect(screen.getByText('Mirror evidence')).toBeInTheDocument();
-    expect(
-      screen.getAllByText(/GitHub mirror evidence unavailable/i).length
-    ).toBeGreaterThan(0);
   });
 });
 

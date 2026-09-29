@@ -36,60 +36,30 @@ describe('router route table', () => {
     expect(familyIdx).toBeLessThan(catchAllIdx);
   });
 
-  it('registers the Shared tools pages and their redirects above the catch-all', () => {
+  // Every page below must be registered before the not-found catch-all, or
+  // its URL renders NotFoundPage instead.
+  it.each([
+    'shared-tools',
+    'shared-tools/findings',
+    'shared-tools/proposals',
+    'shared-tools/adoption',
+    'shared-tools/adoption/:tool',
+    'shared-code',
+    'tool-fleet',
+    'tool-fleet/:tool',
+    'runners',
+    'fleet',
+    'work',
+    'work/:key',
+    'login',
+    'signup',
+  ])('registers %s above the not-found catch-all', (path) => {
     const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
     const notFoundIdx = paths.indexOf('*');
     expect(notFoundIdx).toBeGreaterThan(-1);
-    for (const path of [
-      'shared-tools',
-      'shared-tools/findings',
-      'shared-tools/proposals',
-      'shared-tools/adoption',
-      'shared-tools/adoption/:tool',
-      'shared-code',
-      'tool-fleet',
-      'tool-fleet/:tool',
-    ]) {
-      const idx = paths.indexOf(path);
-      expect(idx, path).toBeGreaterThan(-1);
-      expect(idx, path).toBeLessThan(notFoundIdx);
-    }
-  });
-
-  it('registers /runners and keeps /fleet as a redirect above the catch-all', () => {
-    const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
-    const runnersIdx = paths.indexOf('runners');
-    const fleetIdx = paths.indexOf('fleet');
-    const notFoundIdx = paths.indexOf('*');
-    expect(runnersIdx).toBeGreaterThan(-1);
-    expect(fleetIdx).toBeGreaterThan(-1);
-    expect(notFoundIdx).toBeGreaterThan(-1);
-    expect(runnersIdx).toBeLessThan(notFoundIdx);
-    expect(fleetIdx).toBeLessThan(notFoundIdx);
-  });
-
-  it('registers Work routes above the not-found catch-all', () => {
-    const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
-    const workIdx = paths.indexOf('work');
-    const workDetailIdx = paths.indexOf('work/:key');
-    const notFoundIdx = paths.indexOf('*');
-    expect(workIdx).toBeGreaterThan(-1);
-    expect(workDetailIdx).toBeGreaterThan(-1);
-    expect(notFoundIdx).toBeGreaterThan(-1);
-    expect(workIdx).toBeLessThan(notFoundIdx);
-    expect(workDetailIdx).toBeLessThan(notFoundIdx);
-  });
-
-  it('registers login and signup routes above the not-found catch-all', () => {
-    const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
-    const loginIdx = paths.indexOf('login');
-    const signupIdx = paths.indexOf('signup');
-    const notFoundIdx = paths.indexOf('*');
-    expect(loginIdx).toBeGreaterThan(-1);
-    expect(signupIdx).toBeGreaterThan(-1);
-    expect(notFoundIdx).toBeGreaterThan(-1);
-    expect(loginIdx).toBeLessThan(notFoundIdx);
-    expect(signupIdx).toBeLessThan(notFoundIdx);
+    const idx = paths.indexOf(path);
+    expect(idx).toBeGreaterThan(-1);
+    expect(idx).toBeLessThan(notFoundIdx);
   });
 });
 
