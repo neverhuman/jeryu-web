@@ -6,3 +6,4 @@ test-results
 .lighthouseci
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+coverage

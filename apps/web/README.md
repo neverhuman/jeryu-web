@@ -273,6 +273,7 @@ Commands:
 
 ```bash
 npm run test                # vitest run (unit + component)
+npm run test:coverage       # the same run, instrumented by @vitest/coverage-v8
 npm run test:e2e            # playwright test
 npx playwright install      # first-run only
 npm run storybook           # http://127.0.0.1:6006
@@ -284,6 +285,15 @@ backend on `127.0.0.1:8787` with `JERYU_BACKEND_PROFILE=mock` (seeds 5
 repos for offline determinism). `playwright.config.ts` sets the
 `webServer` entry to launch both the BFF and Vite dev server when run
 locally.
+
+Coverage is measured by `@vitest/coverage-v8` over `src/**/*.{ts,tsx}`,
+skipping test files, stories, the MSW harness, generated wire types and
+`main.tsx`. `npm run test:coverage` prints a summary, writes a browsable
+report to `apps/web/coverage/` (untracked) and fails below the baseline
+recorded in `vitest.config.ts` — 77% lines, 76% statements, 70% branches,
+74% functions as of 2026-09-29. CI runs this lane in place of `npm run
+test` (`ops/ci/pr-ci.sh`). Raise the floors as the suite reaches further;
+`src/__tests__/coverage-baseline.test.ts` keeps them from sliding back.
 
 MSW mocks live in `src/test/mocks/` and are loaded by `src/test/server.ts`
 which is registered via `vitest.config.ts` (`setupFiles`).

@@ -76,7 +76,7 @@ bash ops/ci/artifact_support.sh
 
 echo "[pr-ci] web required checks" >&2
 npm --workspace @jeryu/web run typecheck
-npm --workspace @jeryu/web run test
+npm --workspace @jeryu/web run test:coverage
 npm --workspace @jeryu/web run test:contracts
 npm --workspace @jeryu/web run build
 npm --workspace @jeryu/web run test:e2e:ci
