@@ -188,6 +188,11 @@ test.describe('Pipeline visibility', () => {
       'href',
       '/repos/jeryu/neverhuman/jeryu/pulls/99'
     );
+    // Row times are a clock; a separator says which day they belong to, and the
+    // internal sequence number stays out of sight.
+    await expect(page.locator('.activity__day').first()).toBeVisible();
+    await expect(page.getByTestId('activity-page')).not.toContainText('newest #');
+
     await page.getByTestId('activity-page').screenshot({ path: 'playwright-report/activity.png' });
 
     // Plain words on the row; the wire kind is not shouted at the reader.

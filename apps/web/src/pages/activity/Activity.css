@@ -139,6 +139,37 @@
   color: var(--color-accent-primary);
 }
 
+/* A row with nothing but its one line keeps its toggle out of the way until
+   the pointer or the keyboard asks for it. It stays in the tab order. */
+.activity-row__toggle--quiet {
+  opacity: 0;
+}
+
+.activity-row:hover .activity-row__toggle--quiet,
+.activity-row:focus-within .activity-row__toggle--quiet,
+.activity-row__toggle--quiet:focus {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .activity-row__toggle--quiet {
+    opacity: 1;
+  }
+}
+
+.activity__day {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .activity-row__toggle:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);

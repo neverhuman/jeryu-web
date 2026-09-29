@@ -3,6 +3,8 @@
 // the summary with its subject as the link, how long it took. Everything else
 // (who, which commit, why, the log tail) opens below. A row that needs a human
 // is red until a later event clears its cause; then it is marked resolved.
+// The toggle stays on the rows that have something to say (a reason, a log);
+// on the quiet ones it waits for the pointer or the keyboard.
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -15,6 +17,7 @@ import {
   eventTone,
   formatClock,
   formatSeconds,
+  hasDetail,
   summaryParts,
 } from './activityModel';
 
@@ -37,6 +40,7 @@ export function EventRow({
   const others = eventLinks(event).filter((link) => link.to !== summary.link?.to);
   const detailId = `activity-event-detail-${event.seq}`;
   const toggleLabel = open ? 'Hide' : event.log_tail ? 'Log' : event.reason ? 'Why' : 'More';
+  const quiet = !open && !hasDetail(event);
   const duration = formatSeconds(event.seconds);
 
   return (
@@ -75,7 +79,7 @@ export function EventRow({
         {duration ? <span className="activity-row__meta">{duration}</span> : null}
         <button
           type="button"
-          className="activity-row__toggle"
+          className={`activity-row__toggle${quiet ? ' activity-row__toggle--quiet' : ''}`}
           aria-expanded={open}
           aria-controls={detailId}
           aria-label={`${toggleLabel} for event ${event.seq}`}

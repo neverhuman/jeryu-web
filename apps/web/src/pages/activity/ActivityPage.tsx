@@ -4,7 +4,7 @@
 // for a screen on the wall or a demo.
 
 import { Activity, Maximize2, Minimize2 } from 'lucide-react';
-import { useEffect, useMemo, useRef } from 'react';
+import { Fragment, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
@@ -20,6 +20,8 @@ import {
   activeChip,
   applyChip,
   filtersToQuery,
+  formatDay,
+  groupByDay,
   hasActiveFilters,
   hasMoreFilters,
   isWallMode,
@@ -129,11 +131,19 @@ export function ActivityPage(): JSX.Element {
       ) : (
         <>
           <p className="activity__live" role="status">
-            Live · {events.length} event{events.length === 1 ? '' : 's'} · newest #{newest}
+            Live · {events.length} event{events.length === 1 ? '' : 's'}
           </p>
           <ol className="activity__list" aria-label="Pipeline events">
-            {events.map((event) => (
-              <EventRow key={event.seq} event={event} resolved={resolved.has(event.seq)} />
+            {groupByDay(events).map((group) => (
+              <Fragment key={group.day}>
+                {/* Times on a row are a clock only; the day is said once, here. */}
+                <li className="activity__day" data-testid={`activity-day-${group.day}`}>
+                  {formatDay(group.events[0].ts, new Date())}
+                </li>
+                {group.events.map((event) => (
+                  <EventRow key={event.seq} event={event} resolved={resolved.has(event.seq)} />
+                ))}
+              </Fragment>
             ))}
           </ol>
           {wall ? null : feed.hasOlder ? (

@@ -219,6 +219,51 @@ export function formatClock(iso: string): string {
   return at.toISOString().slice(11, 19);
 }
 
+/** The UTC day an event belongs to, as `YYYY-MM-DD`; `''` when the stamp is unreadable. */
+export function dayKey(iso: string): string {
+  const at = new Date(iso);
+  return Number.isNaN(at.getTime()) ? '' : at.toISOString().slice(0, 10);
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * A day as an operator reads it: `Today · 19 Sep 2026`, `Yesterday · …`, else
+ * the date alone. Clock times carry no date, so the day is said once, above
+ * the rows it covers.
+ */
+export function formatDay(iso: string, now: Date): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return iso;
+  const date = `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}`;
+  const days = Math.round((Date.parse(`${dayKey(now.toISOString())}T00:00:00Z`) - Date.parse(`${dayKey(iso)}T00:00:00Z`)) / DAY_MS);
+  if (days === 0) return `Today · ${date}`;
+  if (days === 1) return `Yesterday · ${date}`;
+  return date;
+}
+
+export interface DayGroup {
+  day: string;
+  events: PipelineEvent[];
+}
+
+/** The feed split into runs of one day, in the order the events came (newest first). */
+export function groupByDay(events: PipelineEvent[]): DayGroup[] {
+  const groups: DayGroup[] = [];
+  for (const event of events) {
+    const day = dayKey(event.ts);
+    const last = groups[groups.length - 1];
+    if (last && last.day === day) last.events.push(event);
+    else groups.push({ day, events: [event] });
+  }
+  return groups;
+}
+
+/** Whether a row has more to say than its one line: a reason, or a log. */
+export function hasDetail(event: Pick<PipelineEvent, 'reason' | 'log_tail'>): boolean {
+  return Boolean(event.reason) || Boolean(event.log_tail);
+}
+
 export interface WallCounters {
   todosFinished: number;
   blocked: number;

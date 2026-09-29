@@ -11,6 +11,9 @@ import {
   filtersToQuery,
   foldEchoes,
   formatClock,
+  formatDay,
+  groupByDay,
+  hasDetail,
   formatSeconds,
   hasActiveFilters,
   hasMoreFilters,
@@ -110,6 +113,26 @@ describe('activityModel', () => {
     expect(formatSeconds(3720)).toBe('1h 2m');
     expect(formatClock('2026-09-19T13:03:26Z')).toBe('13:03:26');
     expect(formatClock('nonsense')).toBe('nonsense');
+  });
+
+  it('names a day in words and groups the feed into days', () => {
+    const now = new Date('2026-09-19T14:00:00Z');
+    expect(formatDay('2026-09-19T13:03:26Z', now)).toBe('Today · 19 Sep 2026');
+    expect(formatDay('2026-09-18T23:59:00Z', now)).toBe('Yesterday · 18 Sep 2026');
+    expect(formatDay('2026-09-16T08:00:00Z', now)).toBe('16 Sep 2026');
+    expect(formatDay('nonsense', now)).toBe('nonsense');
+
+    const older = pipelineEvent({ seq: 2, ts: '2026-09-18T23:00:00Z', kind: 'todo.claimed' });
+    const oldest = pipelineEvent({ seq: 1, ts: '2026-09-18T09:00:00Z', kind: 'todo.filed' });
+    const groups = groupByDay([...EVENTS, older, oldest]);
+    expect(groups.map((group) => group.day)).toEqual(['2026-09-19', '2026-09-18']);
+    expect(groups[1].events.map((event) => event.seq)).toEqual([2, 1]);
+  });
+
+  it('knows which rows have more to say than their one line', () => {
+    expect(hasDetail(EVENTS.find((e) => e.seq === 10)!)).toBe(true);
+    expect(hasDetail(EVENTS.find((e) => e.seq === 12)!)).toBe(true);
+    expect(hasDetail(EVENTS.find((e) => e.seq === 11)!)).toBe(false);
   });
 
   it('counts the last 24 hours from the fetched events only', () => {

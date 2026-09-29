@@ -44,6 +44,42 @@ describe('ActivityPage', () => {
     const seqs = screen.getAllByTestId(/^activity-event-\d+$/).map((el) => el.getAttribute('data-testid'));
     expect(seqs).toEqual(EVENTS.map((e) => `activity-event-${e.seq}`));
     expect(screen.getByText('That is every stored event (30-day retention).')).toBeInTheDocument();
+    // The internal sequence number is not operator-facing.
+    expect(screen.queryByText(/newest #/)).toBeNull();
+
+    // A row with a reason or a log says so; a plain one keeps its toggle quiet.
+    expect(within(gate).getByRole('button', { name: /Hide for event 10/ })).not.toHaveClass(
+      'activity-row__toggle--quiet'
+    );
+    const merged = screen.getByTestId('activity-event-11');
+    expect(within(merged).getByRole('button', { name: /More for event 11/ })).toHaveClass(
+      'activity-row__toggle--quiet'
+    );
+  });
+
+  it('separates the days, so a clock time can be placed', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-19T14:00:00Z') });
+    try {
+      mockPipelineApi((req) =>
+        req.pathname === '/api/v1/events'
+          ? json({
+              events: [
+                pipelineEvent({ seq: 3, ts: '2026-09-19T13:00:00Z', kind: 'todo.claimed' }),
+                pipelineEvent({ seq: 2, ts: '2026-09-18T23:00:00Z', kind: 'todo.claimed' }),
+                pipelineEvent({ seq: 1, ts: '2026-09-16T08:00:00Z', kind: 'todo.filed' }),
+              ],
+              latest_seq: 3,
+            })
+          : undefined
+      );
+      renderPage();
+      expect(await screen.findByTestId('activity-day-2026-09-19')).toHaveTextContent('Today · 19 Sep 2026');
+      expect(screen.getByTestId('activity-day-2026-09-18')).toHaveTextContent('Yesterday · 18 Sep 2026');
+      expect(screen.getByTestId('activity-day-2026-09-16')).toHaveTextContent('16 Sep 2026');
+      expect(screen.getAllByTestId(/^activity-day-/)).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('drops the needs-you pill from a failure a later success cleared', async () => {
