@@ -45,15 +45,29 @@ export function GraphSvg({
   }
   return (
     <div className="intelligence__graph-preview" data-testid="repo-graph-preview">
-      <svg viewBox="0 0 980 420" role="img" aria-label="Operator graph">
+      <svg
+        viewBox={`0 0 ${graph.layout.width} ${graph.layout.height}`}
+        role="img"
+        aria-label="Operator graph"
+      >
         <rect
           x="16"
           y="16"
-          width="948"
-          height="388"
+          width={graph.layout.width - 32}
+          height={graph.layout.height - 32}
           rx="8"
           className="intelligence__graph-ring"
         />
+        {graph.layout.columns.map((column) => (
+          <text
+            key={column.label}
+            x={column.x - 14}
+            y="44"
+            className="intelligence__graph-column"
+          >
+            {column.label}
+          </text>
+        ))}
         {graph.edges.map((edge) => {
           const source = nodesById.get(edge.source);
           const target = nodesById.get(edge.target);
@@ -114,6 +128,8 @@ function GraphNodeMark({
 }): JSX.Element {
   const common = `intelligence__graph-node ${node.colorClass} ${selected ? 'is-selected' : ''}`;
   const label = compactLabel(node.label);
+  // Every mark keeps its full name in a tooltip: the drawn label is truncated
+  // to its column's width so two labels can never sit on top of each other.
   return (
     <g
       role="button"
@@ -141,7 +157,7 @@ function GraphNodeMark({
           className={common}
         />
       )}
-      <text x={node.x + 12} y={node.y + 4} className="intelligence__graph-label">
+      <text x={node.x + 14} y={node.y + 4} className="intelligence__graph-label">
         {label}
       </text>
     </g>

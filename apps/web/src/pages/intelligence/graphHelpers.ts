@@ -1,6 +1,6 @@
 // graphHelpers.ts - pure geometry/label helpers for the operator graph views.
 
-import type { GraphEdge } from '../../api/types';
+import type { GraphEdge, InsightSeverity } from '../../api/types';
 import type { OperatorGraphNode } from '../intelligenceGraphModel';
 
 /**
@@ -21,9 +21,63 @@ export function nodeRadius(node: OperatorGraphNode): number {
   return Math.min(12, Math.max(5, 5 + node.weight));
 }
 
+/** A node label sized to fit one graph column without meeting the next one. */
 export function compactLabel(label: string): string {
   const tail = label.split('/').at(-1) ?? label;
-  return tail.length > 18 ? `${tail.slice(0, 15)}...` : tail;
+  return tail.length > 22 ? `${tail.slice(0, 21)}…` : tail;
+}
+
+/** Node-id prefixes the graph mints itself; an operator reads past them. */
+const NODE_ID_PREFIXES = [
+  'repo',
+  'pr',
+  'check',
+  'mirror',
+  'runner',
+  'tool',
+  'tool-build',
+  'codegraph',
+];
+
+/**
+ * A node id as an operator can tell two of them apart: the minted prefix
+ * dropped, and, when it is still too long, the *tail* kept — `get_manifest`
+ * distinguishes where `tool:jeryu.get_…` does not.
+ */
+export function endpointLabel(id: string): string {
+  const colon = id.indexOf(':');
+  const rest =
+    colon > 0 && NODE_ID_PREFIXES.includes(id.slice(0, colon))
+      ? id.slice(colon + 1)
+      : id;
+  return rest.length > 24 ? `…${rest.slice(-23)}` : rest;
+}
+
+/** An edge kind as words: `tool_dependency` reads as "tool dependency". */
+export function edgeKindLabel(kind: string): string {
+  return kind.replace(/_/g, ' ');
+}
+
+/** A score with thousands separators, so 22017846 is legible at a glance. */
+export function formatScore(score: number): string {
+  return Math.round(score).toLocaleString('en-US');
+}
+
+/**
+ * Tool-build severity as a band within the set on screen, not an absolute
+ * threshold: scores are arbitrary magnitudes, so an absolute cut makes every
+ * cluster the same severity, which says nothing. The worst cluster is `high`,
+ * and the rest fall away from it.
+ */
+export function toolBuildSeverity(
+  score: number,
+  topScore: number
+): InsightSeverity {
+  if (topScore <= 0) return 'low';
+  const share = score / topScore;
+  if (share >= 0.66) return 'high';
+  if (share >= 0.33) return 'medium';
+  return 'low';
 }
 
 export function diamondPoints(x: number, y: number, r: number): string {

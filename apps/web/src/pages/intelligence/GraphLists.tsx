@@ -3,8 +3,11 @@
 import type { GraphEdge } from '../../api/types';
 import type { OperatorGraph } from '../intelligenceGraphModel';
 
-import { compactLabel, pinFreshnessLabel } from './graphHelpers';
+import { edgeKindLabel, endpointLabel, pinFreshnessLabel } from './graphHelpers';
 import { SeverityPill, StatePill } from './StateIndicators';
+
+/** How many edges the list shows before it says how many it left out. */
+const EDGE_LIMIT = 12;
 
 export function EdgeList({
   edges,
@@ -21,12 +24,12 @@ export function EdgeList({
         <p>No visible edges.</p>
       ) : (
         <ol>
-          {edges.slice(0, 12).map((edge) => (
+          {edges.slice(0, EDGE_LIMIT).map((edge) => (
             <li key={`${edge.source}-${edge.target}-${edge.kind}`}>
-              <span>{edge.kind}</span>
-              <code>{compactLabel(edge.source)}</code>
+              <span>{edgeKindLabel(edge.kind)}</span>
+              <code title={edge.source}>{endpointLabel(edge.source)}</code>
               <span>→</span>
-              <code>{compactLabel(edge.target)}</code>
+              <code title={edge.target}>{endpointLabel(edge.target)}</code>
               {showPins ? (
                 <span className="intelligence__pin-note">
                   {pinFreshnessLabel(edge)}
@@ -38,6 +41,12 @@ export function EdgeList({
           ))}
         </ol>
       )}
+      {edges.length > EDGE_LIMIT ? (
+        <p>
+          Showing {EDGE_LIMIT} of {edges.length} edges. Narrow the graph with the
+          filters above to see the rest.
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -51,7 +60,11 @@ export function ClusterChips({ graph }: { graph: OperatorGraph }): JSX.Element {
       ) : (
         <div>
           {graph.clusters.slice(0, 16).map((cluster) => (
-            <span key={cluster.id} className="intelligence__cluster-chip">
+            <span
+              key={cluster.id}
+              className="intelligence__cluster-chip"
+              title={cluster.insights.join(' ')}
+            >
               {cluster.label}
               <SeverityPill severity={cluster.severity} />
             </span>

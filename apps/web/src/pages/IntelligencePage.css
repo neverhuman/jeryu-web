@@ -289,6 +289,13 @@
   stroke-width: 3px;
 }
 
+.intelligence__graph-column {
+  fill: var(--color-fg-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
 .intelligence__graph-node.is-fresh {
   fill: var(--color-accent-success);
 }
@@ -534,12 +541,6 @@
   color: var(--color-fg-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-relaxed);
-}
-
-.intelligence__dossier code {
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-xs);
-  overflow-wrap: anywhere;
 }
 
 .intelligence__cluster-list {

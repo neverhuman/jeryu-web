@@ -2,6 +2,9 @@
 
 import type { ControlPlaneSnapshot, ToolBuildCluster } from '../../api/types';
 
+import { formatScore, toolBuildSeverity } from './graphHelpers';
+import { SeverityPill } from './StateIndicators';
+
 export function ToolBuildDossiers({
   clusters,
   summaryClusters,
@@ -21,10 +24,6 @@ export function ToolBuildDossiers({
           files: cluster.file_count,
           language: cluster.language,
           insight: cluster.insight,
-          proofLane:
-            cluster.language === 'rust'
-              ? 'cargo test -p jeryu-codegraph --jobs 40 tool_build'
-              : 'bash ops/ci/codegraph-tool-build.sh',
         }))
       : summaryClusters.map((cluster) => ({
           id: cluster.clusterId,
@@ -34,8 +33,8 @@ export function ToolBuildDossiers({
           files: cluster.fileCount,
           language: 'unknown',
           insight: cluster.insight,
-          proofLane: 'bash ops/ci/codegraph-tool-build.sh',
         }));
+  const topScore = Math.max(0, ...rows.map((row) => row.score));
   return (
     <div className="intelligence__dossiers" data-testid="tool-build-dossiers">
       <div className="intelligence__section-head">
@@ -50,17 +49,19 @@ export function ToolBuildDossiers({
           {rows.slice(0, 6).map((row) => (
             <article className="intelligence__dossier" key={row.id}>
               <div className="intelligence__dossier-top">
-                <strong>{row.id}</strong>
-                <span>{row.score}</span>
+                <strong>{row.repo}</strong>
+                <SeverityPill severity={toolBuildSeverity(row.score, topScore)} />
               </div>
               <p>{row.insight}</p>
               <div className="intelligence__dossier-meta">
-                <span>{row.repo}</span>
                 <span>{row.occurrences} occurrences</span>
                 <span>{row.files} files</span>
                 <span>{row.language}</span>
+                <span>score {formatScore(row.score)}</span>
+                <span title={`Cluster fingerprint ${row.id}`}>
+                  cluster {row.id}
+                </span>
               </div>
-              <code>{row.proofLane}</code>
             </article>
           ))}
         </div>

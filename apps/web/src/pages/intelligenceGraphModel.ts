@@ -9,6 +9,8 @@ import type {
   ToolBuildCluster,
 } from '../api/types';
 
+import { toolBuildSeverity } from './intelligence/graphHelpers';
+
 export type GraphShape = 'circle' | 'rect' | 'diamond' | 'hex';
 
 /** Which view of the operator graph a console is showing. */
@@ -37,10 +39,27 @@ export interface SelectedNodeDetails {
   evidenceCount: number;
 }
 
+/** A named column of the laid-out graph, headed above the nodes it holds. */
+export interface GraphColumn {
+  label: string;
+  x: number;
+}
+
+/**
+ * The drawing box the layout needs. It grows with the graph instead of being
+ * fixed, so nodes are never stacked on top of each other to fit.
+ */
+export interface GraphLayout {
+  width: number;
+  height: number;
+  columns: GraphColumn[];
+}
+
 export interface OperatorGraph {
   nodes: OperatorGraphNode[];
   edges: GraphEdge[];
   clusters: GraphCluster[];
+  layout: GraphLayout;
   selected: SelectedNodeDetails | null;
   kindOptions: string[];
   stateOptions: EvidenceState[];
@@ -103,13 +122,14 @@ export function buildOperatorGraph(
   const edges = baseEdges.filter(
     (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target)
   );
-  const nodes = layoutNodes(filteredRaw);
+  const { nodes, layout } = layoutByKind(filteredRaw);
   const selectedNode =
     nodes.find((node) => node.id === selectedId) ?? nodes[0] ?? null;
   return {
     nodes,
     edges,
     clusters,
+    layout,
     selected: selectedNode
       ? {
           node: selectedNode,
@@ -154,13 +174,14 @@ export function buildDependencyGraph(
   const edges = dependsOn.filter(
     (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target)
   );
-  const nodes = layoutByDepth(filteredRaw, depths);
+  const { nodes, layout } = layoutByDepth(filteredRaw, depths);
   const selectedNode =
     nodes.find((node) => node.id === selectedId) ?? nodes[0] ?? null;
   return {
     nodes,
     edges,
     clusters: [],
+    layout,
     selected: selectedNode
       ? {
           node: selectedNode,
@@ -289,24 +310,72 @@ function mutualDependencies(
   return group;
 }
 
-function layoutByDepth(
+/**
+ * Column pitch and row height of a laid-out graph. A row is tall enough for a
+ * node and its label, so no two labels can land on top of each other, and a
+ * column is wide enough to hold a truncated label between its neighbours.
+ */
+const COLUMN_PITCH = 196;
+const ROW_HEIGHT = 34;
+const HEAD_ROOM = 74;
+
+interface LaidOutGraph {
+  nodes: OperatorGraphNode[];
+  layout: GraphLayout;
+}
+
+/**
+ * Places nodes in one column per group, in the order the groups are given,
+ * and one row per node within its column. Nothing wraps: the box reports the
+ * height its rows need, and the caller draws that box.
+ */
+function layoutColumns(
   nodes: GraphNode[],
-  depths: Map<string, number>
-): OperatorGraphNode[] {
-  const perDepth = new Map<number, number>();
-  return nodes.map((node) => {
-    const depth = depths.get(node.id) ?? 0;
-    const row = perDepth.get(depth) ?? 0;
-    perDepth.set(depth, row + 1);
+  groups: string[],
+  groupOf: (node: GraphNode) => string,
+  extra: (node: GraphNode) => Partial<OperatorGraphNode> = () => ({})
+): LaidOutGraph {
+  const rows = new Map<string, number>();
+  const placed = nodes.map((node) => {
+    const group = groupOf(node);
+    const column = Math.max(0, groups.indexOf(group));
+    const row = rows.get(group) ?? 0;
+    rows.set(group, row + 1);
     return {
       ...node,
       shape: nodeShape(node.kind),
       colorClass: nodeColorClass(node.state),
-      depth,
-      x: 84 + (depth % 8) * 116,
-      y: 54 + ((row * 58) % 292),
+      ...extra(node),
+      x: 46 + column * COLUMN_PITCH,
+      y: HEAD_ROOM + row * ROW_HEIGHT,
     };
   });
+  const deepest = Math.max(1, ...Array.from(rows.values(), (count) => count));
+  return {
+    nodes: placed,
+    layout: {
+      width: 32 + Math.max(1, groups.length) * COLUMN_PITCH,
+      height: HEAD_ROOM + deepest * ROW_HEIGHT + 18,
+      columns: groups.map((label, index) => ({
+        label,
+        x: 46 + index * COLUMN_PITCH,
+      })),
+    },
+  };
+}
+
+function layoutByDepth(
+  nodes: GraphNode[],
+  depths: Map<string, number>
+): LaidOutGraph {
+  const depthOf = (node: GraphNode): string =>
+    `depth ${depths.get(node.id) ?? 0}`;
+  const groups = Array.from(new Set(nodes.map(depthOf))).sort(
+    (a, b) => Number(a.slice(6)) - Number(b.slice(6))
+  );
+  return layoutColumns(nodes, groups, depthOf, (node) => ({
+    depth: depths.get(node.id) ?? 0,
+  }));
 }
 
 function matchesFilters(node: GraphNode, filters: GraphFilters): boolean {
@@ -328,20 +397,13 @@ export function emptyGraph(snapshot: ControlPlaneSnapshot): boolean {
   return snapshot.repoGraph.nodes.length === 0;
 }
 
-function layoutNodes(nodes: GraphNode[]): OperatorGraphNode[] {
-  const byKind = new Map<string, number>();
-  return nodes.map((node, index) => {
-    const lane = kindLane(node.kind);
-    const laneIndex = byKind.get(node.kind) ?? 0;
-    byKind.set(node.kind, laneIndex + 1);
-    return {
-      ...node,
-      shape: nodeShape(node.kind),
-      colorClass: nodeColorClass(node.state),
-      x: 72 + lane * 118 + ((index * 13) % 32),
-      y: 54 + ((laneIndex * 58) % 292),
-    };
-  });
+/**
+ * One column per kind of node actually on screen — an absent kind leaves no
+ * empty column, so the kinds that are there spread across the whole box
+ * instead of piling into two crowded ones.
+ */
+function layoutByKind(nodes: GraphNode[]): LaidOutGraph {
+  return layoutColumns(nodes, sortedKinds(nodes), (node) => node.kind);
 }
 
 function kindLane(kind: string): number {
@@ -394,10 +456,10 @@ function toolClusterNodes(clusters: ToolBuildCluster[]): GraphNode[] {
     .slice(0, 12)
     .map((cluster) => ({
       id: `tool-build:${cluster.cluster_id}`,
-      label: cluster.cluster_id,
+      label: toolClusterLabel(cluster),
       kind: 'tool_build',
       state: 'fresh',
-      weight: Math.max(1, Math.min(8, cluster.score / 20)),
+      weight: Math.max(1, Math.min(8, cluster.occurrence_count)),
       metadata: {
         repo: cluster.repo_id,
         score: String(cluster.score),
@@ -427,19 +489,30 @@ function toolClusterEdges(
   });
 }
 
+/**
+ * What a tool-build cluster is, in the words an operator can act on: where the
+ * repetition is, how much of it there is and in what language. The cluster id
+ * is a fingerprint hash; it stays available as the node id, not as the name.
+ */
+export function toolClusterLabel(cluster: ToolBuildCluster): string {
+  const copies = `${cluster.occurrence_count} cop${
+    cluster.occurrence_count === 1 ? 'y' : 'ies'
+  }`;
+  return `${cluster.repo_id} · ${copies} · ${cluster.language}`;
+}
+
 function toolClusterGraphClusters(clusters: ToolBuildCluster[]): GraphCluster[] {
-  return clusters
-    .filter((cluster) => !cluster.ignored)
-    .slice(0, 12)
-    .map((cluster) => ({
-      id: `cluster:${cluster.cluster_id}`,
-      label: `Tool-build ${cluster.cluster_id}`,
-      kind: 'tool_build',
-      state: 'fresh',
-      severity: cluster.score >= 80 ? 'high' : 'medium',
-      nodeIds: [`tool-build:${cluster.cluster_id}`],
-      insights: [cluster.insight],
-    }));
+  const visible = clusters.filter((cluster) => !cluster.ignored).slice(0, 12);
+  const topScore = Math.max(0, ...visible.map((cluster) => cluster.score));
+  return visible.map((cluster) => ({
+    id: `cluster:${cluster.cluster_id}`,
+    label: `Tool-build · ${toolClusterLabel(cluster)}`,
+    kind: 'tool_build',
+    state: 'fresh',
+    severity: toolBuildSeverity(cluster.score, topScore),
+    nodeIds: [`tool-build:${cluster.cluster_id}`],
+    insights: [cluster.insight],
+  }));
 }
 
 function evidenceCount(node: GraphNode, clusters: GraphCluster[]): number {

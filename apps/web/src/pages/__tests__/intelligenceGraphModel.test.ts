@@ -6,6 +6,7 @@ import {
   emptyGraph,
   nodeColorClass,
   nodeShape,
+  toolClusterLabel,
 } from '../intelligenceGraphModel';
 
 describe('intelligenceGraphModel', () => {
@@ -44,6 +45,71 @@ describe('intelligenceGraphModel', () => {
 
     expect(graph.nodes.map((node) => node.id)).toEqual(['check:ci']);
     expect(graph.selected?.node.id).toBe('check:ci');
+  });
+
+  it('gives every kind on screen its own column and every node its own row', () => {
+    const graph = buildOperatorGraph(
+      snapshot(),
+      ecosystem(),
+      [cluster()],
+      { kinds: [], states: [], query: '' },
+      null
+    );
+
+    // One column per kind present, in the order the kind filter offers them.
+    expect(graph.layout.columns.map((column) => column.label)).toEqual(
+      graph.kindOptions
+    );
+    const columns = new Map(
+      graph.layout.columns.map((column) => [column.label, column.x])
+    );
+    for (const node of graph.nodes) {
+      expect(node.x).toBe(columns.get(node.kind));
+    }
+    // No two marks share a spot, so no label can hide behind another.
+    const spots = graph.nodes.map((node) => `${node.x},${node.y}`);
+    expect(new Set(spots).size).toBe(spots.length);
+    // The box is as tall as its longest column needs.
+    const deepest = Math.max(...graph.nodes.map((node) => node.y));
+    expect(graph.layout.height).toBeGreaterThan(deepest);
+    expect(graph.layout.width).toBeGreaterThan(
+      Math.max(...graph.nodes.map((node) => node.x))
+    );
+  });
+
+  it('names tool-build clusters by repo and size, and bands their severity', () => {
+    const worst = { ...cluster(), cluster_id: 'tb-worst', score: 22_017_846 };
+    const middling = { ...cluster(), cluster_id: 'tb-mid', score: 11_000_000 };
+    const least = { ...cluster(), cluster_id: 'tb-least', score: 900_000 };
+    const graph = buildOperatorGraph(
+      snapshot(),
+      null,
+      [worst, middling, least],
+      { kinds: [], states: [], query: '' },
+      null
+    );
+    const clusters = graph.clusters.filter(
+      (entry) => entry.kind === 'tool_build'
+    );
+
+    // A fingerprint hash cannot be acted on; the repo, size and language can.
+    expect(clusters.map((entry) => entry.label)).toEqual([
+      'Tool-build · alice/jeryu · 3 copies · rust',
+      'Tool-build · alice/jeryu · 3 copies · rust',
+      'Tool-build · alice/jeryu · 3 copies · rust',
+    ]);
+    for (const entry of clusters) {
+      expect(entry.label).not.toContain('tb-');
+    }
+    // Everything-is-high is the same as no severity: the band is relative.
+    expect(clusters.map((entry) => entry.severity)).toEqual([
+      'high',
+      'medium',
+      'low',
+    ]);
+    expect(toolClusterLabel({ ...cluster(), occurrence_count: 1 })).toContain(
+      '1 copy'
+    );
   });
 
   it('reports an empty base graph and suppresses ignored tool-build clusters', () => {
