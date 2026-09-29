@@ -54,6 +54,9 @@ function detail(over: {
       available_actions: [],
     },
     description: null,
+    head_tree_sha: null,
+    base_tree_sha: null,
+    reviews: [],
     merge_passport: {
       status: 'blocked',
       head_sha: SHA,
