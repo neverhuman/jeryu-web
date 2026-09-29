@@ -198,6 +198,63 @@ test('shared tools findings, proposals, adoption, and non-admin settings @action
   await expect(page.getByRole('region', { name: 'Repository access' })).toHaveCount(0);
 });
 
+test('a tool page leads with the repos that should adopt it, grouped by family, and files their work @action:tool_fleet.file_adoption_todos', async ({
+  page,
+}) => {
+  await mockBootstrap(page, { login: '@admin', auth: { role: 'admin', csrfToken: 'csrf-admin' } });
+  await mockTooling(page);
+  await page.route('**/api/v1/shift/families', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        families: [
+          {
+            name: 'jeryu',
+            queue_repo: 'jeryu/jeryu-todo',
+            repos: [{ name: 'jeryu-web', order: 1, owner: 'jeryu' }],
+            shift_tz: 'America/Los_Angeles',
+            landing: 'shifts',
+          },
+        ],
+      }),
+    });
+  });
+  const filed: unknown[] = [];
+  await page.route('**/api/v1/shift/todos**', async (route, request) => {
+    if (request.method() !== 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ generated_at: '2026-09-28T00:00:00Z', todos: [] }),
+      });
+      return;
+    }
+    filed.push(request.postDataJSON());
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'todo-1', family: 'jeryu' }),
+    });
+  });
+
+  await page.goto('/shared-tools/adoption/action-coverage');
+  const detail = page.getByTestId('tool-fleet-tool-page');
+  await expect(detail).toBeVisible();
+  // The actionable list comes first: "Should adopt" above "Adopting".
+  const sections = detail.getByRole('heading', { level: 2 });
+  await expect(sections.first()).toHaveText('Should adopt (1)');
+  await expect(sections.nth(1)).toHaveText('Adopting (1)');
+  await expect(
+    page.getByTestId('tool-fleet-missing').getByTestId('tool-fleet-family-jeryu')
+  ).toContainText('jeryu/jeryu-web');
+
+  await page.getByTestId('tool-fleet-file-jeryu').click();
+  await expect(page.getByText('Filed 1 todo')).toBeVisible();
+  expect(filed).toHaveLength(1);
+  expect(filed[0]).toMatchObject({ family: 'jeryu', mode: 'night', repos: ['jeryu-web'] });
+});
+
 async function mockTooling(page: Page): Promise<void> {
   await page.route('**/api/v1/tools/registry/summary', async (route) => {
     await route.fulfill({
