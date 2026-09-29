@@ -11,6 +11,10 @@
 //
 // The panel header doubles as a summary
 // (e.g. "3 passing · 1 failing · 0 pending").
+//
+// A check the forge names by UUID ("Attempt 428377c2-6190-…") is shown with
+// the id shortened; the whole id stays in the row's `title` and in the link
+// to the run, so it is still readable and still copyable.
 
 import { useState } from 'react';
 import {
@@ -27,6 +31,7 @@ import {
 } from 'lucide-react';
 
 import type { PullRequestCheck, PullRequestChecks } from '../../api/types';
+import { fullIdTitle, shortenIds } from '../identifiers/shortId';
 
 import './merge.css';
 
@@ -245,8 +250,11 @@ export function ChecksPanel({
                     onClick={() => toggle(check.id)}
                   >
                     <Chevron aria-hidden="true" size={12} />
-                    <span className="checks-panel__name">
-                      {check.name}{' '}
+                    <span
+                      className="checks-panel__name"
+                      title={fullIdTitle(check.name)}
+                    >
+                      {shortenIds(check.name)}{' '}
                       <span
                         className={`checks-panel__status checks-panel__status--${tone}`}
                       >
@@ -275,8 +283,11 @@ export function ChecksPanel({
                     </div>
                   ) : null}
                   {check.description ? (
-                    <div className="checks-panel__description">
-                      {check.description}
+                    <div
+                      className="checks-panel__description"
+                      title={fullIdTitle(check.description)}
+                    >
+                      {shortenIds(check.description)}
                     </div>
                   ) : (
                     <div className="checks-panel__description">

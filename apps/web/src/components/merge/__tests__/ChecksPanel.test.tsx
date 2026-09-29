@@ -116,3 +116,35 @@ describe('ChecksPanel', () => {
     );
   });
 });
+
+describe('ChecksPanel identifiers', () => {
+  const ID = '428377c2-6190-4a50-b306-d52d4a2f1c33';
+  const byId = {
+    passing: 0,
+    failing: 0,
+    pending: 1,
+    skipped: 0,
+    checks: [
+      {
+        id: 9,
+        name: `Attempt ${ID}`,
+        status: 'pending',
+        description: `queued for run ${ID}`,
+        details_url: 'https://forge.example/runs/428377c2',
+      },
+    ],
+  } as unknown as PullRequestChecks;
+
+  it('shows a short label and keeps the whole id in the title and the link', () => {
+    render(<ChecksPanel checks={byId} />);
+    const name = screen.getByText('Attempt 428377c2', { exact: false });
+    expect(name.getAttribute('title')).toBe(`Attempt ${ID}`);
+    expect(screen.queryByText(ID, { exact: false })).toBeNull();
+    expect(
+      screen.getByText('queued for run 428377c2').getAttribute('title')
+    ).toBe(`queued for run ${ID}`);
+    expect(
+      screen.getByRole('link', { name: `Open Attempt ${ID} details` })
+    ).toBeTruthy();
+  });
+});

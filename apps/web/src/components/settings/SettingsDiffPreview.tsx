@@ -9,6 +9,10 @@
 //   * Required permission to apply (taken from `side_effects` when the
 //     backend tags one; falls back to a generic "settings.write" hint).
 //
+// Side effects and warnings are the server's sentences, and the server names
+// its rows by UUID ("repository 428377c2-6190-…"). They are rendered with the
+// ids shortened and the whole sentence kept in the `title`.
+//
 // The component is render-only — it does not own the apply action; the
 // settings page wires a confirm button to the apply mutation.
 
@@ -24,6 +28,8 @@ import type {
   SettingsFieldChange,
 } from '../../api/types';
 
+import { fullIdTitle, shortenIds } from '../identifiers/shortId';
+
 import './settings.css';
 
 function renderValue(value: string | null): JSX.Element {
@@ -33,7 +39,11 @@ function renderValue(value: string | null): JSX.Element {
   if (value === '') {
     return <span className="settings-diff__null">(empty)</span>;
   }
-  return <code className="settings-diff__value">{value}</code>;
+  return (
+    <code className="settings-diff__value" title={fullIdTitle(value)}>
+      {shortenIds(value)}
+    </code>
+  );
 }
 
 export interface SettingsDiffPreviewProps {
@@ -140,7 +150,9 @@ export function SettingsDiffPreview({
           <h4 className="settings-diff__subheading">Affected entities</h4>
           <ul className="settings-diff__list">
             {sideEffects.map((effect, index) => (
-              <li key={`${effect}-${index}`}>{effect}</li>
+              <li key={`${effect}-${index}`} title={fullIdTitle(effect)}>
+                {shortenIds(effect)}
+              </li>
             ))}
           </ul>
         </div>
@@ -154,7 +166,9 @@ export function SettingsDiffPreview({
           </h4>
           <ul className="settings-diff__list">
             {warnings.map((warning, index) => (
-              <li key={`${warning}-${index}`}>{warning}</li>
+              <li key={`${warning}-${index}`} title={fullIdTitle(warning)}>
+                {shortenIds(warning)}
+              </li>
             ))}
           </ul>
         </div>

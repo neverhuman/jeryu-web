@@ -2,11 +2,16 @@
 //
 // Pass `error` for an ApiError or generic Error; the component pulls `code`
 // and `requestId` for debugging when available.
+//
+// Both lines can carry server ids (a message naming a repository by UUID, a
+// request id): they are rendered short, with the whole line in the `title` so
+// it can be read and copied.
 
 import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ApiError } from '../../api/client';
+import { fullIdTitle, shortenIds } from '../identifiers/shortId';
 
 import './state.css';
 
@@ -45,9 +50,18 @@ export function ErrorState({
       </span>
       <h2 className="state-block__title">{title}</h2>
       {derivedDescription ? (
-        <p className="state-block__description">{derivedDescription}</p>
+        <p
+          className="state-block__description"
+          title={fullIdTitle(derivedDescription)}
+        >
+          {shortenIds(derivedDescription)}
+        </p>
       ) : null}
-      {detail ? <p className="state-block__details">{detail}</p> : null}
+      {detail ? (
+        <p className="state-block__details" title={fullIdTitle(detail)}>
+          {shortenIds(detail)}
+        </p>
+      ) : null}
       {action ? <div className="state-block__action">{action}</div> : null}
     </div>
   );

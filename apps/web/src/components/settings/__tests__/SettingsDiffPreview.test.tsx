@@ -112,3 +112,26 @@ describe('SettingsDiffPreview', () => {
     expect(screen.getByText('Reversible')).toBeInTheDocument();
   });
 });
+
+describe('SettingsDiffPreview identifiers', () => {
+  const ID = '428377c2-6190-4a50-b306-d52d4a2f1c33';
+
+  it('shortens the ids the server names rows by, keeping them in the title', () => {
+    const preview: SettingsDiffPreviewWire = {
+      ...BASE,
+      side_effects: [`Rebuilds the merge queue of repository ${ID}.`],
+      warnings: [`Pull request ${ID} would be reopened.`],
+    };
+    render(<SettingsDiffPreview preview={preview} />);
+    const effect = screen.getByText(
+      'Rebuilds the merge queue of repository 428377c2.'
+    );
+    expect(effect.getAttribute('title')).toBe(
+      `Rebuilds the merge queue of repository ${ID}.`
+    );
+    const warning = screen.getByText('Pull request 428377c2 would be reopened.');
+    expect(warning.getAttribute('title')).toBe(
+      `Pull request ${ID} would be reopened.`
+    );
+  });
+});
