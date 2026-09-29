@@ -338,3 +338,26 @@
   flex: 1 1 auto;
   min-height: 0;
 }
+
+/* ── Queue runs strip: the queue's attempts on this repository ───────────── */
+.agents__queue-pane {
+  flex: 0 0 auto;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.agents__queue-pane .page__section-title {
+  margin: 0;
+  flex: 0 0 auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

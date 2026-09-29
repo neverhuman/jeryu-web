@@ -17,6 +17,7 @@ import {
   mockAgentControl,
   mockCompanionShell,
 } from './fixtures/mocks';
+import { mockShiftTodos, shiftTodo } from './fixtures/releaseChannelMocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -119,4 +120,55 @@ test('deep-links straight to a run terminal via the splat tail @action:agents.de
   const terminal = page.getByTestId('agent-terminal').first();
   await expect(terminal).toBeVisible();
   await expect(terminal).toHaveAttribute('data-run-id', 'run-2');
+});
+
+test('an empty repository shows the queue runs, not two empty states @action:agents.queue_runs', async ({
+  page,
+}) => {
+  await mockBootstrap(page);
+  await mockRepoList(page, [
+    { id: REPO, default_branch: 'main', visibility: 'public' },
+  ]);
+  await mockRepoAgentRuns(page, []);
+  await mockShiftTodos(page, [
+    shiftTodo('20260921-002116', {
+      title: 'Feed the agents page',
+      status: 'claimed',
+      attempts: 1,
+      lease_live: true,
+      worked_by: [
+        {
+          by: 'alice',
+          host: 'xbabe2',
+          slot: 'w3',
+          model: 'opus',
+          session: null,
+          started: '2026-06-05T01:00:00Z',
+          ended: null,
+          outcome: '',
+          cost_usd: null,
+          note: '',
+          shift: null,
+        },
+      ],
+    }),
+  ]);
+
+  const shell = new AppShellPage(page);
+  await shell.goto(`${REPO_PATH}/agents`);
+  await shell.assertShellLoaded();
+
+  // One empty state for the missing agent sessions — and no terminal prompt.
+  await expect(page.getByTestId('agents-empty')).toBeVisible();
+  await expect(page.getByTestId('agents-no-selection')).toHaveCount(0);
+
+  const row = page.getByTestId('agent-queue-row-20260921-002116');
+  await expect(row).toContainText('Feed the agents page');
+  await expect(row).toContainText('xbabe2 · w3');
+  await expect(page.getByTestId('agent-queue-status-20260921-002116')).toHaveText(
+    'running'
+  );
+
+  await row.click();
+  await expect(page).toHaveURL(/\/work\?family=core&todo=20260921-002116/);
 });

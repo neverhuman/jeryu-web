@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, GitBranch, Server, Bot, Radio } from 'lucide-react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Plus, GitBranch, Server, Bot, Radio, ListChecks, Cpu } from 'lucide-react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
@@ -10,6 +10,9 @@ import { AgentTerminal } from '../components/terminal/AgentTerminal';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { useRealtime } from '../hooks/useRealtime';
 import { useCreateSession } from '../hooks/useCreateSession';
+import { useShiftTodos } from '../hooks/useShift';
+import { repoQueueRuns, type RepoQueueRun } from './repoQueueRuns';
+import { queueHref } from './shift/workPaths';
 
 import './page.css';
 import './RepositoryAgentsPage.css';
@@ -87,6 +90,15 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
 
   const items = runs.data?.items ?? [];
 
+  // Queue runs: a worker attempt on a todo naming this repository is work the
+  // operator has running here, and it never shows up under `agent-runs`.
+  const queueTodos = useShiftTodos(undefined);
+  const repoName = resolved.data?.summary.id.name ?? '';
+  const queueRuns = useMemo(
+    () => repoQueueRuns(queueTodos.data?.todos ?? [], repoName),
+    [queueTodos.data, repoName]
+  );
+
   // Deep-link: when the runs list loads, add the splat run if it exists on
   // the server and isn't already in the active panes. Also backfill
   // shellRunId for any panes that were added before the list arrived.
@@ -155,6 +167,9 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
   }
 
   const atCapacity = activePanes.length >= MAX_AGENT_PANES;
+  // The terminal belongs to agent runs. With none to open, its "choose a run"
+  // prompt would only stack a second empty state under the list's own.
+  const showTerminalPane = activePanes.length > 0 || items.length > 0;
 
   return (
     <div className="page page--full agents" data-testid="repo-agents-page">
@@ -226,7 +241,8 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
             <p className="page__roadmap-note">{runs.error.message}</p>
           ) : items.length === 0 ? (
             <p className="page__roadmap-note" data-testid="agents-empty">
-              No agent runs on this repository yet.
+              No agent session on this repository yet — start one with New
+              Session.
             </p>
           ) : (
             <ul className="agents__list" data-testid="agents-list">
@@ -242,6 +258,24 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
           )}
         </section>
 
+        {queueRuns.length > 0 ? (
+          <section
+            className="page__section agents__queue-pane"
+            aria-labelledby="agents-queue"
+            data-testid="agents-queue"
+          >
+            <h2 className="page__section-title" id="agents-queue">
+              Queue runs
+            </h2>
+            <ul className="agents__list" data-testid="agents-queue-list">
+              {queueRuns.map((run) => (
+                <QueueRow key={run.key} run={run} />
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {showTerminalPane ? (
         <section className="agents__terminal-pane" aria-label="Agent terminal">
           {activePanes.length > 0 ? (
             <div className="agents__split-terminals">
@@ -282,6 +316,7 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
             </p>
           )}
         </section>
+        ) : null}
       </div>
     </div>
   );
@@ -333,9 +368,40 @@ function AgentRow({
   );
 }
 
+/** One queue attempt, linking to the todo it worked on. */
+function QueueRow({ run }: { run: RepoQueueRun }): JSX.Element {
+  return (
+    <li>
+      <Link
+        to={queueHref(run.family, [run.todoId])}
+        className="agents__row"
+        data-testid={`agent-queue-row-${run.todoId}`}
+        title={`${run.title} · started ${run.started}`}
+      >
+        <span className="agents__row-branch">
+          <ListChecks size={13} aria-hidden="true" /> {run.title}
+        </span>
+        <span className="agents__row-runner">
+          <Server size={13} aria-hidden="true" /> {run.worker}
+        </span>
+        <span className="agents__row-agent">
+          <Cpu size={13} aria-hidden="true" /> {run.model}
+        </span>
+        <span
+          className={`agents__row-status agents__row-status--${statusVariant(run.outcome)}`}
+          data-testid={`agent-queue-status-${run.todoId}`}
+        >
+          {run.outcome}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
 function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'muted' {
   switch (status) {
     case 'running':
+    case 'done':
       return 'success';
     case 'blocked':
     case 'queued':

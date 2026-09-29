@@ -8,41 +8,10 @@ import { RepositoryAgentsPage } from '../RepositoryAgentsPage';
 
 const REPO_ID = 'repo-1';
 const AGENTS_ROUTE = '/repos/jeryu/alice%2Fjeryu/agents';
+const NOW = '2026-09-21T00:21:16Z';
 
 describe('RepositoryAgentsPage — New Session', () => {
-  beforeEach(() => {
-    // The agents surface + mounted terminal touch browser-only transport APIs.
-    // Minimal doubles keep this page-level render focused on navigation.
-    vi.stubGlobal(
-      'WebSocket',
-      class {
-        static OPEN = 1;
-        readyState = 1;
-        addEventListener(): void {}
-        removeEventListener(): void {}
-        send(): void {}
-        close(): void {}
-      }
-    );
-    vi.stubGlobal(
-      'EventSource',
-      class {
-        onopen: ((event: Event) => void) | null = null;
-        onmessage: ((event: MessageEvent) => void) | null = null;
-        onerror: ((event: Event) => void) | null = null;
-        constructor(public url: string) {}
-        close(): void {}
-      }
-    );
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        observe(): void {}
-        unobserve(): void {}
-        disconnect(): void {}
-      }
-    );
-  });
+  beforeEach(stubBrowserTransports);
 
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -98,6 +67,126 @@ describe('RepositoryAgentsPage — New Session', () => {
     expect(screen.queryByTestId('agent-terminal')).not.toBeInTheDocument();
   });
 });
+
+describe('RepositoryAgentsPage — empty repository', () => {
+  beforeEach(stubBrowserTransports);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('shows one empty state, not the terminal prompt under it', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/shift/todos': { generated_at: NOW, todos: [] },
+    });
+
+    renderPage();
+
+    expect(await screen.findByTestId('agents-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('agents-no-selection')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agents-queue')).not.toBeInTheDocument();
+  });
+
+  it('lists the queue runs on this repository', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/shift/todos': { generated_at: NOW, todos: [queueTodo()] },
+    });
+
+    renderPage();
+
+    const row = await screen.findByTestId('agent-queue-row-20260921-002116');
+    expect(row).toHaveTextContent('Feed the agents page');
+    expect(row).toHaveTextContent('xbabe2 · w3');
+    expect(screen.getByTestId('agent-queue-status-20260921-002116')).toHaveTextContent(
+      'running'
+    );
+    expect(row).toHaveAttribute(
+      'href',
+      '/work?family=jeryu&todo=20260921-002116'
+    );
+  });
+});
+
+function queueTodo(): Record<string, unknown> {
+  return {
+    id: '20260921-002116',
+    family: 'jeryu',
+    title: 'Feed the agents page',
+    body: '',
+    repos: ['jeryu'],
+    mode: 'night',
+    priority: 0,
+    blocked_by: [],
+    status: 'claimed',
+    attempts: 1,
+    requested_by: 'alton',
+    filed_at: NOW,
+    claim_by: 'xbabe2/w3',
+    lease_until: null,
+    lease_live: true,
+    shift: null,
+    change_set: null,
+    commits: {},
+    merged: false,
+    note: '',
+    triaged: true,
+    worked_by: [
+      {
+        by: 'alton',
+        host: 'xbabe2',
+        slot: 'w3',
+        model: 'opus',
+        session: null,
+        started: NOW,
+        ended: null,
+        outcome: '',
+        cost_usd: null,
+        note: '',
+        shift: null,
+      },
+    ],
+  };
+}
+
+/** The agents surface and its terminal touch browser-only transport APIs. */
+function stubBrowserTransports(): void {
+    // The agents surface + mounted terminal touch browser-only transport APIs.
+    // Minimal doubles keep this page-level render focused on navigation.
+    vi.stubGlobal(
+      'WebSocket',
+      class {
+        static OPEN = 1;
+        readyState = 1;
+        addEventListener(): void {}
+        removeEventListener(): void {}
+        send(): void {}
+        close(): void {}
+      }
+    );
+    vi.stubGlobal(
+      'EventSource',
+      class {
+        onopen: ((event: Event) => void) | null = null;
+        onmessage: ((event: MessageEvent) => void) | null = null;
+        onerror: ((event: Event) => void) | null = null;
+        constructor(public url: string) {}
+        close(): void {}
+      }
+    );
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      }
+    );
+}
 
 // ── harness ────────────────────────────────────────────────────────────────
 
