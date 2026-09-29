@@ -9,8 +9,9 @@
 //   1. What runs: one row per CONFIGURED environment (the live commit and
 //      release, who deployed it and when, the rollback target, a failed or
 //      running newer attempt, and how many merged pull requests main has that
-//      the environment does not). Environments with nothing recorded fold
-//      behind "other environments".
+//      the environment does not). A configured environment with nothing live
+//      folds behind "other environments"; one never deployed to is named in a
+//      line and given no row.
 //   2. Ready to pin: merged in a dependency, not yet in the deploy repo's pin.
 //
 // This page is about ENVIRONMENTS: what each one runs and what is holding the
@@ -38,6 +39,7 @@ import { behindPinLines } from './pinsModel';
 import { ReadyToPin } from './ReadyToPin';
 import { ReleaseBoardView } from './releaseBoard/ReleaseBoardView';
 import {
+  attemptLabel,
   behindLabel,
   releasePullHref,
   releasesHref,
@@ -229,7 +231,7 @@ export function UnreleasedRedirect(): JSX.Element {
 function Environments({ repoId, branch }: { repoId: string; branch: string }): JSX.Element {
   const { rows, isLoading, error } = useReleaseOverview(repoId, branch);
   const anyDeployed = rows.some((row) => row.configured);
-  const { live, other } = splitEnvironments(rows);
+  const { live, quiet, unused } = splitEnvironments(rows);
   return (
     <section className="page__section" aria-labelledby="releases-environments">
       <h2 className="page__section-title" id="releases-environments">
@@ -251,14 +253,21 @@ function Environments({ repoId, branch }: { repoId: string; branch: string }): J
             </p>
           ) : null}
           {live.length > 0 ? <EnvironmentTable rows={live} repoId={repoId} branch={branch} /> : null}
-          {other.length > 0 ? (
+          {quiet.length > 0 ? (
             <details className="releases__other" data-testid="releases-other-environments">
               <summary>
-                {other.length} other environment{other.length === 1 ? '' : 's'} with nothing
-                live ({other.map((row) => row.name).join(', ')})
+                {quiet.length} other environment{quiet.length === 1 ? '' : 's'} with nothing
+                live ({quiet.map((row) => row.name).join(', ')})
               </summary>
-              <EnvironmentTable rows={other} repoId={repoId} branch={branch} />
+              <EnvironmentTable rows={quiet} repoId={repoId} branch={branch} />
             </details>
+          ) : null}
+          {unused.length > 0 ? (
+            // Never deployed to: a row of empty cells would only repeat the
+            // names, so the names are all this says.
+            <p className="releases__muted" data-testid="releases-unused-environments">
+              Never deployed to: {unused.map((row) => row.name).join(', ')}.
+            </p>
           ) : null}
         </>
       )}
@@ -299,18 +308,16 @@ function EnvironmentTable({
 
 function EnvironmentRowView({ row, repoId }: { row: EnvironmentRow; repoId: string }): JSX.Element {
   if (!row.current) {
+    // Configured, nothing live: the environments never deployed to are named
+    // in a line instead (see splitEnvironments), so they reach no table.
     return (
       <tr className="releases__row releases__row--empty" data-testid={`releases-env-${row.name}`}>
         <th scope="row">{row.name}</th>
         <td colSpan={4}>
-          {row.configured ? (
-            <span>
-              nothing live yet
-              {row.pendingAttempt ? <> · <Attempt attempt={row.pendingAttempt} /></> : null}
-            </span>
-          ) : (
-            <span className="releases__muted">not configured</span>
-          )}
+          <span>
+            nothing live yet
+            {row.pendingAttempt ? <> · <Attempt attempt={row.pendingAttempt} /></> : null}
+          </span>
         </td>
       </tr>
     );
@@ -376,10 +383,12 @@ function Ref({ ref_ }: { ref_: DeployedRef }): JSX.Element {
 }
 
 function Attempt({ attempt }: { attempt: DeployedRef }): JSX.Element {
+  const label = attemptLabel(attempt);
   return (
     <>
       <span className={`page__pill ${STATE_PILL[attempt.state] ?? ''}`} title={attempt.release ?? attempt.sha}>
-        {attempt.state.replace('_', ' ')} {attempt.shortSha}
+        {label.words}
+        {label.shortSha ? ` ${label.shortSha}` : ''}
       </span>
       {attempt.logUrl ? (
         <>

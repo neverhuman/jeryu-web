@@ -618,6 +618,39 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
   };
 }
 
+/**
+ * Reviewers worth a row, and the ones that have never reviewed anything. A
+ * reviewer that is present, idle, and has no review behind it fills a row with
+ * "idle" and "none yet"; four of those read as capacity doing work. They fold
+ * into one line instead. Anything else — a review in flight, a review behind
+ * it, an unmerged approval, offline or an availability we cannot read — keeps
+ * its row, because its row says something.
+ */
+export function splitReviewers(reviewers: readonly RunnerNetworkNode[]): {
+  listed: RunnerNetworkNode[];
+  unused: RunnerNetworkNode[];
+} {
+  const unused = reviewers.filter(
+    (node) =>
+      node.activityState === 'idle' &&
+      node.tasks.length === 0 &&
+      !node.lastActivity &&
+      (node.mergeGrantGaps?.length ?? 0) === 0
+  );
+  return {
+    listed: reviewers.filter((node) => !unused.includes(node)),
+    unused
+  };
+}
+
+/** "4 reviewers have not reviewed anything yet: xbabe0 · redteam, …". */
+export function unusedReviewerSentence(
+  unused: readonly RunnerNetworkNode[]
+): string {
+  const names = unused.map((node) => runnerName(node.runnerId)).join(', ');
+  return `${unused.length} reviewer${unused.length === 1 ? ' has' : 's have'} not reviewed anything yet: ${names}.`;
+}
+
 /** True when a runner has not been heard from for [`RUNNER_SEEN_STALE_MS`]. */
 export function seenStale(lastUpdated: string | null, nowMs: number): boolean {
   if (!lastUpdated) return true;

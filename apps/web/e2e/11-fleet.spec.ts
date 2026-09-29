@@ -293,6 +293,55 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-node-xbabe0_redteam')).toHaveCount(0);
   });
 
+  test('folds reviewers that have never reviewed anything into one line @action:fleet.reviewer_unused', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockFleetBootstrap(page, []);
+    const fabric = runnerFabric(false);
+    const reviewer = (host: string, lastActivity: RunnerLastActivity | null) => ({
+      runnerId: `${host}/redteam`,
+      source: 'pr-redteam',
+      state: 'idle',
+      capacity: 0,
+      inFlight: 0,
+      labels: [host, 'redteam'],
+      classes: ['reviewer'],
+      activeTaskCount: 0,
+      lastUpdated: '2026-06-05T00:05:00Z',
+      activeTasks: [],
+      ...(lastActivity ? { lastActivity } : {}),
+    });
+    fabric.local.nodeDetails.push(
+      reviewer('xbabe0', {
+        repo: 'jeryu/jeryu-deploy',
+        pr: 43,
+        sha: '55ee4dd0efe046dc716f77fa73536d35b760fe4e',
+        recipe: 'redteam-review',
+        conclusion: 'approve',
+        seconds: 22,
+        finishedAt: '2026-06-05T00:04:30Z',
+      }),
+      reviewer('xbabe1', null),
+      reviewer('xbabe2', null)
+    );
+    await mockControlPlaneRunners(page, fabric);
+
+    const shell = new AppShellPage(page);
+    await shell.goto('/runners');
+    await shell.assertShellLoaded();
+
+    await expect(page.getByTestId('fleet-reviewers')).toBeVisible({ timeout: 10_000 });
+    // The one that has reviewed keeps its row; the other two are one sentence.
+    await expect(page.getByTestId('fleet-reviewer-xbabe0_redteam')).toBeVisible();
+    await expect(page.getByTestId('fleet-reviewer-xbabe1_redteam')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-reviewer-xbabe2_redteam')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-reviewers-unused')).toHaveText(
+      '2 reviewers have not reviewed anything yet: xbabe1 · redteam, xbabe2 · redteam.'
+    );
+    await expect(page.getByTestId('fleet-no-reviewer')).toHaveCount(0);
+  });
+
   test('lists the background timers under Automation, and shows no section when none reports @action:fleet.automation', async ({
     page,
   }) => {

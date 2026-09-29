@@ -121,10 +121,13 @@ describe('ReleasesPage', () => {
     ).toHaveAttribute('href', '/pull-room?repo=jeryu%2Fjeryu-deploy');
     // The scope is a real select that always offers the current repository.
     expect(screen.getByLabelText('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
-    // Environments with nothing live fold away; production is the only row shown.
-    const other = screen.getByTestId('releases-other-environments');
-    expect(other).not.toHaveAttribute('open');
-    expect(within(other).getByText(/3 other environments with nothing\s+live \(stable, canary, dev\)/)).toBeInTheDocument();
+    // Nothing was ever deployed to stable, canary or dev: they are named in a
+    // line rather than given three rows that say only "not configured".
+    expect(screen.queryByTestId('releases-other-environments')).toBeNull();
+    expect(screen.getByTestId('releases-unused-environments')).toHaveTextContent(
+      'Never deployed to: stable, canary, dev.'
+    );
+    expect(screen.queryByTestId('releases-env-canary')).toBeNull();
   });
 
   it('shows no staged banner to non-admins and never asks for attention', async () => {

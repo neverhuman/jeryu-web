@@ -2,7 +2,9 @@
 //
 // Everything here comes from `GET /api/v1/control-plane/runners`, which is
 // fed by real runner heartbeats: the PR-gate slots, and the pr-redteam PR
-// reviewer, which is listed in its own section because it holds no gate slot. The page polls it
+// reviewer, which is listed in its own section because it holds no gate slot.
+// A reviewer that is idle and has never reviewed anything is named in one line
+// there rather than given a row of its own. The page polls the snapshot
 // so the one-sentence summary and the rows stay current without a reload.
 // The forge's background timers (auto-pin, auto-stage) get a third section,
 // "Automation", which is absent altogether when none reports: an older forge,
@@ -18,7 +20,9 @@ import { useMemo } from 'react';
 import { useControlPlaneRunners } from '../hooks/useControlPlaneRunners';
 import {
   networkSentence,
-  runnerNetworkFromResponse
+  runnerNetworkFromResponse,
+  splitReviewers,
+  unusedReviewerSentence
 } from './runnerNetworkModel';
 import { AutomationList, ReviewerList, RunnerNodeList } from './fleet';
 
@@ -44,6 +48,7 @@ export function FleetPage(): JSX.Element {
     runnerNetwork.state === 'fresh' &&
     runnerNetwork.nodes.every((node) => node.availability !== 'unknown');
   const sentence = networkSentence(runnerNetwork.nodes);
+  const reviewers = splitReviewers(runnerNetwork.reviewers);
   // Measured against when we fetched the snapshot, so render stays pure.
   const stale =
     runnerNetwork.lastUpdated !== null &&
@@ -131,10 +136,22 @@ export function FleetPage(): JSX.Element {
             No review agent has reported in the last 3 minutes.
           </p>
         ) : (
-          <ReviewerList
-            reviewers={runnerNetwork.reviewers}
-            nowMs={runnersQuery.dataUpdatedAt}
-          />
+          <>
+            {reviewers.listed.length > 0 ? (
+              <ReviewerList
+                reviewers={reviewers.listed}
+                nowMs={runnersQuery.dataUpdatedAt}
+              />
+            ) : null}
+            {reviewers.unused.length > 0 ? (
+              <p
+                className="page__roadmap-note"
+                data-testid="fleet-reviewers-unused"
+              >
+                {unusedReviewerSentence(reviewers.unused)}
+              </p>
+            ) : null}
+          </>
         )}
       </section>
 

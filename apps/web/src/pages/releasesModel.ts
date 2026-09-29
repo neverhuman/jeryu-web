@@ -176,17 +176,64 @@ export function scopeParams(value: string): { repo: string } | { family: string 
 }
 
 /**
- * Environments worth a row: configured ones. "stable / canary / dev: not
- * configured" and an environment with nothing live say nothing a person can
- * act on, so they fold away.
+ * A deploy attempt in words. The state is the sentence; the sha is worth
+ * reading only when an attempt actually ran against it, so an environment
+ * that was simply turned off gets a word rather than a hash to decode.
+ */
+export interface AttemptLabel {
+  words: string;
+  shortSha: string | null;
+}
+
+const ATTEMPT_WORDS: Record<DeploymentState | 'unknown', string> = {
+  success: 'deployed',
+  inactive: 'turned off',
+  failure: 'deploy failed',
+  error: 'deploy errored',
+  in_progress: 'deploying',
+  queued: 'deploy queued',
+  pending: 'deploy pending',
+  unknown: 'state unknown',
+};
+
+export function attemptLabel(attempt: DeployedRef): AttemptLabel {
+  return {
+    words: ATTEMPT_WORDS[attempt.state] ?? ATTEMPT_WORDS.unknown,
+    shortSha: attemptRan(attempt.state) ? attempt.shortSha : null,
+  };
+}
+
+/** Whether a deploy was attempted against the sha, or the environment just stopped. */
+function attemptRan(state: DeploymentState | 'unknown'): boolean {
+  return state !== 'inactive' && state !== 'unknown';
+}
+
+/** What an environment amounts to right now, and therefore how much of a row it earns. */
+export type EnvironmentStanding = 'live' | 'quiet' | 'unused';
+
+export function environmentStanding(row: EnvironmentRow): EnvironmentStanding {
+  if (row.current) return 'live';
+  if (row.pendingAttempt && attemptRan(row.pendingAttempt.state)) return 'live';
+  return row.configured ? 'quiet' : 'unused';
+}
+
+/**
+ * Environments worth a row: the ones running something, or with a deploy in
+ * flight or freshly failed. An environment that is configured but holds
+ * nothing live folds behind a summary; one that was never deployed to at all
+ * has no row to give — a line naming it says everything it could.
  */
 export function splitEnvironments(rows: EnvironmentRow[]): {
   live: EnvironmentRow[];
-  other: EnvironmentRow[];
+  quiet: EnvironmentRow[];
+  unused: EnvironmentRow[];
 } {
-  const live = rows.filter((row) => row.current !== null || row.pendingAttempt !== null);
-  const other = rows.filter((row) => !live.includes(row));
-  return { live, other };
+  const standing = new Map(rows.map((row) => [row, environmentStanding(row)]));
+  return {
+    live: rows.filter((row) => standing.get(row) === 'live'),
+    quiet: rows.filter((row) => standing.get(row) === 'quiet'),
+    unused: rows.filter((row) => standing.get(row) === 'unused'),
+  };
 }
 
 /**

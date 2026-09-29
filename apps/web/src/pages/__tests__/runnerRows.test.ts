@@ -11,6 +11,8 @@ import {
   runnerName,
   runnerNetworkFromResponse,
   seenStale,
+  splitReviewers,
+  unusedReviewerSentence,
   type RunnerNetworkNode
 } from '../runnerNetworkModel';
 
@@ -309,5 +311,48 @@ describe('runner rows in words', () => {
       text: 'No gate runner is reporting.',
       tone: 'warning'
     });
+  });
+  it('folds reviewers that have never reviewed anything into one line', () => {
+    const reviewer = (id: string, overrides: Partial<RunnerNetworkNode> = {}) =>
+      node({ runnerId: id, kind: 'reviewer', source: 'pr-redteam', ...overrides });
+    const review = {
+      repo: 'jeryu/jeryu-deploy',
+      pr: 43,
+      sha: '55ee4dd0efe046dc716f77fa73536d35b760fe4e',
+      recipe: 'redteam-review',
+      conclusion: 'approve',
+      seconds: 22,
+      finishedAt: '2026-09-19T19:00:30Z',
+      mergeAttempt: null
+    };
+    const reviewers = [
+      reviewer('xbabe0/redteam', { lastActivity: review }),
+      reviewer('xbabe1/redteam', {
+        activityState: 'active',
+        tasks: [task('jeryu/jeryu-web#7', '2026-09-19T19:00:00Z')]
+      }),
+      reviewer('xbabe2/redteam', {
+        mergeGrantGaps: [
+          { repo: 'jeryu/jeryu-web', identity: 'redteam', message: 'no merge grant' }
+        ]
+      }),
+      reviewer('xbabe3/redteam', { availability: 'offline', activityState: 'unknown' }),
+      reviewer('xbabe4/redteam'),
+      reviewer('xbabe5/redteam')
+    ];
+    const { listed, unused } = splitReviewers(reviewers);
+    expect(listed.map((n) => n.runnerId)).toEqual([
+      'xbabe0/redteam',
+      'xbabe1/redteam',
+      'xbabe2/redteam',
+      'xbabe3/redteam'
+    ]);
+    expect(unused.map((n) => n.runnerId)).toEqual(['xbabe4/redteam', 'xbabe5/redteam']);
+    expect(unusedReviewerSentence(unused)).toBe(
+      '2 reviewers have not reviewed anything yet: xbabe4 · redteam, xbabe5 · redteam.'
+    );
+    expect(unusedReviewerSentence(unused.slice(0, 1))).toBe(
+      '1 reviewer has not reviewed anything yet: xbabe4 · redteam.'
+    );
   });
 });

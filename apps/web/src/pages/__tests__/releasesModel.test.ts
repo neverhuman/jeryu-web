@@ -8,6 +8,7 @@ import type {
   EnvironmentSummary,
 } from '../../api/types/deployments';
 import {
+  attemptLabel,
   behindLabel,
   buildEnvironmentRows,
   EXPECTED_ENVIRONMENTS,
@@ -193,9 +194,53 @@ describe('one Releases page', () => {
 
   it('shows only environments with something live or in flight; the rest fold away', () => {
     const rows = buildEnvironmentRows([production], new Map([[sha('b'), compare('b', [])]]), []);
-    const { live, other } = splitEnvironments(rows);
+    const { live, quiet, unused } = splitEnvironments(rows);
     expect(live.map((row) => row.name)).toEqual(['production']);
-    expect(other.map((row) => row.name)).toEqual(['stable', 'canary', 'dev']);
+    expect(quiet).toEqual([]);
+    // Never deployed to: they get a line naming them, not a row each.
+    expect(unused.map((row) => row.name)).toEqual(['stable', 'canary', 'dev']);
+  });
+
+  it('counts an environment that was only turned off as holding nothing live', () => {
+    const smoke: EnvironmentSummary = {
+      name: 'smoke',
+      latest: deployed(4, 'd', 'inactive'),
+      current: null,
+      previous: null,
+    };
+    const rows = buildEnvironmentRows([production, smoke], new Map(), []);
+    const { live, quiet } = splitEnvironments(rows);
+    expect(live.map((row) => row.name)).toEqual(['production']);
+    expect(quiet.map((row) => row.name)).toEqual(['smoke']);
+  });
+
+  it('keeps a failed or running deploy in the live table: it is what to act on', () => {
+    const staging: EnvironmentSummary = {
+      name: 'staging',
+      latest: deployed(4, 'd', 'in_progress'),
+      current: null,
+      previous: null,
+    };
+    const { live } = splitEnvironments(buildEnvironmentRows([staging], new Map(), []));
+    expect(live.map((row) => row.name)).toEqual(['staging']);
+  });
+
+  it('says a deploy attempt in words, and keeps the sha only where one ran', () => {
+    const rows = buildEnvironmentRows(
+      [
+        production,
+        { name: 'smoke', latest: deployed(4, 'd', 'inactive'), current: null, previous: null },
+      ],
+      new Map(),
+      []
+    );
+    const prod = rows.find((row) => row.name === 'production')!;
+    expect(attemptLabel(prod.pendingAttempt!)).toEqual({
+      words: 'deploy failed',
+      shortSha: 'ccccccc',
+    });
+    const smoke = rows.find((row) => row.name === 'smoke')!;
+    expect(attemptLabel(smoke.pendingAttempt!)).toEqual({ words: 'turned off', shortSha: null });
   });
 
   it('sends merged-but-not-released questions to the Pull requests timeline', () => {

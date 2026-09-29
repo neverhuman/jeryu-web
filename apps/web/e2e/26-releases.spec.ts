@@ -106,7 +106,7 @@ test('environments show the live release, rollback target and unshipped PRs @act
   await expect(production).toContainText('bbbbbbb');
   await expect(production).toContainText('rel-b');
   await expect(production).toContainText('by alton2');
-  await expect(production).toContainText('failure eeeeeee');
+  await expect(production).toContainText('deploy failed eeeeeee');
   await expect(production).toContainText('aaaaaaa');
 
   const behind = page.getByTestId('releases-behind-production');
@@ -131,11 +131,43 @@ test('environments show the live release, rollback target and unshipped PRs @act
   // No attention feed for this viewer: no staged banner.
   await expect(page.getByTestId('releases-staged')).toHaveCount(0);
 
-  // Environments with nothing live fold away until asked for.
-  await expect(page.getByTestId('releases-env-canary')).toBeHidden();
-  await page.getByTestId('releases-other-environments').locator('summary').click();
-  await expect(page.getByTestId('releases-env-canary')).toContainText('not configured');
+  // Nothing was ever deployed to stable, canary or dev: one line names them,
+  // and no row pretends there is something to read.
+  await expect(page.getByTestId('releases-env-canary')).toHaveCount(0);
+  await expect(page.getByTestId('releases-other-environments')).toHaveCount(0);
+  await expect(page.getByTestId('releases-unused-environments')).toHaveText(
+    'Never deployed to: stable, canary, dev.'
+  );
   await expect(page.getByTestId('releases-empty')).toHaveCount(0);
+});
+
+test('an environment that was only turned off is not shown as live @action:releases.turned_off', async ({
+  page,
+}) => {
+  await mockBootstrap(page);
+  const off = deployed(4, 'f', 'inactive', 'rel-f');
+  await mockReleases(page, [
+    {
+      name: 'production',
+      latest: deployed(2, 'b', 'success', 'rel-b'),
+      current: deployed(2, 'b', 'success', 'rel-b'),
+      previous: null,
+    },
+    { name: 'smoke', latest: off, current: null, previous: null },
+  ]);
+
+  await page.goto('/releases?repo=jeryu%2Fjeryu-deploy');
+  await expect(page.getByTestId('releases-page')).toBeVisible({ timeout: 15_000 });
+
+  // The live table is production alone; smoke folds away with the count.
+  await expect(page.getByTestId('releases-table').first()).not.toContainText('smoke');
+  const other = page.getByTestId('releases-other-environments');
+  await expect(other).toContainText('1 other environment with nothing live (smoke)');
+  await other.locator('summary').click();
+  const smoke = page.getByTestId('releases-env-smoke');
+  // A word for the state, and no hash to decode: nothing ran against that sha.
+  await expect(smoke).toContainText('turned off');
+  await expect(smoke).not.toContainText('fffffff');
 });
 
 test('a repository with no recorded deployment says so @action:releases.empty', async ({ page }) => {
@@ -147,9 +179,10 @@ test('a repository with no recorded deployment says so @action:releases.empty', 
     'No deployment of jeryu/jeryu-deploy has been recorded yet'
   );
   // Nothing is live anywhere, so no environment row competes with that sentence.
-  await expect(page.getByTestId('releases-env-production')).toBeHidden();
-  await page.getByTestId('releases-other-environments').locator('summary').click();
-  await expect(page.getByTestId('releases-env-production')).toContainText('not configured');
+  await expect(page.getByTestId('releases-env-production')).toHaveCount(0);
+  await expect(page.getByTestId('releases-unused-environments')).toContainText(
+    'Never deployed to: production, stable, canary, dev.'
+  );
 });
 
 test('a staged release waits with its deploy command and a failed attempt links its log @action:releases.staged', async ({
