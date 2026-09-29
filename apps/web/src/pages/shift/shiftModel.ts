@@ -26,8 +26,6 @@ export interface QueueFilters {
   requested_by: string;
   worked_by: string;
   shift: string;
-  /** `human`: only todos where a person is the next step (see `needsHuman`). */
-  attention: string;
 }
 
 export const DEFAULT_QUEUE_FILTERS: QueueFilters = {
@@ -37,7 +35,6 @@ export const DEFAULT_QUEUE_FILTERS: QueueFilters = {
   requested_by: 'all',
   worked_by: 'all',
   shift: 'all',
-  attention: 'all',
 };
 
 /** Every operator that attempted the todo, plus a live claimant. */
@@ -70,7 +67,6 @@ export function filterShiftTodos(todos: ShiftTodo[], filters: QueueFilters): Shi
         keep(todo.mode, filters.mode) &&
         keep(todo.requested_by, filters.requested_by) &&
         keep(todo.shift ?? '', filters.shift) &&
-        (filters.attention !== 'human' || needsHuman(todo)) &&
         (filters.repo === 'all' || todo.repos.some((repo) => sameRepo(repo, filters.repo))) &&
         (filters.worked_by === 'all' || todoWorkers(todo).includes(filters.worked_by))
     )
@@ -95,7 +91,8 @@ const STATUS_RANK: Record<string, number> = {
 /**
  * A person is the next step: the todo is blocked or handed off, or it is
  * still waiting for triage. Matches the attention kinds `todo_blocked`,
- * `todo_handoff` and `todo_untriaged`.
+ * `todo_handoff` and `todo_untriaged`. The server's `/api/v1/attention` is the
+ * answer the operator is shown; this stands in only while that is unknown.
  */
 export function needsHuman(todo: Pick<ShiftTodo, 'status' | 'triaged'>): boolean {
   if (todo.status === 'blocked' || todo.status === 'handoff') return true;

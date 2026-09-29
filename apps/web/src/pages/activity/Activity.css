@@ -295,6 +295,12 @@
   background-color: color-mix(in srgb, var(--color-accent-primary) 16%, transparent);
 }
 
+.activity__needs-you {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
 .activity__more > summary {
   cursor: pointer;
   color: var(--color-fg-secondary);

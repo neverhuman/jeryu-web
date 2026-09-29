@@ -157,12 +157,12 @@ test.describe('Work, one page', () => {
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/41'
     );
 
-    const toggle = page.getByTestId('shift-needs-human');
-    await expect(toggle).toContainText('1 needs a human');
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByTestId('shift-todo-20260918-2200-bbb')).toHaveCount(0);
-    await expect(blocked).toBeVisible();
+    // The red count does not decide for itself what waits on a person: it is one
+    // link to Needs you, which is the list the operator was promised.
+    const chip = page.getByTestId('shift-needs-human');
+    await expect(chip).toContainText('a human · open Needs you');
+    await chip.click();
+    await expect(page).toHaveURL(/\/needs-you$/);
   });
 
   test('admin files one todo from the one-line composer, and many from the opened form @action:shift.add_single @action:shift.add_many', async ({

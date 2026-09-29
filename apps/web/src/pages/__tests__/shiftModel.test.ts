@@ -204,9 +204,6 @@ describe('slotLabel', () => {
     expect(needsHuman(doneUntriaged)).toBe(false);
     expect(needsHuman(TODOS[0])).toBe(false);
     expect(countNeedsHuman(all)).toBe(3);
-    expect(
-      filterShiftTodos(all, { ...DEFAULT_QUEUE_FILTERS, attention: 'human' }).map((t) => t.id)
-    ).toEqual(['blk', 'hand', 'new']);
   });
 
   it('traces a todo from queued to released, saying unknown on an older server', () => {

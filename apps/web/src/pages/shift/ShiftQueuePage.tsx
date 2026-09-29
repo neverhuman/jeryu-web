@@ -60,6 +60,7 @@ import {
 } from './shiftModel';
 import { WorkComposer } from './WorkComposer';
 import { WorkersStrip } from './WorkersStrip';
+import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { groupLive, liveFamilyCounts, todoFamily, todosOfFamily } from './workPageModel';
 
 import '../page.css';
@@ -186,8 +187,11 @@ function FamilyQueue({
     const byFamily = new Map(families.map((f) => [f.name, repoOwners(f)]));
     return (name) => byFamily.get(name) ?? NO_OWNER;
   }, [families]);
-  const waiting = useMemo(() => countNeedsHuman(scoped), [scoped]);
-  const humanOnly = filters.attention === 'human';
+  // What waits on a person is Needs you's answer, not a second one computed
+  // here; the queue's own count stands in only until that answer arrives.
+  const needsYou = useNeedsYou(family);
+  const localWaiting = useMemo(() => countNeedsHuman(scoped), [scoped]);
+  const waiting = needsYou.count ?? localWaiting;
   // What is live or waits on someone is the page; what is finished folds away.
   // A todo someone asked for by id, or a status filter, is shown as asked.
   const asked = focusIds.length > 0 || filters.status !== 'all';
@@ -196,9 +200,7 @@ function FamilyQueue({
     [asked, filtered]
   );
   const showFinished = params.get('finished') === '1';
-  const filtersInUse = Object.entries(filters).some(
-    ([key, value]) => key !== 'attention' && value !== 'all'
-  );
+  const filtersInUse = Object.values(filters).some((value) => value !== 'all');
   const inScope = family ? families.filter((f) => f.name === family) : families;
 
   const set = (key: keyof QueueFilters) => (value: string) => {
@@ -225,17 +227,15 @@ function FamilyQueue({
           <FamilyStrip counts={counts} family={family} onPick={onFamily} />
         ) : null}
         <div className="shift__toolbar" role="group" aria-label="Queue filters">
-          {waiting > 0 || humanOnly ? (
-            <button
-              type="button"
-              className={`shift__needs-human${humanOnly ? ' is-active' : ''}`}
-              aria-pressed={humanOnly}
-              onClick={() => set('attention')(humanOnly ? 'all' : 'human')}
+          {waiting > 0 ? (
+            <Link
+              className="shift__needs-human"
+              to={needsYou.href}
               data-testid="shift-needs-human"
             >
               <span className="page__pill page__pill--danger">{waiting}</span> need
-              {waiting === 1 ? 's' : ''} a human
-            </button>
+              {waiting === 1 ? 's' : ''} a human · open Needs you
+            </Link>
           ) : null}
           <details className="shift__more-filters" open={filtersInUse || undefined}>
             <summary>More filters</summary>

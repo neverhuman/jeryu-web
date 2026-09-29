@@ -207,9 +207,15 @@ test.describe('Pipeline visibility', () => {
 
     // The chip is bound to the URL, which the router updates in a transition:
     // click, then wait for the state rather than asserting it synchronously.
-    await page.getByRole('button', { name: 'Needs a human' }).click();
+    await page.getByRole('button', { name: 'Needed a human' }).click();
     await expect(page).toHaveURL(/needs_human=1/);
-    await expect(page.getByRole('button', { name: 'Needs a human' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: 'Needed a human' })).toHaveAttribute('aria-pressed', 'true');
+    // The log is history; what waits on a person now is one link away.
+    const note = page.getByTestId('activity-needs-you');
+    await expect(note).toContainText('waiting on a person right now');
+    // The same 3 rows the nav badge and Needs you show, not a fourth count.
+    await expect(note).toContainText('(3)');
+    await expect(note.getByRole('link', { name: 'Needs you' })).toHaveAttribute('href', '/needs-you');
     // A chip is a whole view: it replaces the kind filter rather than stacking on it.
     await expect(page).not.toHaveURL(/kind=/);
     await expect(page.getByTestId('activity-event-12')).toBeVisible();

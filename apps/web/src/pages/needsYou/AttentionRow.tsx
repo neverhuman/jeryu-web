@@ -11,18 +11,12 @@ import { FamilyPill } from '../../components/family/FamilyPills';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import { useRepositories } from '../../hooks/useRepositories';
 import { formatAgo } from '../shift/shiftModel';
-import { attentionContext, primaryAction } from './needsYouModel';
+import { attentionContext, primaryAction, repoFamilyMap } from './needsYouModel';
 
 /** `owner/name` → family, for rows whose server payload names only the repository. */
 export function useRepoFamilies(): ReadonlyMap<string, string> {
   const repositories = useRepositories({});
-  return useMemo(() => {
-    const map = new Map<string, string>();
-    for (const repo of repositories.data?.repositories ?? []) {
-      if (repo.family) map.set(`${repo.id.owner}/${repo.id.name}`, repo.family);
-    }
-    return map;
-  }, [repositories.data]);
+  return useMemo(() => repoFamilyMap(repositories.data?.repositories ?? []), [repositories.data]);
 }
 
 export interface FamilyProps {

@@ -16,8 +16,11 @@ import {
   findAttention,
   groupAttention,
   kindLabel,
+  needsYouHref,
+  repoFamilyMap,
   safeHref,
   severityOf,
+  urgentAttention,
   severityTone,
   urgentInArea,
 } from '../needsYou/needsYouModel';
@@ -203,5 +206,26 @@ describe('needsYouModel', () => {
       'pulls'
     );
     expect(rows.map((row) => row.id)).toEqual(['c', 'a']);
+  });
+
+  it('hands the other surfaces one set and one link', () => {
+    // The rows Needs you shows in red: the `watch` claim on 20260919-1 is not one.
+    expect(urgentAttention(ATTENTION).map((item) => item.kind)).toEqual([
+      'release_staged',
+      'todo_blocked',
+      'workers_down',
+    ]);
+    expect(urgentAttention(undefined)).toEqual([]);
+    expect(needsYouHref()).toBe('/needs-you');
+    expect(needsYouHref('')).toBe('/needs-you');
+    // The queue calls it jeryu, the repositories list jeryu-split: one link.
+    expect(needsYouHref('jeryu-split')).toBe('/needs-you?family=jeryu');
+    expect(needsYouHref('a b')).toBe('/needs-you?family=a%20b');
+    expect([
+      ...repoFamilyMap([
+        { id: { owner: 'jeryu', name: 'jeryu-deploy' }, family: 'jeryu-split' },
+        { id: { owner: 'jeryu', name: 'orphan' }, family: null },
+      ]),
+    ]).toEqual([['jeryu/jeryu-deploy', 'jeryu-split']]);
   });
 });

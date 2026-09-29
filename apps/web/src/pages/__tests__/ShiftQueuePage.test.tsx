@@ -210,12 +210,43 @@ describe('ShiftQueuePage', () => {
     expect(within(done).getByRole('list', { name: /PR #48, Merged, Released not yet/ })).toBeInTheDocument();
     expect(within(done).getByText('$2.50')).toBeInTheDocument();
 
-    const toggle = screen.getByTestId('shift-needs-human');
-    expect(toggle).toHaveTextContent('1 needs a human');
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByTestId('shift-todo-20260918-2201-a9z')).toBeNull();
-    expect(screen.getByTestId('shift-todo-blk-1')).toBeInTheDocument();
+    // The chip counts the rows Needs you shows (3 urgent attention items), not
+    // the queue's own idea of which todos wait, and it links to that page.
+    const chip = await waitFor(() => {
+      const found = screen.getByTestId('shift-needs-human');
+      expect(found).toHaveTextContent('3 need a human');
+      return found;
+    });
+    expect(chip).toHaveAttribute('href', '/needs-you');
+  });
+
+  it('scopes the needs-a-human chip to the picked family', async () => {
+    mockShiftApi();
+    renderQueue('/work?family=jeryu');
+    // Only jeryu's row of the attention list counts; jain's does not.
+    const chip = await waitFor(() => {
+      const found = screen.getByTestId('shift-needs-human');
+      expect(found).toHaveTextContent('1 needs a human');
+      return found;
+    });
+    expect(chip).toHaveAttribute('href', '/needs-you?family=jeryu');
+  });
+
+  it('falls back to the queue count while the Needs you list is unavailable', async () => {
+    mockShiftApi((req) => {
+      if (req.pathname === '/api/v1/attention') return errorResponse(503, 'down');
+      return req.pathname === '/api/v1/shift/todos'
+        ? json({
+            generated_at: '2026-09-19T09:00:00Z',
+            todos: [TODOS[0], todo({ id: 'blk-2', title: 'Cut the core tag', status: 'blocked' })],
+          })
+        : undefined;
+    });
+    renderQueue();
+    const chip = await screen.findByTestId('shift-needs-human');
+    // The queue knows of one blocked todo, so the chip still tells the truth.
+    expect(chip).toHaveTextContent('1 needs a human');
+    expect(chip).toHaveAttribute('href', '/needs-you');
   });
 
   it('shows shifts still in review, folds finished ones, and links repos under their hosting owner', async () => {

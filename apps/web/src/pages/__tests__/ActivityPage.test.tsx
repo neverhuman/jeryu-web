@@ -73,7 +73,13 @@ describe('ActivityPage', () => {
     expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?family=jeryu&needs_human=true&limit=100')).toBe(
       true
     );
-    expect(screen.getByRole('button', { name: 'Needs a human' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Needed a human' })).toHaveAttribute('aria-pressed', 'true');
+    // The log does not answer "what needs a human now": Needs you does, on the same family.
+    expect(screen.getByTestId('activity-needs-you')).toHaveTextContent('waiting on a person right now');
+    expect(screen.getByRole('link', { name: 'Needs you' })).toHaveAttribute(
+      'href',
+      '/needs-you?family=jeryu'
+    );
     expect(screen.getByLabelText('Family')).toHaveValue('jeryu');
     // A chip is one click and keeps the family.
     fireEvent.click(screen.getByRole('button', { name: 'Gates' }));

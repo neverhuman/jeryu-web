@@ -381,10 +381,11 @@
   color: var(--color-accent-danger);
   font: inherit;
   font-size: var(--font-size-sm);
+  text-decoration: none;
   cursor: pointer;
 }
 
-.shift__needs-human.is-active {
+.shift__needs-human:hover {
   background-color: var(--color-accent-danger-bg);
 }
 

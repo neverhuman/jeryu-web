@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { vi } from 'vitest';
 
+import { ATTENTION } from './pipelineTestData';
 import { FAMILIES, HISTORY, SHIFTS, TODOS, WORKERS } from './shiftTestData';
 
 export interface Recorded {
@@ -54,6 +55,9 @@ export function mockShiftApi(override?: Override): Recorded[] {
         return json(WORKERS);
       case '/api/v1/shift/workers/history':
         return json(HISTORY);
+      // The Work page reads the Needs you list for its red chip.
+      case '/api/v1/attention':
+        return json(ATTENTION);
       default:
         return errorResponse(404, `unmocked ${url.pathname}`);
     }

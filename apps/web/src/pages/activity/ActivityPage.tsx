@@ -11,6 +11,7 @@ import { ActionButton } from '../../components/action/ActionButton';
 import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { usePipelineNudge } from '../../hooks/usePipeline';
+import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { formatCost } from '../shift/shiftModel';
 import { useShiftFamilies } from '../../hooks/useShift';
 import {
@@ -173,6 +174,7 @@ function Filters({
   const families = useShiftFamilies();
   const names = families.data?.families.map((family) => family.name) ?? [];
   const current = activeChip(filters);
+  const needsYou = useNeedsYou(filters.family);
   return (
     <section className="activity__filters" aria-label="Activity filters">
       <div className="activity__chips" role="group" aria-label="Show">
@@ -188,6 +190,14 @@ function Filters({
           </button>
         ))}
       </div>
+      {current === 'human' ? (
+        // The log says what happened; what is waiting now has one home.
+        <p className="activity__needs-you" data-testid="activity-needs-you">
+          These are events that were flagged. What is waiting on a person right now
+          is on <Link to={needsYou.href}>Needs you</Link>
+          {needsYou.count === null ? '' : ` (${needsYou.count})`}.
+        </p>
+      ) : null}
       {names.length > 1 || filters.family ? (
         <label className="activity__family">
           Family

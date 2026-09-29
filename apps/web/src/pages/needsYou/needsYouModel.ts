@@ -2,6 +2,9 @@
 
 import type { AttentionItem, AttentionResponse, AttentionSeverity } from '../../api/types';
 
+/** Where "what needs a human" lives; every other surface links here. */
+export const NEEDS_YOU_PATH = '/needs-you';
+
 export const SEVERITIES: readonly AttentionSeverity[] = ['critical', 'action', 'watch'];
 
 export const SEVERITY_LABEL: Record<AttentionSeverity, string> = {
@@ -267,4 +270,30 @@ export function urgentInArea(
 /** The nav badge for one page: its critical + action rows. */
 export function areaBadgeCount(data: AttentionResponse | undefined, area: AttentionArea): number {
   return urgentInArea(data, area).length;
+}
+
+/** A link to Needs you, kept on one family when the caller is on one. */
+export function needsYouHref(family?: string | null): string {
+  const name = familyName(family);
+  return name ? `${NEEDS_YOU_PATH}?family=${encodeURIComponent(name)}` : NEEDS_YOU_PATH;
+}
+
+/**
+ * The rows Needs you shows in red: a person is the next step. This is the one
+ * derivation of that set — other surfaces read it rather than deciding for
+ * themselves which of their own rows wait on someone.
+ */
+export function urgentAttention(data: AttentionResponse | undefined): AttentionItem[] {
+  return (data?.items ?? []).filter((item) => severityOf(item) !== 'watch');
+}
+
+/** `owner/name` → family, as the repository list reports it. */
+export function repoFamilyMap(
+  repositories: readonly { id: { owner: string; name: string }; family?: string | null }[]
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const repo of repositories) {
+    if (repo.family) map.set(`${repo.id.owner}/${repo.id.name}`, repo.family);
+  }
+  return map;
 }

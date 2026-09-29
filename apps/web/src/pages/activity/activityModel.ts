@@ -353,7 +353,9 @@ export interface ActivityChip {
 
 export const ACTIVITY_CHIPS: readonly ActivityChip[] = [
   { id: 'all', label: 'All' },
-  { id: 'human', label: 'Needs a human', needsHuman: true },
+  // Past tense on purpose: these are events that were flagged, not the list of
+  // what waits on someone now — that is Needs you, linked beside the chips.
+  { id: 'human', label: 'Needed a human', needsHuman: true },
   { id: 'todos', label: 'Todos', kind: 'todo.' },
   { id: 'gates', label: 'Gates', kind: 'gate.' },
   // A verdict is `pr.review`; the reviewer's start/finish beats are `review.*`.
