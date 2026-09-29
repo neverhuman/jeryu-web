@@ -59,15 +59,49 @@ describe('dependency graph', () => {
     ]);
   });
 
-  it('settles depths on a dependency cycle instead of deepening forever', () => {
+  it('holds two repos that depend on each other at one depth', () => {
     const nodes = [node('repo:a'), node('repo:b')];
     const depths = dependencyDepths(nodes, [
       dependsOn('repo:a', 'repo:b', {}),
       dependsOn('repo:b', 'repo:a', {}),
     ]);
 
-    expect(depths.get('repo:a')).toBeLessThanOrEqual(nodes.length);
-    expect(depths.get('repo:b')).toBeLessThanOrEqual(nodes.length);
+    expect(depths.get('repo:a')).toBe(0);
+    expect(depths.get('repo:b')).toBe(0);
+  });
+
+  it('measures depth by the chain, not by the place in the node list', () => {
+    // A loop anywhere in the graph used to push every repo past it out to the
+    // node count; here the loop is one link of a three-hop chain.
+    const ids = Array.from({ length: 27 }, (_, i) => `repo:r${i}`);
+    const nodes = ids.map(node);
+    const depths = dependencyDepths(nodes, [
+      dependsOn('repo:r0', 'repo:r1', {}),
+      dependsOn('repo:r1', 'repo:r2', {}),
+      dependsOn('repo:r2', 'repo:r1', {}),
+      dependsOn('repo:r2', 'repo:r26', {}),
+      ...ids.slice(3, 26).map((id) => dependsOn('repo:r0', id, {})),
+    ]);
+
+    expect(depths.get('repo:r0')).toBe(0);
+    expect(depths.get('repo:r1')).toBe(1);
+    expect(depths.get('repo:r2')).toBe(1);
+    expect(depths.get('repo:r26')).toBe(2);
+    expect(depths.get('repo:r10')).toBe(1);
+  });
+
+  it('ignores depends_on edges pointing outside the nodes it was given', () => {
+    const depths = dependencyDepths(
+      [node('repo:a'), node('repo:b')],
+      [
+        dependsOn('repo:gone', 'repo:a', {}),
+        dependsOn('repo:a', 'repo:b', {}),
+      ]
+    );
+
+    expect(depths.get('repo:a')).toBe(0);
+    expect(depths.get('repo:b')).toBe(1);
+    expect(depths.has('repo:gone')).toBe(false);
   });
 
   it('colours an edge by the pin behind it, and invents nothing without one', () => {

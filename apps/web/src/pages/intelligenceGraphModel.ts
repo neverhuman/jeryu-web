@@ -176,31 +176,117 @@ export function buildDependencyGraph(
 }
 
 /**
- * Longest `depends_on` chain reaching each node. A dependency cycle cannot
- * deepen a node forever: no chain is longer than the graph has nodes, so the
- * depth stops there.
+ * Longest `depends_on` chain reaching each node. Repos that depend on each
+ * other, directly or through a longer loop, sit at one depth together: a loop
+ * has no deeper end, so following it round must not push either repo further
+ * out. Everything else is one hop deeper than the deepest repo depending on it.
  */
 export function dependencyDepths(
   nodes: GraphNode[],
   edges: GraphEdge[]
 ): Map<string, number> {
-  const depths = new Map(nodes.map((node) => [node.id, 0]));
-  const deepest = Math.max(0, nodes.length - 1);
-  for (let round = 0; round < nodes.length; round += 1) {
-    let moved = false;
-    for (const edge of edges) {
-      const source = depths.get(edge.source);
-      const target = depths.get(edge.target);
-      if (source === undefined || target === undefined) continue;
-      const next = Math.min(source + 1, deepest);
-      if (target < next) {
-        depths.set(edge.target, next);
-        moved = true;
+  const known = new Set(nodes.map((node) => node.id));
+  const inside = edges.filter(
+    (edge) => known.has(edge.source) && known.has(edge.target)
+  );
+  const loop = mutualDependencies(nodes, inside);
+  const incoming = new Map(nodes.map((node) => [loop.get(node.id) ?? '', 0]));
+  const outgoing = new Map<string, string[]>();
+  for (const edge of inside) {
+    const source = loop.get(edge.source) ?? '';
+    const target = loop.get(edge.target) ?? '';
+    if (source === target) continue;
+    outgoing.set(source, [...(outgoing.get(source) ?? []), target]);
+    incoming.set(target, (incoming.get(target) ?? 0) + 1);
+  }
+  const loopDepths = new Map(Array.from(incoming.keys(), (id) => [id, 0]));
+  const ready = Array.from(incoming.entries())
+    .filter(([, count]) => count === 0)
+    .map(([id]) => id);
+  while (ready.length > 0) {
+    const id = ready.pop() as string;
+    for (const next of outgoing.get(id) ?? []) {
+      const depth = (loopDepths.get(id) ?? 0) + 1;
+      if ((loopDepths.get(next) ?? 0) < depth) loopDepths.set(next, depth);
+      const left = (incoming.get(next) ?? 0) - 1;
+      incoming.set(next, left);
+      if (left === 0) ready.push(next);
+    }
+  }
+  return new Map(
+    nodes.map((node) => [
+      node.id,
+      loopDepths.get(loop.get(node.id) ?? '') ?? 0,
+    ])
+  );
+}
+
+/**
+ * Names, for each node, the group of nodes it depends on and is depended on by
+ * in turn — its strongly connected component. A node in no loop is its own
+ * group. Tarjan's algorithm, run iteratively so a deep chain cannot overflow
+ * the call stack.
+ */
+function mutualDependencies(
+  nodes: GraphNode[],
+  edges: GraphEdge[]
+): Map<string, string> {
+  const outgoing = new Map<string, string[]>();
+  for (const edge of edges) {
+    outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge.target]);
+  }
+  const index = new Map<string, number>();
+  const low = new Map<string, number>();
+  const onStack = new Set<string>();
+  const stack: string[] = [];
+  const group = new Map<string, string>();
+  let counter = 0;
+
+  for (const root of nodes) {
+    if (index.has(root.id)) continue;
+    const work: { id: string; next: number }[] = [{ id: root.id, next: 0 }];
+    index.set(root.id, counter);
+    low.set(root.id, counter);
+    counter += 1;
+    stack.push(root.id);
+    onStack.add(root.id);
+    while (work.length > 0) {
+      const frame = work[work.length - 1];
+      const neighbours = outgoing.get(frame.id) ?? [];
+      if (frame.next < neighbours.length) {
+        const next = neighbours[frame.next];
+        frame.next += 1;
+        if (!index.has(next)) {
+          index.set(next, counter);
+          low.set(next, counter);
+          counter += 1;
+          stack.push(next);
+          onStack.add(next);
+          work.push({ id: next, next: 0 });
+        } else if (onStack.has(next)) {
+          low.set(frame.id, Math.min(low.get(frame.id) ?? 0, index.get(next) ?? 0));
+        }
+        continue;
+      }
+      work.pop();
+      const parent = work[work.length - 1];
+      if (parent) {
+        low.set(
+          parent.id,
+          Math.min(low.get(parent.id) ?? 0, low.get(frame.id) ?? 0)
+        );
+      }
+      if (low.get(frame.id) === index.get(frame.id)) {
+        for (;;) {
+          const member = stack.pop() as string;
+          onStack.delete(member);
+          group.set(member, frame.id);
+          if (member === frame.id) break;
+        }
       }
     }
-    if (!moved) break;
   }
-  return depths;
+  return group;
 }
 
 function layoutByDepth(
