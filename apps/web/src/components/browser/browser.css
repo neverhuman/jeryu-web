@@ -34,6 +34,12 @@
   color: var(--color-fg-muted);
 }
 
+.breadcrumbs__prefix {
+  margin-right: var(--space-1);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
 .breadcrumbs__link {
   color: var(--color-fg-primary);
   text-decoration: none;

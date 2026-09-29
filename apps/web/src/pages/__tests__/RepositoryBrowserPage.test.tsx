@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -163,6 +163,16 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(screen.queryByRole('link', { name: 'Browse code' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Default branch' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Agents' })).toBeNull();
+  });
+
+  it('labels the host crumb, so the forge and the owner under it are told apart', async () => {
+    renderAt(FRONT);
+    const crumbs = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getByRole('link', { name: 'host jeryu' })).toHaveAttribute(
+      'href',
+      '/repos?host=jeryu'
+    );
+    expect(within(crumbs).getByText('host')).toBeInTheDocument();
   });
 
   it('keeps the Files panel and its open folders while a file opens, and highlights the file', async () => {

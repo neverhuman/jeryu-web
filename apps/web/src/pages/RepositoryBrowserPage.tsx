@@ -204,7 +204,9 @@ export function RepositoryBrowserPage({
       : front;
   const crumbs: BreadcrumbSegment[] = [
     { label: 'Repos', to: '/repos' },
-    { label: provider, to: `/repos?host=${provider}` },
+    // The host is often named like the owner under it ("jeryu / … / jeryu"):
+    // say which one it is so the repeat reads as two different things.
+    { label: provider, prefix: 'host', to: `/repos?host=${provider}` },
     ...(summary.family
       ? [{ label: summary.family, to: `/repos/family/${encodeURIComponent(summary.family)}` }]
       : []),

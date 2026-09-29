@@ -11,7 +11,13 @@ import './browser.css';
 export interface BreadcrumbSegment {
   label: string;
   to?: string;
-  /** Accessible label override; defaults to `label`. */
+  /**
+   * A short qualifier shown before the label, for a crumb whose name alone
+   * says nothing about what it names (a host called the same as the owner
+   * under it, say).
+   */
+  prefix?: string;
+  /** Accessible label override; defaults to `prefix` + `label`. */
   ariaLabel?: string;
 }
 
@@ -33,16 +39,24 @@ export function Breadcrumbs({
       <ol className="breadcrumbs__list">
         {segments.map((seg, idx) => {
           const isLast = idx === segments.length - 1;
+          const name =
+            seg.ariaLabel ??
+            (seg.prefix ? `${seg.prefix} ${seg.label}` : seg.label);
           return (
             <li
               key={`${seg.label}-${idx}`}
               className="breadcrumbs__item"
             >
+              {seg.prefix ? (
+                <span className="breadcrumbs__prefix" aria-hidden="true">
+                  {seg.prefix}
+                </span>
+              ) : null}
               {seg.to && !isLast ? (
                 <Link
                   to={seg.to}
                   className="breadcrumbs__link"
-                  aria-label={seg.ariaLabel ?? seg.label}
+                  aria-label={name}
                 >
                   {seg.label}
                 </Link>
@@ -52,6 +66,7 @@ export function Breadcrumbs({
                     isLast ? 'breadcrumbs__current' : 'breadcrumbs__link'
                   }
                   aria-current={isLast ? 'page' : undefined}
+                  aria-label={seg.prefix ? name : undefined}
                 >
                   {seg.label}
                 </span>
