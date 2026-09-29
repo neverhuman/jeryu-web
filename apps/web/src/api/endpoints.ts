@@ -5,6 +5,7 @@
 
 import type { RepoGraphInclude } from './types/controlPlane';
 import type { PipelineEventsQuery } from './types/pipeline';
+import type { SearchQuery } from './types/search';
 
 export const endpoints = {
   bootstrap: (): string => '/api/v1/bootstrap',
@@ -23,6 +24,14 @@ export const endpoints = {
     `/api/v1/admin/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/grants`,
   adminRepoGrant: (owner: string, repo: string, login: string): string =>
     `/api/v1/admin/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/grants/${encodeURIComponent(login)}`,
+
+  /** Product-wide search; see `jeryu-deploy/docs/search.md`. */
+  search: (query: SearchQuery): string => {
+    const params = new URLSearchParams({ q: query.q });
+    if (query.kind && query.kind.length > 0) params.set('kind', query.kind.join(','));
+    if (query.limit !== undefined) params.set('limit', String(query.limit));
+    return `/api/v1/search?${params.toString()}`;
+  },
 
   repos: (): string => '/api/v1/repos',
   repo: (id: string): string => `/api/v1/repos/${encodeURIComponent(id)}`,

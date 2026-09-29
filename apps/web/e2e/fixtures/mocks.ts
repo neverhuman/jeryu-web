@@ -329,6 +329,63 @@ export async function mockRepoList(
   });
 }
 
+export interface MockSearchHit {
+  kind: 'repository' | 'pull_request' | 'issue' | 'todo' | 'activity';
+  id: string;
+  title: string;
+  context?: string;
+  snippet?: string;
+  path: string;
+}
+
+/**
+ * Mock `GET /api/v1/search` (`jeryu-deploy/docs/search.md`). `hits` is the
+ * whole corpus; the mock matches `?q=` against every hit's title, context and
+ * snippet the way the server matches a name or a body, resolves a `name#12` reference against
+ * the hit ids, and answers with the kinds it searched so the page renders one
+ * section per kind.
+ */
+export async function mockSearch(
+  page: Page,
+  hits: MockSearchHit[],
+  options: { kinds?: MockSearchHit['kind'][] } = {}
+): Promise<void> {
+  const kinds = options.kinds ?? ['repository', 'pull_request', 'issue', 'todo'];
+  await page.route('**/api/v1/search**', async (route: Route, request) => {
+    if (request.method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    const url = new URL(request.url());
+    const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
+    const reference = /^([\w./-]+)#(\d+)$/.exec(q);
+    const results = hits
+      .filter((hit) => kinds.includes(hit.kind))
+      .filter((hit) =>
+        reference
+          ? hit.id.toLowerCase().endsWith(`${reference[1]}#${reference[2]}`)
+          : `${hit.title} ${hit.context ?? ''} ${hit.snippet ?? ''}`
+              .toLowerCase()
+              .includes(q)
+      );
+    const counts: Record<string, number> = {};
+    for (const hit of results) counts[hit.kind] = (counts[hit.kind] ?? 0) + 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generated_at: '2026-05-26T00:00:00Z',
+        query: url.searchParams.get('q') ?? '',
+        kinds,
+        counts,
+        limit: 10,
+        results,
+        problems: [],
+      }),
+    });
+  });
+}
+
 /**
  * Mock `GET /api/v1/repos/{id}` so the SPA's `useResolveRepo` returns a
  * fully populated `RepositorySummary` without touching the live forge.
