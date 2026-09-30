@@ -150,7 +150,7 @@ describe('ReleasesPage — family release board', () => {
     );
   });
 
-  it('lays every lane on the declared columns, with unused columns and tool rows shown', async () => {
+  it('lays every lane on the declared columns, with skipped columns and tool rows shown', async () => {
     serveBoards();
     open('/releases?family=globex');
     const head = await screen.findByTestId('release-board-columns');
