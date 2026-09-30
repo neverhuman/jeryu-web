@@ -33,7 +33,12 @@ import {
 
 import { useAttention } from '../hooks/usePipeline';
 import { useAuth } from '../hooks/useAuth';
-import { attentionBadgeCount } from '../pages/needsYou/needsYouModel';
+import {
+  AREA_LABEL,
+  areaBadgeCount,
+  attentionBadgeCount,
+  type AttentionArea,
+} from '../pages/needsYou/needsYouModel';
 import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
@@ -43,25 +48,29 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   end?: boolean;
-  /** `attention`: show the critical + action count from `/api/v1/attention`. */
-  badge?: 'attention';
+  /**
+   * `attention`: every critical + action row from `/api/v1/attention`. An area:
+   * only the rows whose cause lives on that page, so each page says what on it
+   * is waiting on a person.
+   */
+  badge?: 'attention' | AttentionArea;
 }
 
 /** What an operator opens every day, in the order the work flows. */
 export const PRIMARY_NAV: NavItem[] = [
   { to: NEEDS_YOU_PATH, label: 'Needs you', icon: Siren, badge: 'attention' },
   { to: '/activity', label: 'Activity', icon: Activity },
-  { to: '/work', label: 'Work', icon: ClipboardList },
+  { to: '/work', label: 'Work', icon: ClipboardList, badge: 'work' },
   // The route stays `/pull-room`; the page lists pull requests, so it says so.
-  { to: '/pull-room', label: 'Pull requests', icon: GitMerge },
-  { to: '/releases', label: 'Releases', icon: Rocket },
+  { to: '/pull-room', label: 'Pull requests', icon: GitMerge, badge: 'pulls' },
+  { to: '/releases', label: 'Releases', icon: Rocket, badge: 'releases' },
   { to: '/repos', label: 'Repositories', icon: FolderGit2 },
   // Settings is reached from the top-right account control (UserMenu).
 ];
 
 /** How the machinery is doing: looked at when something is off, not daily. */
 export const SYSTEM_NAV: NavItem[] = [
-  { to: '/runners', label: 'Runners', icon: ServerCog },
+  { to: '/runners', label: 'Runners', icon: ServerCog, badge: 'system' },
   // `end`: Dependencies lives under /intelligence and is its own destination.
   { to: '/intelligence', label: 'Intelligence', icon: Brain, end: true },
   { to: DEPENDENCIES_PATH, label: 'Dependencies', icon: Share2 },
@@ -71,6 +80,29 @@ export const SYSTEM_NAV: NavItem[] = [
 
 const SYSTEM_OPEN_KEY = 'jeryu.leftNav.systemOpen.v1';
 const SYSTEM_LIST_ID = 'left-nav-system';
+
+/** A red count when something on that destination waits on a person; nothing otherwise. */
+function NavBadge({
+  count,
+  area,
+}: {
+  count: number;
+  area: NavItem['badge'];
+}): JSX.Element | null {
+  if (!area || count <= 0) return null;
+  const things = `${count} item${count === 1 ? '' : 's'}`;
+  return (
+    <span
+      className="left-nav__badge"
+      data-testid={area === 'attention' ? 'needs-you-badge' : `nav-badge-${area}`}
+      aria-label={
+        area === 'attention' ? `${things} need you` : `${things} need you in ${AREA_LABEL[area]}`
+      }
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 /** True when `pathname` is one of the System destinations or inside one. */
 export function isSystemPath(pathname: string): boolean {
@@ -130,15 +162,16 @@ export function LeftNav(): JSX.Element {
     >
       <item.icon aria-hidden="true" size={16} />
       {item.label}
-      {item.badge === 'attention' && needsYou > 0 ? (
-        <span
-          className="left-nav__badge"
-          data-testid="needs-you-badge"
-          aria-label={`${needsYou} item${needsYou === 1 ? '' : 's'} need you`}
-        >
-          {needsYou > 99 ? '99+' : needsYou}
-        </span>
-      ) : null}
+      <NavBadge
+        count={
+          item.badge === 'attention'
+            ? needsYou
+            : item.badge
+              ? areaBadgeCount(attention.data, item.badge)
+              : 0
+        }
+        area={item.badge}
+      />
     </Link>
   );
 
@@ -161,6 +194,10 @@ export function LeftNav(): JSX.Element {
           <ChevronRight aria-hidden="true" size={14} />
         )}
         System
+        {/* Closed, the group still says when a runner or worker needs you. */}
+        {systemOpen ? null : (
+          <NavBadge count={areaBadgeCount(attention.data, 'system')} area="system" />
+        )}
       </button>
       <div id={SYSTEM_LIST_ID} className="left-nav__sublist" hidden={!systemOpen}>
         {systemOpen ? SYSTEM_NAV.map(renderItem) : null}

@@ -6,6 +6,8 @@ import {
   familyName,
   familyOf,
   filterByFamily,
+  areaBadgeCount,
+  attentionArea,
   attentionBadgeCount,
   attentionContext,
   commandPlace,
@@ -17,6 +19,7 @@ import {
   safeHref,
   severityOf,
   severityTone,
+  urgentInArea,
 } from '../needsYou/needsYouModel';
 import { ATTENTION, attentionItem } from './pipelineTestData';
 
@@ -159,5 +162,46 @@ describe('needsYouModel', () => {
     expect(filterByFamily(items, 'jeryu', repoFamilies)).toHaveLength(2);
     expect(filterByFamily(items, FORGE_FAMILY, repoFamilies)).toHaveLength(3);
     expect(filterByFamily(items, '', repoFamilies)).toHaveLength(6);
+  });
+
+  it('files each kind under the page where its cause lives', () => {
+    expect(attentionArea('todo_blocked')).toBe('work');
+    expect(attentionArea('shift_without_pr')).toBe('work');
+    expect(attentionArea('pr_checks_failing')).toBe('pulls');
+    expect(attentionArea('queue_failed')).toBe('pulls');
+    expect(attentionArea('reviewer_stuck')).toBe('pulls');
+    expect(attentionArea('release_staged')).toBe('releases');
+    expect(attentionArea('deploy_failed')).toBe('releases');
+    expect(attentionArea('pin_behind')).toBe('releases');
+    expect(attentionArea('gate_runner_down')).toBe('system');
+    expect(attentionArea('workers_down')).toBe('system');
+    expect(attentionArea('something_new')).toBeNull();
+  });
+
+  it('counts only critical + action rows per page, and the pages add up to the badge', () => {
+    expect(areaBadgeCount(ATTENTION, 'work')).toBe(1);
+    expect(areaBadgeCount(ATTENTION, 'releases')).toBe(1);
+    expect(areaBadgeCount(ATTENTION, 'system')).toBe(1);
+    expect(areaBadgeCount(ATTENTION, 'pulls')).toBe(0);
+    expect(areaBadgeCount(undefined, 'work')).toBe(0);
+    const total = (['work', 'pulls', 'releases', 'system'] as const)
+      .map((area) => areaBadgeCount(ATTENTION, area))
+      .reduce((a, b) => a + b, 0);
+    expect(total).toBe(attentionBadgeCount(ATTENTION));
+  });
+
+  it('lists a page\'s rows critical first, never a watch row', () => {
+    const rows = urgentInArea(
+      {
+        ...ATTENTION,
+        items: [
+          attentionItem({ id: 'w', kind: 'pr_awaiting_approval', severity: 'watch' }),
+          attentionItem({ id: 'a', kind: 'pr_ready_to_merge', severity: 'action' }),
+          attentionItem({ id: 'c', kind: 'pr_checks_failing', severity: 'critical' }),
+        ],
+      },
+      'pulls'
+    );
+    expect(rows.map((row) => row.id)).toEqual(['c', 'a']);
   });
 });

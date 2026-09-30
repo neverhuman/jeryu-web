@@ -25,6 +25,7 @@ import {
   useShiftTodoAction,
   useShiftTodos,
 } from '../../hooks/useShift';
+import { NeedsYouHere } from '../needsYou/NeedsYouHere';
 import { ShiftError } from './shiftCommon';
 import {
   DEFAULT_QUEUE_FILTERS,
@@ -112,6 +113,8 @@ export function ShiftQueuePage(): JSX.Element {
           Add work, see who is working, and follow every family&apos;s queue to main.
         </p>
       </header>
+
+      <NeedsYouHere area="work" family={family} onFamily={setFamily} />
 
       {families.isPending ? (
         <LoadingState title="Loading shift families…" variant="message" />

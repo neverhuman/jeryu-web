@@ -11,12 +11,9 @@
 // system is doing, so calm reads as alive rather than broken.
 
 import { CircleCheck } from 'lucide-react';
-import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
-import type { AttentionItem } from '../../api/types';
-import { FamilyPill, FamilyStrip } from '../../components/family/FamilyPills';
-import { CopyCommand } from '../../components/shellCommand/CopyCommand';
+import { FamilyStrip } from '../../components/family/FamilyPills';
 import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
 import { useControlPlaneRunners } from '../../hooks/useControlPlaneRunners';
 import {
@@ -25,16 +22,14 @@ import {
   usePipelineEvents,
   usePipelineNudge,
 } from '../../hooks/usePipeline';
-import { useRepositories } from '../../hooks/useRepositories';
 import { useShiftWorkers } from '../../hooks/useShift';
 import { formatAgo } from '../shift/shiftModel';
+import { AttentionRow, useRepoFamilies, type FamilyProps } from './AttentionRow';
 import {
-  attentionContext,
   groupAttention,
   familyCounts,
   familyOf,
   filterByFamily,
-  primaryAction,
   severityTone,
   systemPulse,
   type AttentionGroup,
@@ -50,14 +45,7 @@ export function NeedsYouPage(): JSX.Element {
   // sets it, so "everything waiting on me for jeryu" is one click and a link.
   const [searchParams, setSearchParams] = useSearchParams();
   const family = searchParams.get('family') ?? '';
-  const repositories = useRepositories({});
-  const repoFamilies = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const repo of repositories.data?.repositories ?? []) {
-      if (repo.family) map.set(`${repo.id.owner}/${repo.id.name}`, repo.family);
-    }
-    return map;
-  }, [repositories.data]);
+  const repoFamilies = useRepoFamilies();
   const setFamily = (next: string): void => {
     const params = new URLSearchParams(searchParams);
     if (next && next !== family) params.set('family', next);
@@ -135,12 +123,6 @@ export function NeedsYouPage(): JSX.Element {
   );
 }
 
-interface FamilyProps {
-  familyFor: (item: AttentionItem) => string;
-  onPick: (family: string) => void;
-  picked: string;
-}
-
 function AttentionSection({
   group,
   now,
@@ -172,66 +154,6 @@ function AttentionList({
         <AttentionRow key={item.id} item={item} tone={tone} now={now} {...familyProps} />
       ))}
     </ul>
-  );
-}
-
-function AttentionRow({
-  item,
-  tone,
-  now,
-  familyFor,
-  onPick,
-  picked,
-}: {
-  item: AttentionItem;
-  tone: 'danger' | 'neutral';
-  now: Date;
-} & FamilyProps): JSX.Element {
-  const action = primaryAction(item);
-  const family = familyFor(item);
-  return (
-    <li className={`needs-you__row needs-you__row--${tone}`} data-testid={`needs-you-item-${item.id}`}>
-      <FamilyPill family={family} picked={picked} onPick={onPick} />
-      <div className="needs-you__main">
-        <p className="needs-you__title-line">
-          <span className="needs-you__title">{item.title}</span>
-          <span className="needs-you__context">
-            {attentionContext(item)}
-            {item.since ? (
-              <>
-                {' · '}
-                <time dateTime={item.since} title={item.since}>
-                  {formatAgo(item.since, now)}
-                </time>
-              </>
-            ) : null}
-          </span>
-        </p>
-        {item.reason ? (
-          <p className="needs-you__reason" title={item.reason}>
-            {item.reason}
-          </p>
-        ) : null}
-      </div>
-      {action?.type === 'command' ? (
-        <CopyCommand
-          command={action.command}
-          where={action.where}
-          label={`${action.label} command for ${item.title}`}
-        />
-      ) : action?.type === 'link' ? (
-        // One link, stretched over the row (CSS): the whole row leads there,
-        // and there is still exactly one thing to activate.
-        <Link
-          className="needs-you__open"
-          to={action.to}
-          aria-label={`${action.label}: ${item.title}`}
-          title={item.reason ?? undefined}
-        >
-          {action.label} →
-        </Link>
-      ) : null}
-    </li>
   );
 }
 

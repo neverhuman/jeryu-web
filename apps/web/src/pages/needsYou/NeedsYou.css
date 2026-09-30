@@ -135,3 +135,32 @@
     white-space: normal;
   }
 }
+
+/* "Waiting on you here": the page's own share of Needs you, above its content. */
+.needs-you__here {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.needs-you__here-all {
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  font-weight: normal;
+}
+
+.needs-you__here .page__section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* A long command wraps inside the strip: a clipped one would be a scroll region
+   that no keyboard can reach (axe scrollable-region-focusable). */
+.needs-you__here .copy-command__text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  overflow: visible;
+}

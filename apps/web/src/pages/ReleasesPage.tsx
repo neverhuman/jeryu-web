@@ -50,6 +50,8 @@ import {
   type EnvironmentRow,
 } from './releasesModel';
 
+import { NeedsYouHere } from './needsYou/NeedsYouHere';
+
 import './page.css';
 import './ReleasesPage.css';
 
@@ -100,6 +102,8 @@ export function ReleasesPage(): JSX.Element {
           </Link>
         </nav>
       </header>
+
+      <NeedsYouHere area="releases" family={params.get('family') ?? ''} />
 
       {perRepository ? repositoryView : <ReleaseBoardView fallback={repositoryView} />}
     </div>

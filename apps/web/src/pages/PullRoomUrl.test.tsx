@@ -5,6 +5,10 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { PullRoomPage } from './PullRoomPage';
 
+// The page's "Waiting on you here" strip has its own query and tests
+// (needsYouModel, e2e 29-pipeline); these URL tests mock every data hook.
+vi.mock('./needsYou/NeedsYouHere', () => ({ NeedsYouHere: () => null }));
+
 vi.mock('../hooks/useControlPlane', () => ({ CONTROL_PLANE_MAX_LIMIT: 500, useControlPlane: () => ({
   isLoading: false, isError: false,
   data: {

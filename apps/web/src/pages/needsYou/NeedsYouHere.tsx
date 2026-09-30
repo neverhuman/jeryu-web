@@ -1,0 +1,89 @@
+// NeedsYouHere.tsx — the slice of "Needs you" that belongs to the page it sits
+// on, shown above that page's own content: failing checks and queue failures on
+// Pull requests, blocked todos and shifts without a PR on Work, staged or failed
+// releases on Releases. It lists the rows /needs-you lists, from one shared query, so the
+// left-nav count, this strip and that page always agree. Nothing waiting here
+// renders nothing: calm pages stay calm.
+
+import { Link, useNavigate } from 'react-router-dom';
+
+import { useAuth } from '../../hooks/useAuth';
+import { useAttention } from '../../hooks/usePipeline';
+import { AttentionRow, useRepoFamilies } from './AttentionRow';
+import {
+  AREA_LABEL,
+  familyOf,
+  filterByFamily,
+  severityOf,
+  severityTone,
+  urgentInArea,
+  type AttentionArea
+} from './needsYouModel';
+
+import './NeedsYou.css';
+
+/** Rows shown before the strip hands over to /needs-you. */
+const SHOWN = 5;
+
+export function NeedsYouHere({
+  area,
+  family = '',
+  onFamily
+}: {
+  area: AttentionArea;
+  /** The page's own family filter, when it has one; the strip follows it. */
+  family?: string;
+  /** How the page narrows to a family; without it a pill opens /needs-you for that family. */
+  onFamily?: (family: string) => void;
+}): JSX.Element | null {
+  const { user } = useAuth();
+  const attention = useAttention(user?.role === 'admin');
+  const repoFamilies = useRepoFamilies();
+  const navigate = useNavigate();
+
+  const items = filterByFamily(
+    urgentInArea(attention.data, area),
+    family,
+    repoFamilies
+  );
+  if (items.length === 0) return null;
+
+  const shown = items.slice(0, SHOWN);
+  const more = items.length - shown.length;
+  const pick =
+    onFamily ??
+    ((next: string): void => {
+      void navigate(`/needs-you?family=${encodeURIComponent(next)}`);
+    });
+  const now = new Date();
+  const title = `${items.length} waiting on you in ${AREA_LABEL[area]}`;
+
+  return (
+    <section
+      className="needs-you__here"
+      aria-label={title}
+      data-testid={`needs-you-here-${area}`}
+    >
+      <h2 className="page__section-title">
+        <span className="page__pill page__pill--danger">{items.length}</span>{' '}
+        Waiting on you here
+        <Link className="needs-you__here-all" to="/needs-you">
+          {more > 0 ? `${more} more in Needs you →` : 'All of Needs you →'}
+        </Link>
+      </h2>
+      <ul className="needs-you__list">
+        {shown.map((item) => (
+          <AttentionRow
+            key={item.id}
+            item={item}
+            tone={severityTone(severityOf(item))}
+            now={now}
+            familyFor={(row) => familyOf(row, repoFamilies)}
+            onPick={pick}
+            picked={family}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}

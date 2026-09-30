@@ -111,6 +111,14 @@ test.describe('Pipeline visibility', () => {
     await expect(page).toHaveURL(/\/work\?family=jeryu&todo=20260919-130515-f8cc66$/);
     // The badge counts critical + action (not watch) and follows the operator.
     await expect(page.getByTestId('needs-you-badge')).toHaveText('3');
+    // Each page carries its own share, and Work shows its row above the queue.
+    await expect(page.getByTestId('nav-badge-work')).toHaveText('1');
+    await expect(page.getByTestId('nav-badge-releases')).toHaveText('1');
+    await expect(page.getByTestId('nav-badge-system')).toHaveText('1');
+    await expect(page.getByTestId('nav-badge-pulls')).toHaveCount(0);
+    await expect(
+      page.getByTestId('needs-you-here-work').getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66')
+    ).toBeVisible();
   });
 
   test('narrow screens: the header never overflows and a Needs-you title keeps its width @action:chrome.narrow_header', async ({

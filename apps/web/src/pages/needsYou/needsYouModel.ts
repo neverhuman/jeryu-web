@@ -219,3 +219,52 @@ export function filterByFamily<T extends Pick<AttentionItem, 'family' | 'repo'>>
 ): T[] {
   return family ? items.filter((item) => familyOf(item, repoFamilies) === family) : items;
 }
+
+/**
+ * The page where a row's cause lives, so each page can show its own share of
+ * "Needs you": todos and shifts on Work, pull requests and their queue on Pull
+ * requests, staging, deploys and pins on Releases, gate runners and workers
+ * under System. A kind with no home stays on Needs you only.
+ */
+export type AttentionArea = 'work' | 'pulls' | 'releases' | 'system';
+
+export const AREA_LABEL: Record<AttentionArea, string> = {
+  work: 'Work',
+  pulls: 'Pull requests',
+  releases: 'Releases',
+  system: 'Runners',
+};
+
+const AREA_BY_PREFIX: ReadonlyArray<readonly [string, AttentionArea]> = [
+  ['todo_', 'work'],
+  ['shift_', 'work'],
+  ['pr_', 'pulls'],
+  ['queue_', 'pulls'],
+  ['reviewer_', 'pulls'],
+  ['release_', 'releases'],
+  ['deploy_', 'releases'],
+  ['pin_', 'releases'],
+  ['gate_runner', 'system'],
+  ['workers_', 'system'],
+];
+
+export function attentionArea(kind: string): AttentionArea | null {
+  const hit = AREA_BY_PREFIX.find(([prefix]) => kind.startsWith(prefix));
+  return hit ? hit[1] : null;
+}
+
+/** The rows waiting on a person (critical, then action) whose cause lives in `area`. */
+export function urgentInArea(
+  data: AttentionResponse | undefined,
+  area: AttentionArea
+): AttentionItem[] {
+  const items = (data?.items ?? []).filter(
+    (item) => severityOf(item) !== 'watch' && attentionArea(item.kind) === area
+  );
+  return groupAttention(items).flatMap((group) => group.items);
+}
+
+/** The nav badge for one page: its critical + action rows. */
+export function areaBadgeCount(data: AttentionResponse | undefined, area: AttentionArea): number {
+  return urgentInArea(data, area).length;
+}

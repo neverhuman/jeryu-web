@@ -7,6 +7,7 @@ import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
 import { useRepoPullLists } from '../hooks/useRepoPullLists';
 import { useRepositories } from '../hooks/useRepositories';
 import { useShiftTodos } from '../hooks/useShift';
+import { NeedsYouHere } from './needsYou/NeedsYouHere';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
 import { awaitingReleaseCount } from './pullRepoGroupsModel';
@@ -273,6 +274,8 @@ export function PullRoomPage(): JSX.Element {
           </button>
         </div>
       </header>
+
+      <NeedsYouHere area="pulls" family={family} onFamily={setFamily} />
 
       <nav className="pull-room__families" aria-label="Family" data-testid="pull-room-families">
         <button
