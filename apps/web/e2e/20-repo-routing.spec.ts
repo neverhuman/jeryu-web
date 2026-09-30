@@ -9,8 +9,11 @@ import { expect, test, type Page } from './fixtures/test';
 import { AppShellPage } from './pages/AppShellPage';
 import {
   mockBootstrap,
+  mockReadme,
   mockRepoAgentRuns,
+  mockRepoAutomation,
   mockRepoList,
+  mockTree,
 } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
@@ -51,6 +54,12 @@ async function seed(page: Page): Promise<void> {
       tty_live: true,
     },
   ]);
+  // The front page: a tree (the Files panel and its button need one), a README
+  // and the automation panel's view. Without the tree the page draws "No code
+  // on this forge" and has no Files button at all.
+  await mockTree(page);
+  await mockReadme(page, { html: '<h1>jankurai</h1>' });
+  await mockRepoAutomation(page, { repo: 'jeryu/jankurai' });
 }
 
 test.describe('Repository sub-page routing', () => {

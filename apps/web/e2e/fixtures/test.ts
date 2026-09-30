@@ -14,6 +14,13 @@
 // API calls are left alone: specs mock `/api/v1/*` with their own routes, which
 // are registered later and so win over this one.
 //
+// An `/api/v1/*` call a spec did not mock is failed here instead of travelling
+// to the dev server's proxy. In UI-only mode there is no backend of ours on the
+// proxy's port, but on a shared box someone else's server can be listening, and
+// its answer -- a 404 for a repository it has never heard of, say -- makes the
+// app draw a different page than the spec is about. A failed call is what the
+// spec means by "not mocked", and it is the same on every box.
+//
 // The app's WebSocket is answered in the browser too, by the auto-used
 // `realtime` fixture below (`./realtime`), so no socket reaches the dev proxy.
 
@@ -54,6 +61,25 @@ async function serveFromNode(route: Route): Promise<void> {
   await route.fulfill(file);
 }
 
+// The modes that serve the SPA with no backend of ours behind `/api`.
+const MOCKED_MODES = new Set(['ui-only', 'ui-mocked']);
+
+/** Fail every `/api/v1/*` call a spec has not mocked. Mocked modes only. */
+export async function failUnmockedApi(
+  context: BrowserContext,
+  baseURL: string | undefined
+): Promise<void> {
+  if (!baseURL) return;
+  if (!MOCKED_MODES.has(process.env.JERYU_PLAYWRIGHT_E2E_MODE ?? 'ui-only')) return;
+  const origin = new URL(baseURL).origin;
+  await context.route(
+    (url) => url.origin === origin && url.pathname.startsWith('/api/v1/'),
+    async (route: Route) => {
+      await route.abort('connectionrefused');
+    }
+  );
+}
+
 export async function serveAppFromNode(
   context: BrowserContext,
   baseURL: string | undefined
@@ -69,6 +95,7 @@ export async function serveAppFromNode(
 export const test = base.extend<{ realtime: RealtimeSocket }>({
   context: async ({ context, baseURL }, provide) => {
     await serveAppFromNode(context, baseURL);
+    await failUnmockedApi(context, baseURL);
     await provide(context);
     // A test may end while a file is still on its way to the page; that fetch
     // dies with the context and is not a failure of the test.

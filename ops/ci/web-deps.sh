@@ -14,8 +14,11 @@
 # Three rules this file keeps:
 #   * one install at a time per tree (flock), so a second gate sharing the tree
 #     never reads node_modules while npm ci is emptying it;
-#   * an install that cannot reach the registry is reported here, naming the
-#     packages that do not resolve, instead of surfacing as a type error later;
+#   * an install is always allowed to reach the registry, and a failed one is
+#     tried once more with `--prefer-online` so a cache that lacks or misholds a
+#     package cannot decide the run; a second failure is reported here in npm's
+#     own words, with the packages that do not resolve, instead of surfacing as
+#     a type error later;
 #   * the browser build is keyed on the Playwright version the lockfile pins.
 
 # Print one line per direct dependency of the workspace root or any member that
@@ -102,19 +105,54 @@ _web_deps_locked() {
   return "$status"
 }
 
+# Run one `npm ci`, keeping what npm said. Nothing here asks npm to stay
+# offline: an install always may reach the registry, and the extra flag on the
+# second try tells it to prefer the registry over whatever the local cache
+# holds, so a cache missing or half-holding a package cannot decide the run.
+# $1 is the file npm's own output is kept in; the rest are npm's flags.
+_web_deps_npm_ci() {
+  local output=$1
+  shift
+  npm ci "$@" >"$output" 2>&1
+}
+
+# npm's own words about a failed install. Callers read the whole file in the
+# log; this is the tail the summary quotes.
+_web_deps_npm_tail() {
+  tail -n 40 "$1" 2>/dev/null | sed 's/^/[web-deps]   /'
+}
+
 _web_deps_install() {
-  local stamp=$1 want=$2 problems
+  local stamp=$1 want=$2 problems output attempt=0
+  local flags=()
   # Another gate may have installed this very lockfile while we waited.
   _web_deps_current "$stamp" "$want" && return 0
   echo "[web-deps] installing workspace dependencies for lockfile ${want:0:12}" >&2
-  _web_deps_clear_member_trees
-  if npm ci; then
-    printf '%s\n' "$want" >"$stamp"
-    return 0
-  fi
+  output="$(mktemp "${TMPDIR:-/tmp}/web-deps-npm-ci.XXXXXX")"
+  # Two tries. A first install can fail on a cache entry that does not match
+  # the lockfile, or on a registry request that did not arrive; `--prefer-online`
+  # revalidates every cached entry against the registry, so the second try
+  # fetches what the cache cannot serve.
+  while [ "$attempt" -lt 2 ]; do
+    _web_deps_clear_member_trees
+    if [ "$attempt" -gt 0 ]; then
+      echo "[web-deps] retrying the install against the registry (--prefer-online)" >&2
+      flags=(--prefer-online)
+    fi
+    if _web_deps_npm_ci "$output" "${flags[@]}"; then
+      cat "$output" >&2
+      rm -f "$output"
+      printf '%s\n' "$want" >"$stamp"
+      return 0
+    fi
+    echo "[web-deps] npm ci exited non-zero; what npm said:" >&2
+    _web_deps_npm_tail "$output" >&2
+    attempt=$((attempt + 1))
+  done
   problems="$(_web_deps_audit || true)"
   {
-    echo "[web-deps] npm ci failed for lockfile ${want:0:12}"
+    echo "[web-deps] npm ci failed for lockfile ${want:0:12}, twice; npm's own"
+    echo "[web-deps] output is above, once per try."
     if [ -n "$problems" ]; then
       echo "[web-deps] these dependencies of this branch do not resolve:"
       printf '%s\n' "$problems" | sed 's/^/[web-deps]   /'
@@ -122,6 +160,7 @@ _web_deps_install() {
     echo "[web-deps] a host that cannot reach the registry fails here, by name,"
     echo "[web-deps] rather than as a missing module inside a later lane."
   } >&2
+  rm -f "$output"
   return 1
 }
 
