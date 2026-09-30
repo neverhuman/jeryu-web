@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { PullRequestDetail } from '../../../api/types';
 import {
   approvalsLabel,
+  approveAvailability,
+  approveRefusal,
+  draftReviewNote,
   failingChecksBlockMerge,
   isSettled,
   primaryAction,
@@ -105,5 +108,108 @@ describe('pull review model', () => {
   it('a failing check blocks the merge only when the passport does not pass', () => {
     expect(failingChecksBlockMerge(detail({ passport: 'pass' }))).toBe(false);
     expect(failingChecksBlockMerge(detail({ passport: 'blocked' }))).toBe(true);
+  });
+});
+
+describe('approveAvailability', () => {
+  it('refuses the author their own approval and names the short SHA', () => {
+    const availability = approveAvailability(detail({}), 'alton2');
+    expect(availability.enabled).toBe(false);
+    expect(availability.reason).toContain('You opened this pull request');
+    expect(availability.reason).toContain('other than alton2');
+    expect(availability.reason).toContain(SHA.slice(0, 7));
+  });
+
+  it('matches the author across the @ prefix and letter case', () => {
+    expect(approveAvailability(detail({}), '@Alton2').enabled).toBe(false);
+  });
+
+  it('leaves the button live for another reviewer or an unknown viewer', () => {
+    expect(approveAvailability(detail({}), 'reviewer')).toEqual({
+      enabled: true,
+      reason: null,
+    });
+    expect(approveAvailability(detail({}), null).enabled).toBe(true);
+    expect(approveAvailability(detail({}), '').enabled).toBe(true);
+  });
+});
+
+describe('draftReviewNote', () => {
+  it('explains that a draft takes the review but not the merge', () => {
+    expect(draftReviewNote(detail({ draft: true }))).toMatch(
+      /merge waits until it is marked ready/
+    );
+  });
+
+  it('says nothing for a ready or a settled pull request', () => {
+    expect(draftReviewNote(detail({}))).toBeNull();
+    expect(draftReviewNote(detail({ draft: true, state: 'merged' }))).toBeNull();
+  });
+});
+
+describe('approveRefusal', () => {
+  const pr = detail({});
+
+  it('names the shared identity and the independent reviewer needed', () => {
+    const refusal = approveRefusal(
+      {
+        status: 403,
+        code: 'pull_self_approval_forbidden',
+        message: 'pull request authors cannot approve their own changes',
+        details: { author: 'alton', reviewer: 'alton' },
+      },
+      pr
+    );
+    expect(refusal.message).toBe(
+      'pull request authors cannot approve their own changes'
+    );
+    expect(refusal.guidance).toContain('signed in as alton, which is also the author');
+    expect(refusal.guidance).toContain('independent authenticated reviewer');
+    expect(refusal.guidance).toContain(SHA.slice(0, 7));
+  });
+
+  it('falls back to the summary author when the server sends no details', () => {
+    const refusal = approveRefusal(
+      {
+        status: 403,
+        code: 'pull_self_approval_forbidden',
+        message: 'no',
+        details: undefined,
+      },
+      pr
+    );
+    expect(refusal.guidance).toContain('signed in as the author (alton2)');
+  });
+
+  it('asks for reviewer access on any other 403', () => {
+    expect(
+      approveRefusal(
+        { status: 403, code: 'permission_denied', message: 'nope', details: {} },
+        pr
+      ).guidance
+    ).toContain('no reviewer access on the repository');
+  });
+
+  it('asks for the draft to be marked ready', () => {
+    expect(
+      approveRefusal(
+        {
+          status: 409,
+          code: 'pull_is_draft',
+          message: 'draft',
+          details: {},
+        },
+        pr
+      ).guidance
+    ).toContain('mark the pull request ready for review');
+  });
+
+  it('asks for a refresh on anything else', () => {
+    expect(
+      approveRefusal(
+        { status: 500, code: 'internal', message: 'boom', details: {} },
+        pr
+      ).guidance
+    ).toContain('Refresh the pull request');
   });
 });

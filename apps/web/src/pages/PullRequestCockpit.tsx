@@ -13,7 +13,11 @@ import {
   ThreadList,
   type DiffViewerMode,
 } from '../components/merge';
-import { failingChecksBlockMerge, isSettled } from '../components/merge/pullReviewModel';
+import {
+  failingChecksBlockMerge,
+  isSettled,
+  type ApproveRefusal,
+} from '../components/merge/pullReviewModel';
 import { ErrorState, LoadingState } from '../components/state';
 import { PullPipelineEvents } from './activity/PullPipelineEvents';
 import type { usePrChecks } from '../hooks/usePrChecks';
@@ -39,6 +43,10 @@ export interface PullRequestCockpitProps {
   /** `owner/name` and PR number, for the pipeline events panel. */
   /** The server's merge refusal, shown verbatim. */
   mergeError?: string | null;
+  /** A refused approval, worded with its next step. */
+  approveRefusal?: ApproveRefusal | null;
+  /** The signed-in account, so the sidebar can spot a self-approval. */
+  viewerLogin?: string | null;
   repoFullName?: string | null;
   prNumber?: string | null;
   onSelectFile: (path: string) => void;
@@ -65,6 +73,8 @@ export function PullRequestCockpit({
   isBusy,
   reviewError,
   mergeError,
+  approveRefusal,
+  viewerLogin,
   repoFullName,
   prNumber,
   onSelectFile,
@@ -125,6 +135,8 @@ export function PullRequestCockpit({
           onApprove={onApprove}
           onRequestChanges={onRequestChanges}
           onMerge={onMerge}
+          viewerLogin={viewerLogin}
+          approveRefusal={approveRefusal}
           isBusy={isBusy}
         />
         {reviewError ? (

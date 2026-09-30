@@ -5,6 +5,7 @@
 // the page shows one calm line and none of the approve/merge/passport
 // controls. An open one has exactly one primary action at a time.
 
+import type { ApiError } from '../../api/client';
 import type { PullRequestDetail, PullRequestSummary } from '../../api/types';
 
 export type PullBadgeTone = 'open' | 'merged' | 'closed' | 'draft';
@@ -73,4 +74,106 @@ export function primaryAction(detail: PullRequestDetail): 'approve' | 'merge' | 
  */
 export function failingChecksBlockMerge(detail: PullRequestDetail): boolean {
   return detail.merge_passport.status !== 'pass';
+}
+
+// ── Who may approve, and what to say when the server says no. ────────────
+//
+// The forge refuses an author's approval of their own pull request with
+// `403 pull_self_approval_forbidden` (see the API's `self_approval_forbidden`).
+// The client knows the author and the signed-in account, so it can say so
+// before the round-trip; when it cannot tell (the web login and the forge
+// handle differ), the refusal arrives from the server and is shown verbatim
+// with the one thing that clears it: an independent reviewer.
+
+export interface ApproveAvailability {
+  /** False when the signed-in account cannot approve this pull request. */
+  enabled: boolean;
+  /** What stands in the way and who clears it; null when approval is open. */
+  reason: string | null;
+}
+
+/** `@alton` and `alton` are the same account. */
+function sameAccount(a: string, b: string): boolean {
+  const normalize = (value: string): string =>
+    value.trim().replace(/^@/, '').toLowerCase();
+  const left = normalize(a);
+  return left.length > 0 && left === normalize(b);
+}
+
+/**
+ * Whether the Approve button accepts a click, given who is signed in.
+ * `viewerLogin` is the authenticated account (`GET /auth/me`); when it is
+ * unknown the button stays live and the server has the last word.
+ */
+export function approveAvailability(
+  detail: PullRequestDetail,
+  viewerLogin: string | null | undefined
+): ApproveAvailability {
+  const author = detail.summary.author;
+  if (viewerLogin && sameAccount(author, viewerLogin)) {
+    return {
+      enabled: false,
+      reason:
+        `You opened this pull request, so you cannot approve it. ` +
+        `An authenticated reviewer other than ${author} has to approve ` +
+        `exact SHA ${detail.summary.head_sha.slice(0, 7)}.`,
+    };
+  }
+  return { enabled: true, reason: null };
+}
+
+/** A draft still takes reviews; the merge waits for it to be marked ready. */
+export function draftReviewNote(detail: PullRequestDetail): string | null {
+  if (!detail.summary.draft || isSettled(detail)) return null;
+  return 'This pull request is a draft: a review is recorded now, but the merge waits until it is marked ready for review.';
+}
+
+export interface ApproveRefusal {
+  /** The server's own message, shown as written. */
+  message: string;
+  /** The single next step that clears the refusal. */
+  guidance: string;
+}
+
+/** Word a failed approval so the reviewer knows what to do next. */
+export function approveRefusal(
+  error: Pick<ApiError, 'code' | 'message' | 'status' | 'details'>,
+  detail: PullRequestDetail
+): ApproveRefusal {
+  const shortSha = detail.summary.head_sha.slice(0, 7);
+  const details = error.details ?? {};
+  const author =
+    typeof details.author === 'string' ? details.author : detail.summary.author;
+  if (error.code === 'pull_self_approval_forbidden') {
+    const reviewer =
+      typeof details.reviewer === 'string' ? details.reviewer : null;
+    const identity = reviewer
+      ? `you are signed in as ${reviewer}, which is also the author`
+      : `you are signed in as the author`;
+    return {
+      message: error.message,
+      guidance:
+        `Nothing was approved: ${identity} (${author}). ` +
+        `An independent authenticated reviewer with write access has to ` +
+        `approve exact SHA ${shortSha}.`,
+    };
+  }
+  if (error.code.includes('draft')) {
+    return {
+      message: error.message,
+      guidance:
+        'Nothing was approved: mark the pull request ready for review, then approve it again.',
+    };
+  }
+  if (error.status === 403) {
+    return {
+      message: error.message,
+      guidance:
+        'Nothing was approved: this account has no reviewer access on the repository. Ask an administrator for it, then approve again.',
+    };
+  }
+  return {
+    message: error.message,
+    guidance: `Nothing was approved. Refresh the pull request and approve exact SHA ${shortSha} again.`,
+  };
 }

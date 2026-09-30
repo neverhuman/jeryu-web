@@ -10,6 +10,10 @@
 //   │ viewed       │ virtualized                      │ Threads          │
 //   └──────────────┴──────────────────────────────────┴──────────────────┘
 //
+// A refused approval that is not head drift (`pull_self_approval_forbidden`
+// above all, since an author cannot approve their own pull request) is worded
+// by `approveRefusal` and shown next to the Approve button.
+//
 // On approve mutation 409 with `merge_sha_stale`, the page shows a recovery
 // banner with the previous/current SHA and a Refresh button that re-runs the
 // detail query. The banner also appears for `merge_passport_stale` /
@@ -28,6 +32,7 @@ import {
   PermissionDeniedState,
 } from '../components/state';
 import { useApprovePr } from '../hooks/useApprovePr';
+import { useAuth } from '../hooks/useAuth';
 import { useMergeAttempt } from '../hooks/useMergeAttempt';
 import { useMergePr } from '../hooks/useMergePr';
 import { useSubmitReview } from '../hooks/useSubmitReview';
@@ -40,7 +45,11 @@ import { useResolveRepo } from '../hooks/useResolveRepo';
 import { usePreferencesStore } from '../stores/preferencesStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { mergeAttemptLine } from '../components/merge/mergeAttemptModel';
-import { isSettled, pullStateBadge } from '../components/merge/pullReviewModel';
+import {
+  approveRefusal,
+  isSettled,
+  pullStateBadge,
+} from '../components/merge/pullReviewModel';
 import { relativeTime } from '../components/repo/relativeTime';
 import { PullRequestCockpit } from './PullRequestCockpit';
 import {
@@ -66,6 +75,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const fullName = props.fullName ?? fullNameFromParams(params);
   const prNumber = props.prNumber ?? params.number ?? null;
 
+  const viewerLogin = useAuth().user?.login ?? null;
   const resolved = useResolveRepo(provider, fullName);
   const repoId = resolved.data?.id ?? null;
   const setPr = useSelectionStore((s) => s.setCurrentPr);
@@ -124,7 +134,11 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const handleApprove = useCallback(
     async (expectedHeadSha: string) => {
       approve.reset();
-      await approve.mutateAsync({ expected_head_sha: expectedHeadSha });
+      // A refusal lands in `approve.error` and is worded in the review pane;
+      // swallow the rejection here so the click is never a silent no-op.
+      await approve
+        .mutateAsync({ expected_head_sha: expectedHeadSha })
+        .catch(() => undefined);
     },
     [approve]
   );
@@ -360,6 +374,10 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         isBusy={approve.isPending || mergeMutation.isPending || review.isPending}
         reviewError={review.error && !headDrift ? review.error.message : null}
         mergeError={mergeMutation.error && !headDrift ? mergeMutation.error.message : null}
+        approveRefusal={
+          approve.error && !headDrift ? approveRefusal(approve.error, data) : null
+        }
+        viewerLogin={viewerLogin}
         repoFullName={fullName}
         prNumber={prNumber}
         onRequestChanges={handleRequestChanges}

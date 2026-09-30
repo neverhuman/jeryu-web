@@ -992,3 +992,24 @@
   color: var(--color-fg-secondary);
   font-size: var(--font-size-sm);
 }
+
+.review-sidebar__approve-note {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.review-sidebar__approve-refusal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.review-sidebar__approve-refusal-message {
+  font-weight: var(--font-weight-medium);
+}

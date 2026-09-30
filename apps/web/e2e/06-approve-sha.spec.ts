@@ -8,6 +8,13 @@
 //   1. Success path — the approve endpoint returns the updated detail (200);
 //      the SPA swaps in the new copy and shows NO recovery banner.
 //
+//   1b. Self-approval — an author cannot approve their own pull request
+//      (`403 pull_self_approval_forbidden`). When the signed-in account is
+//      visibly the author the Approve button is disabled and says who has to
+//      approve instead; when only the server can tell, the rejected click
+//      surfaces the server's message plus the independent-reviewer next step
+//      and leaves the approval count untouched.
+//
 //   2. Stale path — when the head moved since page load, the approve endpoint
 //      returns `409 merge_sha_stale` with `expected_sha` / `current_sha`. The
 //      cockpit must surface its recovery banner (role="alert") naming the SHA
@@ -354,6 +361,114 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     await page.getByRole('button', { name: /^Merge$/ }).click();
     await expect(page.getByTestId('pr-merge-error')).toHaveText(
       `Merge refused: ${reason}`
+    );
+  });
+
+  test('the author sees Approve disabled with the reason @action:pr.approve_self_blocked', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { login: 'alton' });
+    await mockRepoList(page, [{ id: REPO, default_branch: 'main' }]);
+    await mockPullRequestDetail(page, {
+      repoId: REPO_ID,
+      number: PR_NUMBER,
+      title: 'Telemetry counters',
+      author: 'alton',
+      head_sha: OLD_SHA,
+      passport: 'blocked',
+    });
+    // Any approve POST would be a bug: the button must never send one.
+    let approveCalls = 0;
+    await page.route(/\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/approve$/, async (route) => {
+      approveCalls += 1;
+      await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+    });
+
+    await page.goto(PR_URL);
+    await expect(
+      page.getByRole('heading', { name: /PR #99: Telemetry counters/i })
+    ).toBeVisible({ timeout: 15_000 });
+
+    const approve = approveButton(page);
+    await expect(approve).toBeDisabled();
+    await expect(page.getByTestId('pr-approve-note')).toContainText(
+      'You opened this pull request, so you cannot approve it.'
+    );
+    await expect(page.getByTestId('pr-approve-note')).toContainText(
+      `An authenticated reviewer other than alton has to approve exact SHA ${OLD_SHA.slice(0, 7)}.`
+    );
+    await approve.click({ force: true });
+    expect(approveCalls).toBe(0);
+  });
+
+  test('a self-approval the server catches explains itself on the page @action:pr.approve_self_refused', async ({
+    page,
+  }) => {
+    // The web login and the forge handle differ, so only the server can tell
+    // that the reviewer is the author.
+    await mockBootstrap(page, { login: 'alton' });
+    await mockRepoList(page, [{ id: REPO, default_branch: 'main' }]);
+    await mockPullRequestDetail(page, {
+      repoId: REPO_ID,
+      number: PR_NUMBER,
+      title: 'Telemetry counters',
+      author: 'alton.veox',
+      head_sha: OLD_SHA,
+      passport: 'blocked',
+    });
+    const message = 'pull request authors cannot approve their own changes';
+    await page.route(
+      /\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/approve$/,
+      async (route, request) => {
+        if (request.method() !== 'POST') {
+          await route.continue();
+          return;
+        }
+        const body = JSON.parse(request.postData() ?? '{}') as {
+          expected_head_sha?: string;
+        };
+        expect(body.expected_head_sha).toBe(OLD_SHA);
+        await route.fulfill({
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: {
+              code: 'pull_self_approval_forbidden',
+              message,
+              details: {
+                pull_number: Number(PR_NUMBER),
+                author: 'alton',
+                reviewer: 'alton',
+              },
+            },
+          }),
+        });
+      }
+    );
+
+    await page.goto(PR_URL);
+    await expect(
+      page.getByRole('heading', { name: /PR #99: Telemetry counters/i })
+    ).toBeVisible({ timeout: 15_000 });
+
+    const approve = approveButton(page);
+    await expect(approve).toBeEnabled();
+    await approve.click();
+
+    const refusal = page.getByTestId('pr-approve-error');
+    await expect(refusal).toBeVisible({ timeout: 10_000 });
+    await expect(refusal).toHaveAttribute('role', 'alert');
+    await expect(refusal).toContainText(`Approval refused: ${message}`);
+    await expect(refusal).toContainText(
+      'signed in as alton, which is also the author (alton)'
+    );
+    await expect(refusal).toContainText(
+      `independent authenticated reviewer with write access has to approve exact SHA ${OLD_SHA.slice(0, 7)}`
+    );
+    // The refusal is not head drift, so no recovery banner, and no approval.
+    await expect(page.locator('.pr-cockpit__recovery')).toHaveCount(0);
+    await expect(page.locator('.review-sidebar__approvals')).toHaveText(
+      /0 of 1 approvals/
     );
   });
 });

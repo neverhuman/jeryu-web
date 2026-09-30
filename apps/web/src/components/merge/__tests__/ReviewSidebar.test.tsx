@@ -12,6 +12,9 @@
 //      each routing the chosen method into `onMerge`.
 //   4. Disable every action while a mutation is in-flight (`isBusy`).
 //   5. Toggle the request-changes composer and submit a trimmed body.
+//   6. Explain a self-approval: the author's own Approve is disabled and names
+//      who has to approve instead, and a refusal from the server is shown with
+//      its next step.
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -19,6 +22,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { PullRequestDetail } from '../../../api/types';
 import { ReviewSidebar } from '../ReviewSidebar';
+import { approveRefusal } from '../pullReviewModel';
 
 const HEAD_SHA = 'abcdef1234567890abcdef1234567890abcdef12';
 
@@ -33,6 +37,8 @@ function makeDetail(
     user_review_state?: string | null;
     passport_hash?: string | null;
     state?: 'open' | 'closed' | 'merged';
+    author?: string;
+    draft?: boolean;
   } = {}
 ): PullRequestDetail {
   const passport = over.passport ?? 'blocked';
@@ -43,13 +49,13 @@ function makeDetail(
       number: 7,
       entity: { kind: 'pull_request', id: 'r1#7' },
       title: 'A PR',
-      author: '@author',
+      author: over.author ?? '@author',
       head_ref: 'feature/x',
       base_ref: 'main',
       head_sha: HEAD_SHA,
       base_sha: 'base000000000000000000000000000000000000',
       state: over.state ?? 'open',
-      draft: false,
+      draft: over.draft ?? false,
       mergeable: {
         level: canMerge ? 'mergeable' : 'blocked',
         can_merge: canMerge,
@@ -282,3 +288,83 @@ describe('ReviewSidebar', () => {
   });
 });
 
+describe('ReviewSidebar self-approval', () => {
+  it('disables Approve for the author and names who has to approve instead', async () => {
+    const onApprove = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ author: '@alton' })}
+        viewerLogin="alton"
+        onApprove={onApprove}
+        onMerge={vi.fn()}
+      />
+    );
+    const approve = screen.getByRole('button', { name: /Approve exact SHA/ });
+    expect(approve).toBeDisabled();
+    await user.click(approve);
+    expect(onApprove).not.toHaveBeenCalled();
+    expect(screen.getByTestId('pr-approve-note')).toHaveTextContent(
+      /You opened this pull request, so you cannot approve it\. An authenticated reviewer other than @alton has to approve exact SHA abcdef1\./
+    );
+  });
+
+  it('keeps Approve live for a reviewer who is not the author', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ author: '@alton' })}
+        viewerLogin="reviewer"
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(
+      screen.getByRole('button', { name: /Approve exact SHA/ })
+    ).toBeEnabled();
+    expect(screen.queryByTestId('pr-approve-note')).not.toBeInTheDocument();
+  });
+
+  it("shows the server's self-approval refusal with the next step", () => {
+    const refusal = approveRefusal(
+      {
+        status: 403,
+        code: 'pull_self_approval_forbidden',
+        message: 'pull request authors cannot approve their own changes',
+        details: { author: 'alton', reviewer: 'alton' },
+      },
+      makeDetail({ author: 'alton' })
+    );
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ author: 'alton' })}
+        approveRefusal={refusal}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    const alert = screen.getByTestId('pr-approve-error');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert).toHaveTextContent(
+      /Approval refused: pull request authors cannot approve their own changes/
+    );
+    expect(alert).toHaveTextContent(
+      /signed in as alton, which is also the author \(alton\)/
+    );
+    expect(alert).toHaveTextContent(
+      /independent authenticated reviewer with write access has to approve exact SHA abcdef1/
+    );
+  });
+
+  it('says a draft review is recorded but the merge waits', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ draft: true })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('pr-draft-note')).toHaveTextContent(
+      /a review is recorded now, but the merge waits until it is marked ready for review/
+    );
+  });
+});

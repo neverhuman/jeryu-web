@@ -5,6 +5,11 @@
 // button always carries the SHA the reviewer saw (`expected_head_sha`);
 // when the server rejects with `merge_sha_stale` the parent surfaces the
 // recovery banner.
+//
+// An author cannot approve their own pull request: when the signed-in account
+// is the author the Approve button is disabled and says who has to approve
+// instead, and any refusal the server sends back (`pull_self_approval_forbidden`
+// and the rest) is shown next to the button with its next step.
 
 import { Check, GitMerge, ShieldAlert, XCircle } from 'lucide-react';
 import { useState } from 'react';
@@ -13,10 +18,13 @@ import { ActionButton } from '../action/ActionButton';
 import type { PullRequestDetail } from '../../api/types';
 import {
   approvalsLabel,
+  approveAvailability,
+  draftReviewNote,
   isSettled,
   mergeAllowed as canMergeNow,
   primaryAction,
   settledLine,
+  type ApproveRefusal,
 } from './pullReviewModel';
 
 import './merge.css';
@@ -33,6 +41,10 @@ export interface ReviewSidebarProps {
     expectedPassportHash: string | null;
     method: 'merge' | 'squash' | 'rebase';
   }) => Promise<void> | void;
+  /** The signed-in account (`GET /auth/me`), for the self-approval check. */
+  viewerLogin?: string | null;
+  /** A refused approval: the server's message plus its next step. */
+  approveRefusal?: ApproveRefusal | null;
   /** When true, mutations are disabled (in-flight). */
   isBusy?: boolean;
   className?: string;
@@ -43,6 +55,8 @@ export function ReviewSidebar({
   onApprove,
   onRequestChanges,
   onMerge,
+  viewerLogin = null,
+  approveRefusal = null,
   isBusy = false,
   className,
 }: ReviewSidebarProps): JSX.Element {
@@ -51,6 +65,8 @@ export function ReviewSidebar({
   const mergeAllowed = canMergeNow(detail);
   const reviewState = review.user_review_state ?? null;
   const primary = primaryAction(detail);
+  const approve = approveAvailability(detail, viewerLogin);
+  const draftNote = draftReviewNote(detail);
 
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);
   const [requestChangesBody, setRequestChangesBody] = useState('');
@@ -125,7 +141,7 @@ export function ReviewSidebar({
           variant={primary === 'approve' ? 'primary' : 'default'}
           icon={<Check aria-hidden="true" size={12} />}
           onClick={handleApprove}
-          disabled={isBusy}
+          disabled={isBusy || !approve.enabled}
           actionId="pull.approve"
         >
           Approve exact SHA {headSha.slice(0, 7)}
@@ -140,6 +156,29 @@ export function ReviewSidebar({
           Request changes
         </ActionButton>
       </div>
+
+      {approve.reason ? (
+        <p className="review-sidebar__approve-note" data-testid="pr-approve-note">
+          {approve.reason}
+        </p>
+      ) : null}
+      {draftNote ? (
+        <p className="review-sidebar__approve-note" data-testid="pr-draft-note">
+          {draftNote}
+        </p>
+      ) : null}
+      {approveRefusal ? (
+        <div
+          className="review-sidebar__approve-refusal"
+          role="alert"
+          data-testid="pr-approve-error"
+        >
+          <span className="review-sidebar__approve-refusal-message">
+            Approval refused: {approveRefusal.message}
+          </span>
+          <span>{approveRefusal.guidance}</span>
+        </div>
+      ) : null}
 
       {requestChangesOpen ? (
         <div className="review-sidebar__changes-form">

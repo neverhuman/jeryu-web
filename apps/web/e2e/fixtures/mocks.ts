@@ -562,6 +562,9 @@ export interface MockPullRequestDetail {
   number: string;
   title?: string;
   state?: 'open' | 'merged' | 'closed';
+  /** Forge handle of the PR author, for the self-approval check. */
+  author?: string;
+  draft?: boolean;
   head_sha: string;
   base_sha?: string;
   head_ref?: string;
@@ -600,13 +603,13 @@ export async function mockPullRequestDetail(
       number: Number(pr.number),
       entity: { kind: 'pull_request', id: `${pr.repoId}#${pr.number}` },
       title: pr.title ?? `PR #${pr.number}`,
-      author: '@author',
+      author: pr.author ?? '@author',
       head_ref: pr.head_ref ?? 'feature/x',
       base_ref: pr.base_ref ?? 'main',
       head_sha: pr.head_sha,
       base_sha: pr.base_sha ?? 'base000000000000000000000000000000000000',
       state: pr.state ?? 'open',
-      draft: false,
+      draft: pr.draft ?? false,
       mergeable: {
         level: canMerge ? 'mergeable' : 'blocked',
         can_merge: canMerge,
