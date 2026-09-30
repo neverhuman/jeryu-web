@@ -86,7 +86,15 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/settings/preview`,
 
   ws: (): string => '/api/v1/ws',
-  controlPlaneStatus: (): string => '/api/v1/control-plane/status',
+  /**
+   * The snapshot. `limit` raises the page every collection in it is cut to
+   * (the server allows up to 500); a view that must see all the open work
+   * asks for more than the default 100.
+   */
+  controlPlaneStatus: (limit?: number): string =>
+    limit === undefined
+      ? '/api/v1/control-plane/status'
+      : `/api/v1/control-plane/status?limit=${limit}`,
   controlPlaneRunners: (): string => '/api/v1/control-plane/runners',
   /**
    * The repository graph on its own. `include` asks for edge kinds the

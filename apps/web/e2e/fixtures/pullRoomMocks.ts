@@ -42,12 +42,33 @@ export function pullSummaries(snapshot: Snapshot, repo: string) {
     }));
 }
 
+/**
+ * The repository list of a snapshot: one entry per repository that holds a
+ * pull request, with the open ones counted the way the server counts them.
+ * The family bar is built from this list, so it has to agree with the
+ * snapshot. `alice/*` is family `core`; the rest read "other".
+ */
+export function repoListFor(snapshot: Snapshot) {
+  const owners = new Map<string, number>();
+  for (const pr of snapshot.pullRequests) {
+    const open = pr.state !== 'merged' && pr.state !== 'closed' ? 1 : 0;
+    owners.set(pr.repo, (owners.get(pr.repo) ?? 0) + open);
+  }
+  for (const repo of ['alice/jeryu', 'bob/jeryu']) {
+    if (!owners.has(repo)) owners.set(repo, 0);
+  }
+  return Array.from(owners, ([full, open]) => {
+    const [owner, name] = full.split('/');
+    return {
+      id: { host: 'jeryu', owner, name },
+      family: owner === 'alice' ? 'core' : null,
+      open_pull_requests: open,
+    };
+  });
+}
+
 export async function mockPullRoom(page: Page, snapshot = controlPlane()): Promise<void> {
-  // Families come from the repository list; bob/jeryu has none and reads "other".
-  await mockRepoList(page, [
-    { id: { host: 'jeryu', owner: 'alice', name: 'jeryu' }, family: 'core' },
-    { id: { host: 'jeryu', owner: 'bob', name: 'jeryu' }, family: null },
-  ]);
+  await mockRepoList(page, repoListFor(snapshot));
   await page.route('**/api/v1/repos/*/pulls**', async (route) => {
     const repo = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[4]);
     if (repo === 'bob/broken') {
@@ -60,7 +81,7 @@ export async function mockPullRoom(page: Page, snapshot = controlPlane()): Promi
       body: JSON.stringify({ items: pullSummaries(snapshot, repo), next_cursor: null }),
     });
   });
-  await page.route('**/api/v1/control-plane/status', async (route) => {
+  await page.route('**/api/v1/control-plane/status**', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -142,6 +163,8 @@ export function controlPlane() {
       runningCheckCount: 0,
       failingCheckCount: 1,
       missingCheckPrCount: 1,
+      waitingCheckPrCount: 1,
+      failingCheckPrCount: 1,
       priorityCount: 0,
       criticalPriorityCount: 0,
       highPriorityCount: 0,
@@ -279,6 +302,14 @@ export function controlPlane() {
       },
     },
     priorities: [],
+    page: {
+      limit: 500,
+      page: 1,
+      collections: {
+        pull_requests: { limit: 500, page: 1, total: 2, has_more: false },
+        repos: { limit: 500, page: 1, total: 1, has_more: false },
+      },
+    },
     repoGraph: {
       schemaVersion: 'jeryu.repo_graph/v1',
       generatedAt: '2026-06-05T00:00:00Z',
@@ -288,4 +319,56 @@ export function controlPlane() {
       insights: [],
     },
   };
+}
+
+/**
+ * A forge too big for one page: `total` pull requests, of which `open` are
+ * open in the repositories that sort last by name. The server orders open
+ * work first, so the page carries every open one and then the newest
+ * finished ones — and says how much it cut through `page.collections`.
+ */
+export function truncatedSnapshot(
+  { total, open, limit }: { total: number; open: number; limit: number },
+  repos: readonly string[]
+): Snapshot {
+  const snapshot = controlPlane();
+  const template = snapshot.pullRequests[0];
+  const openRows = Array.from({ length: open }, (_, n) => ({
+    ...template,
+    repo: repos[n % repos.length],
+    number: 100 + n,
+    title: `Open work ${n + 1}`,
+    state: 'blockedbychecks',
+    headRef: `feature/open-${n}`,
+    headSha: `head-open-${n}`,
+    baseSha: `base-open-${n}`,
+  }));
+  const finishedRows = Array.from({ length: limit - open }, (_, n) => ({
+    ...template,
+    repo: 'jeryu/core',
+    number: 200 + n,
+    title: `Landed ${n + 1}`,
+    state: 'merged',
+    headRef: `feature/done-${n}`,
+    headSha: `head-done-${n}`,
+    baseSha: `base-done-${n}`,
+    checks: { total: 2, queued: 0, running: 0, failing: 0, successful: 2, missing: false },
+  }));
+  snapshot.pullRequests = [...openRows, ...finishedRows];
+  snapshot.summary = {
+    ...snapshot.summary,
+    openPrCount: open,
+    waitingCheckPrCount: open,
+    failingCheckPrCount: 0,
+    missingCheckPrCount: open,
+  };
+  snapshot.page = {
+    limit,
+    page: 1,
+    collections: {
+      pull_requests: { limit, page: 1, total, has_more: true },
+      repos: { limit, page: 1, total: repos.length, has_more: false },
+    },
+  };
+  return snapshot;
 }

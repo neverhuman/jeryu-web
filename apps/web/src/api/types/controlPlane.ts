@@ -22,6 +22,17 @@ export interface ControlPlaneSummary {
   runningCheckCount: number;
   failingCheckCount: number;
   missingCheckPrCount: number;
+  /**
+   * Open PRs with no failing check yet: none recorded, or some in flight.
+   * Optional: an older forge does not send it.
+   */
+  waitingCheckPrCount?: number;
+  /**
+   * Open PRs with at least one failing check; `failingCheckCount` counts check
+   * runs, which is a different number when one lane breaks twice. Optional:
+   * an older forge does not send it.
+   */
+  failingCheckPrCount?: number;
   priorityCount: number;
   criticalPriorityCount: number;
   highPriorityCount: number;
@@ -68,6 +79,11 @@ export interface ControlPullRequest {
   changedFiles: string[];
   stateEvidence: EvidenceState;
   sourceLinks: SourceLink[];
+  /**
+   * When the forge last touched it; the collection is ordered by it. Optional:
+   * a payload written before the field existed carries no timestamp.
+   */
+  updatedAt?: string;
   checks: {
     total: number;
     queued: number;
@@ -320,6 +336,26 @@ export interface McpToolHealth {
   degradedTools: string[];
 }
 
+/** What a paged collection of the snapshot applied, from `page.collections`. */
+export interface CollectionPageInfo {
+  limit: number;
+  page: number;
+  /** Rows matching the request before paging. */
+  total: number;
+  has_more: boolean;
+}
+
+/**
+ * `page` of `GET /api/v1/control-plane/status`: the limit and page it applied
+ * and, per collection, how much of it the response carries. A reader that
+ * counts rows needs this to know whether it is counting all of them.
+ */
+export interface ControlPlanePageReport {
+  limit: number;
+  page: number;
+  collections: Record<string, CollectionPageInfo>;
+}
+
 export interface ControlPlaneSnapshot {
   schemaVersion: string;
   generatedAt: string;
@@ -348,4 +384,6 @@ export interface ControlPlaneSnapshot {
   mirror: RemoteStatusResponse;
   priorities: PriorityInsight[];
   repoGraph: RepoGraphResponse;
+  /** Absent from an older forge, which sent every row unpaged. */
+  page?: ControlPlanePageReport;
 }

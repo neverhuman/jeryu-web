@@ -3,8 +3,8 @@
 import { expect, test } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
-import { mockBootstrap } from './fixtures/mocks';
-import { controlPlane, mockPullRoom } from './fixtures/pullRoomMocks';
+import { mockBootstrap, mockRepoList } from './fixtures/mocks';
+import { controlPlane, mockPullRoom, truncatedSnapshot } from './fixtures/pullRoomMocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -129,6 +129,75 @@ test('Pull Room follows repository URLs and browser history @action:pull_room.fi
   await expect(page.getByText('Fix BFF PR list')).toBeVisible();
   await expect(page.getByText('Repair check posture')).toBeVisible();
   await testInfo.attach('pull-room-url-navigation', {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  });
+});
+
+test('Pull requests reads every open pull request out of a paged snapshot, and every family has a toggle @action:pull_room.family_pills', async ({
+  page,
+}, testInfo) => {
+  // 509 pull requests, 22 of them open in the repositories that sort last by
+  // name, and a page that holds 100 rows: the count in the header is the
+  // server's, and the family bar is the repository list's, so neither can be
+  // talked down to zero by a page boundary.
+  const OPEN = ['root/jankurai-one', 'veox-ai/jekko', 'veox/redline'];
+  const snapshot = truncatedSnapshot({ total: 509, open: 22, limit: 100 }, OPEN);
+  await mockBootstrap(page);
+  await mockPullRoom(page, snapshot);
+  // Registered after the snapshot mock so this repository list wins: every
+  // family the forge knows, including the ones with nothing open.
+  await mockRepoList(page, [
+    { id: { host: 'jeryu', owner: 'root', name: 'jankurai-one' }, family: 'jankurai', open_pull_requests: 8 },
+    { id: { host: 'jeryu', owner: 'veox-ai', name: 'jekko' }, family: 'jekko', open_pull_requests: 7 },
+    { id: { host: 'jeryu', owner: 'veox', name: 'redline' }, family: 'redline', open_pull_requests: 7 },
+    { id: { host: 'jeryu', owner: 'jeryu', name: 'core' }, family: 'jeryu-split', open_pull_requests: 0 },
+    { id: { host: 'jeryu', owner: 'veox', name: 'tooling' }, family: 'tooling', open_pull_requests: 0 },
+  ]);
+
+  const shell = new AppShellPage(page);
+  await shell.goto('/pull-room?view=board');
+  await shell.assertShellLoaded();
+
+  // The header is the server's summary, not a count of the rows on this page.
+  await expect(page.getByTestId('pull-room-sentence')).toHaveText(
+    '22 open · 22 waiting on checks · 0 stopped by a failing check'
+  );
+  const pills = page.getByTestId('pull-room-families');
+  await expect(pills.getByRole('button', { name: /^All/ })).toContainText('22');
+  await expect(pills.getByRole('button', { name: /^jankurai/ })).toContainText('8');
+  await expect(pills.getByRole('button', { name: /^jekko/ })).toContainText('7');
+  await expect(pills.getByRole('button', { name: /^redline/ })).toContainText('7');
+  // A family with nothing open keeps its toggle, at 0, and is selectable.
+  await expect(pills.getByRole('button', { name: /^jeryu/ })).toContainText('0');
+  await expect(pills.getByRole('button', { name: /^tooling/ })).toContainText('0');
+
+  // Every open pull request is on the board, in all three repositories.
+  await expect(page.getByTestId(/^pull-card-.+-\d+$/)).toHaveCount(22);
+  for (const [repo, cards] of [
+    [OPEN[0], 8],
+    [OPEN[1], 7],
+    [OPEN[2], 7],
+  ] as const) {
+    await expect(page.getByTestId(new RegExp(`^pull-card-${repo}-\\d+$`))).toHaveCount(cards);
+  }
+  // What the page could not fetch is stated, not dropped.
+  await expect(page.getByTestId('pull-room-truncated')).toContainText(
+    'showing 100 of 509 pull requests'
+  );
+
+  // Selecting a family scopes the page through `?family=`.
+  await pills.getByRole('button', { name: /^tooling/ }).click();
+  await expect(page).toHaveURL(/\/pull-room\?view=board&family=tooling$/);
+  await expect(page.getByTestId('pull-room-sentence')).toHaveText(
+    '0 open · 0 waiting on checks · 0 stopped by a failing check'
+  );
+  await pills.getByRole('button', { name: /^jekko/ }).click();
+  await expect(page).toHaveURL(/family=jekko$/);
+  await expect(page.getByTestId('pull-room-sentence')).toHaveText(
+    '7 open · 7 waiting on checks · 0 stopped by a failing check'
+  );
+  await testInfo.attach('pull-room-family-bar', {
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
   });

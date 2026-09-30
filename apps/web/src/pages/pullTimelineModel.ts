@@ -161,25 +161,47 @@ export function timelineOrder(a: PullRequestSummary, b: PullRequestSummary): num
   return rank(a) - rank(b) || b.updated_at.localeCompare(a.updated_at) || b.number - a.number;
 }
 
+export interface PullCounts {
+  open: number;
+  waiting: number;
+  blocked: number;
+}
+
 /**
  * The page in one line: how many are open, how many wait on checks, how many
  * are stopped by a red check, and — when the release ladder has loaded — how
- * many have merged but not shipped yet. A red check that does not stop the
- * merge (the forge says the pull request can merge) is not counted as blocking.
+ * many have merged but not shipped yet. The counts come from whoever knows
+ * them in full: the server's snapshot summary for the whole forge, or the
+ * loaded rows when the page is scoped to a family or a repository.
  */
-export function timelineSentence(pulls: PullRequestSummary[], awaitingRelease?: number): string {
-  const open = pulls.filter((pr) => pr.state !== 'merged' && pr.state !== 'closed');
-  const waiting = open.filter(
-    (pr) => pr.checks.failing === 0 && (pr.checks.total === 0 || pr.checks.pending > 0)
-  ).length;
-  const blocked = open.filter((pr) => pr.checks.failing > 0 && !pr.mergeable.can_merge).length;
+export function pullCountsSentence(counts: PullCounts, awaitingRelease?: number): string {
   const parts = [
-    `${open.length} open`,
-    `${waiting} waiting on checks`,
-    `${blocked} stopped by a failing check`,
+    `${counts.open} open`,
+    `${counts.waiting} waiting on checks`,
+    `${counts.blocked} stopped by a failing check`,
   ];
   if (awaitingRelease !== undefined && awaitingRelease > 0) {
     parts.push(`${awaitingRelease} merged, not yet released`);
   }
   return parts.join(' · ');
+}
+
+/**
+ * The same counts read off a list of pull requests this view holds in full. A
+ * red check that does not stop the merge (the forge says the pull request can
+ * merge) is not counted as blocking.
+ */
+export function pullCountsOf(pulls: PullRequestSummary[]): PullCounts {
+  const open = pulls.filter((pr) => pr.state !== 'merged' && pr.state !== 'closed');
+  return {
+    open: open.length,
+    waiting: open.filter(
+      (pr) => pr.checks.failing === 0 && (pr.checks.total === 0 || pr.checks.pending > 0)
+    ).length,
+    blocked: open.filter((pr) => pr.checks.failing > 0 && !pr.mergeable.can_merge).length,
+  };
+}
+
+export function timelineSentence(pulls: PullRequestSummary[], awaitingRelease?: number): string {
+  return pullCountsSentence(pullCountsOf(pulls), awaitingRelease);
 }

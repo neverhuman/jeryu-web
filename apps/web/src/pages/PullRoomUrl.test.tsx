@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { PullRoomPage } from './PullRoomPage';
 
-vi.mock('../hooks/useControlPlane', () => ({ useControlPlane: () => ({
+vi.mock('../hooks/useControlPlane', () => ({ CONTROL_PLANE_MAX_LIMIT: 500, useControlPlane: () => ({
   isLoading: false, isError: false,
   data: {
     pullRequests: ['owner/a', 'owner/b'].map((repo) => ({
@@ -14,7 +14,13 @@ vi.mock('../hooks/useControlPlane', () => ({ useControlPlane: () => ({
       mergeable: true, mergeableState: 'clean', changedFiles: [], stateEvidence: 'fresh',
       checks: { total: 1, queued: 0, running: 0, failing: 0, successful: 1, missing: false },
     })),
-    summary: { openPrCount: 2, missingCheckPrCount: 0, failingCheckCount: 0 },
+    summary: {
+      openPrCount: 2,
+      missingCheckPrCount: 0,
+      failingCheckCount: 0,
+      waitingCheckPrCount: 0,
+      failingCheckPrCount: 0,
+    },
     toolBuild: { clusterCount: 0, topClusters: [] },
   },
 }) }));
@@ -24,8 +30,8 @@ vi.mock('../hooks/useRepositories', () => ({
     isError: false,
     data: {
       repositories: [
-        { id: { owner: 'owner', name: 'a' }, family: 'fam' },
-        { id: { owner: 'owner', name: 'b' }, family: null },
+        { id: { owner: 'owner', name: 'a' }, family: 'fam', open_pull_requests: 1 },
+        { id: { owner: 'owner', name: 'b' }, family: null, open_pull_requests: 1 },
       ],
     },
   }),

@@ -1,4 +1,6 @@
 import type {
+  ControlPlanePageReport,
+  ControlPlaneSummary,
   ControlPullRequest,
   EvidenceState,
   PullRequestSummary,
@@ -110,7 +112,7 @@ export function fromControlPullRequest(pr: ControlPullRequest): PullListItem {
     checkPosture: checkPosture(pr.checks),
     checks: pr.checks,
     url: pullRequestPath('jeryu', pr.repo, pr.number),
-    updatedAt: null,
+    updatedAt: pr.updatedAt ?? null,
   };
 }
 
@@ -201,20 +203,23 @@ export function isFinished(item: PullListItem): boolean {
 }
 
 /**
- * Header counts over PRs that are still in flight. The snapshot summary
- * counts every PR it knows about, merged and closed included, and every
- * failing check run, so it cannot answer "how many are open".
+ * Header counts over the snapshot rows in scope, for a page narrowed to one
+ * family or repository — the summary counts the whole forge. Read the same
+ * way the server reads them, so the two agree: waiting means no failure has
+ * been reported yet, blocked means one has and the merge is stopped.
  */
-export function pullRoomCounts(items: PullListItem[]): {
+export function scopedCounts(items: PullListItem[]): {
   open: number;
-  missingChecks: number;
-  failingChecks: number;
+  waiting: number;
+  blocked: number;
 } {
   const active = items.filter((item) => !isFinished(item));
   return {
     open: active.length,
-    missingChecks: active.filter((item) => item.checkPosture === 'missing').length,
-    failingChecks: active.filter((item) => item.checkPosture === 'failing').length,
+    waiting: active.filter((item) =>
+      ['missing', 'queued', 'running'].includes(item.checkPosture)
+    ).length,
+    blocked: active.filter((item) => item.checks.failing > 0 && !item.mergeable).length,
   };
 }
 
@@ -368,24 +373,71 @@ export interface FamilyPill {
   count: number;
 }
 
+/** What a pill needs of a repository: its family and its open pull requests. */
+export interface RepoFamilyCount {
+  family: string | null;
+  openPullRequests: number;
+}
+
 /**
- * One pill per family that has a pull request in flight, with its count,
- * alphabetical with "other" last. Merged and closed ones do not make a pill.
+ * One pill per family in the repository list, with the open pull requests its
+ * repositories hold, alphabetical with "other" last. A family with nothing
+ * open keeps its pill at 0: the bar is the way into a family, so leaving one
+ * out would hide it. The counts are the server's own per-repository numbers,
+ * not a count of whatever rows this page loaded.
  */
-export function familyPills(
-  items: PullListItem[],
-  families: ReadonlyMap<string, string | null>
-): FamilyPill[] {
+export function familyPills(repos: readonly RepoFamilyCount[]): FamilyPill[] {
   const counts = new Map<string, number>();
-  for (const item of items) {
-    if (isFinished(item)) continue;
-    const family = familyOfRepo(item.repo, families);
-    counts.set(family, (counts.get(family) ?? 0) + 1);
+  for (const repo of repos) {
+    const family = repo.family || OTHER_FAMILY;
+    counts.set(family, (counts.get(family) ?? 0) + repo.openPullRequests);
   }
   return Array.from(counts, ([family, count]) => ({ family, count })).sort((a, b) => {
     if (a.family === OTHER_FAMILY) return 1;
     if (b.family === OTHER_FAMILY) return -1;
     return a.family.localeCompare(b.family);
+  });
+}
+
+/**
+ * The header counts, from the summary the server computes over every pull
+ * request it knows. The snapshot collections arrive one page at a time, so
+ * counting the rows this page holds would report "0 open" whenever the open
+ * ones sort onto a later page.
+ */
+export function summaryCounts(summary: ControlPlaneSummary): {
+  open: number;
+  waiting: number;
+  blocked: number;
+} {
+  return {
+    open: summary.openPrCount,
+    waiting: summary.waitingCheckPrCount ?? 0,
+    blocked: summary.failingCheckPrCount ?? 0,
+  };
+}
+
+/** How a truncated collection is named on the page. */
+const COLLECTION_WORDS: Record<string, string> = {
+  pull_requests: 'pull requests',
+  repos: 'repositories',
+  check_runs: 'check runs',
+};
+
+/**
+ * "showing 100 of 509 pull requests" for every collection the page reads that
+ * the response cut short, so a missing row is stated rather than dropped.
+ */
+export function truncatedCollections(
+  page: ControlPlanePageReport | undefined,
+  reads: readonly string[]
+): string[] {
+  if (!page) return [];
+  return reads.flatMap((name) => {
+    const info = page.collections?.[name];
+    if (!info?.has_more) return [];
+    const rows = Math.min(info.limit, Math.max(0, info.total - (info.page - 1) * info.limit));
+    return [`showing ${rows} of ${info.total} ${COLLECTION_WORDS[name] ?? name}`];
   });
 }
 

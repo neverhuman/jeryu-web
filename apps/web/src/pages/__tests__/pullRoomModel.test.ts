@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ControlPullRequest, PullRequestSummary } from '../../api/types';
+import type {
+  ControlPlaneSummary,
+  ControlPullRequest,
+  PullRequestSummary,
+} from '../../api/types';
 import {
   DEFAULT_PULL_ROOM_FILTERS,
   filterPullRequests,
@@ -21,7 +25,9 @@ import {
   stateWords,
   knownSha,
   pullRequestPath,
-  pullRoomCounts,
+  scopedCounts,
+  summaryCounts,
+  truncatedCollections,
   visibleLanes,
 } from '../pullRoomModel';
 
@@ -86,7 +92,7 @@ describe('pullRoomModel', () => {
     expect(
       filterPullRequests(items, { ...DEFAULT_PULL_ROOM_FILTERS, state: 'all' })
     ).toHaveLength(4);
-    expect(pullRoomCounts(items)).toEqual({ open: 2, missingChecks: 1, failingChecks: 1 });
+    expect(scopedCounts(items)).toEqual({ open: 2, waiting: 1, blocked: 1 });
   });
 
   it('shows only lanes that hold something', () => {
@@ -136,7 +142,7 @@ describe('pullRoomModel', () => {
     expect(familyOfRepo('nobody/knows', families)).toBe(OTHER_FAMILY);
   });
 
-  it('makes one pill per family with a pull request in flight, "other" last, finished ones ignored', () => {
+  it('makes a pill for every family in the repository list, 0 included, "other" last', () => {
     const families = new Map<string, string | null>([
       ['a/web', 'zeta'],
       ['a/api', 'alpha'],
@@ -149,14 +155,69 @@ describe('pullRoomModel', () => {
       fromControlPullRequest(pr({ repo: 'a/misc', number: 4 })),
       fromControlPullRequest(pr({ repo: 'a/api', number: 5, state: 'merged' })),
     ];
-    expect(familyPills(items, families)).toEqual([
+    // The pills come from the repository list, not from the pull requests this
+    // page loaded: a family whose repos have nothing open is still selectable.
+    expect(
+      familyPills([
+        { family: 'zeta', openPullRequests: 2 },
+        { family: 'alpha', openPullRequests: 1 },
+        { family: 'alpha', openPullRequests: 0 },
+        { family: 'quiet', openPullRequests: 0 },
+        { family: null, openPullRequests: 1 },
+      ])
+    ).toEqual([
       { family: 'alpha', count: 1 },
+      { family: 'quiet', count: 0 },
       { family: 'zeta', count: 2 },
       { family: 'other', count: 1 },
     ]);
     expect(scopeToFamily(items, 'zeta', families).map((item) => item.number)).toEqual([1, 2]);
     expect(scopeToFamily(items, 'other', families).map((item) => item.number)).toEqual([4]);
     expect(scopeToFamily(items, '', families)).toHaveLength(5);
+  });
+
+  it('reads the header counts off the summary, not off the rows it holds', () => {
+    const summary = {
+      openPrCount: 22,
+      waitingCheckPrCount: 16,
+      failingCheckPrCount: 2,
+    } as ControlPlaneSummary;
+    expect(summaryCounts(summary)).toEqual({ open: 22, waiting: 16, blocked: 2 });
+    // An older forge sends neither per-PR count; the open one it always sends.
+    expect(summaryCounts({ openPrCount: 3 } as ControlPlaneSummary)).toEqual({
+      open: 3,
+      waiting: 0,
+      blocked: 0,
+    });
+  });
+
+  it('says which collections the snapshot cut short, and stays quiet otherwise', () => {
+    const page = {
+      limit: 100,
+      page: 1,
+      collections: {
+        pull_requests: { limit: 100, page: 1, total: 509, has_more: true },
+        repos: { limit: 100, page: 1, total: 99, has_more: false },
+      },
+    };
+    expect(truncatedCollections(page, ['pull_requests', 'repos'])).toEqual([
+      'showing 100 of 509 pull requests',
+    ]);
+    expect(truncatedCollections(page, ['repos'])).toEqual([]);
+    expect(truncatedCollections(undefined, ['pull_requests'])).toEqual([]);
+    // The last page of a cut collection reports the rows it actually carries.
+    expect(
+      truncatedCollections(
+        {
+          limit: 100,
+          page: 5,
+          collections: {
+            pull_requests: { limit: 100, page: 5, total: 509, has_more: true },
+          },
+        },
+        ['pull_requests']
+      )
+    ).toEqual(['showing 100 of 509 pull requests']);
   });
 
   it('asks only the repos the snapshot names, and caps how many', () => {

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
-import { useControlPlane } from '../hooks/useControlPlane';
+import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPlane';
 import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
 import { useRepoPullLists } from '../hooks/useRepoPullLists';
 import { useRepositories } from '../hooks/useRepositories';
@@ -24,11 +24,14 @@ import {
   isBoardView,
   pullListState,
   repoOptions,
+  scopedCounts,
+  summaryCounts,
   timelineRepos,
+  truncatedCollections,
   scopeToFamily,
   type PullRoomFilters,
 } from './pullRoomModel';
-import { timelineSentence } from './pullTimelineModel';
+import { pullCountsSentence } from './pullTimelineModel';
 
 import './page.css';
 import './PullRoomPage.css';
@@ -45,7 +48,12 @@ const EVIDENCE_STATES: EvidenceState[] = [
 ];
 
 export function PullRoomPage(): JSX.Element {
-  const snapshot = useControlPlane({ refetchInterval: REFRESH_MS });
+  // The open work is what this page is for, so it asks for the largest page
+  // the snapshot hands out rather than the default 100 rows per collection.
+  const snapshot = useControlPlane({
+    refetchInterval: REFRESH_MS,
+    limit: CONTROL_PLANE_MAX_LIMIT,
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const [localFilters, setFilters] = useState<PullRoomFilters>(DEFAULT_PULL_ROOM_FILTERS);
   // Keep the repository in the URL so shared links and history update the results.
@@ -64,15 +72,19 @@ export function PullRoomPage(): JSX.Element {
   // repository list (already cached for /repos) says which family a repo is in.
   const family = searchParams.get('family') ?? '';
   const repositories = useRepositories({});
+  const members = useMemo(
+    () => repositories.data?.repositories ?? [],
+    [repositories.data]
+  );
   const families = useMemo(
     () =>
       new Map(
-        (repositories.data?.repositories ?? []).map((member) => [
+        members.map((member) => [
           `${member.id.owner}/${member.id.name}`,
           member.family ?? null,
         ])
       ),
-    [repositories.data]
+    [members]
   );
   const setFamily = (value: string): void => {
     const params = new URLSearchParams(searchParams);
@@ -108,7 +120,20 @@ export function PullRoomPage(): JSX.Element {
     () => snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],
     [snapshot.data]
   );
-  const pills = useMemo(() => familyPills(everything, families), [everything, families]);
+  // Every family the repository list knows gets a toggle, with the server's
+  // own open-pull-request count — including 0, so a quiet family is still a
+  // way in. The snapshot's pull request collection is one page of many and
+  // cannot be counted for this.
+  const pills = useMemo(
+    () =>
+      familyPills(
+        members.map((member) => ({
+          family: member.family ?? null,
+          openPullRequests: member.open_pull_requests,
+        }))
+      ),
+    [members]
+  );
   const items = useMemo(
     () => scopeToFamily(everything, family, families),
     [everything, family, families]
@@ -213,6 +238,17 @@ export function PullRoomPage(): JSX.Element {
     );
   }
 
+  // Unscoped, the counts are the server's: it counted every pull request,
+  // while this page holds one page of the snapshot and 24 repositories of
+  // lists. Scoped to a family or a repo, the loaded rows are the better
+  // answer, and `wanted.skipped` says when even they are cut.
+  const scoped = family !== '' || filters.repo !== 'all';
+  const headerCounts = scoped
+    ? scopedCounts(items)
+    : summaryCounts(snapshot.data.summary);
+  // Anything the page reads that the snapshot cut short is said out loud.
+  const truncated = truncatedCollections(snapshot.data.page, ['pull_requests']);
+
   return (
     <div className="page page--full pull-room" data-testid="pull-room-page">
       <header className="page__header pull-room__header">
@@ -221,11 +257,12 @@ export function PullRoomPage(): JSX.Element {
           <p className="page__subtitle">
             Open pull requests across every repository.
           </p>
-          {board ? null : (
-            <p className="pull-room__sentence" data-testid="pull-room-sentence">
-              {timelineSentence(rows, awaitingReleaseCount(rows, ladderFor))}
-            </p>
-          )}
+          <p className="pull-room__sentence" data-testid="pull-room-sentence">
+            {pullCountsSentence(
+              headerCounts,
+              board ? undefined : awaitingReleaseCount(rows, ladderFor)
+            )}
+          </p>
         </div>
         <div className="pull-room__views" role="group" aria-label="View">
           <button type="button" aria-pressed={!board} onClick={() => setBoard(false)}>
@@ -244,7 +281,10 @@ export function PullRoomPage(): JSX.Element {
           aria-pressed={family === ''}
           onClick={() => setFamily('')}
         >
-          All <span className="pull-room__family-count">{pills.reduce((sum, pill) => sum + pill.count, 0)}</span>
+          All{' '}
+          <span className="pull-room__family-count">
+            {summaryCounts(snapshot.data.summary).open}
+          </span>
         </button>
         {pills.map((pill) => (
           <button
@@ -264,6 +304,13 @@ export function PullRoomPage(): JSX.Element {
           </button>
         ) : null}
       </nav>
+
+      {truncated.length > 0 ? (
+        <p className="pull-room__aside" role="status" data-testid="pull-room-truncated">
+          The snapshot answered with part of its lists: {truncated.join('; ')}. Open work
+          is ordered first, so the open ones are all here.
+        </p>
+      ) : null}
 
       <details
         className="pull-room__filter-fold"
