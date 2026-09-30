@@ -63,11 +63,12 @@ export function useSetPullState(
         pullRequestQueryKey(repoId, prNumber)
       );
       if (!cached) return null;
+      const state: 'open' | 'closed' = input.state === 'closed' ? 'closed' : 'open';
       return {
         ...cached,
         summary: {
           ...cached.summary,
-          state: input.state === 'closed' ? ('closed' as const) : ('open' as const),
+          state,
         },
       };
     },

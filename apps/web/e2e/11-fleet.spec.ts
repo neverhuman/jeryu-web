@@ -336,7 +336,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-reviewer-xbabe0_redteam')).toBeVisible();
     await expect(page.getByTestId('fleet-reviewer-xbabe1_redteam')).toHaveCount(0);
     await expect(page.getByTestId('fleet-reviewer-xbabe2_redteam')).toHaveCount(0);
-    await expect(page.getByTestId('fleet-reviewers-unused')).toHaveText(
+    await expect(page.getByTestId('fleet-reviewers-idle')).toHaveText(
       '2 reviewers have not reviewed anything yet: xbabe1 · redteam, xbabe2 · redteam.'
     );
     await expect(page.getByTestId('fleet-no-reviewer')).toHaveCount(0);

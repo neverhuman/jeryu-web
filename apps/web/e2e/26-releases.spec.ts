@@ -135,7 +135,7 @@ test('environments show the live release, rollback target and unshipped PRs @act
   // and no row pretends there is something to read.
   await expect(page.getByTestId('releases-env-canary')).toHaveCount(0);
   await expect(page.getByTestId('releases-other-environments')).toHaveCount(0);
-  await expect(page.getByTestId('releases-unused-environments')).toHaveText(
+  await expect(page.getByTestId('releases-undeployed-environments')).toHaveText(
     'Never deployed to: stable, canary, dev.'
   );
   await expect(page.getByTestId('releases-empty')).toHaveCount(0);
@@ -180,7 +180,7 @@ test('a repository with no recorded deployment says so @action:releases.empty', 
   );
   // Nothing is live anywhere, so no environment row competes with that sentence.
   await expect(page.getByTestId('releases-env-production')).toHaveCount(0);
-  await expect(page.getByTestId('releases-unused-environments')).toContainText(
+  await expect(page.getByTestId('releases-undeployed-environments')).toContainText(
     'Never deployed to: production, stable, canary, dev.'
   );
 });

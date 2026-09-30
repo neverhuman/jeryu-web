@@ -30,7 +30,7 @@ export interface SearchHit {
 
 export interface SearchResponse {
   generated_at: string;
-  /** The query as the server matched it. */
+  /** The query the server matched. */
   query: string;
   /** The kinds this answer searched, in display order. */
   kinds: SearchKind[];

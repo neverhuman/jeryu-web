@@ -12,7 +12,7 @@ import type { SearchQuery, SearchResponse } from '../api/types';
 
 /** Stable React Query key; an empty query is never sent. */
 export function searchQueryKey(query: SearchQuery): readonly unknown[] {
-  return ['search', query.q.trim(), query.kind ?? null, query.limit ?? null] as const;
+  return ['search', query.q.trim(), query.kind ?? null, query.limit ?? null];
 }
 
 export function useSearch(

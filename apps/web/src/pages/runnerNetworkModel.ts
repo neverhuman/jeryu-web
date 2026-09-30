@@ -628,9 +628,9 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
  */
 export function splitReviewers(reviewers: readonly RunnerNetworkNode[]): {
   listed: RunnerNetworkNode[];
-  unused: RunnerNetworkNode[];
+  idle: RunnerNetworkNode[];
 } {
-  const unused = reviewers.filter(
+  const idle = reviewers.filter(
     (node) =>
       node.activityState === 'idle' &&
       node.tasks.length === 0 &&
@@ -638,17 +638,17 @@ export function splitReviewers(reviewers: readonly RunnerNetworkNode[]): {
       (node.mergeGrantGaps?.length ?? 0) === 0
   );
   return {
-    listed: reviewers.filter((node) => !unused.includes(node)),
-    unused
+    listed: reviewers.filter((node) => !idle.includes(node)),
+    idle
   };
 }
 
 /** "4 reviewers have not reviewed anything yet: xbabe0 · redteam, …". */
-export function unusedReviewerSentence(
-  unused: readonly RunnerNetworkNode[]
+export function idleReviewerSentence(
+  idle: readonly RunnerNetworkNode[]
 ): string {
-  const names = unused.map((node) => runnerName(node.runnerId)).join(', ');
-  return `${unused.length} reviewer${unused.length === 1 ? ' has' : 's have'} not reviewed anything yet: ${names}.`;
+  const names = idle.map((node) => runnerName(node.runnerId)).join(', ');
+  return `${idle.length} reviewer${idle.length === 1 ? ' has' : 's have'} not reviewed anything yet: ${names}.`;
 }
 
 /** True when a runner has not been heard from for [`RUNNER_SEEN_STALE_MS`]. */

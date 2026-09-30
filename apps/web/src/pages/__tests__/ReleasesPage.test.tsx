@@ -124,7 +124,7 @@ describe('ReleasesPage', () => {
     // Nothing was ever deployed to stable, canary or dev: they are named in a
     // line rather than given three rows that say only "not configured".
     expect(screen.queryByTestId('releases-other-environments')).toBeNull();
-    expect(screen.getByTestId('releases-unused-environments')).toHaveTextContent(
+    expect(screen.getByTestId('releases-undeployed-environments')).toHaveTextContent(
       'Never deployed to: stable, canary, dev.'
     );
     expect(screen.queryByTestId('releases-env-canary')).toBeNull();

@@ -12,7 +12,7 @@ import {
   runnerNetworkFromResponse,
   seenStale,
   splitReviewers,
-  unusedReviewerSentence,
+  idleReviewerSentence,
   type RunnerNetworkNode
 } from '../runnerNetworkModel';
 
@@ -340,18 +340,18 @@ describe('runner rows in words', () => {
       reviewer('xbabe4/redteam'),
       reviewer('xbabe5/redteam')
     ];
-    const { listed, unused } = splitReviewers(reviewers);
+    const { listed, idle } = splitReviewers(reviewers);
     expect(listed.map((n) => n.runnerId)).toEqual([
       'xbabe0/redteam',
       'xbabe1/redteam',
       'xbabe2/redteam',
       'xbabe3/redteam'
     ]);
-    expect(unused.map((n) => n.runnerId)).toEqual(['xbabe4/redteam', 'xbabe5/redteam']);
-    expect(unusedReviewerSentence(unused)).toBe(
+    expect(idle.map((n) => n.runnerId)).toEqual(['xbabe4/redteam', 'xbabe5/redteam']);
+    expect(idleReviewerSentence(idle)).toBe(
       '2 reviewers have not reviewed anything yet: xbabe4 · redteam, xbabe5 · redteam.'
     );
-    expect(unusedReviewerSentence(unused.slice(0, 1))).toBe(
+    expect(idleReviewerSentence(idle.slice(0, 1))).toBe(
       '1 reviewer has not reviewed anything yet: xbabe4 · redteam.'
     );
   });

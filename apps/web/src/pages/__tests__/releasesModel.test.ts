@@ -194,11 +194,11 @@ describe('one Releases page', () => {
 
   it('shows only environments with something live or in flight; the rest fold away', () => {
     const rows = buildEnvironmentRows([production], new Map([[sha('b'), compare('b', [])]]), []);
-    const { live, quiet, unused } = splitEnvironments(rows);
+    const { live, quiet, undeployed } = splitEnvironments(rows);
     expect(live.map((row) => row.name)).toEqual(['production']);
     expect(quiet).toEqual([]);
     // Never deployed to: they get a line naming them, not a row each.
-    expect(unused.map((row) => row.name)).toEqual(['stable', 'canary', 'dev']);
+    expect(undeployed.map((row) => row.name)).toEqual(['stable', 'canary', 'dev']);
   });
 
   it('counts an environment that was only turned off as holding nothing live', () => {

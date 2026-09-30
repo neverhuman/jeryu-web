@@ -22,7 +22,7 @@ import {
   networkSentence,
   runnerNetworkFromResponse,
   splitReviewers,
-  unusedReviewerSentence
+  idleReviewerSentence
 } from './runnerNetworkModel';
 import { AutomationList, ReviewerList, RunnerNodeList } from './fleet';
 
@@ -143,12 +143,12 @@ export function FleetPage(): JSX.Element {
                 nowMs={runnersQuery.dataUpdatedAt}
               />
             ) : null}
-            {reviewers.unused.length > 0 ? (
+            {reviewers.idle.length > 0 ? (
               <p
                 className="page__roadmap-note"
-                data-testid="fleet-reviewers-unused"
+                data-testid="fleet-reviewers-idle"
               >
-                {unusedReviewerSentence(reviewers.unused)}
+                {idleReviewerSentence(reviewers.idle)}
               </p>
             ) : null}
           </>

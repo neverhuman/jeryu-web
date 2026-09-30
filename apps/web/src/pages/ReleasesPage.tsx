@@ -231,7 +231,7 @@ export function UnreleasedRedirect(): JSX.Element {
 function Environments({ repoId, branch }: { repoId: string; branch: string }): JSX.Element {
   const { rows, isLoading, error } = useReleaseOverview(repoId, branch);
   const anyDeployed = rows.some((row) => row.configured);
-  const { live, quiet, unused } = splitEnvironments(rows);
+  const { live, quiet, undeployed } = splitEnvironments(rows);
   return (
     <section className="page__section" aria-labelledby="releases-environments">
       <h2 className="page__section-title" id="releases-environments">
@@ -262,11 +262,11 @@ function Environments({ repoId, branch }: { repoId: string; branch: string }): J
               <EnvironmentTable rows={quiet} repoId={repoId} branch={branch} />
             </details>
           ) : null}
-          {unused.length > 0 ? (
+          {undeployed.length > 0 ? (
             // Never deployed to: a row of empty cells would only repeat the
             // names, so the names are all this says.
-            <p className="releases__muted" data-testid="releases-unused-environments">
-              Never deployed to: {unused.map((row) => row.name).join(', ')}.
+            <p className="releases__muted" data-testid="releases-undeployed-environments">
+              Never deployed to: {undeployed.map((row) => row.name).join(', ')}.
             </p>
           ) : null}
         </>

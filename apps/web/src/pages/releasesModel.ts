@@ -209,12 +209,12 @@ function attemptRan(state: DeploymentState | 'unknown'): boolean {
 }
 
 /** What an environment amounts to right now, and therefore how much of a row it earns. */
-export type EnvironmentStanding = 'live' | 'quiet' | 'unused';
+export type EnvironmentStanding = 'live' | 'quiet' | 'undeployed';
 
 export function environmentStanding(row: EnvironmentRow): EnvironmentStanding {
   if (row.current) return 'live';
   if (row.pendingAttempt && attemptRan(row.pendingAttempt.state)) return 'live';
-  return row.configured ? 'quiet' : 'unused';
+  return row.configured ? 'quiet' : 'undeployed';
 }
 
 /**
@@ -226,13 +226,13 @@ export function environmentStanding(row: EnvironmentRow): EnvironmentStanding {
 export function splitEnvironments(rows: EnvironmentRow[]): {
   live: EnvironmentRow[];
   quiet: EnvironmentRow[];
-  unused: EnvironmentRow[];
+  undeployed: EnvironmentRow[];
 } {
   const standing = new Map(rows.map((row) => [row, environmentStanding(row)]));
   return {
     live: rows.filter((row) => standing.get(row) === 'live'),
     quiet: rows.filter((row) => standing.get(row) === 'quiet'),
-    unused: rows.filter((row) => standing.get(row) === 'unused'),
+    undeployed: rows.filter((row) => standing.get(row) === 'undeployed'),
   };
 }
 
