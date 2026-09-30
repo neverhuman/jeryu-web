@@ -64,14 +64,27 @@ export function firstErrorLine(error: unknown): string {
   return (first ?? 'unknown error').trim();
 }
 
-/** Sanitize a rendered diagram and hand back its root node, or nothing. */
-export function parseDiagramSvg(svg: string): SVGElement | null {
+/**
+ * Sanitize a rendered diagram and hand back its root node.
+ *
+ * Throws with the reason it could not, so the note the reader sees names what
+ * went wrong instead of collapsing three failures into one.
+ */
+export function parseDiagramSvg(svg: string): SVGElement {
   const clean: unknown = DOMPurify.sanitize(svg, SVG_PURIFY_CONFIG);
-  if (typeof clean !== 'string' || clean.trim() === '') return null;
+  if (typeof clean !== 'string' || clean.trim() === '') {
+    throw new Error('sanitizing the rendered diagram left nothing to draw');
+  }
   const parsed = new DOMParser().parseFromString(clean, 'image/svg+xml');
-  if (parsed.getElementsByTagName('parsererror').length > 0) return null;
+  if (parsed.getElementsByTagName('parsererror').length > 0) {
+    throw new Error('the sanitized diagram is not well-formed SVG');
+  }
   const root = parsed.documentElement;
-  if (!root || root.nodeName.toLowerCase() !== 'svg') return null;
+  if (!root || root.nodeName.toLowerCase() !== 'svg') {
+    throw new Error(
+      `the rendered diagram's root element is <${root ? root.nodeName.toLowerCase() : 'nothing'}>, not <svg>`
+    );
+  }
   return root as unknown as SVGElement;
 }
 
@@ -155,11 +168,7 @@ export function MermaidDiagram({
           MERMAID_RENDER_TIMEOUT_MS
         );
         if (cancelled) return;
-        const root = parseDiagramSvg(rendered.svg);
-        if (!root) {
-          throw new Error('the rendered diagram was not valid SVG');
-        }
-        setState({ kind: 'drawn', svg: root });
+        setState({ kind: 'drawn', svg: parseDiagramSvg(rendered.svg) });
       } catch (error) {
         if (!cancelled) {
           setState({ kind: 'unavailable', reason: firstErrorLine(error) });

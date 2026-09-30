@@ -6,6 +6,7 @@
 // the code-block fallback with its note, and the source-size cap.
 
 import { render, screen, waitFor } from '@testing-library/react';
+import DOMPurify from 'dompurify';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,6 +16,7 @@ import {
   MERMAID_MAX_SOURCE_BYTES,
   MermaidDiagram,
   mermaidLabel,
+  parseDiagramSvg,
 } from '../MermaidDiagram';
 
 const initialize = vi.fn();
@@ -133,6 +135,23 @@ describe('MermaidDiagram', () => {
     await waitFor(() => expect(renderDiagram).not.toHaveBeenCalled());
   });
 
+  it('names the sanitized diagram it could not draw in the note', async () => {
+    renderDiagram.mockResolvedValue({
+      svg: '<svg xmlns="http://www.w3.org/2000/svg">&nbsp;</svg>',
+    });
+
+    const { container } = render(<MermaidDiagram source={FLOWCHART} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /diagram could not be rendered: the sanitized diagram is not well-formed SVG/
+        )
+      ).toBeInTheDocument();
+    });
+    expect(container.querySelector('svg')).toBeNull();
+  });
+
   it('labels a diagram from a title directive when it has one', () => {
     expect(mermaidLabel('%% a note\nflowchart TD\n  title: Ingest pipeline')).toBe(
       'diagram: Ingest pipeline'
@@ -206,5 +225,42 @@ describe('MarkdownSource mermaid fences', () => {
     );
     expect(container.querySelectorAll('.mermaid-diagram')).toHaveLength(1);
     expect(container.querySelector('pre code.language-rust')).not.toBeNull();
+  });
+});
+
+describe('parseDiagramSvg', () => {
+  it('hands back the root of a sanitized diagram', () => {
+    const root = parseDiagramSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg"><rect width="4" height="2"/></svg>'
+    );
+    expect(root.nodeName.toLowerCase()).toBe('svg');
+    expect(root.querySelector('rect')).not.toBeNull();
+  });
+
+  it('says so when sanitizing leaves nothing to draw', () => {
+    expect(() => parseDiagramSvg('<script>window.x = true;</script>')).toThrow(
+      'sanitizing the rendered diagram left nothing to draw'
+    );
+  });
+
+  it('says so when the sanitized diagram is not well-formed', () => {
+    // `&nbsp;` has no definition in XML, so the SVG parser refuses the document.
+    expect(() =>
+      parseDiagramSvg('<svg xmlns="http://www.w3.org/2000/svg">&nbsp;</svg>')
+    ).toThrow('the sanitized diagram is not well-formed SVG');
+  });
+
+  it('names the root element when it is not an svg', () => {
+    // Only a sanitizer change could produce this, so stand in for one.
+    const sanitize = vi
+      .spyOn(DOMPurify, 'sanitize')
+      .mockReturnValue('<circle r="2"/>');
+    try {
+      expect(() => parseDiagramSvg('<svg/>')).toThrow(
+        "the rendered diagram's root element is <circle>, not <svg>"
+      );
+    } finally {
+      sanitize.mockRestore();
+    }
   });
 });
