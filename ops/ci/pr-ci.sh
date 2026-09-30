@@ -62,10 +62,12 @@ if [ -x "$JERYU_TOOL_RENDER" ]; then
     --repo-root "$consumer_repo=$repo_root"
 fi
 
-# Install web deps FIRST: the check lane already typechecks the workspace.
+# Install web deps FIRST: the check lane already typechecks the workspace, and a
+# branch that adds a dependency must not meet it with the previous run's tree.
 # shellcheck source=ops/ci/web-deps.sh
 source ops/ci/web-deps.sh
 ensure_web_deps
+ensure_playwright_browsers
 
 echo "[pr-ci] (jobs=$JOBS) standard lanes" >&2
 bash ops/ci/fast.sh

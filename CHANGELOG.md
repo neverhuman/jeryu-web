@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- PR gate: `ops/ci/web-deps.sh` installs the workspace from the root `package-lock.json` before
+  any lane runs, so a branch that adds or bumps an npm dependency meets a tree that has it. The
+  install is keyed on the lockfile's digest recorded inside `node_modules`, so an unchanged
+  lockfile still costs nothing; a member `node_modules` left by an earlier install is cleared
+  first, since it would otherwise shadow a bumped version. Two gates sharing a tree install one
+  after the other (`flock`), an install the host cannot complete fails there naming the packages
+  that do not resolve rather than surfacing as `TS2307` in a later lane, and the Playwright
+  browser build is keyed on the version the lockfile pins.
 - Markdown views: a ```mermaid fenced block is drawn as a diagram. Mermaid loads only when such a
   block scrolls into view, from its own chunk, with `securityLevel: 'strict'` and `htmlLabels:
   false`; the SVG it produces is sanitized (svg + svgFilters profiles, no foreignObject, no

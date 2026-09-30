@@ -9,14 +9,7 @@ mkdir -p target/jankurai/e2e
 # shellcheck source=ops/ci/web-deps.sh
 source ops/ci/web-deps.sh
 ensure_web_deps
-
-if ! find "${HOME}/.cache/ms-playwright" -maxdepth 1 -type d -name 'chromium-*' 2>/dev/null | grep -q .; then
-  if [ -n "${CI:-}" ]; then
-    npm --workspace @jeryu/web exec -- playwright install --with-deps chromium
-  else
-    npm --workspace @jeryu/web exec -- playwright install chromium
-  fi
-fi
+ensure_playwright_browsers
 
 npm --workspace @jeryu/web run test:e2e:actions
 npm --workspace @jeryu/web run test:e2e:matrix
