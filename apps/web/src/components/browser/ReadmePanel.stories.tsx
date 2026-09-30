@@ -74,9 +74,42 @@ export const Rendered: Story = {
   },
 };
 
+const MERMAID_SOURCE = `flowchart TD
+  Ingest[Ingest events] --> Queue[Fan out]
+  Queue --> Report[Report]
+  Queue --> Store[(Store)]`;
+
+const MERMAID_HTML = `
+<h1>veox-telemetry</h1>
+<p>How a batch moves through the collector.</p>
+<pre><code class="language-mermaid">${MERMAID_SOURCE}</code></pre>
+<p>Text after the diagram.</p>
+`;
+
+// The library refuses this source, so the panel shows the code block and a note.
+const BROKEN_MERMAID_HTML = `
+<h1>veox-telemetry</h1>
+<pre><code class="language-mermaid">flowchart TD
+  A --&gt; </code></pre>
+`;
+
 export const MaliciousHtmlSanitized: Story = {
   name: 'Malicious HTML sanitized',
   args: {
     html: MALICIOUS_HTML,
+  },
+};
+
+export const MermaidDiagramRendered: Story = {
+  name: 'Mermaid diagram',
+  args: {
+    html: MERMAID_HTML,
+  },
+};
+
+export const MermaidDiagramFallback: Story = {
+  name: 'Mermaid diagram fallback',
+  args: {
+    html: BROKEN_MERMAID_HTML,
   },
 };

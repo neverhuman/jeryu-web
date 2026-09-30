@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Markdown views: a ```mermaid fenced block is drawn as a diagram. Mermaid loads only when such a
+  block scrolls into view, from its own chunk, with `securityLevel: 'strict'` and `htmlLabels:
+  false`; the SVG it produces is sanitized (svg + svgFilters profiles, no foreignObject, no
+  script, no event attributes) and inserted as nodes, never as markup. The diagram is announced
+  as an image labelled from its `title:` directive or first line and keeps its source behind a
+  "Source" toggle. A source that will not parse, a render that runs long, or one larger than
+  50 KB shows the code block plus a short note saying why.
 - Repository page: an Automation section says what runs on the repository — the forge's checks
   with what each last concluded (and every required context that has never reported), the
   reviewer and merge identities with whether their grants exist (a merger without its write

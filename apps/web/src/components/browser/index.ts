@@ -16,3 +16,5 @@ export type { FileFinderProps } from './FileFinder';
 export { CodeViewer } from './CodeViewer';
 export type { CodeViewerProps } from './CodeViewer';
 export { MarkdownSource, resolveMarkdownHref } from './MarkdownSource';
+export { MermaidDiagram } from './MermaidDiagram';
+export type { MermaidDiagramProps } from './MermaidDiagram';

@@ -11,6 +11,7 @@ import { createElement, useMemo, type MouseEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { MarkdownImage } from './MarkdownImage';
+import { MermaidDiagram } from './MermaidDiagram';
 
 import './browser.css';
 
@@ -24,8 +25,21 @@ export interface MarkdownRendererProps {
 /** Sanitization config — we strip every script-bearing attribute defensively. */
 const PURIFY_CONFIG: DOMPurifyConfig = {
   USE_PROFILES: { html: true },
-  ADD_ATTR: ['target', 'rel'],
+  // `class` survives the html profile, so `language-mermaid` reaches us and a
+  // fenced diagram block is still recognizable here.
+  ADD_ATTR: ['target', 'rel', 'class'],
 };
+
+/** The source of a ```mermaid fenced block, if this element is one. */
+export function mermaidSourceOf(element: Element): string | null {
+  if (element.tagName.toLowerCase() !== 'pre') return null;
+  const children = Array.from(element.children);
+  const code = children.length === 1 ? children[0] : undefined;
+  if (!code || code.tagName.toLowerCase() !== 'code') return null;
+  return code.classList.contains('language-mermaid')
+    ? (code.textContent ?? '')
+    : null;
+}
 
 function isSafeHref(href: string): boolean {
   return /^(?:(?:https?|mailto|tel|sms):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i.test(
@@ -116,6 +130,13 @@ function renderNode(
       props.target = '_blank';
       props.rel = 'noopener noreferrer';
     }
+  }
+
+  const mermaid = mermaidSourceOf(element);
+  if (mermaid !== null) {
+    // A ```mermaid block draws itself; the source stays reachable behind its
+    // own "Source" toggle and returns as a code block if drawing fails.
+    return createElement(MermaidDiagram, { key, source: mermaid });
   }
 
   if (tagName === 'img') {

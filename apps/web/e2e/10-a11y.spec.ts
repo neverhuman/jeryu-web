@@ -31,6 +31,7 @@ import {
   mockFleetBootstrap,
   mockPullRequestDetail,
   mockRepoAgentRuns,
+  mockReadme,
   mockRepoList,
   mockRepoLookup,
 } from './fixtures/mocks';
@@ -188,6 +189,24 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
       blockers.map((v) => `${v.impact ?? '?'} ${v.id}`),
       'the palette and the nav disclosure add no serious or critical violation'
     ).toEqual([]);
+  });
+
+  test('axe scan: README with a mermaid diagram drawn', async ({ page }) => {
+    await mockBootstrap(page);
+    await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
+    await mockReadme(page, {
+      html: [
+        '<h1 id="veox-telemetry">veox-telemetry</h1>',
+        '<pre><code class="language-mermaid">flowchart TD',
+        '  Ingest[Ingest events] --&gt; Report[Report]</code></pre>',
+      ].join('\n'),
+    });
+
+    await page.goto(`/repos/${REPO.host}/${REPO.owner}/${REPO.name}`);
+    const diagram = page.locator('.markdown-body .mermaid-diagram');
+    await expect(diagram).toBeVisible({ timeout: 30_000 });
+    await expect(diagram).toHaveAttribute('data-state', 'drawn', { timeout: 30_000 });
+    await scanAndAssert(page, 'repo-readme-mermaid');
   });
 
   test('axe scan: Repositories with a failing status opened in place', async ({ page }) => {

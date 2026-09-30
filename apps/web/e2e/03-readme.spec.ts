@@ -18,6 +18,8 @@
 //      `RenderedMarkdown` envelope with the expected renderer/sanitizer
 //      metadata (server-side contract).
 
+import type { Page } from '@playwright/test';
+
 import { expect, test } from './fixtures/test';
 
 import { mockBootstrap, mockReadme, mockRepoList } from './fixtures/mocks';
@@ -47,6 +49,34 @@ const READMEHTML = [
   '</table>',
   '<script>window.__xss=true;</script>',
 ].join('\n');
+
+// A README with a Mermaid flowchart. `MarkdownRenderer` hands a
+// `language-mermaid` block to `MermaidDiagram`, which draws it as an SVG.
+const MERMAIDREADMEHTML = [
+  '<h1 id="veox-telemetry">veox-telemetry</h1>',
+  '<p>How a batch moves through the collector.</p>',
+  '<pre><code class="language-mermaid">flowchart TD',
+  '  Ingest[Ingest events] --&gt; Queue[Fan out]',
+  '  Queue --&gt; Report[Report]</code></pre>',
+  '<p>Text after the diagram.</p>',
+].join('\n');
+
+// Mermaid refuses this source, so the panel must show the code block and a note.
+const BROKENMERMAIDREADMEHTML = [
+  '<h1 id="veox-telemetry">veox-telemetry</h1>',
+  '<pre><code class="language-mermaid">flowchart TD',
+  '  Ingest --&gt; </code></pre>',
+].join('\n');
+
+/** Pin the shell theme before the app boots. */
+async function useTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
+  await page.addInitScript(
+    ([key, value]) => {
+      window.localStorage.setItem(key, value);
+    },
+    ['jeryu.preferences.v2', JSON.stringify({ theme })] as const
+  );
+}
 
 test.describe('README rendering (W-T-11)', () => {
   test('README renders sanitized markdown @action:readme.rendered', async ({ page }) => {
@@ -90,6 +120,77 @@ test.describe('README rendering (W-T-11)', () => {
         (window as unknown as { __xss?: boolean }).__xss === true
     );
     expect(xssFired, 'inline <script> must not have executed').toBe(false);
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    test(`README mermaid diagram renders as an svg in the ${theme} theme @action:readme.mermaid`, async ({
+      page,
+    }) => {
+      await useTheme(page, theme);
+      await mockBootstrap(page);
+      await mockRepoList(page, [REPO]);
+      await mockReadme(page, { html: MERMAIDREADMEHTML });
+
+      await page.goto(`/repos/${REPO.id.host}/${REPO.id.owner}/${REPO.id.name}`);
+
+      const diagram = page.locator('.markdown-body .mermaid-diagram');
+      await expect(diagram).toBeVisible({ timeout: 30_000 });
+      // The drawn state is the one that carries an <svg>; the code block is the
+      // fallback, so waiting for it keeps the assertion honest.
+      await expect(diagram).toHaveAttribute('data-state', 'drawn', {
+        timeout: 30_000,
+      });
+      const svg = diagram.locator('svg');
+      await expect(svg).toBeVisible();
+      const box = await svg.boundingBox();
+      expect(box?.width ?? 0, 'the diagram must take up space').toBeGreaterThan(0);
+
+      // Node labels come from the source, drawn as SVG text (htmlLabels: false).
+      await expect(diagram).toContainText('Ingest events');
+      expect(
+        await diagram.locator('foreignObject').count(),
+        'htmlLabels: false must keep foreignObject out of the diagram'
+      ).toBe(0);
+      expect(await diagram.locator('script').count()).toBe(0);
+
+      // The diagram is announced as an image, and the source stays reachable.
+      await expect(diagram.locator('.mermaid-diagram__svg')).toHaveAttribute(
+        'aria-label',
+        /^diagram: flowchart TD/
+      );
+      await expect(diagram.locator('summary', { hasText: 'Source' })).toBeVisible();
+
+      // Text on either side of the diagram still renders.
+      await expect(page.locator('.markdown-body')).toContainText(
+        'Text after the diagram.'
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.getAttribute('data-theme')
+        )
+      ).toBe(theme);
+    });
+  }
+
+  test('a mermaid block that will not parse shows its source and why @action:readme.mermaid_fallback', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockRepoList(page, [REPO]);
+    await mockReadme(page, { html: BROKENMERMAIDREADMEHTML });
+
+    await page.goto(`/repos/${REPO.id.host}/${REPO.id.owner}/${REPO.id.name}`);
+
+    const diagram = page.locator('.markdown-body .mermaid-diagram');
+    await expect(diagram).toBeVisible({ timeout: 30_000 });
+    await expect(diagram).toHaveAttribute('data-state', 'unavailable', {
+      timeout: 30_000,
+    });
+    await expect(diagram).toContainText('diagram could not be rendered:');
+    await expect(diagram.locator('code.language-mermaid')).toContainText(
+      'flowchart TD'
+    );
+    expect(await diagram.locator('svg').count()).toBe(0);
   });
 
   test('markdown render endpoint returns the RenderedMarkdown contract @bff', async ({

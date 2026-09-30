@@ -6,13 +6,14 @@
 // GitHub-flavoured Markdown, sanitized by rehype-sanitize, into the same
 // `.markdown-body` container the global stylesheet already styles.
 
-import { useMemo, useRef, type AnchorHTMLAttributes, type ImgHTMLAttributes, type MouseEvent } from 'react';
+import { isValidElement, useMemo, useRef, type AnchorHTMLAttributes, type HTMLAttributes, type ImgHTMLAttributes, type MouseEvent, type ReactNode } from 'react';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeSlug from 'rehype-slug';
 import { MarkdownImage } from './MarkdownImage';
+import { MermaidDiagram } from './MermaidDiagram';
 import { remarkGfmRead } from './remarkGfmRead';
 
 import './browser.css';
@@ -40,6 +41,14 @@ export function resolveMarkdownHref(href: string, linkBase?: string): string {
   }
   const url = new URL(href, `https://spa.invalid${linkBase}`);
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+/** The source of a ```mermaid fence, given the `<pre>`'s children. */
+export function mermaidSourceOfChildren(children: ReactNode): string | null {
+  if (!isValidElement<{ className?: string; children?: ReactNode }>(children)) return null;
+  const { className, children: text } = children.props;
+  if (!className?.split(/\s+/).includes('language-mermaid')) return null;
+  return typeof text === 'string' ? text : null;
 }
 
 function isPlainLeftClick(event: MouseEvent): boolean {
@@ -93,7 +102,14 @@ export function MarkdownSource({
         />
       );
     }
-    return { a: Anchor, img: Image };
+    function Pre({ children, ...rest }: HTMLAttributes<HTMLPreElement>): JSX.Element {
+      const mermaid = mermaidSourceOfChildren(children);
+      if (mermaid !== null) {
+        return <MermaidDiagram source={mermaid} />;
+      }
+      return <pre {...rest}>{children}</pre>;
+    }
+    return { a: Anchor, img: Image, pre: Pre };
   }, [linkBase, docDir, navigate]);
 
   // HTML written in the Markdown (an <img>, a comment) is parsed and then

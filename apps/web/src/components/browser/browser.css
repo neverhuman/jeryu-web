@@ -602,3 +602,31 @@ a.markdown-image-chip:hover {
   border-bottom: 1px solid var(--color-border-subtle);
   background-color: var(--color-bg-1);
 }
+
+/* A ```mermaid block: the drawing, its source toggle, and its failure note. */
+.mermaid-diagram {
+  margin: var(--space-4) 0;
+}
+
+.mermaid-diagram__svg {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.mermaid-diagram__svg svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-diagram__details > summary {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+
+.mermaid-diagram__note {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+}
