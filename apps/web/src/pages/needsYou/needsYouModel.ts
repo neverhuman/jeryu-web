@@ -72,6 +72,7 @@ const KIND_LABEL: Record<string, string> = {
   pr_checks_failing: 'Checks failing',
   pr_awaiting_approval: 'Awaiting approval',
   pr_ready_to_merge: 'Ready to merge',
+  pr_draft_waiting: 'Draft waiting to be marked ready',
   queue_failed: 'Merge queue failed',
   reviewer_stuck: 'Reviewer stuck',
   gate_runner_down: 'Gate runners down',

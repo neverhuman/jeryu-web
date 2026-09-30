@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -59,6 +60,85 @@ describe('RepositoryPullRequestsPage', () => {
 
     expect(await screen.findByTestId('pull-lanes')).toBeInTheDocument();
     expect(screen.queryByTestId('pull-timeline')).not.toBeInTheDocument();
+  });
+
+  it('lists a draft with its badge and its non-main base, and filters on it', async () => {
+    mockFetch([
+      [
+        '/api/v1/repos?host=jeryu',
+        {
+          generated_at: '2026-06-05T00:00:00Z',
+          total: 1,
+          repositories: [repoSummary()],
+          facets: { hosts: ['jeryu'], owners: ['alice'], families: [], languages: [] },
+        },
+      ],
+      [
+        '/api/v1/repos/repo-1/pulls',
+        {
+          total: 2,
+          items: [
+            pullSummary(),
+            // A draft into a branch that is not the default one: the case an
+            // owner could not find in the list at all.
+            pullSummary({
+              number: 13,
+              title: 'Cart totals',
+              draft: true,
+              base_ref: 'rc/auto',
+              updated_at: '2026-05-20T00:00:00Z',
+            }),
+          ],
+        },
+      ],
+    ]);
+    const user = userEvent.setup();
+
+    renderPage('/repos/jeryu/alice%2Fjeryu/pulls');
+
+    // The default view narrows nothing: both are there, base branches and all.
+    await waitFor(() => {
+      expect(screen.getByText('Cart totals')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Fix Pull Room')).toBeInTheDocument();
+    expect(screen.getByTestId('pull-draft-13')).toBeInTheDocument();
+    expect(screen.getByTestId('pull-draft-13').textContent).toMatch(
+      /^Draft · idle \d+ days?$/
+    );
+    expect(screen.getByTestId('pull-timeline-13').textContent).toContain('rc/auto');
+
+    // Drafts only, and then the ones offered for review.
+    await user.click(screen.getByTestId('pull-filter-drafts'));
+    await waitFor(() => {
+      expect(screen.queryByText('Fix Pull Room')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Cart totals')).toBeInTheDocument();
+    expect(screen.getByTestId('pull-filter-drafts').textContent).toBe('Drafts (1)');
+
+    await user.click(screen.getByTestId('pull-filter-ready'));
+    await waitFor(() => {
+      expect(screen.queryByText('Cart totals')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Fix Pull Room')).toBeInTheDocument();
+  });
+
+  it('opens straight into the drafts filter from the URL', async () => {
+    mockFetch([
+      [
+        '/api/v1/repos?host=jeryu',
+        {
+          generated_at: '2026-06-05T00:00:00Z',
+          total: 1,
+          repositories: [repoSummary()],
+          facets: { hosts: ['jeryu'], owners: ['alice'], families: [], languages: [] },
+        },
+      ],
+      ['/api/v1/repos/repo-1/pulls', { total: 1, items: [pullSummary()] }],
+    ]);
+
+    renderPage('/repos/jeryu/alice%2Fjeryu/pulls?drafts=drafts');
+
+    expect(await screen.findByText('No draft pull requests')).toBeInTheDocument();
   });
 
   it('renders the required empty state', async () => {
@@ -143,7 +223,7 @@ function repoSummary(): Record<string, unknown> {
   };
 }
 
-function pullSummary(): Record<string, unknown> {
+function pullSummary(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     repo: { id: 'repo-1', host: 'jeryu', owner: 'alice', name: 'jeryu' },
     number: 12,
@@ -181,5 +261,6 @@ function pullSummary(): Record<string, unknown> {
     updated_at: '2026-06-05T00:00:00Z',
     passport_hash: 'passport-1',
     available_actions: [],
+    ...over,
   };
 }

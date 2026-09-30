@@ -37,6 +37,7 @@ import { useBootstrap } from '../hooks/useBootstrap';
 import { useMergeAttempt } from '../hooks/useMergeAttempt';
 import { useMergePr } from '../hooks/useMergePr';
 import { useSetPullState } from '../hooks/useSetPullState';
+import { useSetPullDraft } from '../hooks/useSetPullDraft';
 import { useSubmitReview } from '../hooks/useSubmitReview';
 import { usePullRequest } from '../hooks/usePullRequest';
 import { usePrChecks } from '../hooks/usePrChecks';
@@ -50,6 +51,7 @@ import { useSelectionStore } from '../stores/selectionStore';
 import { mergeAttemptLine } from '../components/merge/mergeAttemptModel';
 import {
   approveRefusal,
+  draftRefusal,
   isSettled,
   pullStateBadge,
 } from '../components/merge/pullReviewModel';
@@ -79,7 +81,8 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const fullName = props.fullName ?? fullNameFromParams(params);
   const prNumber = props.prNumber ?? params.number ?? null;
 
-  const viewerLogin = useAuth().user?.login ?? null;
+  const authUser = useAuth().user;
+  const viewerLogin = authUser?.login ?? null;
   const resolved = useResolveRepo(provider, fullName);
   const repoId = resolved.data?.id ?? null;
   const setPr = useSelectionStore((s) => s.setCurrentPr);
@@ -125,6 +128,8 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     }),
     [bootstrap.data]
   );
+
+  const setDraft = useSetPullDraft(repoId, prNumber);
 
   // Diff viewer state.
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
@@ -208,6 +213,17 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     [setState]
   );
 
+  // The draft lifecycle. The forge answers the updated detail, which the hook
+  // writes into the cache, so the Passport's draft blocker clears in place; a
+  // refusal is worded next to the control rather than thrown away.
+  const handleSetDraft = useCallback(
+    async (draft: boolean) => {
+      setDraft.reset();
+      await setDraft.mutateAsync({ draft }).catch(() => undefined);
+    },
+    [setDraft]
+  );
+
   // Aggregate the head-drift signal from either mutation.
   const headDrift = useMemo<HeadDriftInfo | undefined>(() => {
     const approveErr = approve.error;
@@ -231,12 +247,13 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     approve.reset();
     mergeMutation.reset();
     review.reset();
+    setDraft.reset();
     void detail.refetch();
     void diff.refetch();
     void checks.refetch();
     void threads.refetch();
     void commits.refetch();
-  }, [approve, mergeMutation, review, detail, diff, checks, threads, commits]);
+  }, [approve, mergeMutation, review, setDraft, detail, diff, checks, threads, commits]);
 
   // ── Loading + error guards. ────────────────────────────────────────
   if (resolved.isPending) {
@@ -407,7 +424,8 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           approve.isPending ||
           mergeMutation.isPending ||
           review.isPending ||
-          setState.isPending
+          setState.isPending ||
+          setDraft.isPending
         }
         reviewError={review.error && !headDrift ? review.error.message : null}
         mergeError={mergeMutation.error && !headDrift ? mergeMutation.error.message : null}
@@ -417,6 +435,13 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         viewerLogin={viewerLogin}
         closeError={setState.error ? setState.error.message : null}
         viewer={viewer}
+        viewerRole={authUser?.role ?? null}
+        onSetDraft={handleSetDraft}
+        draftRefusal={
+          setDraft.error
+            ? draftRefusal(setDraft.error, setDraft.variables?.draft ?? false)
+            : null
+        }
         repoFullName={fullName}
         prNumber={prNumber}
         onRequestChanges={handleRequestChanges}

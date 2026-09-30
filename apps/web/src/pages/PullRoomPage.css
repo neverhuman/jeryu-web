@@ -835,3 +835,22 @@ button.pull-repo__count-link {
 .pull-shift-queue a {
   text-decoration: underline;
 }
+
+/* A draft, and how long it has sat: a draft merges nothing and no automation
+   reviews it, so the list says so without the row having to be opened. */
+.pull-timeline__draft,
+.pull-card__draft {
+  align-self: flex-start;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.pull-room__filters {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}

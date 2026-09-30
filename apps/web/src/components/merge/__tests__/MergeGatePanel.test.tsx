@@ -8,7 +8,8 @@
 //   4. A null passport renders the "No verdict yet" pending state.
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { MergePassport } from '../../../api/types';
 import { MergeGatePanel } from '../MergeGatePanel';
@@ -88,6 +89,41 @@ describe('MergeGatePanel', () => {
     expect(
       screen.getByText('Custom-server-side rule failed.')
     ).toBeInTheDocument();
+  });
+
+  it('carries the button that clears the draft blocker, not only the rule', async () => {
+    const onMarkReady = vi.fn();
+    const user = userEvent.setup();
+    const passport: MergePassport = {
+      status: 'blocked',
+      head_sha: HEAD_SHA,
+      blockers: [
+        {
+          code: 'passport_blocked_draft',
+          message:
+            'Draft pull requests cannot be merged: mark it ready for review.',
+          details: 'POST /api/v1/repos/acme/widget-shop/pulls/7/ready',
+        },
+      ],
+      evaluated_at: '2026-05-26T12:00:00Z',
+    };
+    const { unmount } = render(
+      <MergeGatePanel passport={passport} onMarkReady={onMarkReady} />
+    );
+    expect(screen.getByText('Draft pull request')).toBeInTheDocument();
+    // The route that clears it is on the row, and so is the button.
+    expect(
+      screen.getByText('POST /api/v1/repos/acme/widget-shop/pulls/7/ready')
+    ).toBeInTheDocument();
+    await user.click(screen.getByTestId('pr-passport-ready-for-review'));
+    expect(onMarkReady).toHaveBeenCalledTimes(1);
+    unmount();
+
+    // Without the callback the blocker still explains itself, with no control.
+    render(<MergeGatePanel passport={passport} />);
+    expect(
+      screen.queryByTestId('pr-passport-ready-for-review')
+    ).not.toBeInTheDocument();
   });
 
   it('renders the pending state when no passport is available', () => {

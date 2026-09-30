@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { ActionButton } from '../action/ActionButton';
 import type { MergePassport, MergePassportBlocker } from '../../api/types';
 
 import './merge.css';
@@ -67,6 +68,10 @@ const GATE_EXPLANATIONS: Record<
     title: 'License policy violation',
     hint: 'A dependency change introduces a disallowed license.',
   },
+  passport_blocked_draft: {
+    title: 'Draft pull request',
+    hint: 'A draft is not offered for merging yet. Marking it ready for review clears this gate; the author or an admin can do it.',
+  },
   passport_blocked_secret_scan: {
     title: 'Secret scan finding',
     hint: 'A secret-scanning finding is open against this PR.',
@@ -83,6 +88,14 @@ export interface MergeGatePanelProps {
   passport: MergePassport | null;
   /** When `true`, render a loading skeleton while the passport is computed. */
   isLoading?: boolean;
+  /**
+   * Marks the draft ready for review. Given, the `passport_blocked_draft`
+   * blocker carries the button that clears it instead of only stating the
+   * rule: the reader who sees the gate is the one who can open it.
+   */
+  onMarkReady?: () => Promise<void> | void;
+  /** Disables the embedded control while a transition is in flight. */
+  isBusy?: boolean;
   className?: string;
 }
 
@@ -95,6 +108,8 @@ const StatusIcon: Record<'pass' | 'blocked' | 'pending', LucideIcon> = {
 export function MergeGatePanel({
   passport,
   isLoading = false,
+  onMarkReady,
+  isBusy = false,
   className,
 }: MergeGatePanelProps): JSX.Element {
   if (isLoading) {
@@ -186,6 +201,18 @@ export function MergeGatePanel({
                     <div className="merge-gate__blocker-details">
                       {blocker.details}
                     </div>
+                  ) : null}
+                  {blocker.code === 'passport_blocked_draft' && onMarkReady ? (
+                    <ActionButton
+                      variant="primary"
+                      onClick={() => void onMarkReady()}
+                      disabled={isBusy}
+                      actionId="pull.ready_for_review"
+                      className="merge-gate__blocker-action"
+                      data-testid="pr-passport-ready-for-review"
+                    >
+                      Ready for review
+                    </ActionButton>
                   ) : null}
                   <code className="merge-gate__blocker-code">{blocker.code}</code>
                 </div>

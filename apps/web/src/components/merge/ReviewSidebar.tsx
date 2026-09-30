@@ -11,11 +11,12 @@
 // instead, and any refusal the server sends back (`pull_self_approval_forbidden`
 // and the rest) is shown next to the button with its next step.
 
-import { Check, GitMerge, ShieldAlert, XCircle } from 'lucide-react';
+import { Check, FileEdit, GitMerge, Send, ShieldAlert, XCircle } from 'lucide-react';
 import { useState } from 'react';
 
 import { ActionButton } from '../action/ActionButton';
 import type { PullRequestDetail } from '../../api/types';
+import { canChangeDraft } from '../../pages/pullDraftModel';
 import {
   approvalsLabel,
   approveAvailability,
@@ -43,6 +44,15 @@ export interface ReviewSidebarProps {
   }) => Promise<void> | void;
   /** The signed-in account (`GET /auth/me`), for the self-approval check. */
   viewerLogin?: string | null;
+  /** The signed-in account's role; an admin may move anyone's draft. */
+  viewerRole?: 'admin' | 'user' | null;
+  /**
+   * Called when the reader marks a draft ready for review, or converts an open
+   * pull request back to a draft. Absent when no draft control is wired.
+   */
+  onSetDraft?: (draft: boolean) => Promise<void> | void;
+  /** A refused draft transition, worded with its next step. */
+  draftRefusal?: string | null;
   /** A refused approval: the server's message plus its next step. */
   approveRefusal?: ApproveRefusal | null;
   /** When true, mutations are disabled (in-flight). */
@@ -56,6 +66,9 @@ export function ReviewSidebar({
   onRequestChanges,
   onMerge,
   viewerLogin = null,
+  viewerRole = null,
+  onSetDraft,
+  draftRefusal = null,
   approveRefusal = null,
   isBusy = false,
   className,
@@ -67,6 +80,15 @@ export function ReviewSidebar({
   const primary = primaryAction(detail);
   const approve = approveAvailability(detail, viewerLogin);
   const draftNote = draftReviewNote(detail);
+  const isDraft = detail.summary.draft;
+  // The control is offered to whoever the forge would let use it: the author,
+  // and an admin on their behalf when the author is away.
+  const draftControl =
+    onSetDraft &&
+    canChangeDraft(
+      detail.summary,
+      viewerLogin ? { login: viewerLogin, role: viewerRole ?? 'user' } : null
+    );
 
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);
   const [requestChangesBody, setRequestChangesBody] = useState('');
@@ -155,6 +177,31 @@ export function ReviewSidebar({
         >
           Request changes
         </ActionButton>
+        {draftControl ? (
+          isDraft ? (
+            <ActionButton
+              variant="primary"
+              icon={<Send aria-hidden="true" size={12} />}
+              onClick={() => void onSetDraft(false)}
+              disabled={isBusy}
+              actionId="pull.ready_for_review"
+              data-testid="pr-ready-for-review"
+            >
+              Ready for review
+            </ActionButton>
+          ) : (
+            <ActionButton
+              variant="ghost"
+              icon={<FileEdit aria-hidden="true" size={12} />}
+              onClick={() => void onSetDraft(true)}
+              disabled={isBusy}
+              actionId="pull.convert_to_draft"
+              data-testid="pr-convert-to-draft"
+            >
+              Convert to draft
+            </ActionButton>
+          )
+        ) : null}
       </div>
 
       {approve.reason ? (
@@ -165,6 +212,15 @@ export function ReviewSidebar({
       {draftNote ? (
         <p className="review-sidebar__approve-note" data-testid="pr-draft-note">
           {draftNote}
+        </p>
+      ) : null}
+      {draftRefusal ? (
+        <p
+          className="review-sidebar__approve-note"
+          role="alert"
+          data-testid="pr-draft-error"
+        >
+          {draftRefusal}
         </p>
       ) : null}
       {approveRefusal ? (

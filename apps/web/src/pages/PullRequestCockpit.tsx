@@ -53,6 +53,12 @@ export interface PullRequestCockpitProps {
   closeError?: string | null;
   /** Who is looking: decides whether Close / Reopen is offered at all. */
   viewer: PullCloseViewer;
+  /** The signed-in account's role; an admin may move anyone's draft. */
+  viewerRole?: 'admin' | 'user' | null;
+  /** Marks a draft ready for review, or converts an open PR back to a draft. */
+  onSetDraft?: (draft: boolean) => Promise<void> | void;
+  /** A refused draft transition, shown next to the control. */
+  draftRefusal?: string | null;
   repoFullName?: string | null;
   prNumber?: string | null;
   onSelectFile: (path: string) => void;
@@ -87,6 +93,9 @@ export function PullRequestCockpit({
   viewerLogin,
   closeError,
   viewer,
+  viewerRole,
+  onSetDraft,
+  draftRefusal,
   repoFullName,
   prNumber,
   onSelectFile,
@@ -149,6 +158,9 @@ export function PullRequestCockpit({
           onRequestChanges={onRequestChanges}
           onMerge={onMerge}
           viewerLogin={viewerLogin}
+          viewerRole={viewerRole}
+          onSetDraft={onSetDraft}
+          draftRefusal={draftRefusal}
           approveRefusal={approveRefusal}
           isBusy={isBusy}
         />
@@ -169,7 +181,13 @@ export function PullRequestCockpit({
           isBusy={isBusy}
           error={closeError ?? null}
         />
-        {settled ? null : <MergeGatePanel passport={data.merge_passport} />}
+        {settled ? null : (
+          <MergeGatePanel
+            passport={data.merge_passport}
+            onMarkReady={onSetDraft ? () => onSetDraft(false) : undefined}
+            isBusy={isBusy}
+          />
+        )}
         <ChecksPanel
           checks={checks.data ?? null}
           isLoading={checks.isPending}

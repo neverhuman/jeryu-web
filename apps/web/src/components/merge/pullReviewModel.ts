@@ -125,7 +125,22 @@ export function approveAvailability(
 /** A draft still takes reviews; the merge waits for it to be marked ready. */
 export function draftReviewNote(detail: PullRequestDetail): string | null {
   if (!detail.summary.draft || isSettled(detail)) return null;
-  return 'This pull request is a draft: a review is recorded now, but the merge waits until it is marked ready for review.';
+  return 'This pull request is a draft: a review is recorded now, but the merge waits until it is marked ready for review. Use "Ready for review" below when it is.';
+}
+
+/** Word a refused draft transition so the reader knows what to do next. */
+export function draftRefusal(
+  error: Pick<ApiError, 'code' | 'message' | 'status'>,
+  draft: boolean
+): string {
+  const what = draft ? 'converted to a draft' : 'marked ready for review';
+  if (error.code === 'pull_draft_forbidden') {
+    return `Not ${what}: ${error.message} Ask the author, or an administrator, to make the change.`;
+  }
+  if (error.code === 'pull_draft_not_open') {
+    return `Not ${what}: ${error.message} Reopen it first.`;
+  }
+  return `Not ${what}: ${error.message}`;
 }
 
 export interface ApproveRefusal {

@@ -86,6 +86,7 @@ describe('needsYouModel', () => {
     expect(kindLabel('todo_blocked')).toBe('Blocked todo');
     expect(kindLabel('release_staged')).toBe('Release ready to deploy');
     expect(kindLabel('pin_behind')).toBe('Merged, not pinned for release');
+    expect(kindLabel('pr_draft_waiting')).toBe('Draft waiting to be marked ready');
     expect(kindLabel('some_new.kind')).toBe('Some new kind');
     expect(kindLabel('')).toBe('Needs attention');
     expect(

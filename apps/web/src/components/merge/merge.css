@@ -604,6 +604,12 @@
   font-family: var(--font-mono);
 }
 
+/* The button that clears the blocker beside it, not a full-width control. */
+.merge-gate__blocker-action {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+}
+
 .merge-gate__blocker-code {
   align-self: flex-start;
   background-color: var(--color-bg-3);

@@ -22,7 +22,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { PullRequestDetail } from '../../../api/types';
 import { ReviewSidebar } from '../ReviewSidebar';
-import { approveRefusal } from '../pullReviewModel';
+import { approveRefusal, draftRefusal } from '../pullReviewModel';
 
 const HEAD_SHA = 'abcdef1234567890abcdef1234567890abcdef12';
 
@@ -369,5 +369,107 @@ describe('ReviewSidebar self-approval', () => {
     expect(screen.getByTestId('pr-draft-note')).toHaveTextContent(
       /a review is recorded now, but the merge waits until it is marked ready for review/
     );
+  });
+});
+
+describe('the draft lifecycle controls', () => {
+  it('offers Ready for review on a draft and Convert to draft on an open PR', async () => {
+    const onSetDraft = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <ReviewSidebar
+        detail={makeDetail({ draft: true, author: 'dana' })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+        onSetDraft={onSetDraft}
+        viewerLogin="dana"
+      />
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Convert to draft' })
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ready for review' }));
+    expect(onSetDraft).toHaveBeenCalledWith(false);
+    unmount();
+
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ author: 'dana' })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+        onSetDraft={onSetDraft}
+        viewerLogin="dana"
+      />
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Ready for review' })
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Convert to draft' }));
+    expect(onSetDraft).toHaveBeenLastCalledWith(true);
+  });
+
+  it('offers the control to an admin and withholds it from a stranger', () => {
+    const { unmount } = render(
+      <ReviewSidebar
+        detail={makeDetail({ draft: true, author: 'dana' })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+        onSetDraft={vi.fn()}
+        viewerLogin="root"
+        viewerRole="admin"
+      />
+    );
+    expect(screen.getByRole('button', { name: 'Ready for review' })).toBeEnabled();
+    unmount();
+
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ draft: true, author: 'dana' })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+        onSetDraft={vi.fn()}
+        viewerLogin="mallory"
+        viewerRole="user"
+      />
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Ready for review' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('tells a draft reviewer the merge waits, and points at the control', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ draft: true })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+        onSetDraft={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('pr-draft-note').textContent).toContain(
+      'Ready for review'
+    );
+  });
+
+  it('shows a refused transition next to the control', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ draft: true })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+        onSetDraft={vi.fn()}
+        draftRefusal={draftRefusal(
+          {
+            code: 'pull_draft_forbidden',
+            message: 'only the pull request author or an admin can change its draft state',
+            status: 403,
+          },
+          false
+        )}
+      />
+    );
+    const note = screen.getByTestId('pr-draft-error').textContent ?? '';
+    expect(note).toContain('Not marked ready for review');
+    expect(note).toContain('Ask the author, or an administrator');
   });
 });

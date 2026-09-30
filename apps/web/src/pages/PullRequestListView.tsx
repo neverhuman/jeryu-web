@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { draftBadgeLabel } from './pullDraftModel';
 import {
   cardFacts,
   knownSha,
@@ -49,6 +50,15 @@ export function PullRequestCard({
         <span aria-hidden="true">→</span>
         <code>{item.baseRef}</code>
       </div>
+      {item.draft ? (
+        <div
+          className="pull-card__draft"
+          data-testid={`pull-card-draft-${item.repo}-${item.number}`}
+          title={item.updatedAt ? `Draft since ${item.updatedAt}` : 'Draft'}
+        >
+          {item.updatedAt ? draftBadgeLabel(item.updatedAt) : 'Draft'}
+        </div>
+      ) : null}
       <div className="pull-card__facts">
         {cardFacts(item).map((fact, index) => (
           <span className="pull-card__pill" key={fact}>

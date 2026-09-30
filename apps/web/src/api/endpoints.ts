@@ -104,6 +104,12 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/reviews`,
   pullApprove: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/approve`,
+  /** The draft lifecycle: POST marks a draft ready for review. */
+  pullReady: (id: string, prNumber: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/ready`,
+  /** POST puts an open pull request back into draft. */
+  pullDraft: (id: string, prNumber: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/draft`,
   pullMerge: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge`,
   pullMergeAttempt: (id: string, prNumber: string): string =>

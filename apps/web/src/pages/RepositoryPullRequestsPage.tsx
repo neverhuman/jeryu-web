@@ -4,6 +4,14 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 import { fetchPullList } from '../api/pullLists';
 import { useResolveRepo } from '../hooks/useResolveRepo';
+import {
+  PULL_DRAFT_FILTERS,
+  draftCount,
+  draftFilterLabel,
+  filterByDraft,
+  parseDraftFilter,
+  type PullDraftFilter,
+} from './pullDraftModel';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
 import { fromPullRequestSummary, groupPullRequests } from './pullRoomModel';
@@ -23,8 +31,19 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   const resolved = useResolveRepo(provider, fullName);
   const [search, setSearch] = useSearchParams();
   const view = search.get('view') === 'board' ? 'board' : 'timeline';
+  const drafts = parseDraftFilter(search.get('drafts'));
+  const query = (next: { view?: 'timeline' | 'board'; drafts?: PullDraftFilter }) => {
+    const out: Record<string, string> = {};
+    const wantView = next.view ?? view;
+    const wantDrafts = next.drafts ?? drafts;
+    if (wantView === 'board') out.view = wantView;
+    if (wantDrafts !== 'all') out.drafts = wantDrafts;
+    return out;
+  };
   const setView = (next: 'timeline' | 'board') =>
-    setSearch(next === 'timeline' ? {} : { view: next }, { replace: true });
+    setSearch(query({ view: next }), { replace: true });
+  const setDrafts = (next: PullDraftFilter) =>
+    setSearch(query({ drafts: next }), { replace: true });
   const repoId = resolved.data?.id ?? null;
   const pulls = useQuery({
     queryKey: ['repo-pulls', repoId],
@@ -33,12 +52,15 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
     enabled: typeof repoId === 'string' && repoId.length > 0,
     staleTime: 15_000,
   });
+  // Every pull request the repository has, whatever its base branch: the
+  // default view narrows nothing, so a pull request into `rc/auto` is as
+  // visible as one into the default branch. Only the draft filter narrows it.
+  const all = pulls.data?.items ?? [];
+  const shown = useMemo(() => filterByDraft(all, drafts), [all, drafts]);
+  const openDrafts = useMemo(() => draftCount(all), [all]);
   const lanes = useMemo(
-    () =>
-      groupPullRequests(
-        pulls.data?.items.map((item) => fromPullRequestSummary(item)) ?? []
-      ),
-    [pulls.data]
+    () => groupPullRequests(shown.map((item) => fromPullRequestSummary(item))),
+    [shown]
   );
 
   if (resolved.isPending) {
@@ -71,6 +93,20 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
             {resolved.data.summary.id.owner}/{resolved.data.summary.id.name}
           </p>
         </div>
+        <div className="pull-room__filters" role="group" aria-label="Draft filter">
+          {PULL_DRAFT_FILTERS.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              aria-pressed={drafts === filter}
+              data-testid={`pull-filter-${filter}`}
+              onClick={() => setDrafts(filter)}
+            >
+              {draftFilterLabel(filter)}
+              {filter === 'drafts' && openDrafts > 0 ? ` (${openDrafts})` : ''}
+            </button>
+          ))}
+        </div>
         <div className="pull-room__views" role="group" aria-label="View">
           <button type="button" aria-pressed={view === 'timeline'} onClick={() => setView('timeline')}>
             Timeline
@@ -85,10 +121,17 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
       ) : pulls.isError ? (
         <p className="page__roadmap-note">{pulls.error.message}</p>
       ) : view === 'timeline' ? (
-        <PullRequestTimeline pulls={pulls.data.items} emptyMessage="No pull requests" />
+        <PullRequestTimeline pulls={shown} emptyMessage={emptyMessage(drafts)} />
       ) : (
-        <PullRequestListView lanes={lanes} emptyMessage="No pull requests" />
+        <PullRequestListView lanes={lanes} emptyMessage={emptyMessage(drafts)} />
       )}
     </div>
   );
+}
+
+/** The empty line says which filter is empty, not just "nothing here". */
+function emptyMessage(filter: PullDraftFilter): string {
+  if (filter === 'drafts') return 'No draft pull requests';
+  if (filter === 'ready') return 'No pull requests ready for review';
+  return 'No pull requests';
 }

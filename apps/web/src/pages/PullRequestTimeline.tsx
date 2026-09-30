@@ -15,6 +15,7 @@ import {
   type PullRow,
   type RepoGroup,
 } from './pullRepoGroupsModel';
+import { draftBadgeLabel } from './pullDraftModel';
 import { pullRequestPath } from './pullRoomModel';
 import { UNKNOWN_LADDER, type ReleaseLadder } from './releaseChannelsModel';
 import { releasesHref } from './releasesModel';
@@ -239,7 +240,22 @@ function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JS
               + {row.alsoWaiting} more waiting
             </span>
           ) : null}{' '}
-          · <code>{pr.head_ref}</code> · {pr.author}
+          {pr.draft ? (
+            <>
+              ·{' '}
+              <span
+                className="pull-timeline__draft"
+                data-testid={`pull-draft-${id}`}
+                title={`Draft since ${pr.updated_at}`}
+              >
+                {draftBadgeLabel(pr.updated_at)}
+              </span>{' '}
+            </>
+          ) : null}
+          {/* The base is named on the row: a pull request into a branch that
+              is not the default one is otherwise easy to miss in the list. */}
+          · <code>{pr.head_ref}</code> <span aria-hidden="true">→</span>{' '}
+          <code>{pr.base_ref}</code> · {pr.author}
           {supersedes.length > 0 ? (
             <span className="pull-timeline__supersedes">
               {' '}
