@@ -1559,3 +1559,41 @@ export async function mockCompanionShell(
     });
   });
 }
+
+/**
+ * Mock `GET /api/v1/repos/{id}/automation` — what acts on the repository and
+ * where it is mirrored to. The default is a repository whose merge identity
+ * holds no grant, because that is the case the page exists to make visible;
+ * pass an override for any other shape.
+ */
+export async function mockRepoAutomation(
+  page: Page,
+  view: Record<string, unknown> = {}
+): Promise<void> {
+  const body = {
+    repo: 'acme/widget-www',
+    defaultBranch: 'main',
+    checks: [],
+    requiredContexts: [],
+    actors: [],
+    mirrors: [],
+    grants: [],
+    grantsVisible: false,
+    warnings: [],
+    ...view,
+  };
+  await page.route(
+    /\/api\/v1\/repos\/[^/]+\/automation(\?.*)?$/,
+    async (route: Route, request) => {
+      if (request.method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    }
+  );
+}

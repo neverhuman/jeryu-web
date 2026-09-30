@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Repository page: an Automation section says what runs on the repository — the forge's checks
+  with what each last concluded (and every required context that has never reported), the
+  reviewer and merge identities with whether their grants exist (a merger without its write
+  grant is called out, because its merges answer 403), the gate runners and deployers that
+  reported, and who holds which access. A Mirrors section says where the repository is copied
+  to, which refs travel, the sha the target holds, and whether it is behind the forge. Both read
+  `GET /api/v1/repos/{id}/automation`; a forge without that route leaves the rest of the page
+  alone.
 - Releases: `/releases` opens on the family release board (`jeryu.release_board.v1`, admin-only):
   one lane per deliverable with its stages, what each stage runs on every target and how that is
   known, the promote command to copy, a "Work reached" bar, and "Pinned vs released" and

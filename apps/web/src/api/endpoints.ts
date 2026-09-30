@@ -108,6 +108,10 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge`,
   pullMergeAttempt: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge-attempt`,
+  /** What acts on the repository (checks, reviewer, merger, runners,
+   *  deployers, grants) and where it is mirrored to. */
+  repoAutomation: (id: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/automation`,
   settings: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/settings`,
   settingsPreview: (id: string): string =>

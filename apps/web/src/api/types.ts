@@ -17,6 +17,7 @@ export type * from './types/shift';
 export type * from './types/pipeline';
 export type * from './types/qualityGate';
 export type * from './types/search';
+export type * from './types/automation';
 
 // Live agent terminal types (defined in ./agentTerminal).
 export type { AgentTtyFrame, AgentControl, AgentControlClientMessage, RepoAgentSummary, RepoAgentRunsResponse, CreateSessionResponse } from './agentTerminal';

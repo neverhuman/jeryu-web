@@ -22,6 +22,7 @@ import {
 } from '../components/browser';
 import type { BreadcrumbSegment } from '../components/browser';
 import { JankuraiScoreBadge } from '../components/repo/JankuraiScoreBadge';
+import { RepoAutomationPanel } from '../components/repo/RepoAutomationPanel';
 import { RepoHealthPill } from '../components/repo/RepoHealthPill';
 import { RepoArchivedBadge } from '../components/repo/RepoArchivedBadge';
 import { RepoRoleBadge } from '../components/repo/RepoRoleBadge';
@@ -342,6 +343,10 @@ export function RepositoryBrowserPage({
           />
         </aside>
       </section>
+
+      {/* What runs on the repository, and where it is copied to. Only on the
+          front page: a reader opening a file wants the file. */}
+      {onFile ? null : <RepoAutomationPanel repoId={repoId} />}
 
       <FileFinder
         open={finderOpen}

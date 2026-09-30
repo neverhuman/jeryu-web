@@ -30,3 +30,5 @@ export { RepoArchiveSection } from './RepoArchiveSection';
 export type { RepoArchiveSectionProps } from './RepoArchiveSection';
 export { CreateRepoDialog } from './CreateRepoDialog';
 export type { CreateRepoDialogProps } from './CreateRepoDialog';
+export { RepoAutomationPanel } from './RepoAutomationPanel';
+export type { RepoAutomationPanelProps } from './RepoAutomationPanel';

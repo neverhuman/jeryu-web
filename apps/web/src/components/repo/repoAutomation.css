@@ -1,0 +1,85 @@
+/* repoAutomation.css — the repository page's Automation and Mirrors sections.
+   One row per thing that acts on the repository: a colour says whether it is
+   fine, waiting, or something a person has to settle. */
+
+.repo-automation__subtitle {
+  margin: var(--space-4) 0 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-fg-secondary);
+}
+
+.repo-automation__list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.repo-automation__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-1) 0 var(--space-1) var(--space-2);
+  border-left: 2px solid var(--color-border-subtle);
+  color: var(--color-fg-secondary);
+}
+
+.repo-automation__row--ok {
+  border-left-color: var(--color-accent-success);
+}
+
+.repo-automation__row--bad {
+  border-left-color: var(--color-accent-danger);
+}
+
+.repo-automation__row--waiting {
+  border-left-color: var(--color-fg-muted);
+}
+
+.repo-automation__name {
+  color: var(--color-fg-primary);
+  font-weight: 500;
+}
+
+.repo-automation__state,
+.repo-automation__when {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.repo-automation__sha {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+.repo-automation__grant[data-grant='missing'] {
+  color: var(--color-accent-danger);
+}
+
+.repo-automation__grant[data-grant='present'] {
+  color: var(--color-accent-success);
+}
+
+.repo-automation__warnings {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.repo-automation__warning {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  color: var(--color-accent-danger);
+}
+
+.repo-automation__note {
+  margin-top: var(--space-3);
+  color: var(--color-fg-secondary);
+}
