@@ -4,7 +4,11 @@
 // are split into `reviewers` and kept out of the slot totals. Nodes labelled
 // `automation` are the forge's background timers (auto-pin, auto-stage): they
 // go to `automation` and nowhere else; their words are in
-// fleet/automationModel.ts.
+// fleet/automationModel.ts. Nodes labelled `jankurai-audit` are quality audit
+// runners: they score repositories rather than gate them, and are listed in
+// their own section under `audits`. A forge that sends each node's `kind` is
+// believed over the labels (deploy timers carry gate-like labels and are
+// automation); labels are the fallback for an older forge.
 //
 // The Fleet page consumes the shared runner-fabric response directly and keeps
 // the node/task/TTY projection isolated from React. That lets the page show the
@@ -19,10 +23,13 @@ import type {
   RunnerLastActivity,
   RunnerFabricResponse,
   RunnerCode,
+  RunnerNodeKind,
   RunnerNodeSummary,
   RunnerTaskSummary,
+  RunnerTool,
   RunnerTtyPreview,
 } from '../api/types';
+import { toolsFromRaw } from './fleet/runnerTools';
 
 export type RunnerAvailability =
   | 'online'
@@ -32,14 +39,17 @@ export type RunnerAvailability =
 
 export type RunnerActivityState = 'active' | 'idle' | 'unknown';
 
-/** A gate runner slot, or a PR reviewer or background timer that holds none. */
-export type RunnerKind = 'gate' | 'reviewer' | 'automation';
+/** A gate runner slot, or a PR reviewer, quality audit or background timer that holds none. */
+export type RunnerKind = 'gate' | 'reviewer' | 'audit' | 'automation';
 
 /** Heartbeat label that marks a PR reviewer rather than a gate slot. */
 export const REVIEWER_LABEL = 'redteam';
 
 /** Heartbeat label that marks a background timer (auto-pin, auto-stage). */
 export const AUTOMATION_LABEL = 'automation';
+
+/** Heartbeat label that marks a quality audit runner (it scores, it does not gate). */
+export const AUDIT_LABEL = 'jankurai-audit';
 
 /** What a reviewer's last pass concluded, as shown on /runners. */
 export type ReviewVerdict = 'approve' | 'hold' | 'no usable verdict';
@@ -91,6 +101,8 @@ export interface RunnerNetworkNode {
   mergeGrantGaps?: MergeGrantGap[];
   /** The code the runner has installed, when it reports it. */
   code?: RunnerCode | null;
+  /** The tools that evaluate a pull request here; empty or absent when none are reported. */
+  tools?: RunnerTool[];
 }
 
 export interface RunnerNetworkTotals {
@@ -112,6 +124,8 @@ export interface RunnerNetworkState {
   reviewers: RunnerNetworkNode[];
   /** Background timers (auto-pin, auto-stage); empty from an older forge. */
   automation: RunnerNetworkNode[];
+  /** Quality audit runners; empty from an older forge. */
+  audits: RunnerNetworkNode[];
   totals: RunnerNetworkTotals;
   lastUpdated: string | null;
   /** The forge server's own build; null from an older forge. */
@@ -218,11 +232,7 @@ function nodeFromRaw(
     null;
   return {
     runnerId: raw.runnerId,
-    kind: raw.labels.includes(AUTOMATION_LABEL)
-      ? 'automation'
-      : raw.labels.includes(REVIEWER_LABEL)
-        ? 'reviewer'
-        : 'gate',
+    kind: kindOf(raw.kind, raw.labels),
     source: raw.source,
     state: raw.state,
     availability,
@@ -238,7 +248,34 @@ function nodeFromRaw(
     mergeGrantGaps: raw.mergeGrantGaps ?? [],
     offlineAfterSeconds: raw.offlineAfterSeconds ?? null,
     code: raw.code ?? null,
+    tools: raw.tools ?? [],
   };
+}
+
+/** The forge's kinds, and the section each belongs in. */
+const KIND_SECTIONS: Record<RunnerNodeKind, RunnerKind> = {
+  gate: 'gate',
+  workcell: 'gate',
+  reviewer: 'reviewer',
+  automation: 'automation',
+  deployer: 'automation',
+  'jankurai-audit': 'audit',
+};
+
+function isNodeKind(value: unknown): value is RunnerNodeKind {
+  return typeof value === 'string' && Object.hasOwn(KIND_SECTIONS, value);
+}
+
+/**
+ * Which section a runner belongs in: the forge's `kind` when it sends one we
+ * know, else its heartbeat labels.
+ */
+function kindOf(kind: RunnerNodeKind | undefined, labels: readonly string[]): RunnerKind {
+  if (kind) return KIND_SECTIONS[kind];
+  if (labels.includes(AUTOMATION_LABEL)) return 'automation';
+  if (labels.includes(REVIEWER_LABEL)) return 'reviewer';
+  if (labels.includes(AUDIT_LABEL)) return 'audit';
+  return 'gate';
 }
 
 function totalsFromNodes(nodes: RunnerNetworkNode[]): RunnerNetworkTotals {
@@ -366,6 +403,7 @@ export function runnerNetworkFromResponse(
       const tasks = Array.isArray(record.activeTasks) ? record.activeTasks : [];
       return nodeFromRaw({
         runnerId: str(record.runnerId),
+        kind: isNodeKind(record.kind) ? record.kind : undefined,
         source: str(record.source) || 'local',
         state: str(record.state),
         capacity: num(record.capacity),
@@ -378,6 +416,7 @@ export function runnerNetworkFromResponse(
         mergeGrantGaps: mergeGrantGapsFromRaw(record.mergeGrantGaps),
         offlineAfterSeconds: num(record.offlineAfterSeconds) > 0 ? num(record.offlineAfterSeconds) : null,
         code: codeFromRaw(record.code),
+        tools: toolsFromRaw(record.tools),
         activeTasks: tasks
           .map((task) => {
             const taskRecord = asRecord(task);
@@ -418,6 +457,7 @@ export function runnerNetworkFromResponse(
   const nodes = allNodes.filter((node) => node.kind === 'gate');
   const reviewers = allNodes.filter((node) => node.kind === 'reviewer');
   const automation = allNodes.filter((node) => node.kind === 'automation');
+  const audits = allNodes.filter((node) => node.kind === 'audit');
 
   const totals = totalsFromNodes(nodes);
   const lastUpdated =
@@ -437,6 +477,7 @@ export function runnerNetworkFromResponse(
     nodes,
     reviewers,
     automation,
+    audits,
     totals,
     lastUpdated,
     forge: forgeFromRaw(raw?.forge),
@@ -664,7 +705,14 @@ export function rowNow(node: RunnerNetworkNode, nowMs: number): RowNow {
   const started = task.startedAt ? new Date(task.startedAt).getTime() : Number.NaN;
   const elapsed =
     Number.isFinite(started) && nowMs >= started ? durationWords((nowMs - started) / 1000) : null;
-  const verb = node.kind === 'reviewer' ? 'reviewing' : pull ? 'gating' : 'running';
+  const verb =
+    node.kind === 'reviewer'
+      ? 'reviewing'
+      : node.kind === 'audit'
+        ? 'auditing'
+        : pull
+          ? 'gating'
+          : 'running';
   return {
     text: verb,
     subject: task.label || task.program,
@@ -733,6 +781,19 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
       blocked
     };
   }
+  if (node.kind === 'audit') {
+    const audit = auditVerb(last.conclusion);
+    return {
+      pull,
+      subject,
+      verb: audit.verb,
+      verbFirst: false,
+      duration,
+      finishedAt: last.finishedAt,
+      tone: audit.tone,
+      blocked: null
+    };
+  }
   const passed = last.conclusion === 'success';
   return {
     pull,
@@ -748,6 +809,29 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
     tone: passed ? 'success' : 'danger',
     blocked: null
   };
+}
+
+/**
+ * An audit's conclusion in words: the report was recorded ("scored", which is
+ * not a pass: the verdict is the proof check's), the audit was refused or
+ * failed, or the scorer itself broke (which says nothing about the code).
+ */
+export function auditVerb(conclusion: string): { verb: string; tone: RowTone } {
+  switch (conclusion) {
+    case 'scored':
+    case 'success':
+      // The report was recorded; pass or fail is the proof check's verdict.
+      return { verb: 'scored', tone: 'neutral' };
+    case 'refused':
+      return { verb: 'refused', tone: 'warning' };
+    case 'failed':
+    case 'failure':
+      return { verb: 'failed', tone: 'danger' };
+    case 'tool-failed':
+      return { verb: 'tool failed', tone: 'warning' };
+    default:
+      return { verb: 'errored', tone: 'danger' };
+  }
 }
 
 /**

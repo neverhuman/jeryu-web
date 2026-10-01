@@ -546,3 +546,41 @@
   font-size: var(--font-size-sm);
   color: var(--color-fg-secondary);
 }
+
+/* What evaluates a pull request on a runner: a disclosure whose summary is the
+ * one line under the runner's code, listing every tool when opened. */
+.fleet__node-row .fleet__node-tools {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+.fleet__node-tools summary {
+  cursor: pointer;
+}
+
+.fleet__node-tools summary:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.fleet__node-tools code,
+.fleet__tool-list code {
+  font-family: var(--font-mono);
+  color: inherit;
+}
+
+.fleet__tool-list {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* A runner scoring with another build than most of its section. */
+.fleet__node-item.is-tool-drift {
+  border-color: var(--color-accent-warning);
+}

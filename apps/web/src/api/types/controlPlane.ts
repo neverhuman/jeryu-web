@@ -167,8 +167,32 @@ export interface RunnerCode {
   installedAt?: string;
 }
 
+/**
+ * One tool a runner evaluates pull requests with: the scorer, scanners and
+ * linters on its PATH, by name, version and the sha256 of the binary.
+ */
+export interface RunnerTool {
+  name: string;
+  version?: string;
+  sha256?: string;
+}
+
+/**
+ * What a runner is, as the forge classifies it. Absent from an older forge,
+ * which leaves the page to read it from the labels.
+ */
+export type RunnerNodeKind =
+  | 'gate'
+  | 'reviewer'
+  | 'automation'
+  | 'deployer'
+  | 'jankurai-audit'
+  | 'workcell';
+
 export interface RunnerNodeSummary {
   runnerId: string;
+  /** The forge's classification; absent from an older forge. */
+  kind?: RunnerNodeKind;
   source: string;
   state: string;
   capacity: number;
@@ -193,6 +217,8 @@ export interface RunnerNodeSummary {
   mergeGrantGaps?: MergeGrantGap[];
   /** The runner's own installed code. Absent from an older forge or runner. */
   code?: RunnerCode;
+  /** The tools that evaluate a pull request on this runner. Absent from an older forge. */
+  tools?: RunnerTool[];
 }
 
 /** The forge's answer to the last attempt to merge or enqueue a pull request. */

@@ -10,13 +10,23 @@ import { expect, test } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import {
+  blockingViolations,
+  persistAxeResult,
+  persistRenderedEvidence,
+  runAxe,
+} from './fixtures/accessibility';
+import {
   mockBootstrap,
   mockControlPlaneRunners,
   mockFleetBootstrap,
 } from './fixtures/mocks';
 import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { mockBoards, mockEnvironments } from './fixtures/releaseBoardMocks';
-import type { RunnerFabricResponse, RunnerLastActivity } from '../src/api/types';
+import type {
+  RunnerFabricResponse,
+  RunnerLastActivity,
+  RunnerNodeSummary,
+} from '../src/api/types';
 
 test.describe.configure({ retries: 1 });
 
@@ -467,7 +477,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
       { timeout: 10_000 }
     );
     const code = page.getByTestId('fleet-node-code-gate-a_slot0');
-    await expect(code).toHaveText('a1b2c3d · 1.4.0');
+    await expect(code).toHaveText('runs a1b2c3d · 1.4.0');
     await expect(code).toHaveAttribute(
       'title',
       `acme/gate-scripts@${usual} 1.4.0, installed 2026-06-05T00:00:00Z`
@@ -612,6 +622,153 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
       'href',
       '/repos/jeryu/jeryu%2Fveox/agents/ar-000001'
     );
+  });
+
+  test('says what evaluates each pull request, lists quality audits, and flags a drifting scorer @action:fleet.tools', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockFleetBootstrap(page, []);
+    const usual = 'b05c03b1aa2233445566778899aabbccddeeff00112233445566778899aabbcc';
+    const other = '9e6b8851aa2233445566778899aabbccddeeff00112233445566778899aabbcc';
+    const scanners = [
+      'gitleaks',
+      'syft',
+      'zizmor',
+      'actionlint',
+      'cargo-audit',
+      'cargo-deny',
+      'shellcheck',
+      'cargo-public-api',
+    ].map((name) => ({ name, version: '1.0.0', sha256: 'c0ffee00c0ffee00' }));
+    const slot = (runnerId: string, governed: string, onPath = governed): RunnerNodeSummary => ({
+      runnerId,
+      kind: 'gate',
+      source: 'pr-gate-runner',
+      state: 'idle',
+      capacity: 1,
+      inFlight: 0,
+      labels: ['pr-gate'],
+      classes: ['pr-gate'],
+      activeTaskCount: 0,
+      lastUpdated: '2026-06-05T00:05:00Z',
+      activeTasks: [],
+      code: {
+        repo: 'acme/gate-scripts',
+        commit: 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678',
+        version: 'main 2026-06-05',
+      },
+      tools: [
+        { name: 'jankurai', version: '1.6.11', sha256: onPath },
+        { name: 'jankurai@governed', version: '1.6.11', sha256: governed },
+        ...scanners,
+      ],
+    });
+    const fabric = runnerFabric(false);
+    fabric.local.nodeDetails = [
+      slot('gate-a/slot0', usual),
+      slot('gate-a/slot1', usual, other),
+      slot('gate-b/slot0', other),
+      {
+        runnerId: 'gate-a/jankurai-audit',
+        kind: 'jankurai-audit',
+        source: 'jankurai-audit-runner',
+        state: 'idle',
+        capacity: 0,
+        inFlight: 0,
+        offlineAfterSeconds: 180,
+        labels: ['gate-a', 'slot 0', 'jankurai-audit'],
+        classes: ['jankurai-audit'],
+        activeTaskCount: 0,
+        lastUpdated: '2026-06-05T00:05:00Z',
+        activeTasks: [],
+        code: { repo: 'acme/audit-runner', commit: 'f00dfacef00dfacef00dfacef00dfacef00dface' },
+        tools: [{ name: 'jankurai', version: '1.6.11', sha256: usual }],
+        lastActivity: {
+          repo: 'acme/widgets',
+          pr: 12,
+          sha: 'ea04cac1f05eadc15694dd1434d9f8f99c44a0d3',
+          recipe: 'jankurai audit',
+          conclusion: 'scored',
+          seconds: 42,
+          finishedAt: '2026-06-05T00:04:00Z',
+        },
+      },
+    ];
+    await mockControlPlaneRunners(page, fabric);
+
+    const shell = new AppShellPage(page);
+    await shell.goto('/runners');
+    await shell.assertShellLoaded();
+
+    // The runner's own scripts, then what scores the pull request.
+    await expect(page.getByTestId('fleet-node-code-gate-a_slot0')).toHaveText(
+      'runs a1b2c3d · main 2026-06-05',
+      { timeout: 10_000 }
+    );
+    const tools = page.getByTestId('fleet-node-tools-gate-a_slot0');
+    const summary = tools.locator('summary');
+    await expect(summary).toHaveText(
+      'evaluates with jankurai (governed) 1.6.11 (b05c03b) · +8 tools'
+    );
+    // The full list opens from the keyboard.
+    const list = tools.getByRole('list', { name: 'Evaluation tools' });
+    await expect(list).toBeHidden();
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(list).toBeVisible();
+    await expect(list.getByRole('listitem')).toHaveCount(10);
+    await expect(list).toContainText('gitleaks 1.0.0 c0ffee0');
+
+    // A PATH copy that is another build is named, and amber.
+    await expect(page.getByTestId('fleet-node-tools-gate-a_slot1-path')).toHaveText(
+      '· PATH copy 1.6.11 (9e6b885) differs'
+    );
+    // gate-b scores with a build most gates do not use.
+    await expect(page.getByTestId('fleet-node-gate-b_slot0')).toHaveClass(/is-tool-drift/);
+    await expect(page.getByTestId('fleet-node-tools-gate-b_slot0-differs')).toBeVisible();
+    const header = page.getByTestId('fleet-scorer-summary');
+    await expect(header).toHaveText(
+      'Gates evaluate with 2 jankurai builds: b05c03b ×2, 9e6b885 ×1'
+    );
+    await expect(header).toHaveClass(/fleet__tone--warning/);
+
+    // The audit runner has its own section and the same row anatomy.
+    const audits = page.getByTestId('fleet-audits');
+    await expect(audits.getByRole('heading', { name: 'Quality audits' })).toBeVisible();
+    await expect(page.getByTestId('fleet-audit-last-gate-a_jankurai-audit')).toContainText(
+      'acme/widgets#12 scored in 42s'
+    );
+    await expect(page.getByTestId('fleet-audit-tools-gate-a_jankurai-audit')).toContainText(
+      'evaluates with jankurai 1.6.11 (b05c03b)'
+    );
+    await expect(page.getByTestId('fleet-node-gate-a_jankurai-audit')).toHaveCount(0);
+
+    const result = await runAxe(page, { disableRules: ['color-contrast'] });
+    await persistAxeResult('fleet-tools', result);
+    const rendered = await persistRenderedEvidence(page, 'fleet-tools');
+    expect(rendered.geometry.width).toBeGreaterThan(0);
+    expect(blockingViolations(result).map((violation) => violation.id)).toEqual([]);
+
+    // Phone width: rows stack, nothing scrolls sideways.
+    await page.setViewportSize({ width: 375, height: 800 });
+    await expect(summary).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+
+    // Gates on one build: one plain summary line, no drift marks.
+    fabric.local.nodeDetails = [slot('gate-a/slot0', usual), slot('gate-b/slot0', usual)];
+    await mockControlPlaneRunners(page, fabric);
+    await page.reload();
+    await expect(page.getByTestId('fleet-scorer-summary')).toHaveText(
+      'Gates evaluate with jankurai 1.6.11 (b05c03b)',
+      { timeout: 10_000 }
+    );
+    await expect(page.getByTestId('fleet-scorer-summary')).not.toHaveClass(/fleet__tone--warning/);
+    await expect(page.getByTestId('fleet-node-gate-b_slot0')).not.toHaveClass(/is-tool-drift/);
+    await expect(page.getByTestId('fleet-audits')).toHaveCount(0);
   });
 
 });

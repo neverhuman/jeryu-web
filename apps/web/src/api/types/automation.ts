@@ -48,6 +48,7 @@ export type AutomationActorKind =
   | 'merger'
   | 'gate-runner'
   | 'deployer'
+  | 'jankurai-audit'
   | 'automation';
 
 /** One thing that acts on the repository. */

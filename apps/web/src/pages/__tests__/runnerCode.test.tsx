@@ -218,7 +218,7 @@ describe('FleetPage runner code', () => {
       )
     );
     const code = screen.getByTestId('fleet-node-code-gate-a_slot0');
-    expect(code).toHaveTextContent('a1b2c3d · 1.4.0');
+    expect(code).toHaveTextContent('runs a1b2c3d · 1.4.0');
     expect(code).toHaveAttribute(
       'title',
       `acme/gate-scripts@${COMMIT_A} 1.4.0, installed 2026-06-05T00:00:00Z`

@@ -87,7 +87,14 @@ export function shortSha(sha: string): string {
 }
 
 /** Actors in the order a reader asks about them. */
-const ACTOR_ORDER = ['reviewer', 'merger', 'gate-runner', 'deployer', 'automation'];
+const ACTOR_ORDER = [
+  'reviewer',
+  'merger',
+  'gate-runner',
+  'jankurai-audit',
+  'deployer',
+  'automation'
+];
 
 export function orderedActors(actors: AutomationActor[]): AutomationActor[] {
   return [...actors].sort((a, b) => {
@@ -112,6 +119,8 @@ export function actorKindText(kind: string): string {
       return 'Gate runner';
     case 'deployer':
       return 'Deployer';
+    case 'jankurai-audit':
+      return 'Quality audit';
     default:
       return 'Automation';
   }

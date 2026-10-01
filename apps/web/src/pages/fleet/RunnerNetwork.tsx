@@ -6,8 +6,11 @@
 // label columns are gone: for a one-slot runner they all said the same thing.
 //
 // A runner that reports its installed code carries it under its name
-// ("abc1234 · 1.4.0"), marked "differs" when most of its peers on the same
-// code repo run another commit. A runner a release board names gets a second
+// ("runs abc1234 · 1.4.0"), marked "differs" when most of its peers on the same
+// code repo run another commit. That is the runner's own scripts; what scores
+// a pull request is the line beneath it ("evaluates with jankurai …", see
+// RunnerEvaluates), amber when its scorer build is not its section's majority.
+// Quality audit runners get the same rows in their own list. A runner a release board names gets a second
 // line linking to that lane ("acme · Gate runner · installed v1.2.0"), and a
 // row `?runners=` picked is highlighted; each row's id is `runner-<slug>`.
 
@@ -29,6 +32,8 @@ import {
 } from '../runnerNetworkModel';
 import { NO_PLACES, runnerAnchorId, type RunnerPlaces } from './releaseIndex';
 import { RunnerReleaseLink } from './RunnerReleaseLink';
+import { RunnerEvaluates } from './RunnerEvaluates';
+import { scorerOutliers } from './runnerTools';
 
 interface RowListProps {
   nodes: RunnerNetworkNode[];
@@ -75,6 +80,29 @@ export function ReviewerList({
   );
 }
 
+/** Quality audit runners: they score repositories with jankurai rather than gate them. */
+export function AuditList({
+  audits,
+  nowMs,
+  places
+}: {
+  audits: RunnerNetworkNode[];
+  nowMs: number;
+  places?: RunnerPlaces;
+}): JSX.Element {
+  return (
+    <RowList
+      nodes={audits}
+      nowMs={nowMs}
+      places={places}
+      label="Quality audits"
+      testId="fleet-audit-list"
+      rowTestId="fleet-audit"
+      heads={['Runner', 'Now', 'Last audit', 'Seen']}
+    />
+  );
+}
+
 function RowList({
   nodes,
   nowMs,
@@ -90,6 +118,7 @@ function RowList({
   heads: [string, string, string, string];
 }): JSX.Element {
   const outliers = codeOutliers(nodes);
+  const scorerDrift = scorerOutliers(nodes);
   return (
     <div
       className="fleet__node-list"
@@ -113,6 +142,7 @@ function RowList({
           testId={rowTestId}
           heads={heads}
           codeDiffers={outliers.has(node.runnerId)}
+          scorerDiffers={scorerDrift.has(node.runnerId)}
           places={places}
         />
       ))}
@@ -126,6 +156,7 @@ function RunnerRow({
   testId,
   heads,
   codeDiffers,
+  scorerDiffers,
   places
 }: {
   node: RunnerNetworkNode;
@@ -133,6 +164,7 @@ function RunnerRow({
   testId: string;
   heads: [string, string, string, string];
   codeDiffers: boolean;
+  scorerDiffers: boolean;
   places: RunnerPlaces;
 }): JSX.Element {
   const nodeId = testIdSegment(node.runnerId);
@@ -144,7 +176,7 @@ function RunnerRow({
   return (
     <article
       id={runnerAnchorId(node.runnerId)}
-      className={`fleet__node-item is-${node.availability} is-${node.activityState}${highlighted ? ' is-highlighted' : ''}`}
+      className={`fleet__node-item is-${node.availability} is-${node.activityState}${highlighted ? ' is-highlighted' : ''}${scorerDiffers ? ' is-tool-drift' : ''}`}
       aria-current={highlighted ? 'true' : undefined}
       data-testid={`${testId}-${nodeId}`}
       role="listitem"
@@ -164,7 +196,7 @@ function RunnerRow({
               data-testid={`${testId}-code-${nodeId}`}
               title={codeTitle(node.code)}
             >
-              <code>{codeLabel(node.code)}</code>
+              runs <code>{codeLabel(node.code)}</code>
               {codeDiffers ? (
                 <>
                   {' '}
@@ -178,6 +210,11 @@ function RunnerRow({
               ) : null}
             </p>
           ) : null}
+          <RunnerEvaluates
+            tools={node.tools ?? []}
+            scorerDiffers={scorerDiffers}
+            testId={`${testId}-tools-${nodeId}`}
+          />
           {release ? (
             <RunnerReleaseLink
               release={release}

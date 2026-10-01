@@ -13,7 +13,11 @@
 // Under the title, one line says what code the forge itself runs (its
 // release, server commit, and the web commit it pins) beside this page's own
 // build commit when the two differ. Rows carry each runner's installed code.
-// An older forge sends neither, and then neither shows.
+// An older forge sends neither, and then neither shows. Rows also say what
+// evaluates a pull request there (the scorer and scanners, from `tools`), and
+// a line under the forge's says which scorer build the gates use — amber when
+// they use more than one. Quality audit runners (label `jankurai-audit`) get
+// a section of their own, absent when none reports.
 //
 // "What it is and where it is": the page also reads every family's release
 // board (once, then at most every 5 minutes) so a runner a board names links
@@ -41,7 +45,8 @@ import {
   splitReviewers,
   idleReviewerSentence
 } from './runnerNetworkModel';
-import { AutomationList, ReviewerList, RunnerNodeList } from './fleet';
+import { AuditList, AutomationList, ReviewerList, RunnerNodeList } from './fleet';
+import { scorerSummary } from './fleet/runnerTools';
 import {
   forgeReleaseLane,
   parseRunnersParam,
@@ -74,6 +79,7 @@ export function FleetPage(): JSX.Element {
     runnerNetwork.nodes.every((node) => node.availability !== 'unknown');
   const sentence = networkSentence(runnerNetwork.nodes);
   const build = forgeBuildLine(runnerNetwork.forge, pageWebCommit());
+  const scorers = scorerSummary(runnerNetwork.nodes);
   const reviewers = splitReviewers(runnerNetwork.reviewers);
   const boardsQuery = useRunnerReleaseBoards();
   const boards = boardsQuery.data;
@@ -90,6 +96,7 @@ export function FleetPage(): JSX.Element {
   const rendered = [
     ...runnerNetwork.nodes,
     ...reviewers.listed,
+    ...runnerNetwork.audits,
     ...runnerNetwork.automation
   ].map((node) => node.runnerId);
   const pickedIds = parseRunnersParam(picked);
@@ -153,6 +160,14 @@ export function FleetPage(): JSX.Element {
             ) : (
               <code>{build.text}</code>
             )}
+          </p>
+        ) : null}
+        {scorers && !runnerNetworkNote ? (
+          <p
+            className={`fleet__build${scorers.mixed ? ' fleet__tone--warning' : ''}`}
+            data-testid="fleet-scorer-summary"
+          >
+            {scorers.text}
           </p>
         ) : null}
         {runnerNetworkNote ? null : (
@@ -234,6 +249,23 @@ export function FleetPage(): JSX.Element {
           </>
         )}
       </section>
+
+      {runnerNetworkNote || runnerNetwork.audits.length === 0 ? null : (
+        <section
+          className="page__section"
+          aria-labelledby="fleet-audits"
+          data-testid="fleet-audits"
+        >
+          <h2 className="page__section-title" id="fleet-audits">
+            Quality audits
+          </h2>
+          <AuditList
+            audits={runnerNetwork.audits}
+            nowMs={runnersQuery.dataUpdatedAt}
+            places={places}
+          />
+        </section>
+      )}
 
       {runnerNetworkNote || runnerNetwork.automation.length === 0 ? null : (
         <section
