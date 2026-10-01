@@ -176,6 +176,20 @@ ensure_web_deps() {
     _web_deps_locked _web_deps_install "$stamp" "$want" || return 1
   fi
   problems="$(_web_deps_audit)" || return 1
+  if [ -n "$problems" ]; then
+    # The stamp says this lockfile was installed, yet the tree disagrees:
+    # something installed into it since, e.g. a member's own node_modules
+    # another checkout left behind. Rebuild once from the lockfile (which
+    # clears member trees) before deciding; only a rebuild that still does not
+    # match fails the gate.
+    {
+      echo "[web-deps] node_modules carries this lockfile's stamp but does not match it; rebuilding:"
+      printf '%s\n' "$problems" | sed 's/^/[web-deps]   /'
+    } >&2
+    rm -f "$stamp"
+    _web_deps_locked _web_deps_install "$stamp" "$want" || return 1
+    problems="$(_web_deps_audit)" || return 1
+  fi
   [ -n "$problems" ] || return 0
   {
     echo "[web-deps] node_modules does not match package-lock.json:"

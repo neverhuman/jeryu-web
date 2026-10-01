@@ -209,15 +209,36 @@ describe('ensure_web_deps', () => {
     expect(result.stderr).toContain('mermaid@11.17.2');
   });
 
-  it('refuses to hand a lane a tree that lost a package the lockfile requires', () => {
+  it('rebuilds a stamped tree that another checkout installed into since', () => {
+    // The shape of jeryu-web#74's gate on 2026-10-01: the stamp matched the
+    // lockfile, but apps/web/node_modules held newer copies some other
+    // checkout left behind, and a required package was gone.
     const lock = lockfile({ deps: { dompurify: '3.4.15', mermaid: '11.17.2' } });
-    const tree = makeTree({ lock, installed: { dompurify: '3.4.15' } });
+    const tree = makeTree({
+      lock,
+      installed: { dompurify: '3.4.15' },
+      member: { dompurify: '3.9.0' },
+    });
     writeFileSync(join(tree, 'node_modules', '.jeryu-lockfile-sha256'), `${digest(tree)}\n`);
-    rmSync(join(tree, 'fakebin', 'npm'));
+
+    const result = run(tree, 'ensure_web_deps');
+
+    expect(result.status).toBe(0);
+    expect(result.calls).toEqual(['ci']);
+    expect(existsSync(join(tree, 'apps', 'web', 'node_modules', 'dompurify'))).toBe(false);
+    expect(existsSync(join(tree, 'node_modules', 'mermaid', 'package.json'))).toBe(true);
+    expect(stampOf(tree)).toBe(digest(tree));
+  });
+
+  it('refuses to hand a lane a stamped tree that a rebuild cannot repair', () => {
+    const lock = lockfile({ deps: { dompurify: '3.4.15', mermaid: '11.17.2' } });
+    const tree = makeTree({ lock, installed: { dompurify: '3.4.15' }, offline: true });
+    writeFileSync(join(tree, 'node_modules', '.jeryu-lockfile-sha256'), `${digest(tree)}\n`);
 
     const result = run(tree, 'ensure_web_deps');
 
     expect(result.status).not.toBe(0);
+    expect(result.calls).toEqual(['ci', 'ci --prefer-online']);
     expect(result.stderr).toContain('mermaid@11.17.2');
   });
 });
