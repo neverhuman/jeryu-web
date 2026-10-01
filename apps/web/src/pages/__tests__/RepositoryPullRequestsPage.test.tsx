@@ -74,7 +74,7 @@ describe('RepositoryPullRequestsPage', () => {
         },
       ],
       [
-        '/api/v1/repos/repo-1/pulls',
+        '/api/v1/repos/repo-1/pulls?limit=500&page=1',
         {
           total: 2,
           items: [
@@ -133,7 +133,7 @@ describe('RepositoryPullRequestsPage', () => {
           facets: { hosts: ['jeryu'], owners: ['alice'], families: [], languages: [] },
         },
       ],
-      ['/api/v1/repos/repo-1/pulls', { total: 1, items: [pullSummary()] }],
+      ['/api/v1/repos/repo-1/pulls?limit=500&page=1', { total: 1, items: [pullSummary()] }],
     ]);
 
     renderPage('/repos/jeryu/alice%2Fjeryu/pulls?drafts=drafts');
