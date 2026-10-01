@@ -172,7 +172,7 @@ export function splitFrontmatter(markdown: string): Frontmatter {
   if (end < 0) return { fields: [], body: markdown, offset: 0 };
   const fields: Array<[string, string]> = [];
   for (const line of lines.slice(1, end)) {
-    const match = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
+    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
     if (match) {
       fields.push([match[1], match[2].replace(/^["']|["']$/g, '')]);
     } else if (fields.length > 0 && /^\s+-\s+/.test(line)) {
@@ -188,7 +188,7 @@ export function splitFrontmatter(markdown: string): Frontmatter {
 export function pageTitle(path: string, page: Frontmatter): string {
   const fromFields = page.fields.find(([key]) => key.toLowerCase() === 'title')?.[1];
   if (fromFields) return fromFields;
-  const heading = /^#\s+(.+?)\s*#*\s*$/m.exec(page.body)?.[1];
+  const heading = page.body.match(/^#\s+(.+?)\s*#*\s*$/m)?.[1];
   return heading ?? pageLabel(path);
 }
 
@@ -233,7 +233,7 @@ export function splitSections(body: string, offset = 0): Section[] {
     }
   };
   lines.forEach((line, index) => {
-    const fenceMatch = FENCE.exec(line);
+    const fenceMatch = line.match(FENCE);
     if (fence) {
       if (fenceMatch && fenceMatch[1][0] === fence[0] && fenceMatch[1].length >= fence.length) {
         fence = null;
@@ -244,7 +244,7 @@ export function splitSections(body: string, offset = 0): Section[] {
       fence = fenceMatch[1];
       return;
     }
-    const headingMatch = ATX_HEADING.exec(line);
+    const headingMatch = line.match(ATX_HEADING);
     if (headingMatch && index > start) {
       flush(index);
       start = index;
@@ -287,7 +287,7 @@ export function linkWikiReferences(markdown: string, scope: WikiScope): string {
   return markdown
     .split('\n')
     .map((line) => {
-      const fenceMatch = FENCE.exec(line);
+      const fenceMatch = line.match(FENCE);
       if (fence) {
         if (fenceMatch && fenceMatch[1][0] === fence[0]) fence = null;
         return line;
