@@ -8,15 +8,29 @@
 // matches anywhere under `../src` to pick them up no matter how deep the
 // component tree goes.
 
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
+
 import type { StorybookConfig } from '@storybook/react-vite';
+
+// npm workspaces hoist `storybook` to the repository root but keep these
+// packages in apps/web/node_modules, so a bare name resolved from the root
+// `storybook` package finds nothing ("Cannot find package
+// '@storybook/react-vite'"). Resolve each one from this config instead, as
+// Storybook recommends for monorepos. A gate tree whose node_modules came
+// from an older install hid this; a clean `npm ci` exposes it.
+const require = createRequire(import.meta.url);
+function absolute(name: string): string {
+  return dirname(require.resolve(join(name, 'package.json')));
+}
 
 const config: StorybookConfig = {
   framework: {
-    name: '@storybook/react-vite',
+    name: absolute('@storybook/react-vite') as '@storybook/react-vite',
     options: {},
   },
   stories: ['../src/**/*.stories.@(ts|tsx|mdx)'],
-  addons: ['@storybook/addon-a11y', '@storybook/addon-vitest'],
+  addons: [absolute('@storybook/addon-a11y'), absolute('@storybook/addon-vitest')],
   typescript: {
     check: false,
     reactDocgen: false,
