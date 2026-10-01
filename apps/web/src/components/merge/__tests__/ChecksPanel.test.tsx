@@ -135,16 +135,22 @@ describe('ChecksPanel identifiers', () => {
     ],
   } as unknown as PullRequestChecks;
 
-  it('shows a short label and keeps the whole id in the title and the link', () => {
+  it('shows a short label and keeps the whole id in the title and the link', async () => {
+    const user = userEvent.setup();
     render(<ChecksPanel checks={byId} />);
-    const name = screen.getByText('Attempt 428377c2', { exact: false });
+    const name = screen.getByText('Attempt 428377c2', {
+      exact: false,
+      selector: '.checks-panel__name',
+    });
     expect(name.getAttribute('title')).toBe(`Attempt ${ID}`);
-    expect(screen.queryByText(ID, { exact: false })).toBeNull();
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
     expect(
       screen.getByText('queued for run 428377c2').getAttribute('title')
     ).toBe(`queued for run ${ID}`);
-    expect(
-      screen.getByRole('link', { name: `Open Attempt ${ID} details` })
-    ).toBeTruthy();
+    // The link is the one place the whole id is spelled out.
+    const link = screen.getByRole('link', { name: `Open the Attempt ${ID} report` });
+    expect(screen.getAllByText(ID, { exact: false })).toEqual([link]);
   });
 });
