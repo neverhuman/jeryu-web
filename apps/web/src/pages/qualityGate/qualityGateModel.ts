@@ -7,6 +7,7 @@
 
 import type {
   QualityGateDay,
+  QualityGateDimensionSummary,
   QualityGateRepoSummary,
   QualityGateRuleSummary,
 } from '../../api/types';
@@ -41,14 +42,50 @@ export function percent(rate: number, of = 1): string {
   return `${Math.round(rate * 100)}%`;
 }
 
-/** Rules worst first: most findings, then most disputed, then by name. */
+/**
+ * Findings a rule has open: distinct findings on each repository's latest
+ * scored head. An older server only sends the per-head total, so that stands
+ * in for it there.
+ */
+export function ruleFindings(rule: QualityGateRuleSummary): number {
+  return rule.latest_findings ?? rule.failures;
+}
+
+/** Repositories a rule has open findings in (see `ruleFindings`). */
+export function ruleRepos(rule: QualityGateRuleSummary): number {
+  return rule.latest_repos ?? rule.repos;
+}
+
+/** True when the server counts rules per repository's latest head. */
+export function countsLatestHeads(rules: QualityGateRuleSummary[]): boolean {
+  return rules.some((rule) => rule.latest_findings !== undefined);
+}
+
+/** Rules worst first: most open findings, then most disputed, then by name. */
 export function sortRules(rules: QualityGateRuleSummary[]): QualityGateRuleSummary[] {
   return [...rules].sort(
     (a, b) =>
-      b.failures - a.failures ||
+      ruleFindings(b) - ruleFindings(a) ||
       b.dispute_rate - a.dispute_rate ||
       a.rule.localeCompare(b.rule)
   );
+}
+
+/** Dimensions most widespread first, then the lowest median, then by name. */
+export function sortDimensions(
+  dimensions: QualityGateDimensionSummary[]
+): QualityGateDimensionSummary[] {
+  return [...dimensions].sort(
+    (a, b) =>
+      b.repos - a.repos ||
+      a.median_score - b.median_score ||
+      a.dimension.localeCompare(b.dimension)
+  );
+}
+
+/** A median score as the auditor writes scores: whole, or one decimal. */
+export function formatScore(score: number): string {
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
 }
 
 /** Repositories worst first: highest fail rate, then most heads flagged. */
@@ -68,7 +105,7 @@ export function sortRepos(repos: QualityGateRepoSummary[]): QualityGateRepoSumma
 export function topFailingRule(
   rules: QualityGateRuleSummary[]
 ): QualityGateRuleSummary | undefined {
-  return sortRules(rules).find((rule) => rule.failures > 0);
+  return sortRules(rules).find((rule) => ruleFindings(rule) > 0);
 }
 
 export interface DailyBar {

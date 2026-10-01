@@ -20,10 +20,22 @@ export interface QualityGateDay {
 export interface QualityGateRuleSummary {
   rule: string;
   title: string;
-  /** Findings this rule raised across every scored head. */
+  /**
+   * Findings summed over every scored head: one problem left open across ten
+   * pushes counts ten times. Prefer `latest_findings` when present.
+   */
   failures: number;
-  /** Repositories the rule raised a finding in. */
+  /** Repositories with any scored head in the window carrying the rule. */
   repos: number;
+  /** Same as `failures`, named for what it counts; absent on an older server. */
+  findings_all_heads?: number;
+  /**
+   * Distinct findings on each repository's latest scored head, summed over
+   * repositories: what is open now. Absent on an older server.
+   */
+  latest_findings?: number;
+  /** Repositories whose latest scored head carries the rule. */
+  latest_repos?: number;
   /** Findings an admin disputed. */
   disputes: number;
   /** `disputes / failures`, 0 when the rule raised nothing. */
@@ -40,6 +52,22 @@ export interface QualityGateRepoSummary {
   top_rule: string | null;
 }
 
+/**
+ * A scoring dimension below the floor on repositories' latest heads. A score,
+ * not a rule detection: the auditor files it under a rule id, but no rule
+ * raised it, so it is kept out of the rule counts.
+ */
+export interface QualityGateDimensionSummary {
+  dimension: string;
+  /** Repositories whose latest scored head has the dimension below the floor. */
+  repos: number;
+  /** Median of those repositories' scores for the dimension. */
+  median_score: number;
+  floor: number;
+  /** The rule id the auditor filed these results under, when it named one. */
+  attributed_rule: string | null;
+}
+
 export interface QualityGateOverview {
   schema_version: number;
   generated_at: string;
@@ -49,7 +77,11 @@ export interface QualityGateOverview {
   heads_failed: number;
   fail_rate: number;
   disputes: number;
+  /** Repositories with a scored head in the window; absent on an older server. */
+  repos_scored?: number;
   rules: QualityGateRuleSummary[];
+  /** Dimension-floor results, kept out of `rules`; absent on an older server. */
+  dimensions_below_floor?: QualityGateDimensionSummary[];
   repos: QualityGateRepoSummary[];
   daily: QualityGateDay[];
 }

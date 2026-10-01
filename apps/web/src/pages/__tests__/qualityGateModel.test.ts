@@ -3,12 +3,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  countsLatestHeads,
   dailyGeometry,
+  formatScore,
   percent,
   qualityGateHeadPath,
   qualityGateRulePath,
   repoCodeHref,
+  ruleFindings,
+  ruleRepos,
   shortSha,
+  sortDimensions,
   sortRepos,
   sortRules,
   topFailingRule,
@@ -27,8 +32,43 @@ describe('qualityGateModel', () => {
   });
 
   it('has no rule to drill into when nothing failed', () => {
-    const quiet = OVERVIEW.rules.map((rule) => ({ ...rule, failures: 0 }));
+    const quiet = OVERVIEW.rules.map((rule) => ({ ...rule, failures: 0, latest_findings: 0 }));
     expect(topFailingRule(quiet)).toBeUndefined();
+  });
+
+  it('ranks rules by what is open on the latest heads, not by every push', () => {
+    const rules = [
+      { ...OVERVIEW.rules[0], rule: 'repeated', failures: 90, latest_findings: 1, latest_repos: 1 },
+      { ...OVERVIEW.rules[0], rule: 'spread', failures: 10, latest_findings: 8, latest_repos: 6 },
+    ];
+    expect(sortRules(rules).map((rule) => rule.rule)).toEqual(['spread', 'repeated']);
+    expect(topFailingRule(rules)?.rule).toBe('spread');
+    expect(ruleFindings(rules[0])).toBe(1);
+    expect(ruleRepos(rules[1])).toBe(6);
+    expect(countsLatestHeads(rules)).toBe(true);
+  });
+
+  it('falls back to the per-head totals from a server without latest counts', () => {
+    const { rule, title, failures, repos, disputes, dispute_rate } = OVERVIEW.rules[1];
+    const older = { rule, title, failures, repos, disputes, dispute_rate };
+    expect(ruleFindings(older)).toBe(12);
+    expect(ruleRepos(older)).toBe(3);
+    expect(countsLatestHeads([older])).toBe(false);
+  });
+
+  it('orders dimensions by reach, then lowest median', () => {
+    const dimensions = [
+      { dimension: 'Proof lanes', repos: 2, median_score: 40, floor: 85, attributed_rule: null },
+      { dimension: 'Build speed', repos: 5, median_score: 70, floor: 85, attributed_rule: null },
+      { dimension: 'Code shape', repos: 2, median_score: 20, floor: 85, attributed_rule: null },
+    ];
+    expect(sortDimensions(dimensions).map((d) => d.dimension)).toEqual([
+      'Build speed',
+      'Code shape',
+      'Proof lanes',
+    ]);
+    expect(formatScore(62.5)).toBe('62.5');
+    expect(formatScore(70)).toBe('70');
   });
 
   it('orders repositories by fail rate', () => {

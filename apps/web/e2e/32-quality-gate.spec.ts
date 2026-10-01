@@ -34,6 +34,16 @@ test.describe('Quality gate', () => {
     await expect(rules.getByRole('row').nth(1)).toContainText('stale-naming');
     await expect(page.getByTestId('quality-gate-rule-evidence-link')).toContainText('75%');
     await expect(page.getByTestId('quality-gate-repo-jeryu/jeryu-web')).toContainText('40%');
+    // Counted on each repository's latest head; dimension scores apart.
+    await expect(
+      rules.getByRole('columnheader', { name: 'Open findings' })
+    ).toBeVisible();
+    await expect(page.getByTestId('quality-gate-dimensions-note')).toContainText(
+      'These are dimension scores, not rule detections'
+    );
+    const dimensions = page.getByTestId('quality-gate-dimensions-table');
+    await expect(dimensions.getByRole('row').nth(1)).toContainText('Build speed signals');
+    await expect(dimensions.getByRole('row').nth(1)).toContainText('62.5');
     await expect(
       page.getByRole('img', { name: /^Scored heads per day: 30 scored/ })
     ).toBeVisible();

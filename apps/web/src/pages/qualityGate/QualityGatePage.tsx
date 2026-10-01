@@ -10,14 +10,19 @@
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import type { QualityGateOverview } from '../../api/types';
+import type { QualityGateDimensionSummary, QualityGateOverview } from '../../api/types';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useQualityGateOverview, QUALITY_GATE_WINDOW_DAYS } from '../../hooks/useQualityGate';
 import { QualityGateChart } from './QualityGateChart';
 import { QualityGateQueryState } from './QualityGateQueryState';
 import {
+  countsLatestHeads,
+  formatScore,
   percent,
   qualityGateRulePath,
+  ruleFindings,
+  ruleRepos,
+  sortDimensions,
   sortRepos,
   sortRules,
   topFailingRule,
@@ -86,6 +91,7 @@ function QualityGateOverviewBody({
   const rules = sortRules(data.rules);
   const repos = sortRepos(data.repos);
   const top = topFailingRule(data.rules);
+  const latest = countsLatestHeads(data.rules);
 
   return (
     <>
@@ -139,12 +145,17 @@ function QualityGateOverviewBody({
         <h2 className="page__section-title" id="quality-gate-rules">
           Failures by rule
         </h2>
+        <p className="quality-gate__summary" data-testid="quality-gate-rules-note">
+          {latest
+            ? "Counted on each repository's latest scored head: a finding left in place across several pushes counts once."
+            : 'Counted on every scored head: a finding left in place across several pushes counts once per push.'}
+        </p>
         <table className="quality-gate__table" data-testid="quality-gate-rules-table">
           <thead>
             <tr>
               <th scope="col">Rule</th>
               <th scope="col" className="quality-gate__num">
-                Findings
+                {latest ? 'Open findings' : 'Findings'}
               </th>
               <th scope="col" className="quality-gate__num">
                 Repositories
@@ -161,8 +172,8 @@ function QualityGateOverviewBody({
                   <Link to={qualityGateRulePath(rule.rule)}>{rule.rule}</Link>
                   <span className="quality-gate__rule-title">{rule.title}</span>
                 </td>
-                <td className="quality-gate__num">{rule.failures}</td>
-                <td className="quality-gate__num">{rule.repos}</td>
+                <td className="quality-gate__num">{ruleFindings(rule)}</td>
+                <td className="quality-gate__num">{ruleRepos(rule)}</td>
                 <td className="quality-gate__num">
                   {percent(rule.dispute_rate, rule.failures)}
                   <span className="quality-gate__sub">{rule.disputes}</span>
@@ -172,6 +183,13 @@ function QualityGateOverviewBody({
           </tbody>
         </table>
       </section>
+
+      {data.dimensions_below_floor ? (
+        <DimensionsBelowFloor
+          dimensions={data.dimensions_below_floor}
+          reposScored={data.repos_scored}
+        />
+      ) : null}
 
       <section className="page__section" aria-labelledby="quality-gate-repos">
         <h2 className="page__section-title" id="quality-gate-repos">
@@ -217,5 +235,68 @@ function QualityGateOverviewBody({
         </table>
       </section>
     </>
+  );
+}
+
+function DimensionsBelowFloor({
+  dimensions,
+  reposScored,
+}: {
+  dimensions: QualityGateDimensionSummary[];
+  reposScored: number | undefined;
+}): JSX.Element {
+  const rows = sortDimensions(dimensions);
+  return (
+    <section className="page__section" aria-labelledby="quality-gate-dimensions">
+      <h2 className="page__section-title" id="quality-gate-dimensions">
+        Dimensions below the floor
+      </h2>
+      <p className="quality-gate__summary" data-testid="quality-gate-dimensions-note">
+        These are dimension scores, not rule detections: the auditor files each
+        under a rule id, but no rule raised them, so they are left out of the
+        rule counts above.
+      </p>
+      {rows.length === 0 ? (
+        <p className="quality-gate__summary" data-testid="quality-gate-dimensions-empty">
+          No dimension is below the floor on any repository&apos;s latest scored head.
+        </p>
+      ) : (
+        <table className="quality-gate__table" data-testid="quality-gate-dimensions-table">
+          <thead>
+            <tr>
+              <th scope="col">Dimension</th>
+              <th scope="col" className="quality-gate__num">
+                Repositories below
+              </th>
+              <th scope="col" className="quality-gate__num">
+                Median score
+              </th>
+              <th scope="col">Filed under</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((dimension) => (
+              <tr
+                key={dimension.dimension}
+                data-testid={`quality-gate-dimension-${dimension.dimension}`}
+              >
+                <td>{dimension.dimension}</td>
+                <td className="quality-gate__num">
+                  {dimension.repos}
+                  {reposScored !== undefined ? (
+                    <span className="quality-gate__sub">of {reposScored}</span>
+                  ) : null}
+                </td>
+                <td className="quality-gate__num">
+                  {formatScore(dimension.median_score)}
+                  <span className="quality-gate__sub">floor {dimension.floor}</span>
+                </td>
+                <td>{dimension.attributed_rule ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
   );
 }

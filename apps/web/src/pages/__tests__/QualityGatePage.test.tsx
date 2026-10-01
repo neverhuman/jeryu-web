@@ -30,6 +30,33 @@ describe('QualityGatePage', () => {
     expect(ruleRows[1]).toHaveTextContent('stale-naming');
     const disputed = screen.getByTestId('quality-gate-rule-evidence-link');
     expect(disputed).toHaveTextContent('75%');
+    // Counted on each repository's latest head, not summed over every push.
+    expect(
+      within(screen.getByTestId('quality-gate-rules-table')).getByRole('columnheader', {
+        name: 'Open findings',
+      })
+    ).toBeInTheDocument();
+    const cells = within(screen.getByTestId('quality-gate-rule-stale-naming')).getAllByRole('cell');
+    expect(cells[1]).toHaveTextContent(/^5$/);
+    expect(cells[2]).toHaveTextContent(/^2$/);
+    expect(screen.getByTestId('quality-gate-rules-note')).toHaveTextContent(
+      "latest scored head"
+    );
+
+    // Dimension scores are their own table, explained as scores.
+    expect(screen.getByTestId('quality-gate-dimensions-note')).toHaveTextContent(
+      'These are dimension scores, not rule detections'
+    );
+    const dimensionRows = within(
+      screen.getByTestId('quality-gate-dimensions-table')
+    ).getAllByRole('row');
+    expect(dimensionRows).toHaveLength(3);
+    expect(dimensionRows[1]).toHaveTextContent('Build speed signals');
+    expect(dimensionRows[1]).toHaveTextContent('3of 4');
+    expect(dimensionRows[1]).toHaveTextContent('62.5floor 85');
+    expect(dimensionRows[1]).toHaveTextContent('HLT-018');
+    expect(dimensionRows[2]).toHaveTextContent('Code shape');
+    expect(dimensionRows[2]).toHaveTextContent('—');
 
     const repoRow = screen.getByTestId('quality-gate-repo-jeryu/jeryu-web');
     expect(within(repoRow).getByRole('link', { name: 'jeryu/jeryu-web' })).toHaveAttribute(
@@ -56,6 +83,47 @@ describe('QualityGatePage', () => {
     const action = await screen.findByTestId('quality-gate-top-rule');
     expect(action).toHaveAttribute('href', '/quality-gate/rules/stale-naming');
     expect(action).toHaveTextContent('Open stale-naming, the rule failing most often');
+  });
+
+  it('counts per head and shows no dimension table on a server without the split', async () => {
+    const rules = OVERVIEW.rules.map(
+      ({ rule, title, failures, repos, disputes, dispute_rate }) => ({
+        rule,
+        title,
+        failures,
+        repos,
+        disputes,
+        dispute_rate,
+      })
+    );
+    mockQualityGateApi((req) =>
+      req.pathname === '/api/v1/quality-gate/overview'
+        ? json({ ...OVERVIEW, rules, repos_scored: undefined, dimensions_below_floor: undefined })
+        : undefined
+    );
+    renderAt('/quality-gate', '/quality-gate', <QualityGatePage />);
+    const row = await screen.findByTestId('quality-gate-rule-stale-naming');
+    expect(within(row).getAllByRole('cell')[1]).toHaveTextContent(/^12$/);
+    expect(
+      within(screen.getByTestId('quality-gate-rules-table')).getByRole('columnheader', {
+        name: 'Findings',
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('quality-gate-rules-note')).toHaveTextContent('once per push');
+    expect(screen.queryByTestId('quality-gate-dimensions-note')).toBeNull();
+  });
+
+  it('says when no dimension is below the floor', async () => {
+    mockQualityGateApi((req) =>
+      req.pathname === '/api/v1/quality-gate/overview'
+        ? json({ ...OVERVIEW, dimensions_below_floor: [] })
+        : undefined
+    );
+    renderAt('/quality-gate', '/quality-gate', <QualityGatePage />);
+    expect(await screen.findByTestId('quality-gate-dimensions-empty')).toHaveTextContent(
+      'No dimension is below the floor'
+    );
+    expect(screen.queryByTestId('quality-gate-dimensions-table')).toBeNull();
   });
 
   it('says so while loading, and when nothing has been scored', async () => {
