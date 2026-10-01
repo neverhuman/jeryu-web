@@ -1,11 +1,26 @@
+import { execFileSync } from 'node:child_process';
+
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { reproducibleFileNames, sourcemapSourcePath } from './src/build/reproducibleOutput';
+import { resolveWebCommit } from './src/build/webCommit';
 
 const projectRoot = decodeURIComponent(new URL('.', import.meta.url).pathname);
 
+// The commit the page reports as its own build (see src/build/webCommit.ts).
+const webCommit = resolveWebCommit(process.env.JERYU_WEB_COMMIT, () =>
+  execFileSync('git', ['rev-parse', 'HEAD'], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  })
+);
+
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __JERYU_WEB_COMMIT__: JSON.stringify(webCommit),
+  },
   server: {
     proxy: {
       '/api': { target: 'http://127.0.0.1:8787', ws: true },

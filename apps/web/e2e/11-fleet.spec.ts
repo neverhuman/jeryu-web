@@ -415,6 +415,82 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-automation')).toHaveCount(0);
   });
 
+  test('says what code each runner and the forge run, and nothing from an older forge @action:fleet.code', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockFleetBootstrap(page, []);
+    const fabric = runnerFabric(false);
+    const slot = (runnerId: string, commit?: string) => ({
+      runnerId,
+      source: 'pr-gate-runner',
+      state: 'idle',
+      capacity: 1,
+      inFlight: 0,
+      labels: ['pr-gate'],
+      classes: ['pr-gate'],
+      activeTaskCount: 0,
+      lastUpdated: '2026-06-05T00:05:00Z',
+      activeTasks: [],
+      ...(commit
+        ? {
+            code: {
+              repo: 'acme/gate-scripts',
+              commit,
+              version: '1.4.0',
+              installedAt: '2026-06-05T00:00:00Z',
+            },
+          }
+        : {}),
+    });
+    const usual = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678';
+    fabric.local.nodeDetails = [
+      slot('gate-a/slot0', usual),
+      slot('gate-a/slot1', usual),
+      slot('gate-b/slot0', 'b2c3d4e5f60718293a4b5c6d7e8f901234567890'),
+    ];
+    fabric.forge = {
+      version: '5.0.0',
+      commit: 'b2c3d4e5f60718293a4b5c6d7e8f901234567890',
+      webCommit: 'c3d4e5f60718293a4b5c6d7e8f90123456789012',
+    };
+    await mockControlPlaneRunners(page, fabric);
+
+    const shell = new AppShellPage(page);
+    await shell.goto('/runners');
+    await shell.assertShellLoaded();
+
+    await expect(page.getByTestId('fleet-forge-build')).toContainText(
+      'Forge 5.0.0 · server b2c3d4e · web c3d4e5f',
+      { timeout: 10_000 }
+    );
+    const code = page.getByTestId('fleet-node-code-gate-a_slot0');
+    await expect(code).toHaveText('a1b2c3d · 1.4.0');
+    await expect(code).toHaveAttribute(
+      'title',
+      `acme/gate-scripts@${usual} 1.4.0, installed 2026-06-05T00:00:00Z`
+    );
+    await expect(page.getByTestId('fleet-node-code-differs-gate-a_slot0')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-node-code-differs-gate-b_slot0')).toHaveText('· differs');
+
+    await page.screenshot({
+      path: 'playwright-report/fleet-runner-code.png',
+      fullPage: true,
+    });
+
+    // An older forge sends neither field: the rows carry no code line.
+    const older = runnerFabric(false);
+    older.local.nodeDetails = [slot('gate-a/slot0')];
+    await mockControlPlaneRunners(page, older);
+    await page.reload();
+    await expect(page.getByTestId('fleet-node-gate-a_slot0')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('fleet-node-code-gate-a_slot0')).toHaveCount(0);
+    // This page's own build commit may still show; the forge's does not.
+    await expect(
+      page.getByTestId('fleet-forge-build').filter({ hasText: 'Forge' })
+    ).toHaveCount(0);
+  });
+
   test('keeps observed tasks but does not invent runner availability @action:fleet.availability_unknown', async ({
     page,
   }) => {

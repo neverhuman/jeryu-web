@@ -10,6 +10,11 @@
 // "Automation", which is absent altogether when none reports: an older forge,
 // or timers that were never installed, should not leave an empty box.
 //
+// Under the title, one line says what code the forge itself runs (its
+// release, server commit, and the web commit it pins) beside this page's own
+// build commit when the two differ. Rows carry each runner's installed code.
+// An older forge sends neither, and then neither shows.
+//
 // It used to also render "Runner pools" and "System health" from the
 // bootstrap read model, but those were not real: pool capacity came from a
 // hardcoded 4x10 fixture, "failed" summed every failed check ever recorded,
@@ -17,8 +22,10 @@
 
 import { useMemo } from 'react';
 
+import { pageWebCommit } from '../build/webCommit';
 import { useControlPlaneRunners } from '../hooks/useControlPlaneRunners';
 import {
+  forgeBuildLine,
   networkSentence,
   runnerNetworkFromResponse,
   splitReviewers,
@@ -48,6 +55,7 @@ export function FleetPage(): JSX.Element {
     runnerNetwork.state === 'fresh' &&
     runnerNetwork.nodes.every((node) => node.availability !== 'unknown');
   const sentence = networkSentence(runnerNetwork.nodes);
+  const build = forgeBuildLine(runnerNetwork.forge, pageWebCommit());
   const reviewers = splitReviewers(runnerNetwork.reviewers);
   // Measured against when we fetched the snapshot, so render stays pure.
   const stale =
@@ -88,6 +96,15 @@ export function FleetPage(): JSX.Element {
           The machines that gate pull requests and the agents that review and
           merge them, from their heartbeats.
         </p>
+        {build ? (
+          <p
+            className={`fleet__build${build.webMismatch ? ' fleet__tone--warning' : ''}`}
+            data-testid="fleet-forge-build"
+            title={build.title || undefined}
+          >
+            <code>{build.text}</code>
+          </p>
+        ) : null}
         {runnerNetworkNote ? null : (
           <p
             className={`fleet__sentence fleet__tone--${sentence.tone}`}

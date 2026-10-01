@@ -469,3 +469,46 @@
     margin-left: 0;
   }
 }
+
+/* What code the forge runs, under the title; warning tone when this page is
+ * not the web bundle the forge pins. */
+.fleet__build {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+.fleet__build code {
+  font-family: var(--font-mono);
+  color: inherit;
+}
+
+/* Runner cell: the name, and the code it runs beneath it. */
+.fleet__node-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Wraps between its parts, never inside one, so "differs" is never cut off. */
+.fleet__node-row .fleet__node-code {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.fleet__node-code code,
+.fleet__node-code span {
+  white-space: nowrap;
+}
+
+.fleet__node-code code {
+  font-family: var(--font-mono);
+  color: inherit;
+}
+
+.fleet__build.fleet__tone--warning {
+  color: var(--color-accent-warning);
+}

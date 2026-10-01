@@ -146,6 +146,25 @@ export interface RunnerFabricResponse {
     nodeDetails: RunnerNodeSummary[];
   };
   mirror: MirrorEvidence;
+  /** The forge server's own build. Absent from an older forge. */
+  forge?: ForgeBuild;
+}
+
+/** What code the forge itself runs: its release and the commits it was built from. */
+export interface ForgeBuild {
+  version: string;
+  /** The server's commit; null when the build did not record one. */
+  commit: string | null;
+  /** The commit of the web bundle the server pins; null when unknown. */
+  webCommit: string | null;
+}
+
+/** The code a runner has installed and runs. */
+export interface RunnerCode {
+  repo: string;
+  commit: string;
+  version?: string;
+  installedAt?: string;
 }
 
 export interface RunnerNodeSummary {
@@ -172,6 +191,8 @@ export interface RunnerNodeSummary {
    * no write grant, so an approval there cannot land. Absent when none.
    */
   mergeGrantGaps?: MergeGrantGap[];
+  /** The runner's own installed code. Absent from an older forge or runner. */
+  code?: RunnerCode;
 }
 
 /** The forge's answer to the last attempt to merge or enqueue a pull request. */

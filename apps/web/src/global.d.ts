@@ -8,6 +8,13 @@
 import type { JSX as ReactJsx } from 'react';
 
 declare global {
+  /**
+   * The commit this bundle was built from, defined by `vite.config.ts`; null
+   * when the build knew none. Undefined where no build defines it (vitest), so
+   * read it through `pageWebCommit()` in `build/webCommit.ts`.
+   */
+  const __JERYU_WEB_COMMIT__: string | null | undefined;
+
   namespace JSX {
     type Element = ReactJsx.Element;
     type ElementType = ReactJsx.ElementType;

@@ -4,12 +4,19 @@
 // differ only in their words ("gating … passed" / "reviewing … approved"), so
 // the two lists read the same way. Status, slots, in-flight, task-count and
 // label columns are gone: for a one-slot runner they all said the same thing.
+//
+// A runner that reports its installed code carries it under its name
+// ("abc1234 · 1.4.0"), marked "differs" when most of its peers on the same
+// code repo run another commit.
 
 import { Link } from 'react-router-dom';
 
 import { pullHref } from '../activity/activityModel';
 import { relativeTime } from '../../components/repo/relativeTime';
 import {
+  codeLabel,
+  codeOutliers,
+  codeTitle,
   rowLast,
   rowNow,
   runnerName,
@@ -71,6 +78,7 @@ function RowList({
   rowTestId: string;
   heads: [string, string, string, string];
 }): JSX.Element {
+  const outliers = codeOutliers(nodes);
   return (
     <div
       className="fleet__node-list"
@@ -93,6 +101,7 @@ function RowList({
           nowMs={nowMs}
           testId={rowTestId}
           heads={heads}
+          codeDiffers={outliers.has(node.runnerId)}
         />
       ))}
     </div>
@@ -103,12 +112,14 @@ function RunnerRow({
   node,
   nowMs,
   testId,
-  heads
+  heads,
+  codeDiffers
 }: {
   node: RunnerNetworkNode;
   nowMs: number;
   testId: string;
   heads: [string, string, string, string];
+  codeDiffers: boolean;
 }): JSX.Element {
   const nodeId = testIdSegment(node.runnerId);
   const now = rowNow(node, nowMs);
@@ -122,12 +133,34 @@ function RunnerRow({
       aria-label={`${runnerName(node.runnerId)}: ${now.text}`}
     >
       <div className="fleet__node-row">
-        <h3
-          className="fleet__node-title"
-          title={`${node.runnerId} · ${node.source}`}
-        >
-          {runnerName(node.runnerId)}
-        </h3>
+        <div className="fleet__node-who">
+          <h3
+            className="fleet__node-title"
+            title={`${node.runnerId} · ${node.source}`}
+          >
+            {runnerName(node.runnerId)}
+          </h3>
+          {node.code ? (
+            <p
+              className="fleet__node-code"
+              data-testid={`${testId}-code-${nodeId}`}
+              title={codeTitle(node.code)}
+            >
+              <code>{codeLabel(node.code)}</code>
+              {codeDiffers ? (
+                <>
+                  {' '}
+                  <span
+                    className="fleet__tone--warning"
+                    data-testid={`${testId}-code-differs-${nodeId}`}
+                  >
+                    · differs
+                  </span>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
         <p
           className={`fleet__node-now fleet__tone--${now.tone}`}
           data-label={heads[1]}

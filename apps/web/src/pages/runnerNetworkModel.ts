@@ -13,10 +13,12 @@
 
 import type {
   EvidenceState,
+  ForgeBuild,
   MergeAttempt,
   MergeGrantGap,
   RunnerLastActivity,
   RunnerFabricResponse,
+  RunnerCode,
   RunnerNodeSummary,
   RunnerTaskSummary,
   RunnerTtyPreview,
@@ -87,6 +89,8 @@ export interface RunnerNetworkNode {
   offlineAfterSeconds?: number | null;
   /** Reviewer only: repositories where the merge identity has no grant. */
   mergeGrantGaps?: MergeGrantGap[];
+  /** The code the runner has installed, when it reports it. */
+  code?: RunnerCode | null;
 }
 
 export interface RunnerNetworkTotals {
@@ -110,6 +114,8 @@ export interface RunnerNetworkState {
   automation: RunnerNetworkNode[];
   totals: RunnerNetworkTotals;
   lastUpdated: string | null;
+  /** The forge server's own build; null from an older forge. */
+  forge: ForgeBuild | null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -231,6 +237,7 @@ function nodeFromRaw(
     lastActivity: raw.lastActivity ?? null,
     mergeGrantGaps: raw.mergeGrantGaps ?? [],
     offlineAfterSeconds: raw.offlineAfterSeconds ?? null,
+    code: raw.code ?? null,
   };
 }
 
@@ -296,6 +303,32 @@ export function mergeBlockedReason(attempt: MergeAttempt | null | undefined): st
   return attempt.message ? `${code} - ${attempt.message}` : code;
 }
 
+/** A runner's installed code, or undefined when absent or malformed. */
+function codeFromRaw(value: unknown): RunnerCode | undefined {
+  const record = asRecord(value);
+  const repo = str(record?.repo);
+  const commit = str(record?.commit);
+  if (!record || !repo || !commit) return undefined;
+  const code: RunnerCode = { repo, commit };
+  const version = str(record.version);
+  const installedAt = str(record.installedAt);
+  if (version) code.version = version;
+  if (installedAt) code.installedAt = installedAt;
+  return code;
+}
+
+/** The forge's own build, or null when absent or malformed. */
+function forgeFromRaw(value: unknown): ForgeBuild | null {
+  const record = asRecord(value);
+  const version = str(record?.version);
+  if (!record || !version) return null;
+  return {
+    version,
+    commit: str(record.commit) || null,
+    webCommit: str(record.webCommit) || null,
+  };
+}
+
 /** A gate runner's last finished gate, or null when absent or malformed. */
 function lastActivityFromRaw(value: unknown): RunnerLastActivity | null {
   const record = asRecord(value);
@@ -344,6 +377,7 @@ export function runnerNetworkFromResponse(
         lastActivity: lastActivityFromRaw(record.lastActivity),
         mergeGrantGaps: mergeGrantGapsFromRaw(record.mergeGrantGaps),
         offlineAfterSeconds: num(record.offlineAfterSeconds) > 0 ? num(record.offlineAfterSeconds) : null,
+        code: codeFromRaw(record.code),
         activeTasks: tasks
           .map((task) => {
             const taskRecord = asRecord(task);
@@ -405,6 +439,7 @@ export function runnerNetworkFromResponse(
     automation,
     totals,
     lastUpdated,
+    forge: forgeFromRaw(raw?.forge),
   };
 }
 
@@ -462,6 +497,103 @@ export function runnerName(runnerId: string): string {
 /** The seven-character sha people read aloud. */
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);
+}
+
+/** True when two commits name the same one, whichever is abbreviated. */
+export function sameCommit(a: string, b: string): boolean {
+  const x = a.toLowerCase();
+  const y = b.toLowerCase();
+  return x.length >= 7 && y.length >= 7 && (x.startsWith(y) || y.startsWith(x));
+}
+
+// ── Code: what each runner, and the forge itself, runs ───────────────────
+
+/** A runner's code in a few characters: "abc1234 · 1.4.0", or "abc1234". */
+export function codeLabel(code: RunnerCode): string {
+  return code.version
+    ? `${shortSha(code.commit)} · ${code.version}`
+    : shortSha(code.commit);
+}
+
+/** The full story for a tooltip: "acme/gate-scripts@<sha> 1.4.0, installed <when>". */
+export function codeTitle(code: RunnerCode): string {
+  const version = code.version ? ` ${code.version}` : '';
+  const installed = code.installedAt ? `, installed ${code.installedAt}` : '';
+  return `${code.repo}@${code.commit}${version}${installed}`;
+}
+
+/**
+ * Runners whose commit differs from the one most of the runners with the same
+ * code repo in the list run. Only a clear majority counts: two runners on two
+ * commits mark neither, because neither is the odd one out.
+ */
+export function codeOutliers(nodes: readonly RunnerNetworkNode[]): Set<string> {
+  const byRepo = new Map<string, RunnerNetworkNode[]>();
+  for (const node of nodes) {
+    if (!node.code) continue;
+    const group = byRepo.get(node.code.repo) ?? [];
+    group.push(node);
+    byRepo.set(node.code.repo, group);
+  }
+  const outliers = new Set<string>();
+  for (const group of byRepo.values()) {
+    const counts = new Map<string, number>();
+    for (const node of group) {
+      const commit = node.code?.commit.toLowerCase() ?? '';
+      counts.set(commit, (counts.get(commit) ?? 0) + 1);
+    }
+    if (counts.size < 2) continue;
+    const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const [top, next] = ranked;
+    if (!top || !next || top[1] === next[1]) continue;
+    for (const node of group) {
+      if (node.code && node.code.commit.toLowerCase() !== top[0]) {
+        outliers.add(node.runnerId);
+      }
+    }
+  }
+  return outliers;
+}
+
+export interface ForgeBuildLine {
+  /** "Forge 5.0.0 · server abc1234 · web def5678". */
+  text: string;
+  /** The full commits, for a tooltip. */
+  title: string;
+  /** True when this page is not the web bundle the forge pins. */
+  webMismatch: boolean;
+}
+
+/**
+ * What code the forge runs, in one line, with this page's own build commit
+ * beside the pinned web commit when the two differ. Null when there is
+ * nothing to say: an older forge and a page built without a commit.
+ */
+export function forgeBuildLine(
+  forge: ForgeBuild | null,
+  pageCommit: string | null
+): ForgeBuildLine | null {
+  if (!forge && !pageCommit) return null;
+  const parts: string[] = [];
+  const titles: string[] = [];
+  if (forge) {
+    parts.push(`Forge ${forge.version}`);
+    if (forge.commit) {
+      parts.push(`server ${shortSha(forge.commit)}`);
+      titles.push(`server ${forge.commit}`);
+    }
+    if (forge.webCommit) {
+      parts.push(`web ${shortSha(forge.webCommit)}`);
+      titles.push(`pinned web ${forge.webCommit}`);
+    }
+  }
+  const pinned = forge?.webCommit ?? null;
+  const webMismatch = pinned !== null && pageCommit !== null && !sameCommit(pinned, pageCommit);
+  if (pageCommit && (pinned === null || webMismatch)) {
+    parts.push(`this page ${shortSha(pageCommit)}`);
+    titles.push(`this page ${pageCommit}`);
+  }
+  return { text: parts.join(' · '), title: titles.join('\n'), webMismatch };
 }
 
 /** 14 -> "14s", 127 -> "2m 7s", 3780 -> "1h 3m". */
