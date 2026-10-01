@@ -30,7 +30,11 @@ vi.mock('../api/client', () => ({
       : accounts,
   ),
   apiSend: vi.fn(),
+  apiPut: vi.fn(),
   apiDelete: vi.fn(),
+}));
+vi.mock('./InternalWikiPanel', () => ({
+  InternalWikiPanel: () => <section aria-label="Internal wiki panel" />,
 }));
 
 describe('AdminSettingsPage user list', () => {

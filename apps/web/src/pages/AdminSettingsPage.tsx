@@ -1,7 +1,7 @@
 // AdminSettingsPage.tsx — admin preferences surface.
 //
-// Implements theme preferences plus account access controls wired
-// through typed HTTP endpoints.
+// Implements theme preferences, the internal wiki choice, and account access
+// controls wired through typed HTTP endpoints.
 
 import { LogOut, Moon, Monitor, Sun, ToggleRight } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import { endpoints } from '../api/endpoints';
 import { ActionButton } from '../components/action/ActionButton';
 import { ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
+import { InternalWikiPanel } from './InternalWikiPanel';
 import {
   usePreferencesStore,
   type ThemePreference,
@@ -76,6 +77,7 @@ export function AdminSettingsPage(): JSX.Element {
 
       {user?.role === 'admin' ? (
         <>
+          <InternalWikiPanel />
           <AdminAccessPanel />
           <RepoAccessPanel />
         </>

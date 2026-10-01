@@ -1,6 +1,7 @@
 // LeftNav.tsx — primary navigation (W-FE-01).
 //
-// Six destinations an operator uses daily, then a "System" disclosure for the
+// Six destinations an operator uses daily (plus Wiki, when an administrator
+// has chosen a repository for it), then a "System" disclosure for the
 // five that explain the machinery (Runners, Intelligence, Dependencies,
 // Quality gate, Shared tools). The disclosure is closed by default, remembers what the operator chose, and is
 // open whenever the current page is inside it. When the current URL is inside a
@@ -13,6 +14,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Activity,
+  BookOpen,
   Bot,
   ChevronDown,
   ChevronRight,
@@ -33,6 +35,7 @@ import {
 
 import { useAttention } from '../hooks/usePipeline';
 import { useAuth } from '../hooks/useAuth';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 import {
   AREA_LABEL,
   areaBadgeCount,
@@ -40,6 +43,7 @@ import {
   type AttentionArea,
 } from '../pages/needsYou/needsYouModel';
 import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
+import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
 
@@ -134,6 +138,8 @@ export function LeftNav(): JSX.Element {
   const { user } = useAuth();
   const attention = useAttention(user?.role === 'admin');
   const needsYou = attentionBadgeCount(attention.data);
+  // Shown only when a wiki is set and this viewer can read its repository.
+  const wiki = useSiteSettings().data?.internal_wiki ?? null;
 
   // Closed unless the operator opened it; always open on a System page, so
   // the current page is never hidden inside a closed group.
@@ -178,6 +184,18 @@ export function LeftNav(): JSX.Element {
   return (
     <nav className="left-nav" aria-label="Primary">
       {PRIMARY_NAV.map(renderItem)}
+      {wiki ? (
+        <Link
+          to={WIKI_PATH}
+          title={wiki.full_name}
+          className={`left-nav__item${isActivePath(pathname, WIKI_PATH) ? ' is-active' : ''}`}
+          aria-current={isActivePath(pathname, WIKI_PATH) ? 'page' : undefined}
+          data-testid="left-nav-wiki"
+        >
+          <BookOpen aria-hidden="true" size={16} />
+          Wiki
+        </Link>
+      ) : null}
 
       <button
         type="button"

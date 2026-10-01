@@ -41,6 +41,7 @@ import {
 } from '../pages/qualityGate';
 import { RepoRouter } from '../pages/RepoRouter';
 import { ShiftQueuePage, WORK_PATH } from '../pages/shift';
+import { WikiPage } from '../pages/wiki/WikiPage';
 
 import {
   ADOPTION_PATH,
@@ -135,6 +136,9 @@ export const router = createBrowserRouter([
       // the record of who-did-what lives instead of a bare NotFound.
       { path: 'audit', element: <NotFoundPage movedTo={AUDIT_MOVED_TO} /> },
       { path: 'settings', element: <AdminSettingsPage /> },
+      // The internal wiki: the repository chosen in Settings, read as pages.
+      { path: 'wiki', element: <WikiPage /> },
+      { path: 'wiki/*', element: <WikiPage /> },
       // Forge-shaped links (`/<owner>/<repo>/pull/<n>`) are everywhere: pull
       // request bodies, notifications, agent output, bookmarks. They land on
       // the canonical `/repos/<provider>/<owner>/<repo>/pulls/<n>`. Declared

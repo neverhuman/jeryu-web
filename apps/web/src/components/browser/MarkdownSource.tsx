@@ -29,6 +29,11 @@ export interface MarkdownSourceProps {
   docDir?: string;
   /** Maps a repository path to a loadable URL, for relative images. */
   imageSrc?: (repoPath: string) => string;
+  /**
+   * Where a link leads, in place of resolving it against `linkBase`: the wiki
+   * sends pages of the wiki to itself and every other file to the repository.
+   */
+  resolveHref?: (href: string) => string;
   className?: string;
 }
 
@@ -60,6 +65,7 @@ export function MarkdownSource({
   linkBase,
   docDir,
   imageSrc,
+  resolveHref,
   className,
 }: MarkdownSourceProps): JSX.Element {
   const navigate = useNavigate();
@@ -68,10 +74,12 @@ export function MarkdownSource({
   // image and load it again.
   const imageSrcRef = useRef(imageSrc);
   imageSrcRef.current = imageSrc;
+  const resolveHrefRef = useRef(resolveHref);
+  resolveHrefRef.current = resolveHref;
 
   const components = useMemo(() => {
     function Anchor({ href = '', children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement>): JSX.Element {
-      const target = resolveMarkdownHref(href, linkBase);
+      const target = resolveHrefRef.current?.(href) ?? resolveMarkdownHref(href, linkBase);
       if (/^https?:\/\//i.test(target)) {
         return (
           <a {...rest} href={target} target="_blank" rel="noopener noreferrer">

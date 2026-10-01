@@ -55,6 +55,8 @@ describe('router route table', () => {
     'work/:key',
     'login',
     'signup',
+    'wiki',
+    'wiki/*',
   ])('registers %s above the not-found catch-all', (path) => {
     const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
     const notFoundIdx = paths.indexOf('*');

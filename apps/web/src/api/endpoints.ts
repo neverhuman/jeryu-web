@@ -24,6 +24,10 @@ export const endpoints = {
     `/api/v1/admin/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/grants`,
   adminRepoGrant: (owner: string, repo: string, login: string): string =>
     `/api/v1/admin/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/grants/${encodeURIComponent(login)}`,
+  /** Instance-wide settings any caller may read (the internal wiki). */
+  siteSettings: (): string => '/api/v1/site-settings',
+  /** The same settings as an admin reads and writes them. */
+  adminSiteSettings: (): string => '/api/v1/admin/site-settings',
 
   /** Product-wide search; see `jeryu-deploy/docs/search.md`. */
   search: (query: SearchQuery): string => {
@@ -60,14 +64,31 @@ export const endpoints = {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/readme`;
     return ref ? `${base}?ref=${encodeURIComponent(ref)}` : base;
   },
+  /** Every Markdown page in the commit `ref` names, at any depth. */
+  pages: (id: string, ref?: string): string => {
+    const base = `/api/v1/repos/${encodeURIComponent(id)}/pages`;
+    return ref ? `${base}?ref=${encodeURIComponent(ref)}` : base;
+  },
+  /** Which commit last changed each line of one file. */
+  blame: (id: string, params: { ref?: string; path: string }): string => {
+    const qs = new URLSearchParams({ path: params.path });
+    if (params.ref) qs.set('ref', params.ref);
+    return `/api/v1/repos/${encodeURIComponent(id)}/blame?${qs.toString()}`;
+  },
   /**
    * A branch's commits, newest first (`ref` defaults to the default branch).
    * `limit` caps the page; the response's `page.total` counts all of them.
+   * `path` narrows them to the commits that touched one file or directory.
    */
-  commits: (id: string, params: { ref?: string; limit?: number } = {}): string => {
+  commits: (
+    id: string,
+    params: { ref?: string; path?: string; limit?: number; page?: number } = {}
+  ): string => {
     const qs = new URLSearchParams();
     if (params.ref) qs.set('ref', params.ref);
+    if (params.path) qs.set('path', params.path);
     if (params.limit !== undefined) qs.set('limit', String(params.limit));
+    if (params.page !== undefined) qs.set('page', String(params.page));
     const suffix = qs.toString();
     const base = `/api/v1/repos/${encodeURIComponent(id)}/commits`;
     return suffix ? `${base}?${suffix}` : base;

@@ -1,0 +1,339 @@
+/* WikiPage.css — the internal wiki: page tree, document, change notes. */
+
+.wiki {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: var(--space-7);
+  padding: var(--space-6) var(--space-7);
+  max-width: 1440px;
+}
+
+.wiki__nav {
+  position: sticky;
+  top: var(--space-4);
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: calc(100vh - 2 * var(--space-6));
+  overflow-y: auto;
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--color-border-subtle);
+}
+
+.wiki__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+  text-decoration: none;
+}
+
+.wiki__repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  text-decoration: none;
+}
+
+.wiki__repo-link:hover,
+.wiki__repo-link:focus-visible {
+  color: var(--color-accent-primary);
+}
+
+.wiki__main {
+  min-width: 0;
+}
+
+.wiki-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wiki-tree .wiki-tree {
+  margin-left: var(--space-3);
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+.wiki-tree__page,
+.wiki-tree__folder {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.wiki-tree__folder {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-primary);
+}
+
+.wiki-tree__page:hover,
+.wiki-tree__page:focus-visible {
+  color: var(--color-fg-primary);
+  background-color: var(--color-bg-2);
+}
+
+.wiki-tree__page.is-active {
+  color: var(--color-accent-primary);
+  background-color: var(--color-accent-primary-bg);
+  font-weight: var(--font-weight-medium);
+}
+
+/* The document: a readable text column, with a margin for change notes. */
+.wiki-doc {
+  --wiki-text: 72ch;
+  --wiki-margin: 220px;
+  display: flex;
+  flex-direction: column;
+}
+
+.wiki-doc__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: var(--wiki-text);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.wiki-doc__crumbs {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+}
+
+.wiki-doc__crumbs a {
+  color: inherit;
+}
+
+.wiki-doc__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+}
+
+.wiki-doc__meta {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+}
+
+.wiki-doc__meta a {
+  color: var(--color-fg-secondary);
+}
+
+.wiki-doc__toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--color-fg-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.wiki-doc__toggle:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.wiki-doc__fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.wiki-doc__field {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-2);
+}
+
+.wiki-doc__field dt {
+  color: var(--color-fg-muted);
+}
+
+.wiki-doc__field dd {
+  margin: 0;
+  color: var(--color-fg-secondary);
+}
+
+.wiki-doc__section {
+  display: grid;
+  grid-template-columns: minmax(0, var(--wiki-text));
+  column-gap: var(--space-6);
+  padding: var(--space-2) 0;
+}
+
+.wiki-doc--notes .wiki-doc__section {
+  grid-template-columns: minmax(0, var(--wiki-text)) var(--wiki-margin);
+}
+
+.wiki-doc__body {
+  min-width: 0;
+}
+
+.wiki-doc__body .markdown-body h1 {
+  font-size: var(--font-size-3xl);
+}
+
+/* One note per section, top-aligned with its heading. */
+.wiki-note {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+  border-left: 2px solid var(--color-border-subtle);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-fg-muted);
+}
+
+.wiki-note--empty {
+  border-left-color: transparent;
+}
+
+.wiki-doc__section:hover .wiki-note:not(.wiki-note--empty) {
+  border-left-color: var(--color-accent-primary);
+}
+
+.wiki-note__commit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  color: var(--color-fg-secondary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiki-note__commit svg {
+  flex: none;
+  align-self: center;
+}
+
+.wiki-note__commit:hover,
+.wiki-note__commit:focus-visible {
+  color: var(--color-accent-primary);
+}
+
+.wiki-note__since a {
+  color: inherit;
+}
+
+/* Narrower: notes move under their section as one quiet line. */
+@media (max-width: 1180px) {
+  .wiki-doc--notes .wiki-doc__section {
+    grid-template-columns: minmax(0, var(--wiki-text));
+    row-gap: var(--space-1);
+  }
+
+  .wiki-note {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: var(--space-2);
+  }
+
+  .wiki-note--empty {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .wiki {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+
+  .wiki__nav {
+    position: static;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: var(--space-3);
+  }
+}
+
+.wiki__hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-fg-muted);
+}
+
+.wiki__hint code,
+.wiki-invite code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  color: var(--color-fg-secondary);
+}
+
+/* A wiki without a start page: what to add, and where. */
+.wiki-invite {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 72ch;
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border-strong);
+  color: var(--color-fg-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.wiki-invite p {
+  margin: 0;
+}
+
+.wiki-invite__title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+}
+
+.wiki-invite__steps {
+  align-self: stretch;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  overflow-x: auto;
+  background-color: var(--color-bg-3);
+  border: 1px solid var(--color-border-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-primary);
+}
+
+/* Links inside a line of text are underlined, not told apart by colour alone. */
+.wiki-doc__meta a,
+.wiki-doc__crumbs a,
+.wiki-note__since a,
+.wiki__hint a,
+.wiki-invite p a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

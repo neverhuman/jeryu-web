@@ -9,6 +9,11 @@ vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: { login: 'alton', role: 'user' } }),
 }));
 
+const siteSettings = vi.hoisted((): { wiki: null | { full_name: string } } => ({ wiki: null }));
+vi.mock('../../hooks/useSiteSettings', () => ({
+  useSiteSettings: () => ({ data: { internal_wiki: siteSettings.wiki } }),
+}));
+
 // Node 26 defines a global localStorage that is undefined without a backing
 // file and shadows jsdom's, so the test brings its own Storage.
 function makeStorage(): Storage {
@@ -41,6 +46,7 @@ function renderAt(path: string): { unmount: () => void } {
 
 describe('LeftNav', () => {
   beforeEach(() => {
+    siteSettings.wiki = null;
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
   });
 
@@ -122,5 +128,17 @@ describe('LeftNav', () => {
     const { unmount } = renderAt('/repos/jeryu/jeryu/jeryu-web/pulls');
     expect(screen.getByRole('link', { name: 'Code' })).not.toHaveAttribute('aria-current');
     unmount();
+  });
+  it('links to the wiki only when one is set, and marks it on wiki pages', () => {
+    const { unmount } = renderAt('/activity');
+    expect(screen.queryByRole('link', { name: 'Wiki' })).toBeNull();
+    unmount();
+
+    siteSettings.wiki = { full_name: 'acme/handbook' };
+    renderAt('/wiki/guides/setup.md');
+    const wiki = screen.getByRole('link', { name: 'Wiki' });
+    expect(wiki).toHaveAttribute('href', '/wiki');
+    expect(wiki).toHaveAttribute('title', 'acme/handbook');
+    expect(wiki).toHaveAttribute('aria-current', 'page');
   });
 });
