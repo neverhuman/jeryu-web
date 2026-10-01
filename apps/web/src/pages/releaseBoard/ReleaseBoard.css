@@ -463,3 +463,31 @@
     display: block;
   }
 }
+
+/* A lane reached by `#lane-<id>` (e.g. from /runners): clear of the top bar,
+   and ringed for a moment so the eye lands on it. */
+.release-board__lane {
+  scroll-margin-top: var(--space-6);
+  border-radius: var(--radius-md);
+  outline: 2px solid transparent;
+  outline-offset: var(--space-1);
+  transition: outline-color 400ms ease-out, background-color 400ms ease-out;
+}
+
+.release-board__lane--target {
+  outline-color: var(--color-accent-primary);
+  background-color: color-mix(in srgb, var(--color-accent-primary) 6%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release-board__lane {
+    transition: none;
+  }
+}
+
+/* "2 runners" under a target's name, linking to them on /runners. */
+.release-board__runners {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: normal;
+}

@@ -14,6 +14,8 @@ import {
   mockControlPlaneRunners,
   mockFleetBootstrap,
 } from './fixtures/mocks';
+import { mockPipelineApi } from './fixtures/pipelineMocks';
+import { mockBoards, mockEnvironments } from './fixtures/releaseBoardMocks';
 import type { RunnerFabricResponse, RunnerLastActivity } from '../src/api/types';
 
 test.describe.configure({ retries: 1 });
@@ -489,6 +491,73 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(
       page.getByTestId('fleet-forge-build').filter({ hasText: 'Forge' })
     ).toHaveCount(0);
+  });
+
+  test('links each runner and the forge to the release-board lane that ships it @action:fleet.releases', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    await mockEnvironments(page);
+    // The invented globex board names build-1/slot0 and build-1/slot1 on its
+    // gate-runner lane, and its forge-server production stage runs be19083.
+    await mockBoards(page);
+    const fabric = runnerFabric(false);
+    const slot = (runnerId: string) => ({
+      runnerId,
+      source: 'pr-gate-runner',
+      state: 'idle',
+      capacity: 1,
+      inFlight: 0,
+      labels: ['pr-gate'],
+      classes: ['pr-gate'],
+      activeTaskCount: 0,
+      lastUpdated: '2026-06-05T00:05:00Z',
+      activeTasks: [],
+    });
+    fabric.local.nodeDetails = [slot('build-1/slot0'), slot('build-1/slot1'), slot('build-2/slot0')];
+    fabric.forge = {
+      version: '5.0.0',
+      commit: 'be19083a1b2c3d4e5f60718293a4b5c6d7e8f901',
+      webCommit: null,
+    };
+    let boardReads = 0;
+    let runnerReads = 0;
+    page.on('request', (request) => {
+      const { pathname } = new URL(request.url());
+      if (pathname === '/api/v1/release-board') boardReads += 1;
+      if (pathname === '/api/v1/control-plane/runners') runnerReads += 1;
+    });
+    await mockControlPlaneRunners(page, fabric);
+    await page.clock.install();
+
+    const shell = new AppShellPage(page);
+    await shell.goto('/runners');
+    await shell.assertShellLoaded();
+
+    const where = page.getByTestId('fleet-node-release-build-1_slot0');
+    await expect(where).toHaveText('globex · Gate runner · installed aab6147', { timeout: 10_000 });
+    await expect(where).toHaveAttribute('href', '/releases/family/globex#lane-gate-runner');
+    await expect(page.getByTestId('fleet-node-build-1_slot0')).toHaveAttribute('id', 'runner-build-1-slot0');
+    // A runner no board names has no such line.
+    await expect(page.getByTestId('fleet-node-release-build-2_slot0')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-forge-release')).toHaveAttribute(
+      'href',
+      '/releases/family/globex#lane-forge-server'
+    );
+
+    // The runner rows poll every 15 s; the boards do not come along.
+    const boardsBefore = boardReads;
+    const runnersBefore = runnerReads;
+    await page.clock.fastForward(20_000);
+    await expect.poll(() => runnerReads).toBeGreaterThan(runnersBefore);
+    expect(boardReads).toBe(boardsBefore);
+
+    await where.click();
+    await expect(page).toHaveURL(/\/releases\/family\/globex#lane-gate-runner$/);
+    const lane = page.getByTestId('release-board-lane-gate-runner');
+    await expect(lane).toHaveClass(/release-board__lane--target/, { timeout: 15_000 });
+    await expect(lane).toBeInViewport();
   });
 
   test('keeps observed tasks but does not invent runner availability @action:fleet.availability_unknown', async ({

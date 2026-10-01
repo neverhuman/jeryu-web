@@ -101,6 +101,11 @@ export interface BoardTarget {
   name: string;
   running: string | null;
   state: BoardState;
+  /**
+   * The runners this target covers, ids exactly as `runnerId` on
+   * `GET /api/v1/control-plane/runners`. Absent from an older collector.
+   */
+  runners?: string[];
 }
 
 export type WorkPartKey = 'live' | 'merged' | 'stranded' | 'untraceable' | 'blocked' | 'open';

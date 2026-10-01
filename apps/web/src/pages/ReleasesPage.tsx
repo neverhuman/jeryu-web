@@ -21,12 +21,13 @@
 // keeping half a list of pull requests.
 //
 // Its scope comes from `?repo=owner/name` (default the jeryu deploy repo) or
-// `?view=repositories&family=<family>`; on the board, `?family=` picks the
-// board instead. `/unreleased` was a page, then a section here; it is
+// `?view=repositories&family=<family>`. The board's address is
+// `/releases/family/<family>` (lanes are `#lane-<id>` on it); the older
+// `/releases?family=<family>` redirects there (see ReleasesRoute). `/unreleased` was a page, then a section here; it is
 // neither now, and the route redirects (see UnreleasedRedirect) because the
 // forge's own attention items still link to it.
 
-import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { useAuth } from '../hooks/useAuth';
@@ -37,6 +38,7 @@ import { useRepositories } from '../hooks/useRepositories';
 import { commandPlace, findAttention } from './needsYou/needsYouModel';
 import { behindPinLines } from './pinsModel';
 import { ReadyToPin } from './ReadyToPin';
+import { canonicalBoardRedirect } from './releaseBoard/links';
 import { ReleaseBoardView } from './releaseBoard/ReleaseBoardView';
 import {
   attemptLabel,
@@ -69,9 +71,24 @@ const STATE_PILL: Record<string, string> = {
   pending: 'page__pill--warning',
 };
 
+/**
+ * The `/releases` route: the page, unless the URL is the board's older
+ * spelling `?family=<family>`, which is replaced by `/releases/family/<family>`
+ * with every other parameter and the hash kept.
+ */
+export function ReleasesRoute(): JSX.Element {
+  const { search, hash } = useLocation();
+  const target = canonicalBoardRedirect(search, hash);
+  return target ? <Navigate to={target} replace /> : <ReleasesPage />;
+}
+
 export function ReleasesPage(): JSX.Element {
   const [params] = useSearchParams();
+  const { family: pathFamily } = useParams();
   const perRepository = params.has('repo') || params.get('view') === REPOSITORY_VIEW;
+  // On the board the family comes from the path; `?family=` still works when
+  // the page is mounted without the redirect in front of it.
+  const boardFamily = pathFamily ?? (perRepository ? null : params.get('family'));
   const repositoryView = (
     <RepositoryReleases scope={perRepository ? scopeFrom(params) : DEFAULT_SCOPE} />
   );
@@ -105,9 +122,13 @@ export function ReleasesPage(): JSX.Element {
         </nav>
       </header>
 
-      <NeedsYouHere area="releases" family={params.get('family') ?? ''} />
+      <NeedsYouHere area="releases" family={pathFamily ?? params.get('family') ?? ''} />
 
-      {perRepository ? repositoryView : <ReleaseBoardView fallback={repositoryView} />}
+      {perRepository ? (
+        repositoryView
+      ) : (
+        <ReleaseBoardView family={boardFamily} fallback={repositoryView} />
+      )}
     </div>
   );
 }

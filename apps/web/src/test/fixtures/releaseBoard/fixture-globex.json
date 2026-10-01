@@ -195,7 +195,8 @@
             {
               "name": "build-1 · pr-gate-runner",
               "running": "aab6147 · auto-installs every 10 min",
-              "state": "ok"
+              "state": "ok",
+              "runners": ["build-1/slot0", "build-1/slot1"]
             }
           ],
           "column": "prod"
@@ -230,7 +231,8 @@
             {
               "name": "node-a · ~/reviewer",
               "running": "no remote · 575-line diff vs runner",
-              "state": "bad"
+              "state": "bad",
+              "runners": ["node-a/reviewer"]
             }
           ],
           "promote": {

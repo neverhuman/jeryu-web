@@ -7,8 +7,11 @@
 // and pressing a cell opens its detail under the lane: every target and what
 // it runs, what promoting would ship, the rollback, and the promote command to
 // copy. One cell per lane is open at a time; pressing it again closes it.
+// Each lane is the anchor `#lane-<id>`, and a target that names its runners
+// links to them on /runners ("2 runners").
 
 import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import type { EnvironmentSummary } from '../../api/types/deployments';
 import type {
@@ -18,6 +21,7 @@ import type {
   ReleaseBoard,
 } from '../../api/types/releaseBoard';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
+import { laneAnchorId, runnerCountLabel, runnersHref } from './links';
 import {
   boardColumns,
   connectorLabel,
@@ -132,6 +136,7 @@ function LaneView({
 
   return (
     <section
+      id={laneAnchorId(lane.id)}
       className="release-board__lane"
       aria-labelledby={headingId}
       data-testid={`release-board-lane-${lane.id}`}
@@ -309,7 +314,19 @@ function StageDetail({
             <tbody>
               {stage.targets.map((target, index) => (
                 <tr key={`${index}-${target.name}`}>
-                  <th scope="row">{target.name}</th>
+                  <th scope="row">
+                    {target.name}
+                    {target.runners && target.runners.length > 0 ? (
+                      <Link
+                        className="release-board__runners"
+                        to={runnersHref(target.runners)}
+                        title={target.runners.join(', ')}
+                        data-testid="release-board-target-runners"
+                      >
+                        {runnerCountLabel(target.runners.length)}
+                      </Link>
+                    ) : null}
+                  </th>
                   <td>
                     <code>{target.running ?? 'unknown'}</code>
                   </td>

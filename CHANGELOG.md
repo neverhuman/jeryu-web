@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Releases and Runners point at each other. A family's board is `/releases/family/<family>` (the
+  family pills link there; `/releases?family=<family>` redirects, keeping other parameters and the
+  hash), and each lane is the anchor `#lane-<id>`, scrolled to and ringed briefly when a URL names
+  it. A stage target that names its runners (`runners` on a board target, optional; an older
+  collector sends none) links "N runners" to `/runners?runners=<ids>`, which highlights those rows
+  and scrolls to the first. Each runner row has the anchor `runner-<slug>` and, when a board names
+  it, a second line such as "acme · Gate runner · installed v1.2.0" linking to its lane; the
+  forge's own build line links to the lane whose production stage runs its commit. /runners reads
+  the boards once and then at most every 5 minutes; boards it cannot read mean no links.
 - PR gate: `ops/ci/web-deps.sh` installs the workspace from the root `package-lock.json` before
   any lane runs, so a branch that adds or bumps an npm dependency meets a tree that has it. The
   install is keyed on the lockfile's digest recorded inside `node_modules`, so an unchanged

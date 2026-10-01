@@ -9,6 +9,8 @@ import { Link } from 'react-router-dom';
 import { pullHref } from '../activity/activityModel';
 import { relativeTime } from '../../components/repo/relativeTime';
 import type { RunnerNetworkNode } from '../runnerNetworkModel';
+import { NO_PLACES, runnerAnchorId, type RunnerPlaces } from './releaseIndex';
+import { RunnerReleaseLink } from './RunnerReleaseLink';
 import {
   automationDid,
   automationHost,
@@ -20,11 +22,14 @@ const HEADS = ['Timer', 'Host', 'Last did', 'Seen'] as const;
 
 export function AutomationList({
   timers,
-  nowMs
+  nowMs,
+  places = NO_PLACES
 }: {
   timers: RunnerNetworkNode[];
   /** When the snapshot was fetched: "offline" measures against it. */
   nowMs: number;
+  /** Each timer's release-board lane, and the rows `?runners=` picked. */
+  places?: RunnerPlaces;
 }): JSX.Element {
   return (
     <div
@@ -42,7 +47,12 @@ export function AutomationList({
         ))}
       </div>
       {timers.map((timer) => (
-        <AutomationRow key={timer.runnerId} timer={timer} nowMs={nowMs} />
+        <AutomationRow
+          key={timer.runnerId}
+          timer={timer}
+          nowMs={nowMs}
+          places={places}
+        />
       ))}
     </div>
   );
@@ -50,26 +60,41 @@ export function AutomationList({
 
 function AutomationRow({
   timer,
-  nowMs
+  nowMs,
+  places
 }: {
   timer: RunnerNetworkNode;
   nowMs: number;
+  places: RunnerPlaces;
 }): JSX.Element {
   const id = timer.runnerId.replace(/[^a-zA-Z0-9_-]/g, '_');
   const name = automationName(timer);
   const offline = automationOffline(timer, nowMs);
   const did = automationDid(timer);
+  const release = places.releases.get(timer.runnerId);
+  const highlighted = places.highlighted.has(timer.runnerId);
   return (
     <article
-      className={`fleet__node-item is-${offline ? 'offline' : 'online'}`}
+      id={runnerAnchorId(timer.runnerId)}
+      className={`fleet__node-item is-${offline ? 'offline' : 'online'}${highlighted ? ' is-highlighted' : ''}`}
+      aria-current={highlighted ? 'true' : undefined}
       data-testid={`fleet-automation-${id}`}
       role="listitem"
       aria-label={`${name}: ${offline ? 'offline' : 'reporting'}`}
     >
       <div className="fleet__node-row">
-        <h3 className="fleet__node-title" title={timer.runnerId}>
-          {name}
-        </h3>
+        <div className="fleet__node-who">
+          <h3 className="fleet__node-title" title={timer.runnerId}>
+            {name}
+          </h3>
+          {release ? (
+            <RunnerReleaseLink
+              release={release}
+              codeVersion={timer.code?.version}
+              testId={`fleet-automation-release-${id}`}
+            />
+          ) : null}
+        </div>
         <p className="fleet__node-muted" data-label={HEADS[1]}>
           {automationHost(timer)}
         </p>

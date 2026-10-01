@@ -512,3 +512,37 @@
 .fleet__build.fleet__tone--warning {
   color: var(--color-accent-warning);
 }
+
+/* A row the release board linked to (`?runners=`): ringed, so it reads as picked. */
+.fleet__node-item.is-highlighted {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 1px;
+  background-color: color-mix(in srgb, var(--color-accent-primary) 8%, var(--color-bg-1));
+  scroll-margin-block: var(--space-6, 3rem);
+}
+
+/* Where a runner's code is released: a quiet link under its code line. */
+.fleet__node-row .fleet__node-release {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.fleet__build a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-subtle);
+  text-underline-offset: 2px;
+}
+
+.fleet__build a:hover,
+.fleet__build a:focus-visible {
+  color: var(--color-accent-primary);
+  text-decoration-color: currentColor;
+}
+
+.fleet__picked {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}

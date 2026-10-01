@@ -21,10 +21,12 @@
   font-size: var(--font-size-xs);
   cursor: pointer;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .family-pill:hover,
-.family-pill[aria-pressed='true'] {
+.family-pill[aria-pressed='true'],
+.family-pill[aria-current='page'] {
   color: var(--color-fg-primary);
   border-color: var(--color-accent-primary);
 }

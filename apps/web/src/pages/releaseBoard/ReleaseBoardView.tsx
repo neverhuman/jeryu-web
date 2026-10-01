@@ -2,9 +2,11 @@
 // /releases.
 //
 // One board per family, read from `GET /api/v1/release-board[/{family}]`
-// (admin-only). A family pill picks the board; `?family=<name>` names it and
-// the last pick is remembered. The board says how old its snapshot is and who
-// took it, lists any source the collector could not read, and has three
+// (admin-only). A family pill links to the board's address,
+// `/releases/family/<name>`, and the last pick is remembered. Each lane is
+// `#lane-<id>`: a URL with that hash scrolls to the lane once the board has
+// loaded and rings it briefly (without the glide under reduced motion). The
+// board says how old its snapshot is and who took it, lists any source the collector could not read, and has three
 // views: the deliverables (lanes of stages plus the work bar), pinned against
 // released (when the family sends pins) and the release notes.
 //
@@ -12,8 +14,8 @@
 // route, or no family has reported yet — the page says why in one line and
 // shows the per-repository view (`fallback`) below it.
 
-import { useState, type KeyboardEvent, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import { ApiError } from '../../api/client';
 import type { ReleaseBoard, ReleaseBoardListEntry } from '../../api/types/releaseBoard';
@@ -24,8 +26,10 @@ import {
   useReleaseBoard,
   useReleaseBoardList,
 } from '../../hooks/useReleaseBoard';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { BoardLanes } from './BoardLanes';
+import { laneAnchorId, laneFromHash, releaseFamilyPath } from './links';
 import { NotesPanel, PinsTable, ProblemList, WorkBar } from './BoardPanels';
 import {
   BOARD_FAMILY_STORAGE_KEY,
@@ -46,7 +50,20 @@ function statusOf(error: unknown): number | null {
   return error instanceof ApiError ? error.status : null;
 }
 
-export function ReleaseBoardView({ fallback }: { fallback: ReactNode }): JSX.Element {
+/** How long a lane reached by `#lane-<id>` stays ringed. */
+export const LANE_HIGHLIGHT_MS = 2_500;
+
+/** The class that rings a lane reached by its anchor. */
+export const LANE_TARGET_CLASS = 'release-board__lane--target';
+
+export function ReleaseBoardView({
+  family,
+  fallback,
+}: {
+  /** The family the URL names, or null for the remembered or first one. */
+  family: string | null;
+  fallback: ReactNode;
+}): JSX.Element {
   const { user, isPending } = useAuth();
   const admin = user?.role === 'admin';
   const list = useReleaseBoardList(admin);
@@ -91,7 +108,7 @@ export function ReleaseBoardView({ fallback }: { fallback: ReactNode }): JSX.Ele
       </BoardUnavailable>
     );
   }
-  return <BoardForFamily boards={boards} />;
+  return <BoardForFamily boards={boards} requested={family} />;
 }
 
 function BoardUnavailable({
@@ -113,25 +130,31 @@ function BoardUnavailable({
   );
 }
 
-function BoardForFamily({ boards }: { boards: ReleaseBoardListEntry[] }): JSX.Element {
-  const [params, setParams] = useSearchParams();
+function BoardForFamily({
+  boards,
+  requested,
+}: {
+  boards: ReleaseBoardListEntry[];
+  requested: string | null;
+}): JSX.Element {
   const family =
-    pickFamily(
-      boards,
-      params.get('family'),
-      readBrowserText('durable', BOARD_FAMILY_STORAGE_KEY)
-    ) ?? '';
+    pickFamily(boards, requested, readBrowserText('durable', BOARD_FAMILY_STORAGE_KEY)) ?? '';
   const families = boards.map((entry) => entry.family);
   if (family && !families.includes(family)) families.push(family);
 
-  const pick = (next: string): void => {
+  const remember = (next: string): void => {
     writeBrowserText('durable', BOARD_FAMILY_STORAGE_KEY, next);
-    setParams({ family: next });
   };
 
   return (
     <section className="page__section release-board" aria-label="Family release board" data-testid="release-board">
-      <FamilyPicker families={families} family={family} onPick={pick} label="Family" />
+      <FamilyPicker
+        families={families}
+        family={family}
+        onPick={remember}
+        hrefOf={releaseFamilyPath}
+        label="Family"
+      />
       <FamilyBoard key={family} family={family} />
     </section>
   );
@@ -141,6 +164,7 @@ function FamilyBoard({ family }: { family: string }): JSX.Element {
   const query = useReleaseBoard(family, true);
   const board = query.data;
   const environments = useBoardEnvironments(board ? forgeRepos(board) : []);
+  useLaneFromHash(board ?? null);
 
   if (query.isLoading) {
     return <p className="page__roadmap-note">Loading the {family} board…</p>;
@@ -163,6 +187,37 @@ function FamilyBoard({ family }: { family: string }): JSX.Element {
       <BoardTabs board={board} environments={environments} />
     </>
   );
+}
+
+/**
+ * The lane `#lane-<id>` names, once the board that has it is drawn: scroll it
+ * into view and ring it for {@link LANE_HIGHLIGHT_MS}. Done once per hash, so
+ * the 30 s refetch does not scroll the page back. The ring is a class put on
+ * the element directly: it is a moment of DOM feedback, not page state.
+ */
+function useLaneFromHash(board: ReleaseBoard | null): void {
+  const { hash } = useLocation();
+  const reducedMotion = usePrefersReducedMotion();
+  const done = useRef<string | null>(null);
+  const laneId = laneFromHash(hash);
+  const present = board !== null && laneId !== null && board.lanes.some((lane) => lane.id === laneId);
+
+  useEffect(() => {
+    if (!present || laneId === null || done.current === hash) return;
+    const element = document.getElementById(laneAnchorId(laneId));
+    if (!element) return;
+    done.current = hash;
+    element.scrollIntoView?.({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' });
+    element.classList.add(LANE_TARGET_CLASS);
+    const timer = window.setTimeout(
+      () => element.classList.remove(LANE_TARGET_CLASS),
+      LANE_HIGHLIGHT_MS
+    );
+    return () => {
+      window.clearTimeout(timer);
+      element.classList.remove(LANE_TARGET_CLASS);
+    };
+  }, [present, laneId, hash, reducedMotion]);
 }
 
 function BoardHeader({ board, fetchedAt }: { board: ReleaseBoard; fetchedAt: number }): JSX.Element {

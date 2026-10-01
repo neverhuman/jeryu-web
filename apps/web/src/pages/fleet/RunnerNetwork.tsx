@@ -7,7 +7,9 @@
 //
 // A runner that reports its installed code carries it under its name
 // ("abc1234 · 1.4.0"), marked "differs" when most of its peers on the same
-// code repo run another commit.
+// code repo run another commit. A runner a release board names gets a second
+// line linking to that lane ("acme · Gate runner · installed v1.2.0"), and a
+// row `?runners=` picked is highlighted; each row's id is `runner-<slug>`.
 
 import { Link } from 'react-router-dom';
 
@@ -25,18 +27,23 @@ import {
   type RowLast,
   type RunnerNetworkNode
 } from '../runnerNetworkModel';
+import { NO_PLACES, runnerAnchorId, type RunnerPlaces } from './releaseIndex';
+import { RunnerReleaseLink } from './RunnerReleaseLink';
 
 interface RowListProps {
   nodes: RunnerNetworkNode[];
   /** When the snapshot was fetched: "for 1m 20s" and "stale" measure against it. */
   nowMs: number;
+  /** Each runner's release-board lane, and the rows `?runners=` picked. */
+  places?: RunnerPlaces;
 }
 
-export function RunnerNodeList({ nodes, nowMs }: RowListProps): JSX.Element {
+export function RunnerNodeList({ nodes, nowMs, places }: RowListProps): JSX.Element {
   return (
     <RowList
       nodes={nodes}
       nowMs={nowMs}
+      places={places}
       label="Runner nodes"
       testId="fleet-node-list"
       rowTestId="fleet-node"
@@ -48,15 +55,18 @@ export function RunnerNodeList({ nodes, nowMs }: RowListProps): JSX.Element {
 /** PR reviewers (pr-redteam): the agents that approve and merge pull requests. */
 export function ReviewerList({
   reviewers,
-  nowMs
+  nowMs,
+  places
 }: {
   reviewers: RunnerNetworkNode[];
   nowMs: number;
+  places?: RunnerPlaces;
 }): JSX.Element {
   return (
     <RowList
       nodes={reviewers}
       nowMs={nowMs}
+      places={places}
       label="PR reviewers"
       testId="fleet-reviewer-list"
       rowTestId="fleet-reviewer"
@@ -68,6 +78,7 @@ export function ReviewerList({
 function RowList({
   nodes,
   nowMs,
+  places = NO_PLACES,
   label,
   testId,
   rowTestId,
@@ -102,6 +113,7 @@ function RowList({
           testId={rowTestId}
           heads={heads}
           codeDiffers={outliers.has(node.runnerId)}
+          places={places}
         />
       ))}
     </div>
@@ -113,21 +125,27 @@ function RunnerRow({
   nowMs,
   testId,
   heads,
-  codeDiffers
+  codeDiffers,
+  places
 }: {
   node: RunnerNetworkNode;
   nowMs: number;
   testId: string;
   heads: [string, string, string, string];
   codeDiffers: boolean;
+  places: RunnerPlaces;
 }): JSX.Element {
   const nodeId = testIdSegment(node.runnerId);
+  const release = places.releases.get(node.runnerId);
+  const highlighted = places.highlighted.has(node.runnerId);
   const now = rowNow(node, nowMs);
   const last = rowLast(node);
   const stale = seenStale(node.lastUpdated, nowMs);
   return (
     <article
-      className={`fleet__node-item is-${node.availability} is-${node.activityState}`}
+      id={runnerAnchorId(node.runnerId)}
+      className={`fleet__node-item is-${node.availability} is-${node.activityState}${highlighted ? ' is-highlighted' : ''}`}
+      aria-current={highlighted ? 'true' : undefined}
       data-testid={`${testId}-${nodeId}`}
       role="listitem"
       aria-label={`${runnerName(node.runnerId)}: ${now.text}`}
@@ -159,6 +177,13 @@ function RunnerRow({
                 </>
               ) : null}
             </p>
+          ) : null}
+          {release ? (
+            <RunnerReleaseLink
+              release={release}
+              codeVersion={node.code?.version}
+              testId={`${testId}-release-${nodeId}`}
+            />
           ) : null}
         </div>
         <p

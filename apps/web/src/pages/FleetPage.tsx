@@ -15,15 +15,25 @@
 // build commit when the two differ. Rows carry each runner's installed code.
 // An older forge sends neither, and then neither shows.
 //
+// "What it is and where it is": the page also reads every family's release
+// board (once, then at most every 5 minutes) so a runner a board names links
+// to its lane, and the forge's own line links to the lane whose production
+// stage runs its commit. `?runners=a,b` (the board's "N runners" link)
+// highlights those rows and scrolls to the first. Unreadable boards — not an
+// admin, or an older server — just mean no links.
+//
 // It used to also render "Runner pools" and "System health" from the
 // bootstrap read model, but those were not real: pool capacity came from a
 // hardcoded 4x10 fixture, "failed" summed every failed check ever recorded,
 // and every system component was always reported healthy.
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { pageWebCommit } from '../build/webCommit';
 import { useControlPlaneRunners } from '../hooks/useControlPlaneRunners';
+import { useRunnerReleaseBoards } from '../hooks/useRunnerReleaseBoards';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import {
   forgeBuildLine,
   networkSentence,
@@ -32,6 +42,14 @@ import {
   idleReviewerSentence
 } from './runnerNetworkModel';
 import { AutomationList, ReviewerList, RunnerNodeList } from './fleet';
+import {
+  forgeReleaseLane,
+  parseRunnersParam,
+  runnerAnchorId,
+  runnerReleaseIndex,
+  type RunnerPlaces
+} from './fleet/releaseIndex';
+import { RUNNERS_PARAM } from './releaseBoard/links';
 
 import './page.css';
 import './FleetPage.css';
@@ -57,6 +75,28 @@ export function FleetPage(): JSX.Element {
   const sentence = networkSentence(runnerNetwork.nodes);
   const build = forgeBuildLine(runnerNetwork.forge, pageWebCommit());
   const reviewers = splitReviewers(runnerNetwork.reviewers);
+  const boardsQuery = useRunnerReleaseBoards();
+  const boards = boardsQuery.data;
+  const [params] = useSearchParams();
+  const picked = params.get(RUNNERS_PARAM);
+  const places = useMemo<RunnerPlaces>(
+    () => ({
+      releases: runnerReleaseIndex(boards ?? []),
+      highlighted: new Set(parseRunnersParam(picked))
+    }),
+    [boards, picked]
+  );
+  const forgeLane = forgeReleaseLane(boards ?? [], runnerNetwork.forge);
+  const rendered = [
+    ...runnerNetwork.nodes,
+    ...reviewers.listed,
+    ...runnerNetwork.automation
+  ].map((node) => node.runnerId);
+  const pickedIds = parseRunnersParam(picked);
+  const shown = pickedIds.filter((id) => rendered.includes(id));
+  const missing = pickedIds.filter((id) => !rendered.includes(id));
+  const reducedMotion = usePrefersReducedMotion();
+  useScrollToFirst(picked, shown[0] ?? null, reducedMotion);
   // Measured against when we fetched the snapshot, so render stays pure.
   const stale =
     runnerNetwork.lastUpdated !== null &&
@@ -102,7 +142,17 @@ export function FleetPage(): JSX.Element {
             data-testid="fleet-forge-build"
             title={build.title || undefined}
           >
-            <code>{build.text}</code>
+            {forgeLane ? (
+              <Link
+                to={forgeLane.href}
+                data-testid="fleet-forge-release"
+                title={`On the ${forgeLane.family} release board, lane ${forgeLane.laneName}`}
+              >
+                <code>{build.text}</code>
+              </Link>
+            ) : (
+              <code>{build.text}</code>
+            )}
           </p>
         ) : null}
         {runnerNetworkNote ? null : (
@@ -114,6 +164,17 @@ export function FleetPage(): JSX.Element {
             {sentence.text}
           </p>
         )}
+        {pickedIds.length > 0 && !runnerNetworkNote ? (
+          <p className="fleet__picked" role="status" data-testid="fleet-picked">
+            {shown.length === 1
+              ? '1 runner linked from a release board is highlighted.'
+              : `${shown.length} runners linked from a release board are highlighted.`}
+            {missing.length > 0 ? ` Not reporting: ${missing.join(', ')}.` : ''}{' '}
+            <Link to="/runners" data-testid="fleet-picked-clear">
+              Clear
+            </Link>
+          </p>
+        ) : null}
       </header>
 
       <section className="page__section" aria-labelledby="fleet-runners">
@@ -132,6 +193,7 @@ export function FleetPage(): JSX.Element {
             <RunnerNodeList
               nodes={runnerNetwork.nodes}
               nowMs={runnersQuery.dataUpdatedAt}
+              places={places}
             />
           </div>
         )}
@@ -158,6 +220,7 @@ export function FleetPage(): JSX.Element {
               <ReviewerList
                 reviewers={reviewers.listed}
                 nowMs={runnersQuery.dataUpdatedAt}
+                places={places}
               />
             ) : null}
             {reviewers.idle.length > 0 ? (
@@ -184,9 +247,33 @@ export function FleetPage(): JSX.Element {
           <AutomationList
             timers={runnerNetwork.automation}
             nowMs={runnersQuery.dataUpdatedAt}
+            places={places}
           />
         </section>
       )}
     </div>
   );
+}
+
+/**
+ * Scroll the first highlighted row into view once it has rendered, once per
+ * `?runners=` value: the 15 s poll re-renders the rows and must not yank the
+ * page back.
+ */
+function useScrollToFirst(
+  picked: string | null,
+  firstId: string | null,
+  reducedMotion: boolean
+): void {
+  const done = useRef<string | null>(null);
+  useEffect(() => {
+    if (!picked || !firstId || done.current === picked) return;
+    const row = document.getElementById(runnerAnchorId(firstId));
+    if (!row) return;
+    done.current = picked;
+    row.scrollIntoView?.({
+      block: 'center',
+      behavior: reducedMotion ? 'auto' : 'smooth'
+    });
+  }, [picked, firstId, reducedMotion]);
 }

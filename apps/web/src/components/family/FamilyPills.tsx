@@ -5,6 +5,8 @@
 // pressing it again (or "All" in the strip above the list) shows every family.
 // One look and one behaviour on both pages.
 
+import { Link } from 'react-router-dom';
+
 import './FamilyPills.css';
 
 export interface FamilyCountEntry {
@@ -41,22 +43,37 @@ export function FamilyPill({
 
 /**
  * One pill per family where exactly one is always shown (no "All"): the
- * release board picks the family whose board it draws.
+ * release board picks the family whose board it draws. With `hrefOf` each
+ * pill is a link to that family's address (the picked one is the current
+ * page) and `onPick` still runs on the click, e.g. to remember the pick.
  */
 export function FamilyPicker({
   families,
   family,
   onPick,
   label,
+  hrefOf,
 }: {
   families: string[];
   family: string;
   onPick: (family: string) => void;
   label: string;
+  hrefOf?: (family: string) => string;
 }): JSX.Element {
   return (
     <div className="family-strip" role="group" aria-label={label}>
-      {families.map((entry) => (
+      {families.map((entry) =>
+        hrefOf ? (
+          <Link
+            key={entry}
+            to={hrefOf(entry)}
+            className="family-pill"
+            aria-current={family === entry ? 'page' : undefined}
+            onClick={() => onPick(entry)}
+          >
+            {entry}
+          </Link>
+        ) : (
         <button
           key={entry}
           type="button"
@@ -66,7 +83,8 @@ export function FamilyPicker({
         >
           {entry}
         </button>
-      ))}
+        )
+      )}
     </div>
   );
 }

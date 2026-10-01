@@ -49,6 +49,8 @@ describe('router route table', () => {
     'tool-fleet/:tool',
     'runners',
     'fleet',
+    'releases',
+    'releases/family/:family',
     'work',
     'work/:key',
     'login',
@@ -60,6 +62,45 @@ describe('router route table', () => {
     const idx = paths.indexOf(path);
     expect(idx).toBeGreaterThan(-1);
     expect(idx).toBeLessThan(notFoundIdx);
+  });
+});
+
+describe('releases board address', () => {
+  /** The real `/releases` element, in front of a stand-in for the board path. */
+  function follow(entry: string): string {
+    const releases = topLevelRoutes().find((r) => r.path === 'releases');
+    expect(releases?.element).toBeTruthy();
+    const memoryRouter = createMemoryRouter(
+      [
+        { path: '/releases', element: releases?.element as JSX.Element },
+        { path: '/releases/family/:family', element: <p>family board</p> },
+      ],
+      { initialEntries: [entry] }
+    );
+    render(<RouterProvider router={memoryRouter} />);
+    const { pathname, search, hash } = memoryRouter.state.location;
+    return `${pathname}${search}${hash}`;
+  }
+
+  it('redirects /releases?family= to /releases/family/<family>, keeping the rest', async () => {
+    expect(follow('/releases?family=acme&x=1#lane-cloud-app')).toBe(
+      '/releases/family/acme?x=1#lane-cloud-app'
+    );
+    expect(await screen.findByText('family board')).toBeInTheDocument();
+  });
+
+  it('replaces the old address in history rather than adding to it', () => {
+    const releases = topLevelRoutes().find((r) => r.path === 'releases');
+    const memoryRouter = createMemoryRouter(
+      [
+        { path: '/releases', element: releases?.element as JSX.Element },
+        { path: '/releases/family/:family', element: <p>family board</p> },
+      ],
+      { initialEntries: ['/releases?family=globex'] }
+    );
+    render(<RouterProvider router={memoryRouter} />);
+    expect(memoryRouter.state.location.pathname).toBe('/releases/family/globex');
+    expect(memoryRouter.state.historyAction).toBe('REPLACE');
   });
 });
 

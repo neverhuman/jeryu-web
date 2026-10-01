@@ -17,7 +17,7 @@ import { ActivityPage } from '../pages/activity';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { FleetPage } from '../pages/FleetPage';
 import { ForgeLinkRedirect } from '../pages/ForgeLinkRedirect';
-import { ReleasesPage, UnreleasedRedirect } from '../pages/ReleasesPage';
+import { ReleasesPage, ReleasesRoute, UnreleasedRedirect } from '../pages/ReleasesPage';
 import { DependenciesPage, DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
 import { PullRequestPage } from '../pages/PullRequestPage';
@@ -103,7 +103,10 @@ export const router = createBrowserRouter([
       // The item tracker is retired; its detail links land on Work.
       { path: 'work/:key', element: <Navigate to={WORK_PATH} replace /> },
       { path: 'pull-room', element: <PullRoomPage /> },
-      { path: 'releases', element: <ReleasesPage /> },
+      // `/releases?family=x` (the board) redirects to `/releases/family/x`.
+      { path: 'releases', element: <ReleasesRoute /> },
+      // One family's release board; each lane is `#lane-<id>` on it.
+      { path: 'releases/family/:family', element: <ReleasesPage /> },
       // Unreleased is the last section of Releases; old links keep working.
       { path: 'unreleased', element: <UnreleasedRedirect /> },
       { path: 'intelligence', element: <IntelligencePage /> },

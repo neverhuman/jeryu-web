@@ -4,11 +4,14 @@
 // `GET /api/v1/release-board/{family}` (one snapshot), both admin-only; stages
 // linked to a forge environment also read `/api/v3/repos/{o}/{r}/environments`
 // for a deployment reported after the snapshot. The snapshots served here are
-// the invented acme, globex and initech fixtures the unit tests use.
+// the invented acme, globex and initech fixtures the unit tests use. A board's
+// address is /releases/family/<family> (`?family=` redirects there), each lane
+// is `#lane-<id>`, and a target that names runners links to /runners.
 
 import { expect, test, type Page } from './fixtures/test';
 
-import { mockBootstrap } from './fixtures/mocks';
+import { mockBootstrap, mockControlPlaneRunners } from './fixtures/mocks';
+import type { RunnerFabricResponse } from '../src/api/types';
 import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { BOARD_SNAPSHOTS, mockBoards, mockEnvironments } from './fixtures/releaseBoardMocks';
 
@@ -41,7 +44,7 @@ test('the board opens on the first family, a pill switches family and the URL ke
   await expect(page.getByRole('link', { name: 'Family board' })).toHaveAttribute('aria-current', 'page');
 
   // The first reported family, alphabetically.
-  await expect(board.getByRole('button', { name: 'acme', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(board.getByRole('link', { name: 'acme', exact: true })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByTestId('release-board-summary')).toHaveText(SNAPSHOTS[0]?.summary ?? '');
   await expect(page.getByRole('heading', { level: 3, name: 'Cloud app', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 3, name: 'Website' })).toBeVisible();
@@ -58,8 +61,8 @@ test('the board opens on the first family, a pill switches family and the URL ke
   );
 
   // A pill switches family; a lane shared from another family is read-only.
-  await board.getByRole('button', { name: 'initech', exact: true }).click();
-  await expect(page).toHaveURL(/\/releases\?family=initech$/);
+  await board.getByRole('link', { name: 'initech', exact: true }).click();
+  await expect(page).toHaveURL(/\/releases\/family\/initech$/);
   await expect(page.getByTestId('release-board-summary')).toHaveText(SNAPSHOTS[2]?.summary ?? '');
   await expect(page.getByTestId('release-board-read-only-cloud-appliance')).toHaveText(
     'read-only here · owned by acme'
@@ -77,9 +80,9 @@ test('the board opens on the first family, a pill switches family and the URL ke
 
   // Coming back without ?family= lands on the family picked last.
   await page.goto('/releases');
-  await expect(page.getByRole('button', { name: 'initech', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
+  await expect(page.getByRole('link', { name: 'initech', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
     { timeout: 15_000 }
   );
 
@@ -123,7 +126,7 @@ test('a stage opens into its targets, what promoting ships and the command @acti
 
   // A board with fixed columns lines every lane up under one header; a column a
   // lane skips says "not used", and each tool is its own row.
-  await page.getByRole('button', { name: 'globex', exact: true }).click();
+  await page.getByRole('link', { name: 'globex', exact: true }).click();
   await expect(page.getByTestId('release-board-columns')).toHaveText(/main\s*dev\s*stage\s*prod/i);
   await expect(page.getByTestId('release-board-slot-gate-runner-dev')).toHaveText(/not used/);
   await expect(page.getByRole('group', { name: 'Tools' }).getByRole('heading', { level: 3 })).toHaveText([
@@ -162,7 +165,7 @@ test('pinned vs released lists every repo with how far behind it is @action:rele
   await expect(page.getByRole('tab', { name: 'Release notes' })).toHaveAttribute('aria-selected', 'true');
 
   // A family that sends no pins has no such view.
-  await page.getByRole('button', { name: 'acme', exact: true }).click();
+  await page.getByRole('link', { name: 'acme', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Deliverables' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Pinned vs released' })).toHaveCount(0);
 });
@@ -212,4 +215,76 @@ test('without an admin session the page says so and shows the per-repository vie
     { timeout: 15_000 }
   );
   await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
+});
+
+/** Gate slots and a reviewer whose ids the globex board names on its targets. */
+function boardRunners(): RunnerFabricResponse {
+  const node = (runnerId: string, labels: string[]) => ({
+    runnerId,
+    source: 'pr-gate-runner',
+    state: 'idle',
+    capacity: 1,
+    inFlight: 0,
+    labels,
+    classes: [],
+    activeTaskCount: 0,
+    lastUpdated: new Date().toISOString(),
+    activeTasks: [],
+  });
+  const nodes = [
+    node('build-1/slot0', ['pr-gate']),
+    node('build-1/slot1', ['pr-gate']),
+    node('build-2/slot0', ['pr-gate']),
+  ];
+  return {
+    schemaVersion: 'jeryu.runner_fabric/v1',
+    local: {
+      state: 'fresh',
+      nodes: nodes.length,
+      onlineRunners: nodes.length,
+      offlineRunners: 0,
+      busyRunners: 0,
+      idleRunners: nodes.length,
+      totalSlots: nodes.length,
+      activeSlots: 0,
+      utilization: 0,
+      lastUpdated: new Date().toISOString(),
+      nodeDetails: nodes,
+    },
+    mirror: { name: 'github_actions_runners', state: 'missing', reason: 'not configured', docsUrl: 'docs/x.md' },
+  };
+}
+
+test('an old ?family= link lands on the board path and its lane, and a target links to its runners @action:releases.board.runners', async ({
+  page,
+}) => {
+  await mockBootstrap(page, { auth: { role: 'admin' } });
+  await mockPipelineApi(page);
+  await mockEnvironments(page);
+  await mockBoards(page);
+  await mockControlPlaneRunners(page, boardRunners());
+
+  // The older spelling redirects to the board's own address, hash kept.
+  await page.goto('/releases?family=globex#lane-gate-runner');
+  await expect(page).toHaveURL(/\/releases\/family\/globex#lane-gate-runner$/, { timeout: 15_000 });
+  const lane = page.getByTestId('release-board-lane-gate-runner');
+  await expect(lane).toHaveAttribute('id', 'lane-gate-runner');
+  // Scrolled to and ringed for a moment.
+  await expect(lane).toHaveClass(/release-board__lane--target/);
+  await expect(lane).toBeInViewport();
+  await expect(lane).not.toHaveClass(/release-board__lane--target/, { timeout: 6_000 });
+
+  // The installed stage's target names two runners: one link to both.
+  await page.getByTestId('release-board-stage-gate-runner-installed').click();
+  const runners = page.getByTestId('release-board-detail-gate-runner').getByRole('link', { name: '2 runners' });
+  await expect(runners).toHaveAttribute('title', 'build-1/slot0, build-1/slot1');
+  await runners.click();
+
+  await expect(page).toHaveURL(/\/runners\?runners=build-1%2Fslot0%2Cbuild-1%2Fslot1$/);
+  await expect(page.getByTestId('fleet-node-build-1_slot0')).toHaveClass(/is-highlighted/, { timeout: 10_000 });
+  await expect(page.getByTestId('fleet-node-build-1_slot1')).toHaveClass(/is-highlighted/);
+  await expect(page.getByTestId('fleet-node-build-2_slot0')).not.toHaveClass(/is-highlighted/);
+  await expect(page.getByTestId('fleet-picked')).toHaveText(
+    '2 runners linked from a release board are highlighted. Clear'
+  );
 });

@@ -3,8 +3,12 @@
 // views; the live overlay; freshness; and the three ways there is no board to
 // show (403, nothing reported, non-admin), each of which keeps the
 // per-repository view below the note. `?repo=` is still the per-repo view.
+// The board's address is `/releases/family/<family>`; its lanes are
+// `#lane-<id>` anchors, and a target that names runners links to /runners.
 
-import { fireEvent, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ReleaseBoard } from '../../api/types/releaseBoard';
@@ -16,9 +20,10 @@ import {
   listResponse,
 } from '../../test/fixtures/releaseBoard';
 import { BOARD_FAMILY_STORAGE_KEY } from '../releaseBoard/model';
+import { LANE_TARGET_CLASS } from '../releaseBoard/ReleaseBoardView';
 import { ReleasesPage } from '../ReleasesPage';
 import { mockPipelineApi } from './pipelinePageHelpers';
-import { errorResponse, json, renderAt, type Override } from './shiftPageHelpers';
+import { errorResponse, json, type Override } from './shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
@@ -41,8 +46,32 @@ function serveBoards(boards: ReleaseBoard[] = ALL_BOARDS, extra?: Override) {
   });
 }
 
+/** Where the router is now, for the tests that follow a link. */
+function LocationProbe(): JSX.Element {
+  const location = useLocation();
+  return (
+    <output data-testid="location">{`${location.pathname}${location.search}${location.hash}`}</output>
+  );
+}
+
+/** Both of the page's routes: `/releases[?…]` and the board's own path. */
 function open(path: string): void {
-  renderAt(path, '/releases', <ReleasesPage />);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/releases" element={<ReleasesPage />} />
+          <Route path="/releases/family/:family" element={<ReleasesPage />} />
+        </Routes>
+        <LocationProbe />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+function pill(family: string): HTMLElement {
+  return screen.getByRole('link', { name: family });
 }
 
 describe('ReleasesPage — family release board', () => {
@@ -60,7 +89,8 @@ describe('ReleasesPage — family release board', () => {
       serveBoards();
       open(`/releases?family=${family}`);
       expect(await screen.findByTestId('release-board-summary')).toHaveTextContent(board.summary);
-      expect(screen.getByRole('button', { name: family })).toHaveAttribute('aria-pressed', 'true');
+      expect(pill(family)).toHaveAttribute('aria-current', 'page');
+      expect(pill(family)).toHaveAttribute('href', `/releases/family/${family}`);
       for (const lane of board.lanes) {
         const section = screen.getByTestId(`release-board-lane-${lane.id}`);
         expect(within(section).getByRole('heading', { level: 3, name: lane.name })).toBeInTheDocument();
@@ -95,10 +125,11 @@ describe('ReleasesPage — family release board', () => {
     expect(await screen.findByTestId('release-board-summary')).toHaveTextContent(
       ALL_BOARDS[0]?.summary ?? ''
     );
-    expect(screen.getByRole('button', { name: 'acme' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'globex' }));
+    expect(pill('acme')).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(pill('globex'));
     expect(await screen.findByText(GLOBEX_BOARD.summary)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'globex' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('location')).toHaveTextContent('/releases/family/globex');
+    expect(pill('globex')).toHaveAttribute('aria-current', 'page');
   });
 
   it('opens a stage into its targets, what promoting ships, the rollback and the command', async () => {
@@ -322,5 +353,70 @@ describe('ReleasesPage — family release board', () => {
     expect(screen.getByRole('link', { name: 'Per repository' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByTestId('release-board')).toBeNull();
     expect(calls.some((c) => c.pathname.startsWith('/api/v1/release-board'))).toBe(false);
+  });
+  it('reads the family from the board path', async () => {
+    serveBoards();
+    open('/releases/family/initech');
+    expect(await screen.findByTestId('release-board-summary')).toHaveTextContent(
+      ALL_BOARDS[2]?.summary ?? 'x'
+    );
+    expect(pill('initech')).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('gives every lane an anchor, and scrolls to and rings the lane the hash names', async () => {
+    const scrolled: string[] = [];
+    const original = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value(this: Element) {
+        scrolled.push(this.id);
+      },
+    });
+    try {
+      serveBoards();
+      open('/releases/family/globex#lane-gate-runner');
+      const lane = await screen.findByTestId('release-board-lane-gate-runner');
+      expect(lane).toHaveAttribute('id', 'lane-gate-runner');
+      expect(screen.getByTestId('release-board-lane-forge-server')).toHaveAttribute(
+        'id',
+        'lane-forge-server'
+      );
+      await vi.waitFor(() => expect(scrolled).toEqual(['lane-gate-runner']));
+      expect(lane).toHaveClass(LANE_TARGET_CLASS);
+      expect(screen.getByTestId('release-board-lane-reviewer')).not.toHaveClass(LANE_TARGET_CLASS);
+    } finally {
+      if (original) Object.defineProperty(Element.prototype, 'scrollIntoView', original);
+      else Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    }
+  });
+
+  it('ignores a hash that names no lane of the board', async () => {
+    serveBoards();
+    open('/releases/family/globex#lane-nowhere');
+    await screen.findByTestId('release-board-lane-gate-runner');
+    expect(document.querySelector(`.${LANE_TARGET_CLASS}`)).toBeNull();
+  });
+
+  it('links a target that names its runners to them on /runners', async () => {
+    serveBoards();
+    open('/releases/family/globex');
+    fireEvent.click(await screen.findByTestId('release-board-stage-gate-runner-installed'));
+    const link = within(screen.getByTestId('release-board-detail-gate-runner')).getByRole('link', {
+      name: '2 runners',
+    });
+    expect(link).toHaveAttribute('href', '/runners?runners=build-1%2Fslot0%2Cbuild-1%2Fslot1');
+    expect(link).toHaveAttribute('title', 'build-1/slot0, build-1/slot1');
+
+    fireEvent.click(screen.getByTestId('release-board-stage-reviewer-installed'));
+    expect(
+      within(screen.getByTestId('release-board-detail-reviewer')).getByRole('link', { name: '1 runner' })
+    ).toHaveAttribute('href', '/runners?runners=node-a%2Freviewer');
+  });
+
+  it('shows no runner link for a target without runners (an older collector)', async () => {
+    serveBoards();
+    open('/releases/family/acme');
+    fireEvent.click(await screen.findByTestId('release-board-stage-cloud-app-prod'));
+    expect(screen.queryByTestId('release-board-target-runners')).toBeNull();
   });
 });
