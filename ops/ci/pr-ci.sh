@@ -14,6 +14,11 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
+# Cheapest gate first: a tracked file that .gitignore excludes makes every
+# later lane rewrite it and leaves the tree dirty, so stop here.
+echo "[pr-ci] tracked-but-ignored files" >&2
+bash ops/ci/tracked-ignored.sh
+
 # jeryu governs the worker count from live load; never default high.
 if [ -n "${JERYU_CI_JOBS:-}" ]; then
   JOBS="${JERYU_CI_JOBS}"
