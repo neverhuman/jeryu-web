@@ -6,8 +6,8 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
+import { fetchPullList } from '../api/pullLists';
 import type { CompareResponse, EnvironmentsResponse } from '../api/types/deployments';
-import type { PullRequestListResponse } from '../api/types/pullRequests';
 import { buildEnvironmentRows, type EnvironmentRow } from '../pages/releasesModel';
 
 export interface ReleaseOverview {
@@ -29,7 +29,7 @@ export function useReleaseOverview(repoId: string, defaultBranch: string): Relea
   const pulls = useQuery({
     queryKey: ['releases', 'pulls', repoId],
     queryFn: ({ signal }) =>
-      apiGet<PullRequestListResponse>(endpoints.pulls(repoId, 'all'), { signal }),
+      fetchPullList(repoId, 'all', signal),
     enabled: owner !== '' && repo !== '',
     staleTime: 30_000,
   });

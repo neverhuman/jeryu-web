@@ -111,6 +111,8 @@ export interface PullRequestThreadList {
 export interface PullRequestListResponse {
   items: PullRequestSummary[];
   total: number;
+  /** What the server applied; `has_more` says another page follows. */
+  page?: { limit: number; page: number; total: number; has_more: boolean };
 }
 
 /** Body for `POST /pulls/{number}/approve`. */

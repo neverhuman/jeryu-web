@@ -60,9 +60,16 @@ export const endpoints = {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/release-tag`;
     return branch ? `${base}?branch=${encodeURIComponent(branch)}` : base;
   },
-  pulls: (id: string, state?: string): string => {
+  pulls: (id: string, state?: string, paging?: { limit: number; page: number }): string => {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/pulls`;
-    return state ? `${base}?state=${encodeURIComponent(state)}` : base;
+    const query = new URLSearchParams();
+    if (state) query.set('state', state);
+    if (paging) {
+      query.set('limit', String(paging.limit));
+      query.set('page', String(paging.page));
+    }
+    const text = query.toString();
+    return text ? `${base}?${text}` : base;
   },
   pull: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}`,

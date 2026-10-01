@@ -4,9 +4,8 @@
 
 import { useQueries } from '@tanstack/react-query';
 
-import { apiGet } from '../api/client';
-import { endpoints } from '../api/endpoints';
-import type { PullRequestListResponse, PullRequestSummary } from '../api/types';
+import { fetchPullList } from '../api/pullLists';
+import type { PullRequestSummary } from '../api/types';
 
 export interface RepoPullLists {
   pulls: PullRequestSummary[];
@@ -25,7 +24,7 @@ export function useRepoPullLists(
     queries: repos.map((repo) => ({
       queryKey: ['repo-pulls', repo, state ?? 'all'],
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        apiGet<PullRequestListResponse>(endpoints.pulls(repo, state), { signal }),
+        fetchPullList(repo, state, signal),
       staleTime: 15_000,
       refetchInterval,
     })),

@@ -75,7 +75,7 @@ export async function mockRepo(
   await page.route(`**/api/v3/repos/jeryu/${name}/environments`, (route) =>
     route.fulfill(json({ total_count: opts.environments.length, environments: opts.environments }))
   );
-  await page.route(`**/api/v1/repos/${id}/pulls?state=all`, (route) =>
+  await page.route(`**/api/v1/repos/${id}/pulls?state=all&limit=500&page=1`, (route) =>
     route.fulfill(json({ total: opts.pulls.length, items: opts.pulls }))
   );
   await page.route(`**/api/v1/repos/${id}/release-tag**`, (route) =>

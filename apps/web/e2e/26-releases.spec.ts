@@ -3,7 +3,7 @@
 //
 // The page reads `/api/v3/repos/{o}/{r}/environments`, then
 // `/api/v1/repos/{id}/compare?base=<live sha>&head=main` per live deployment and
-// `/api/v1/repos/{id}/pulls?state=all`. A merged PR is unshipped when its head
+// `/api/v1/repos/{id}/pulls?state=all&limit=500&page=1`. A merged PR is unshipped when its head
 // sha is one of the compare commits.
 
 import { expect, test, type Page } from './fixtures/test';
@@ -70,7 +70,7 @@ async function mockReleases(page: Page, environments: unknown[]): Promise<void> 
       }),
     })
   );
-  await page.route('**/api/v1/repos/jeryu%2Fjeryu-deploy/pulls?state=all', (route) =>
+  await page.route('**/api/v1/repos/jeryu%2Fjeryu-deploy/pulls?state=all&limit=500&page=1', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',

@@ -2,9 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
-import { apiGet } from '../api/client';
-import { endpoints } from '../api/endpoints';
-import type { PullRequestListResponse } from '../api/types';
+import { fetchPullList } from '../api/pullLists';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
@@ -31,9 +29,7 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   const pulls = useQuery({
     queryKey: ['repo-pulls', repoId],
     queryFn: ({ signal }) =>
-      apiGet<PullRequestListResponse>(endpoints.pulls(repoId as string), {
-        signal,
-      }),
+      fetchPullList(repoId as string, undefined, signal),
     enabled: typeof repoId === 'string' && repoId.length > 0,
     staleTime: 15_000,
   });
