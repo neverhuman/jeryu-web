@@ -66,7 +66,13 @@ const webDir = existsSync(join(repoRoot, 'apps', 'web'))
 const uxArtifactDir = join(repoRoot, 'target', 'jankurai', 'ux-qa');
 mkdirSync(uxArtifactDir, { recursive: true });
 
+// What the first page load fetches (the entry script and the chunks it
+// statically imports, which Vite lists as modulepreload links) is what a
+// visitor pays for; it keeps the 700 KB budget. Chunks loaded only on demand
+// (a diagram renderer that loads only when a Markdown view contains a diagram)
+// get their own cap, so lazy code cannot grow without bound either.
 const BUNDLE_BUDGET_BYTES = 700 * 1024;
+const LAZY_BUNDLE_BUDGET_BYTES = 1536 * 1024;
 
 // ── helper utilities ───────────────────────────────────────────────────────
 
@@ -350,24 +356,59 @@ async function checkBundleSize() {
       details: { reason: 'missing apps/web/dist/assets/' },
     };
   }
+  const indexHtml = join(webDir, 'dist', 'index.html');
+  const initialFiles = existsSync(indexHtml)
+    ? initialLoadScripts(readFileSync(indexHtml, 'utf8'))
+    : new Set();
+  if (initialFiles.size === 0) {
+    // Without the entry we cannot tell what loads first, so the check fails
+    // rather than silently budgeting nothing.
+    return {
+      pass: false,
+      details: { reason: 'no module script found in apps/web/dist/index.html' },
+    };
+  }
   const jsFiles = readdirSync(assetsDir).filter((f) => f.endsWith('.js'));
-  let totalGz = 0;
+  let initialGz = 0;
+  let lazyGz = 0;
   const perFile = [];
   for (const f of jsFiles) {
     const fpath = join(assetsDir, f);
     const raw = statSync(fpath).size;
     const gz = await gzipByteCount(fpath);
-    totalGz += gz;
-    perFile.push({ file: f, raw_bytes: raw, gzip_bytes: gz });
+    const initial = initialFiles.has(f);
+    if (initial) initialGz += gz;
+    else lazyGz += gz;
+    perFile.push({ file: f, raw_bytes: raw, gzip_bytes: gz, initial });
   }
   return {
-    pass: totalGz < BUNDLE_BUDGET_BYTES,
+    pass: initialGz < BUNDLE_BUDGET_BYTES && lazyGz < LAZY_BUNDLE_BUDGET_BYTES,
     details: {
-      total_gzip_bytes: totalGz,
+      initial_gzip_bytes: initialGz,
       budget_bytes: BUNDLE_BUDGET_BYTES,
+      lazy_gzip_bytes: lazyGz,
+      lazy_budget_bytes: LAZY_BUNDLE_BUDGET_BYTES,
+      total_gzip_bytes: initialGz + lazyGz,
+      initial_files: [...initialFiles].sort(),
       per_file: perFile,
     },
   };
+}
+
+// The asset file names a built index.html loads up front: its module scripts
+// and the chunks Vite preloads for them.
+function initialLoadScripts(html) {
+  const files = new Set();
+  const tags = html.match(/<(?:script|link)\b[^>]*>/gi) ?? [];
+  for (const tag of tags) {
+    const isModuleScript = /^<script\b/i.test(tag) && /\btype=["']?module["']?/i.test(tag);
+    const isPreload = /^<link\b/i.test(tag) && /\brel=["']?modulepreload["']?/i.test(tag);
+    if (!isModuleScript && !isPreload) continue;
+    const url = /\b(?:src|href)=["']([^"']+)["']/i.exec(tag)?.[1];
+    const name = url?.match(/(?:^|\/)assets\/([^/?#]+\.js)(?:[?#].*)?$/)?.[1];
+    if (name) files.add(name);
+  }
+  return files;
 }
 
 // Lighthouse perf-budget proof. We look for either an lhci-emitted LHR
