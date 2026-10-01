@@ -16,6 +16,7 @@ import {
   MERMAID_MAX_SOURCE_BYTES,
   MermaidDiagram,
   mermaidLabel,
+  mermaidThemeVariables,
   parseDiagramSvg,
 } from '../MermaidDiagram';
 
@@ -60,7 +61,7 @@ describe('MermaidDiagram', () => {
     );
   });
 
-  it('follows the shell theme when choosing mermaid options', async () => {
+  it('draws in the forge palette for the shell theme, not a stock mermaid theme', async () => {
     document.documentElement.setAttribute('data-theme', 'light');
     render(<MermaidDiagram source={FLOWCHART} />);
     await waitFor(() => expect(initialize).toHaveBeenCalled());
@@ -69,10 +70,46 @@ describe('MermaidDiagram', () => {
         startOnLoad: false,
         securityLevel: 'strict',
         htmlLabels: false,
-        theme: 'default',
+        theme: 'base',
+        themeVariables: expect.objectContaining({
+          darkMode: false,
+          background: '#ffffff',
+          primaryTextColor: '#0b1220',
+          nodeBorder: '#0a7ea4',
+        }),
       })
     );
     document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('redraws in the dark palette when the shell switches theme', async () => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    render(<MermaidDiagram source={FLOWCHART} />);
+    await waitFor(() => expect(initialize).toHaveBeenCalled());
+    document.documentElement.setAttribute('data-theme', 'dark');
+    await waitFor(() =>
+      expect(initialize).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          themeVariables: expect.objectContaining({
+            darkMode: true,
+            background: '#0a0e14',
+            primaryTextColor: '#e8f0f7',
+          }),
+        })
+      )
+    );
+    document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('takes colours from the page tokens when the stylesheet defines them', () => {
+    document.documentElement.style.setProperty('--color-bg-1', '#123456');
+    document.documentElement.style.setProperty('--color-accent-primary', 'rgba(1, 2, 3, 0.5)');
+    const vars = mermaidThemeVariables('dark');
+    expect(vars.background).toBe('#123456');
+    // A translucent token is not a colour mermaid can shade from: fall back.
+    expect(vars.nodeBorder).toBe('#22d3ee');
+    document.documentElement.style.removeProperty('--color-bg-1');
+    document.documentElement.style.removeProperty('--color-accent-primary');
   });
 
   it('shows the source and a note when the diagram does not parse', async () => {

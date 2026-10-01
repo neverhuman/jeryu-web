@@ -100,6 +100,99 @@ function resolvedTheme(): 'light' | 'dark' {
     : 'dark';
 }
 
+/** Mermaid's `base` theme variables, the only theme Mermaid lets us recolour. */
+export interface MermaidThemeVariables {
+  darkMode: boolean;
+  background: string;
+  fontFamily: string;
+  primaryColor: string;
+  primaryTextColor: string;
+  primaryBorderColor: string;
+  secondaryColor: string;
+  tertiaryColor: string;
+  mainBkg: string;
+  nodeBorder: string;
+  lineColor: string;
+  textColor: string;
+  titleColor: string;
+  clusterBkg: string;
+  clusterBorder: string;
+  edgeLabelBackground: string;
+  noteBkgColor: string;
+  noteTextColor: string;
+  noteBorderColor: string;
+}
+
+// Used when a token cannot be read (tests, or a page without the stylesheet).
+// The values mirror styles/tokens.css.
+const FALLBACK_TOKENS: Record<'light' | 'dark', Record<string, string>> = {
+  dark: {
+    'bg-0': '#05070a',
+    'bg-1': '#0a0e14',
+    'bg-2': '#10151d',
+    'bg-3': '#04060a',
+    'fg-primary': '#e8f0f7',
+    'fg-secondary': '#9fb0c3',
+    'border-subtle': '#17202b',
+    'border-strong': '#2b3a4b',
+    'accent-primary': '#22d3ee',
+  },
+  light: {
+    'bg-0': '#f6f8fa',
+    'bg-1': '#ffffff',
+    'bg-2': '#eef1f5',
+    'bg-3': '#e4e9ef',
+    'fg-primary': '#0b1220',
+    'fg-secondary': '#3f4a5c',
+    'border-subtle': '#d3d9e0',
+    'border-strong': '#aab3bf',
+    'accent-primary': '#0a7ea4',
+  },
+};
+
+/**
+ * The page's own colour tokens as Mermaid theme variables, so a diagram is drawn
+ * in the forge's palette, light, dark or high contrast, rather than in Mermaid's
+ * stock themes, which ignore it. Each token is read from `<html>` as the
+ * stylesheet resolved it; anything unreadable falls back to the same palette.
+ */
+export function mermaidThemeVariables(theme: 'light' | 'dark'): MermaidThemeVariables {
+  const style =
+    typeof document !== 'undefined' && typeof getComputedStyle === 'function'
+      ? getComputedStyle(document.documentElement)
+      : null;
+  const token = (name: string): string => {
+    const value = style?.getPropertyValue(`--color-${name}`).trim() ?? '';
+    // Mermaid derives shades from these, so only plain colours are taken;
+    // a translucent or var() value falls back.
+    return /^#[0-9a-f]{3,8}$/i.test(value) || /^rgb\(/i.test(value)
+      ? value
+      : FALLBACK_TOKENS[theme][name];
+  };
+  const font = style?.getPropertyValue('--font-sans').trim() || 'system-ui, sans-serif';
+  return {
+    darkMode: theme === 'dark',
+    background: token('bg-1'),
+    fontFamily: font,
+    primaryColor: token('bg-2'),
+    primaryTextColor: token('fg-primary'),
+    primaryBorderColor: token('accent-primary'),
+    secondaryColor: token('bg-3'),
+    tertiaryColor: token('bg-0'),
+    mainBkg: token('bg-2'),
+    nodeBorder: token('accent-primary'),
+    lineColor: token('fg-secondary'),
+    textColor: token('fg-primary'),
+    titleColor: token('fg-primary'),
+    clusterBkg: token('bg-0'),
+    clusterBorder: token('border-strong'),
+    edgeLabelBackground: token('bg-1'),
+    noteBkgColor: token('bg-3'),
+    noteTextColor: token('fg-primary'),
+    noteBorderColor: token('border-strong'),
+  };
+}
+
 let idCounter = 0;
 
 export function MermaidDiagram({
@@ -134,15 +227,25 @@ export function MermaidDiagram({
     return () => observer.disconnect();
   }, [oversize, visible]);
 
-  // Follow the shell's light/dark choice, which lands as `<html data-theme>`.
+  // Follow the shell's light/dark choice, which lands as `<html data-theme>`,
+  // and the operating system's when the shell defers to it.
   useEffect(() => {
-    if (typeof MutationObserver === 'undefined') return;
-    const observer = new MutationObserver(() => setTheme(resolvedTheme()));
-    observer.observe(document.documentElement, {
+    const update = () => setTheme(resolvedTheme());
+    const observer =
+      typeof MutationObserver === 'undefined' ? null : new MutationObserver(update);
+    observer?.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['data-theme'],
     });
-    return () => observer.disconnect();
+    const media =
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : null;
+    media?.addEventListener?.('change', update);
+    return () => {
+      observer?.disconnect();
+      media?.removeEventListener?.('change', update);
+    };
   }, []);
 
   useEffect(() => {
@@ -159,7 +262,8 @@ export function MermaidDiagram({
           securityLevel: 'strict',
           htmlLabels: false,
           flowchart: { htmlLabels: false },
-          theme: theme === 'light' ? 'default' : 'dark',
+          theme: 'base',
+          themeVariables: mermaidThemeVariables(theme),
         });
         await mermaid.parse(source);
         if (cancelled) return;
