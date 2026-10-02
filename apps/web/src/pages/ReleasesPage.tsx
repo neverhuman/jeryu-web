@@ -204,7 +204,7 @@ function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element 
         </h2>
         <p className="releases__muted">
           For how far one change has got on its way here, see the{' '}
-          <Link to={timelineHref({ repo: repoId, family })}>In flight</Link>; for
+          <Link to={timelineHref({ repo: repoId, family })}>In flight timeline</Link>; for
           work not yet on a pull request, see <Link to={workHref({ repo: repoId, family })}>Work</Link>.
         </p>
         <p className="releases__repo">

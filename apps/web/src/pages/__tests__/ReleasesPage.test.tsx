@@ -117,7 +117,7 @@ describe('ReleasesPage', () => {
     // and the header says so with a link instead of listing them here.
     expect(screen.queryByRole('heading', { name: 'Merged, not yet released' })).not.toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'In flight' })
+      screen.getByRole('link', { name: 'In flight timeline' })
     ).toHaveAttribute('href', '/in-flight?repo=jeryu%2Fjeryu-deploy');
     // The scope is a real select that always offers the current repository.
     expect(screen.getByLabelText('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');

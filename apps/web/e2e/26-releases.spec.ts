@@ -123,7 +123,7 @@ test('environments show the live release, rollback target and unshipped PRs @act
     '/repos/jeryu/jeryu/jeryu-deploy/pulls/21'
   );
   await expect(page.getByRole('heading', { name: 'Merged, not yet released' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'In flight' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'In flight timeline' })).toHaveAttribute(
     'href',
     '/in-flight?repo=jeryu%2Fjeryu-deploy'
   );
