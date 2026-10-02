@@ -20,6 +20,7 @@ import { relativeTime } from '../../components/repo/relativeTime';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useBlob } from '../../hooks/useBlob';
+import { useRepositories } from '../../hooks/useRepositories';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { useBlame, usePageHistory, useWikiPages } from '../../hooks/useWiki';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
@@ -44,6 +45,15 @@ import {
   type TreeFolder,
   type WikiScope,
 } from './wikiModel';
+
+import {
+  classifySource,
+  fieldValue,
+  HEADER_FIELDS,
+  parseSourceList,
+  statusTone,
+  type WikiSource,
+} from './wikiSources';
 
 import '../page.css';
 import './WikiPage.css';
@@ -263,26 +273,51 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
     );
   const commitHref = (sha: string): string =>
     `${repoFrontPath(wiki.host, wiki.full_name)}/commit/${sha}`;
-  const fields = page.fields.filter(([key]) => key.toLowerCase() !== 'title');
+  // Title, summary, status, date and sources have their own places; anything
+  // else in the frontmatter shows as a field chip.
+  const fields = page.fields.filter(([key]) => !HEADER_FIELDS.includes(key.toLowerCase()));
+  const summary = fieldValue(page.fields, 'summary');
+  const status = fieldValue(page.fields, 'status');
+  const updated = fieldValue(page.fields, 'updated');
+  const sourcesValue = fieldValue(page.fields, 'sources');
+  const sources = sourcesValue ? parseSourceList(sourcesValue).map(classifySource) : [];
   const newest = history.data?.newest ?? null;
   const oldest = history.data?.oldest ?? null;
 
   return (
     <article className={`wiki-doc${notesOn ? ' wiki-doc--notes' : ''}`} aria-label={title}>
       <header className="wiki-doc__header">
-        {folders.length > 0 ? (
-          <nav className="wiki-doc__crumbs" aria-label="Folder">
-            <Link to={WIKI_PATH}>Wiki</Link>
-            {folders.map((folder, index) => (
-              <span key={folder}>
-                {' / '}
-                <Link to={`${WIKI_PATH}/${folders.slice(0, index + 1).map(encodeURIComponent).join('/')}`}>
-                  {folder}
-                </Link>
-              </span>
-            ))}
-          </nav>
-        ) : null}
+        <div className="wiki-doc__top">
+          {folders.length > 0 ? (
+            <nav className="wiki-doc__crumbs" aria-label="Folder">
+              <Link to={WIKI_PATH}>Wiki</Link>
+              {folders.map((folder, index) => (
+                <span key={folder}>
+                  {' / '}
+                  <Link to={`${WIKI_PATH}/${folders.slice(0, index + 1).map(encodeURIComponent).join('/')}`}>
+                    {folder}
+                  </Link>
+                </span>
+              ))}
+            </nav>
+          ) : (
+            <span />
+          )}
+          {updated || status ? (
+            <div className="wiki-doc__badges" data-testid="wiki-page-badges">
+              {updated ? (
+                <time className="wiki-doc__date" dateTime={updated}>
+                  {shortDate(updated)}
+                </time>
+              ) : null}
+              {status ? (
+                <span className={`page__pill wiki-doc__status wiki-doc__status--${statusTone(status)}`}>
+                  {status}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
         {bodyHasTitle ? null : <h1 className="wiki-doc__title">{title}</h1>}
         <p className="wiki-doc__meta" data-testid="wiki-page-meta">
           {newest ? (
@@ -312,6 +347,7 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
             {notesOn ? 'Hide change notes' : 'Show change notes'}
           </button>
         </p>
+        {summary ? <p className="wiki-doc__summary">{summary}</p> : null}
         {fields.length > 0 ? (
           <dl className="wiki-doc__fields">
             {fields.map(([key, value]) => (
@@ -347,7 +383,60 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
           ) : null}
         </section>
       ))}
+      {sources.length > 0 ? (
+        <SourceList sources={sources} wiki={wiki} gitRef={gitRef} scope={scope} />
+      ) : null}
     </article>
+  );
+}
+
+interface SourceListProps {
+  sources: WikiSource[];
+  wiki: WikiRepository;
+  gitRef: string;
+  scope: WikiScope;
+}
+
+/** The page's frontmatter sources, each linked to the file it names when it names one. */
+function SourceList({ sources, wiki, gitRef, scope }: SourceListProps): JSX.Element {
+  // Another repository is named by its bare name; it links when exactly one
+  // repository the viewer can see has that name.
+  const needsRepos = sources.some((source) => source.target?.kind === 'repo');
+  const repos = useRepositories({}, { enabled: needsRepos });
+  const hrefOf = (source: WikiSource): string | null => {
+    const target = source.target;
+    if (!target) return null;
+    if (target.kind === 'wiki-repo') {
+      return resolveDocLink(target.path, '', scope, (repoPath) =>
+        blobPath(wiki.host, wiki.full_name, gitRef, repoPath)
+      );
+    }
+    const matches = (repos.data?.repositories ?? []).filter((repo) => repo.id.name === target.repo);
+    if (matches.length !== 1) return null;
+    const repo = matches[0];
+    const fullName = `${repo.id.owner}/${repo.id.name}`;
+    if (!target.path) return repoFrontPath(repo.id.host, fullName);
+    if (target.path.endsWith('/')) {
+      return `${repoFrontPath(repo.id.host, fullName)}/tree/${encodeURIComponent(repo.default_branch)}/${target.path.slice(0, -1)}`;
+    }
+    return blobPath(repo.id.host, fullName, repo.default_branch, target.path);
+  };
+  return (
+    <section className="wiki-doc__sources" aria-labelledby="wiki-sources-title">
+      <h2 className="wiki-doc__sources-title" id="wiki-sources-title">
+        Sources
+      </h2>
+      <ul>
+        {sources.map((source) => {
+          const href = hrefOf(source);
+          return (
+            <li key={source.text}>
+              {href ? <Link to={href}>{source.text}</Link> : <span>{source.text}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

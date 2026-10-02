@@ -32,6 +32,8 @@ const FRONT = '/repos/jeryu/neverhuman/jeryu';
 let authUser: { role: string } | null = { role: 'user' };
 // The summary builder is module-level, so the failing-check count is too.
 let failingChecks = 0;
+let repoFamily = 'jeryu-split';
+let repoOwner = 'neverhuman';
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ isPending: false, user: authUser }),
 }));
@@ -45,6 +47,8 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     hasCode = true;
     treeOnlyMissing = false;
     failingChecks = 0;
+    repoFamily = 'jeryu-split';
+    repoOwner = 'neverhuman';
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
     vi.stubGlobal(
@@ -152,7 +156,7 @@ describe('RepositoryBrowserPage (one repository page)', () => {
       'href',
       `${FRONT}/pulls`
     );
-    expect(screen.getByRole('link', { name: 'jeryu-split' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'family jeryu-split' })).toHaveAttribute(
       'href',
       '/repos/family/jeryu-split'
     );
@@ -163,6 +167,26 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(screen.queryByRole('link', { name: 'Browse code' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Default branch' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Agents' })).toBeNull();
+  });
+
+  it('labels a family crumb named unlike its owner, and links it to the family', async () => {
+    renderAt(FRONT);
+    const crumbs = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getByRole('link', { name: 'family jeryu-split' })).toHaveAttribute(
+      'href',
+      '/repos/family/jeryu-split'
+    );
+    expect(within(crumbs).getByText('neverhuman')).toBeInTheDocument();
+  });
+
+  it('shows a family named like its owner once, linked to the family', async () => {
+    repoFamily = 'acme';
+    repoOwner = 'acme';
+    renderAt('/repos/jeryu/acme/jeryu');
+    const crumbs = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getAllByText('acme')).toHaveLength(1);
+    expect(within(crumbs).getByRole('link', { name: 'acme' })).toHaveAttribute('href', '/repos/family/acme');
+    expect(within(crumbs).queryByText('family')).toBeNull();
   });
 
   it('labels the host crumb, so the forge and the owner under it are told apart', async () => {
@@ -358,12 +382,12 @@ function entry(path: string, kind: 'file' | 'directory'): Record<string, unknown
 
 function repoSummary(): Record<string, unknown> {
   return {
-    id: { id: 'repo-1', host: 'jeryu', owner: 'neverhuman', name: 'jeryu' },
+    id: { id: 'repo-1', host: 'jeryu', owner: repoOwner, name: 'jeryu' },
     entity: { kind: 'repository', id: 'repo-1' },
     description: 'Portal repo',
     visibility: 'public',
     default_branch: 'main',
-    family: 'jeryu-split',
+    family: repoFamily,
     repo_role: 'public_portal',
     topics: [],
     language: null,

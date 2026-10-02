@@ -18,6 +18,10 @@ const WIKI = {
 const SETUP = [
   '---',
   'title: Setting up',
+  'summary: How a new machine gets the tools',
+  'status: current',
+  'updated: 2026-09-30',
+  'sources: [raw/setup-notes.md, acme-deploy docs/setup.md, live checks on node-a 2026-09-30]',
   'owner: platform',
   '---',
   '# Setting up',
@@ -35,7 +39,11 @@ vi.mock('../../../hooks/useAuth', () => ({
 }));
 vi.mock('../../../api/client', () => ({
   apiGet: vi.fn(async (url: string) => {
-    const key = Object.keys(responses).find((prefix) => url.startsWith(prefix));
+    // The longest matching prefix wins, so `/api/v1/repos` (the list) and
+    // `/api/v1/repos/repo-1/...` can both be answered.
+    const key = Object.keys(responses)
+      .filter((prefix) => url === prefix || url.startsWith(`${prefix}/`) || url.startsWith(`${prefix}?`))
+      .sort((a, b) => b.length - a.length)[0];
     if (!key) throw new Error(`unmocked ${url}`);
     return responses[key];
   }),
@@ -100,16 +108,21 @@ describe('WikiPage', () => {
       ref: 'main',
       sha: 'c'.repeat(40),
       path: 'wiki/guides/setup.md',
-      line_count: 10,
+      line_count: 14,
       hunks: [
-        { start_line: 1, line_count: 6, commit: 'a1' },
-        { start_line: 7, line_count: 1, commit: 'b2' },
-        { start_line: 8, line_count: 1, commit: 'a1' },
-        { start_line: 9, line_count: 2, commit: 'b2' },
+        { start_line: 1, line_count: 10, commit: 'a1' },
+        { start_line: 11, line_count: 1, commit: 'b2' },
+        { start_line: 12, line_count: 1, commit: 'a1' },
+        { start_line: 13, line_count: 2, commit: 'b2' },
       ],
       commits: [
         { sha: 'b2', summary: 'docs: add install step', author: 'Bea', authored_at: '2026-02-01T00:00:00Z', boundary: false },
         { sha: 'a1', summary: 'docs: first setup page', author: 'Ada', authored_at: '2026-01-01T00:00:00Z', boundary: true },
+      ],
+    };
+    responses['/api/v1/repos'] = {
+      repositories: [
+        { id: { host: 'jeryu', owner: 'acme', name: 'acme-deploy', id: 'repo-2' }, default_branch: 'main' },
       ],
     };
     responses['/api/v1/repos/repo-1/commits'] = {
@@ -129,19 +142,35 @@ describe('WikiPage', () => {
     expect(within(nav).getByTestId('wiki-repo-link')).toHaveAttribute('href', '/repos/jeryu/acme/handbook');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Setting up' })).toBeInTheDocument();
-    // Frontmatter is shown as fields, not as text, and the title is not repeated.
+    // Frontmatter: date + status pill top right, summary in its box, other keys as fields.
+    const badges = screen.getByTestId('wiki-page-badges');
+    expect(within(badges).getByText('current')).toHaveClass('wiki-doc__status--success');
+    expect(within(badges).getByText(/2026/)).toHaveAttribute('dateTime', '2026-09-30');
+    expect(screen.getByText('How a new machine gets the tools')).toHaveClass('wiki-doc__summary');
     expect(screen.getByText('platform')).toBeInTheDocument();
-    expect(screen.queryByText('title')).toBeNull();
+    for (const key of ['title', 'summary', 'status', 'updated', 'sources']) {
+      expect(screen.queryByText(key)).toBeNull();
+    }
+    // Sources: a wiki-repo file, another repository's file, and a note as text.
+    const sources = screen.getByRole('region', { name: 'Sources' });
+    expect(within(sources).getByRole('link', { name: 'raw/setup-notes.md' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/acme/handbook/blob/main/raw/setup-notes.md'
+    );
+    expect(
+      await within(sources).findByRole('link', { name: 'acme-deploy docs/setup.md' })
+    ).toHaveAttribute('href', '/repos/jeryu/acme/acme-deploy/blob/main/docs/setup.md');
+    expect(within(sources).getByText('live checks on node-a 2026-09-30').tagName).toBe('SPAN');
     // `[[index]]` became a link to that page.
     expect(screen.getByRole('link', { name: 'index' })).toHaveAttribute('href', '/wiki');
 
-    const installNote = await screen.findByRole('complementary', { name: 'Changes to lines 9 to 10' });
+    const installNote = await screen.findByRole('complementary', { name: 'Changes to lines 13 to 14' });
     expect(within(installNote).getByRole('link', { name: /add install step/ })).toHaveAttribute(
       'href',
       '/repos/jeryu/acme/handbook/commit/b2'
     );
     expect(within(installNote).getByText(/Bea/)).toBeInTheDocument();
-    const introNote = screen.getByRole('complementary', { name: 'Changes to lines 5 to 8' });
+    const introNote = screen.getByRole('complementary', { name: 'Changes to lines 9 to 12' });
     expect(within(introNote).getByText(/since/)).toBeInTheDocument();
 
     expect(screen.getByRole('link', { name: 'View source' })).toHaveAttribute(

@@ -337,3 +337,87 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Top row: breadcrumb on the left; the page's date and status on the right. */
+.wiki-doc__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.wiki-doc__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.wiki-doc__date {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+}
+
+.wiki-doc__status {
+  text-transform: lowercase;
+}
+
+.wiki-doc__status--success {
+  color: var(--color-accent-success);
+  background-color: var(--color-accent-success-bg);
+}
+
+.wiki-doc__status--warning {
+  color: var(--color-accent-warning);
+  background-color: var(--color-accent-warning-bg);
+}
+
+.wiki-doc__status--danger {
+  color: var(--color-accent-danger);
+  background-color: var(--color-accent-danger-bg);
+}
+
+/* The frontmatter summary: one quiet box under the title, no label. */
+.wiki-doc__summary {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-fg-secondary);
+  background-color: var(--color-bg-2);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* Sources come last, under the page's own Related line. */
+.wiki-doc__sources {
+  max-width: var(--wiki-text);
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
+}
+
+.wiki-doc__sources-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+}
+
+.wiki-doc__sources ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-fg-secondary);
+}
+
+.wiki-doc__sources a {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}

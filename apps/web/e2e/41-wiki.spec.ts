@@ -28,7 +28,8 @@ const WIKI = {
 const PAGES: Record<string, string> = {
   'index.md': '# Handbook\n\nStart with [[setup]].\n\n## Conventions\nOne topic per page.\n',
   'README.md': '# Code readme, not part of the wiki\n',
-  'wiki/guides/setup.md': '---\ntitle: Setting up\nowner: platform\n---\n# Setting up\n\nInstall the tools.\n',
+  'wiki/guides/setup.md':
+    '---\ntitle: Setting up\nsummary: How a new machine gets the tools\nstatus: current\nupdated: 2026-09-30\nsources: [raw/setup-notes.md, live checks on node-a]\nowner: platform\n---\n# Setting up\n\nInstall the tools.\n',
 };
 
 const COMMITS = [
@@ -131,6 +132,17 @@ test.describe('Internal wiki', () => {
     await expect(page).toHaveURL(/\/wiki\/guides\/setup\.md$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Setting up' })).toBeVisible();
     await expect(page.getByText('platform')).toBeVisible();
+    // Date and status pill top right, summary in its box, sources listed last.
+    const badges = page.getByTestId('wiki-page-badges');
+    await expect(badges.getByText('current')).toBeVisible();
+    await expect(badges.locator('time')).toHaveAttribute('datetime', '2026-09-30');
+    await expect(page.locator('.wiki-doc__summary')).toHaveText('How a new machine gets the tools');
+    const sources = page.getByRole('region', { name: 'Sources' });
+    await expect(sources.getByRole('link', { name: 'raw/setup-notes.md' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/acme/handbook/blob/main/raw/setup-notes.md'
+    );
+    await expect(sources.getByText('live checks on node-a')).toBeVisible();
 
     await page.getByRole('button', { name: 'Hide change notes' }).click();
     await expect(page.getByRole('complementary', { name: /Changes to lines/ })).toHaveCount(0);

@@ -208,10 +208,20 @@ export function RepositoryBrowserPage({
     // The host is often named like the owner under it ("jeryu / … / jeryu"):
     // say which one it is so the repeat reads as two different things.
     { label: provider, prefix: 'host', to: `/repos?host=${provider}` },
-    ...(summary.family
-      ? [{ label: summary.family, to: `/repos/family/${encodeURIComponent(summary.family)}` }]
+    // The family is often named like the owner ("veox-ai / veox-ai"): then one
+    // crumb is both and opens the family; a different family says it is one.
+    ...(summary.family && summary.family !== summary.id.owner
+      ? [
+          {
+            label: summary.family,
+            prefix: 'family',
+            to: `/repos/family/${encodeURIComponent(summary.family)}`,
+          },
+        ]
       : []),
-    { label: summary.id.owner },
+    summary.family === summary.id.owner
+      ? { label: summary.id.owner, to: `/repos/family/${encodeURIComponent(summary.family)}` }
+      : { label: summary.id.owner },
     onFile ? { label: summary.id.name, to: frontWithRef } : { label: summary.id.name },
     ...(onFile
       ? file.path
