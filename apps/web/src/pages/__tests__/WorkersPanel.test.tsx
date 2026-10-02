@@ -23,7 +23,7 @@ describe('WorkersPanel', () => {
     expect(within(row).getByText('working · agent')).toBeInTheDocument();
     expect(within(row).getByRole('link', { name: '20260919-0900-q1q' })).toHaveAttribute(
       'href',
-      '/work?family=jeryu&todo=20260919-0900-q1q'
+      '/work/20260919-0900-q1q'
     );
     // xbabe1/w2 was last seen long ago: a ghost, hidden until asked for.
     expect(screen.queryByTestId('shift-worker-xbabe1-w2')).toBeNull();

@@ -13,7 +13,7 @@ import { useShiftWorkers, useShiftWorkersHistory } from '../../hooks/useShift';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { WorkersPanel } from './WorkersPanel';
 import { busySparkline, nightWindow, workersLine } from './workPageModel';
-import { WORK_WORKERS_ID, queueHref } from './workPaths';
+import { WORK_WORKERS_ID, todoHref } from './workPaths';
 
 const OPEN_KEY = 'jeryu.work.workersOpen.v1';
 const SPARK_W = 120;
@@ -74,7 +74,7 @@ export function WorkersStrip({ todos }: { todos: ShiftTodo[] }): JSX.Element {
                   <span key={`${slot.family}-${slot.slot}-${slot.todoId}`}>
                     {i > 0 ? ', ' : ''}
                     {slot.family} {slot.slot} on{' '}
-                    <Link to={queueHref(slot.family, [slot.todoId])}>{slot.title}</Link>
+                    <Link to={todoHref(slot.todoId)}>{slot.title}</Link>
                   </span>
                 ))}
                 {')'}

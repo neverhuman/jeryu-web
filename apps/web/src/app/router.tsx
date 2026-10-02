@@ -40,7 +40,7 @@ import {
   QualityGateRulePage,
 } from '../pages/qualityGate';
 import { RepoRouter } from '../pages/RepoRouter';
-import { ShiftQueuePage, WORK_PATH } from '../pages/shift';
+import { ShiftQueuePage, TodoPage, WORK_PATH, todoHref } from '../pages/shift';
 import { WikiPage } from '../pages/wiki/WikiPage';
 
 import {
@@ -67,9 +67,15 @@ function PullRoomRedirect(): JSX.Element {
   return <Navigate to={{ pathname: IN_FLIGHT_PATH, search, hash }} replace />;
 }
 
-/** An old Work URL -> `/work`, keeping its query string; `hash` names a place on the page. */
+/**
+ * An old Work URL -> `/work`, keeping its query string; `hash` names a place on
+ * the page. A link to one todo (`?todo=<id>`, what Needs you sends) opens that
+ * todo's own page instead.
+ */
 function WorkRedirect({ hash }: { hash?: string }): JSX.Element {
   const { search, hash: current } = useLocation();
+  const ids = (new URLSearchParams(search).get('todo') ?? '').split(',').filter(Boolean);
+  if (!hash && ids.length === 1) return <Navigate to={todoHref(ids[0])} replace />;
   return (
     <Navigate
       to={{ pathname: WORK_PATH, search, hash: hash ? `#${hash}` : current }}
@@ -108,8 +114,8 @@ export const router = createBrowserRouter([
       { path: 'work/shift', element: <WorkRedirect /> },
       { path: 'work/shift/new', element: <WorkRedirect hash="add" /> },
       { path: 'work/shift/workers', element: <WorkRedirect hash="workers" /> },
-      // The item tracker is retired; its detail links land on Work.
-      { path: 'work/:key', element: <Navigate to={WORK_PATH} replace /> },
+      // One todo's own page; Needs you, Activity and the queue link here.
+      { path: 'work/:key', element: <TodoPage /> },
       { path: IN_FLIGHT_PATH.slice(1), element: <PullRoomPage /> },
       // The page's first name; links and bookmarks keep working, filters too.
       { path: 'pull-room', element: <PullRoomRedirect /> },

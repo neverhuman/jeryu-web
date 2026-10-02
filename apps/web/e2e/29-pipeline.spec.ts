@@ -108,7 +108,9 @@ test.describe('Pipeline visibility', () => {
       .getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66')
       .getByRole('link', { name: /^Open: Allow PATCH/ })
       .click();
-    await expect(page).toHaveURL(/\/work\?family=jeryu&todo=20260919-130515-f8cc66$/);
+    // The server's link names the todo, so it opens the todo's own page.
+    await expect(page).toHaveURL(/\/work\/20260919-130515-f8cc66$/);
+    await expect(page.getByTestId('todo-page')).toBeVisible();
     // The badge counts critical + action (not watch) and follows the operator.
     await expect(page.getByTestId('needs-you-badge')).toHaveText('3');
     // Each page carries its own share, and Work shows its row above the queue.
@@ -116,6 +118,7 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('nav-badge-releases')).toHaveText('1');
     await expect(page.getByTestId('nav-badge-system')).toHaveText('1');
     await expect(page.getByTestId('nav-badge-pulls')).toHaveCount(0);
+    await page.getByTestId('todo-page').getByRole('link', { name: 'Work', exact: true }).click();
     await expect(
       page.getByTestId('needs-you-here-work').getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66')
     ).toBeVisible();

@@ -6,11 +6,11 @@
 // on top, finished todos and finished shifts folded away. Each row wears its
 // family at the far left; the pill filters the whole page to that family
 // (`?family=`), and pressing it again, or All, shows every family. A row expands
-// to the body, note and attempt history. Admins get release / block / priority /
+// to the body, note and attempt history; its id opens the todo's own page. Admins get release / block / priority /
 // now-night row actions and "Open review PR" on each shift.
 
 import { GitBranch, Inbox } from 'lucide-react';
-import { Fragment, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type { ShiftBranch, ShiftFamily, ShiftTodo } from '../../api/types';
@@ -22,7 +22,6 @@ import {
   useOpenShiftPr,
   useShiftFamilies,
   useShiftShiftsByFamily,
-  useShiftTodoAction,
   useShiftTodos,
 } from '../../hooks/useShift';
 import { NeedsYouHere } from '../needsYou/NeedsYouHere';
@@ -30,7 +29,6 @@ import { ShiftError } from './shiftCommon';
 import {
   DEFAULT_QUEUE_FILTERS,
   SHIFT_MODES,
-  SHIFT_PRIORITIES,
   SHIFT_STATUSES,
   attemptSummary,
   commitHref,
@@ -40,26 +38,21 @@ import {
   formatCost,
   todoCost,
   isLastNight,
-  isLongNote,
-  latestWorker,
   repoOwners,
-  repoCodeHref,
   splitFinished,
   splitShifts,
   canOpenReviewPr,
   type RepoOwners,
   queueOptions,
   shortSha,
-  slotLabel,
   sortShifts,
   statusTone,
-  todoPrHref,
-  todoTrace,
-  traceSummary,
   unmergedTodosNote,
   type QueueFilters,
 } from './shiftModel';
+import { RepoName, TodoDetail, TodoPrimaryAction, TodoTrace, WhyStuck } from './todoParts';
 import { WorkComposer } from './WorkComposer';
+import { todoHref } from './workPaths';
 import { WorkersStrip } from './WorkersStrip';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { groupLive, liveFamilyCounts, todoFamily, todosOfFamily } from './workPageModel';
@@ -438,7 +431,10 @@ function TodoRow({
           {/* Why it is stuck is the information; it does not hide behind a click. */}
           {stuck && todo.note ? <WhyStuck id={todo.id} note={todo.note} /> : null}
           <span className="shift__id">
-            {todo.id} · P{todo.priority} · {todo.mode}
+            <Link to={todoHref(todo.id)} title="Open this todo's page">
+              {todo.id}
+            </Link>{' '}
+            · P{todo.priority} · {todo.mode}
             {todo.triaged ? '' : ' · untriaged'}
           </span>
           <TodoTrace todo={todo} owners={owners} />
@@ -507,221 +503,6 @@ function TodoRow({
         </tr>
       ) : null}
     </Fragment>
-  );
-}
-
-/** A family repo by name: a link to its code when this forge hosts it. */
-function RepoName({ owners, repo }: { owners: RepoOwners; repo: string }): JSX.Element {
-  const href = repoCodeHref(owners, repo);
-  return href ? <Link to={href}>{repo}</Link> : <span>{repo}</span>;
-}
-
-/**
- * Why a todo is stuck, inline. A worker's note can run to twenty lines, which
- * pushed every other row off the screen: four lines show, the rest unfolds.
- */
-function WhyStuck({ id, note }: { id: string; note: string }): JSX.Element {
-  const [full, setFull] = useState(false);
-  const long = isLongNote(note);
-  const noteId = `shift-why-text-${id}`;
-  return (
-    <div className="shift__why-wrap">
-      <p
-        id={noteId}
-        className={`shift__why${long && !full ? ' shift__why--clamped' : ''}`}
-        data-testid={`shift-why-${id}`}
-      >
-        {note}
-      </p>
-      {long ? (
-        <button
-          type="button"
-          className="shift__why-toggle"
-          aria-expanded={full}
-          aria-controls={noteId}
-          onClick={() => setFull((v) => !v)}
-        >
-          {full ? 'Show less' : 'Show full note'}
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-/** Queued > Claimed > Done > PR > Merged > Released, with the PR step linked. */
-function TodoTrace({ todo, owners }: { todo: ShiftTodo; owners: RepoOwners }): JSX.Element {
-  const steps = todoTrace(todo);
-  const prHref = todoPrHref(todo, owners);
-  return (
-    <ol className="shift-trace" aria-label={`Lifecycle of ${todo.id}: ${traceSummary(steps)}`}>
-      {steps.map((step) => (
-        <li key={step.key} className={`shift-trace__step is-${step.state}`}>
-          {step.key === 'pr' && prHref ? <Link to={prHref}>{step.label}</Link> : step.label}
-          {step.state === 'unknown' ? '?' : ''}
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function TodoDetail({ todo, isAdmin }: { todo: ShiftTodo; isAdmin: boolean }): JSX.Element {
-  const worker = latestWorker(todo);
-  return (
-    <div data-testid={`shift-todo-detail-${todo.id}`}>
-      <pre>{todo.body || '(no body)'}</pre>
-      {todo.note ? <p><strong>Note:</strong> {todo.note}</p> : null}
-      {isAdmin ? <TodoAdjust todo={todo} /> : null}
-      <p className="shift__muted">
-        Requested by {todo.requested_by || '—'} · worker {worker ?? '—'} · filed {todo.filed_at}
-        {todo.shift ? ` · shift ${todo.shift}` : ''}
-        {todo.blocked_by.length > 0 ? ` · blocked by ${todo.blocked_by.join(', ')}` : ''}
-        {todo.change_set ? ` · change set ${todo.change_set}` : ''}
-      </p>
-      {todo.worked_by.length === 0 ? (
-        <p className="shift__muted">No attempts yet.</p>
-      ) : (
-        <table className="shift__table" aria-label={`Attempts for ${todo.id}`}>
-          <thead>
-            <tr>
-              <th scope="col">Worker</th>
-              <th scope="col">Model</th>
-              <th scope="col">Started</th>
-              <th scope="col">Ended</th>
-              <th scope="col">Outcome</th>
-              <th scope="col">Cost</th>
-              <th scope="col">Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {todo.worked_by.map((attempt, i) => (
-              <tr key={`${attempt.started}-${i}`}>
-                <td>
-                  {slotLabel(attempt.by, attempt.host, attempt.slot)}
-                </td>
-                <td>{attempt.model}</td>
-                <td>{attempt.started}</td>
-                <td>{attempt.ended ?? '—'}</td>
-                <td>{attempt.outcome}</td>
-                <td>{formatCost(attempt.cost_usd)}</td>
-                <td>{attempt.note}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
-/** The one thing to do with this row: release what is stuck, block what should not run. */
-function TodoPrimaryAction({ todo }: { todo: ShiftTodo }): JSX.Element | null {
-  const action = useShiftTodoAction();
-  const base = { family: todo.family, id: todo.id };
-  const [blocking, setBlocking] = useState(false);
-  const [note, setNote] = useState('');
-  const submitBlock = (event: FormEvent): void => {
-    event.preventDefault();
-    action.mutate(
-      { ...base, action: 'block', note: note.trim() },
-      {
-        onSuccess: () => {
-          setBlocking(false);
-          setNote('');
-        },
-      }
-    );
-  };
-  const releasable =
-    todo.status === 'claimed' || todo.status === 'blocked' || todo.status === 'handoff';
-  if (todo.status === 'done') return null;
-  return (
-    <span className="shift__actions">
-      {releasable ? (
-        <ActionButton
-          // Outlined, never filled: the page's one filled action is "Open review PR".
-          variant={todo.status === 'claimed' ? 'ghost' : 'default'}
-          disabled={action.isPending}
-          onClick={() => action.mutate({ ...base, action: 'release' })}
-          aria-label={`Release ${todo.id}`}
-        >
-          Release
-        </ActionButton>
-      ) : (
-        <ActionButton
-          variant="ghost"
-          disabled={action.isPending}
-          onClick={() => setBlocking((v) => !v)}
-          aria-expanded={blocking}
-          aria-label={`Block ${todo.id}`}
-        >
-          Block
-        </ActionButton>
-      )}
-      {blocking ? (
-        <form className="shift__block-form" onSubmit={submitBlock} aria-label={`Why block ${todo.id}?`}>
-          <input
-            type="text"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="Why? (shown on the todo)"
-            aria-label={`Reason for blocking ${todo.id}`}
-          />
-          <ActionButton variant="danger" type="submit" disabled={action.isPending}>
-            Confirm block
-          </ActionButton>
-          <ActionButton variant="ghost" type="button" onClick={() => setBlocking(false)}>
-            Cancel
-          </ActionButton>
-        </form>
-      ) : null}
-      {action.error ? (
-        <span className="shift__error" role="alert">
-          {action.error.message}
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
-/** Priority and now/night: adjustments, so they live in the opened row. */
-function TodoAdjust({ todo }: { todo: ShiftTodo }): JSX.Element | null {
-  const action = useShiftTodoAction();
-  const base = { family: todo.family, id: todo.id };
-  if (todo.status === 'done') return null;
-  const otherMode = todo.mode === 'now' ? 'night' : 'now';
-  return (
-    <p className="shift__actions">
-      <label>
-        Priority{' '}
-        <select
-          aria-label={`Priority for ${todo.id}`}
-          value={todo.priority}
-          disabled={action.isPending}
-          onChange={(event) =>
-            action.mutate({ ...base, action: 'priority', value: Number(event.target.value) })
-          }
-        >
-          {SHIFT_PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              P{p}
-            </option>
-          ))}
-        </select>
-      </label>
-      <ActionButton
-        variant="ghost"
-        disabled={action.isPending}
-        onClick={() => action.mutate({ ...base, action: 'mode', value: otherMode })}
-        aria-label={`Move ${todo.id} to ${otherMode}`}
-      >
-        Move to {otherMode}
-      </ActionButton>
-      {action.error ? (
-        <span className="shift__error" role="alert">
-          {action.error.message}
-        </span>
-      ) : null}
-    </p>
   );
 }
 

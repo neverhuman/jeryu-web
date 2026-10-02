@@ -44,14 +44,14 @@ describe('WorkersStrip', () => {
     vi.restoreAllMocks();
   });
 
-  it('is one line: slots, who works on what (linked into the queue), a sparkline', async () => {
+  it('is one line: slots, who works on what (linked to the todo), a sparkline', async () => {
     mockShiftApi();
     renderStrip();
     const summary = await screen.findByTestId('work-workers-summary');
     expect(summary).toHaveTextContent('1 of 1 slot healthy · 1 working · 0 paused (jeryu w1 on Claimed thing)');
     expect(within(summary).getByRole('link', { name: 'Claimed thing' })).toHaveAttribute(
       'href',
-      '/work?family=jeryu&todo=20260919-0900-q1q'
+      '/work/20260919-0900-q1q'
     );
     expect(
       await screen.findByRole('img', { name: 'Busy worker slots over the last 24 hours' })

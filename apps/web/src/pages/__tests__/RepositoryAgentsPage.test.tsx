@@ -107,7 +107,7 @@ describe('RepositoryAgentsPage — empty repository', () => {
     );
     expect(row).toHaveAttribute(
       'href',
-      '/work?family=jeryu&todo=20260921-002116'
+      '/work/20260921-002116'
     );
   });
 });

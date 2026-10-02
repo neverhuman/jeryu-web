@@ -53,8 +53,8 @@ test.describe('Work, one page', () => {
     await expect(page.getByTestId('work-composer-readonly')).toContainText('Only admins can file todos');
 
     // The three old addresses are this page, query string kept.
-    await page.goto('/work/shift?family=jeryu&todo=20260919-0900-ccc');
-    await expect(page).toHaveURL(/\/work\?family=jeryu&todo=20260919-0900-ccc$/);
+    await page.goto('/work/shift?family=jeryu');
+    await expect(page).toHaveURL(/\/work\?family=jeryu$/);
     await page.goto('/work/shift/workers?family=jeryu');
     await expect(page).toHaveURL(/\/work\?family=jeryu#workers$/);
     await expect(page.getByTestId('shift-workers-panel')).toBeVisible();
@@ -165,6 +165,34 @@ test.describe('Work, one page', () => {
     await expect(page).toHaveURL(/\/needs-you$/);
   });
 
+  test('a todo has its own page: the row id opens it, and a Needs-you link lands on it @action:shift.todo_page', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'user' } });
+    await mockShiftApi(page);
+    await page.goto('/work');
+    const blocked = page.getByTestId('shift-todo-20260919-0930-ddd');
+    await expect(blocked).toBeVisible({ timeout: 15_000 });
+    await blocked.getByRole('link', { name: '20260919-0930-ddd' }).click();
+    await expect(page).toHaveURL(/\/work\/20260919-0930-ddd$/);
+    const todoPage = page.getByTestId('todo-page');
+    await expect(todoPage.getByRole('heading', { name: 'Cut the core tag' })).toBeVisible();
+    await expect(todoPage.getByTestId('todo-page-status')).toHaveText('blocked');
+    await expect(todoPage.getByTestId('shift-why-20260919-0930-ddd')).toContainText(
+      'The jeryu-core tag split.7 does not exist.'
+    );
+    await expect(todoPage.getByRole('table', { name: 'Attempts for 20260919-0930-ddd' })).toBeVisible();
+
+    // What Needs you sends (`/work/shift?family=&todo=`) opens the same page.
+    await page.goto('/work/shift?family=jeryu&todo=20260919-0930-ddd');
+    await expect(page).toHaveURL(/\/work\/20260919-0930-ddd$/);
+    await expect(todoPage.getByRole('heading', { name: 'Cut the core tag' })).toBeVisible();
+
+    // The trail leads back to the family's queue.
+    await todoPage.getByRole('link', { name: 'jeryu', exact: true }).first().click();
+    await expect(page).toHaveURL(/\/work\?family=jeryu$/);
+  });
+
   test('admin files one todo from the one-line composer, and many from the opened form @action:shift.add_single @action:shift.add_many', async ({
     page,
   }) => {
@@ -227,7 +255,7 @@ test.describe('Work, one page', () => {
     await expect(summary).toContainText('1 working');
     await expect(summary.getByRole('link', { name: /Claimed refactor/ })).toHaveAttribute(
       'href',
-      '/work?family=jeryu&todo=20260919-0900-ccc'
+      '/work/20260919-0900-ccc'
     );
     await expect(workers.getByRole('img', { name: 'Busy worker slots over the last 24 hours' })).toBeVisible();
     await expect(page.getByTestId('shift-workers-panel')).toHaveCount(0);
@@ -237,7 +265,7 @@ test.describe('Work, one page', () => {
     await expect(row).toContainText('healthy');
     await expect(row.getByRole('link', { name: '20260919-0900-ccc' })).toHaveAttribute(
       'href',
-      '/work?family=jeryu&todo=20260919-0900-ccc'
+      '/work/20260919-0900-ccc'
     );
     await expect(page.getByTestId('shift-worker-xbabe1-w2')).toContainText('stale');
     await expect(page.getByTestId('shift-timeline').getByRole('img')).toBeVisible();

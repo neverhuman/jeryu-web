@@ -325,11 +325,13 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
 
 test.describe('Accessibility scans — Work, one page', () => {
   // One page, three states: as it opens, with the composer opened (`#add`
-  // puts the cursor in it), and with the workers line expanded (`#workers`).
+  // puts the cursor in it), and with the workers line expanded (`#workers`);
+  // then one todo's own page.
   for (const target of [
     { scope: 'shift-queue', path: '/work', testId: 'shift-todo-20260919-0800-aaa' },
     { scope: 'shift-add', path: '/work?family=jain#add', testId: 'shift-add-count' },
     { scope: 'shift-workers', path: '/work#workers', testId: 'shift-capacity' },
+    { scope: 'shift-todo-page', path: '/work/20260919-0930-ddd', testId: 'shift-why-20260919-0930-ddd' },
   ]) {
     test(`axe scan: ${target.scope}`, async ({ page }) => {
       await mockBootstrap(page, { auth: { role: 'admin' } });

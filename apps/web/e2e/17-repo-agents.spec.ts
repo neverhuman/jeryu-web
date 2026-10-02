@@ -170,5 +170,5 @@ test('an empty repository shows the queue runs, not two empty states @action:age
   );
 
   await row.click();
-  await expect(page).toHaveURL(/\/work\?family=core&todo=20260921-002116/);
+  await expect(page).toHaveURL(/\/work\/20260921-002116$/);
 });

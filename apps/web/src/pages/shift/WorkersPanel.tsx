@@ -16,7 +16,7 @@ import { ShiftError } from './shiftCommon';
 import { ShiftCapacityChart, ShiftTimeline } from './ShiftCharts';
 import { formatAgo, splitWorkers } from './shiftModel';
 import { splitSupervisors } from './workersModel';
-import { queueHref } from './workPaths';
+import { todoHref } from './workPaths';
 
 import '../page.css';
 import './Shift.css';
@@ -182,7 +182,7 @@ function WorkersTable({ workers }: { workers: ShiftWorker[] }): JSX.Element {
                 {w.stage ? ` · ${w.stage}` : ''}
               </td>
               <td>
-                {w.todo_id ? <Link to={queueHref(w.family, [w.todo_id])}>{w.todo_id}</Link> : '—'}
+                {w.todo_id ? <Link to={todoHref(w.todo_id)}>{w.todo_id}</Link> : '—'}
               </td>
               <td>{w.lease_until ? formatAgo(w.lease_until, now) : '—'}</td>
               <td>{formatAgo(w.last_seen, now)}</td>

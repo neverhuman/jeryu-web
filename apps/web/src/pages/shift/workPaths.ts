@@ -14,6 +14,12 @@ export function queueHref(family: string, ids: string[] = []): string {
   return query ? `${WORK_PATH}?${query}` : WORK_PATH;
 }
 
+/** One todo's own page. Ids are unique across families; `family` only narrows the lookup. */
+export function todoHref(id: string, family = ''): string {
+  const path = `${WORK_PATH}/${encodeURIComponent(id)}`;
+  return family ? `${path}?${new URLSearchParams({ family }).toString()}` : path;
+}
+
 /**
  * Work, filtered to one repository's todos. Todos name repos bare
  * (`jeryu-web`), so an `owner/name` is reduced to its name.

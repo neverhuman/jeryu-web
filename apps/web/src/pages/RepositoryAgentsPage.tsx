@@ -12,7 +12,7 @@ import { useRealtime } from '../hooks/useRealtime';
 import { useCreateSession } from '../hooks/useCreateSession';
 import { useShiftTodos } from '../hooks/useShift';
 import { repoQueueRuns, type RepoQueueRun } from './repoQueueRuns';
-import { queueHref } from './shift/workPaths';
+import { todoHref } from './shift/workPaths';
 
 import './page.css';
 import './RepositoryAgentsPage.css';
@@ -373,7 +373,7 @@ function QueueRow({ run }: { run: RepoQueueRun }): JSX.Element {
   return (
     <li>
       <Link
-        to={queueHref(run.family, [run.todoId])}
+        to={todoHref(run.todoId)}
         className="agents__row"
         data-testid={`agent-queue-row-${run.todoId}`}
         title={`${run.title} · started ${run.started}`}

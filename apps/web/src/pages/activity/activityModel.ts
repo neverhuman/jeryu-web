@@ -2,7 +2,7 @@
 // live dock, and the per-PR events panel. Deterministic given `now`.
 
 import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
-import { queueHref } from '../shift/workPaths';
+import { todoHref } from '../shift/workPaths';
 
 export const ACTIVITY_PATH = '/activity';
 export const ACTIVITY_PAGE_SIZE = 100;
@@ -196,7 +196,7 @@ export function pullHref(repo: string, pr: number): string {
 export function eventLinks(event: PipelineEvent): EventLink[] {
   const links: EventLink[] = [];
   if (event.todo_id && event.family) {
-    links.push({ label: `todo ${event.todo_id}`, to: queueHref(event.family, [event.todo_id]) });
+    links.push({ label: `todo ${event.todo_id}`, to: todoHref(event.todo_id) });
   }
   if (event.repo && event.pr) {
     links.push({ label: `${event.repo}#${event.pr}`, to: pullHref(event.repo, event.pr) });
@@ -442,7 +442,7 @@ export function primaryLink(event: PipelineEvent): EventLink | null {
     return { label: `${event.repo}#${event.pr}`, to: pullHref(event.repo, event.pr) };
   }
   if (event.todo_id && event.family) {
-    return { label: `todo ${event.todo_id}`, to: queueHref(event.family, [event.todo_id]) };
+    return { label: `todo ${event.todo_id}`, to: todoHref(event.todo_id) };
   }
   if (event.repo) return { label: event.repo, to: repoHref(event.repo) };
   return null;
