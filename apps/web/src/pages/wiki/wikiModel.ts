@@ -97,13 +97,24 @@ export function resolveDocLink(
   return `${blobHref(target)}${suffix}`;
 }
 
-/** A page's display name in the tree: its folder for an index page, else its file name. */
+/**
+ * A page's name in the tree. A folder's index page (README, index, home) is
+ * listed under its own file name, since the folder above it already names it;
+ * other pages read as words. The start page is Home.
+ */
 export function pageLabel(path: string, scope?: WikiScope): string {
   if (scope && path === scope.home) return 'Home';
   const name = path.split('/').pop() ?? path;
+  if (isIndexName(name)) return name;
+  return humanize(name.replace(/\.(md|markdown)$/i, ''));
+}
+
+/** A title for a page with neither a frontmatter title nor a heading. */
+function fallbackTitle(path: string): string {
+  const name = path.split('/').pop() ?? path;
   if (isIndexName(name)) {
     const parent = path.split('/').slice(-2, -1)[0];
-    return !parent || `${parent}/` === WIKI_DIR ? 'Overview' : humanize(parent);
+    return !parent || `${parent}/` === WIKI_DIR ? 'Wiki' : humanize(parent);
   }
   return humanize(name.replace(/\.(md|markdown)$/i, ''));
 }
@@ -189,7 +200,7 @@ export function pageTitle(path: string, page: Frontmatter): string {
   const fromFields = page.fields.find(([key]) => key.toLowerCase() === 'title')?.[1];
   if (fromFields) return fromFields;
   const heading = page.body.match(/^#\s+(.+?)\s*#*\s*$/m)?.[1];
-  return heading ?? pageLabel(path);
+  return heading ?? fallbackTitle(path);
 }
 
 export interface Section {

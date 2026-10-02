@@ -92,10 +92,11 @@ describe('resolveDocLink', () => {
 });
 
 describe('page names', () => {
-  it('names the start page Home, wiki/README Overview, folders by name', () => {
+  it('names the start page Home and lists a folder\'s index page under its file name', () => {
     expect(pageLabel('index.md', SCOPE)).toBe('Home');
-    expect(pageLabel('wiki/README.md', SCOPE)).toBe('Overview');
-    expect(pageLabel('wiki/guides/index.md', SCOPE)).toBe('Guides');
+    expect(pageLabel('wiki/README.md', SCOPE)).toBe('README.md');
+    expect(pageLabel('wiki/guides/index.md', SCOPE)).toBe('index.md');
+    expect(pageLabel('wiki/products/jain/README.md', SCOPE)).toBe('README.md');
     expect(pageLabel('wiki/guides/release-checklist.md', SCOPE)).toBe('Release checklist');
     expect(pageLabel('wiki/README.md', wikiScope(['wiki/README.md']))).toBe('Home');
   });
@@ -104,6 +105,7 @@ describe('page names', () => {
     expect(pageTitle('a.md', splitFrontmatter('---\ntitle: "Runbook"\n---\n# Other\n'))).toBe('Runbook');
     expect(pageTitle('a.md', splitFrontmatter('Intro\n\n# Deploying ##\n'))).toBe('Deploying');
     expect(pageTitle('wiki/on-call.md', splitFrontmatter('no heading'))).toBe('On call');
+    expect(pageTitle('wiki/products/jain/README.md', splitFrontmatter('no heading'))).toBe('Jain');
   });
 });
 
