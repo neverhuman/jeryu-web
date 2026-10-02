@@ -60,6 +60,120 @@ export function mergeAllowed(detail: PullRequestDetail): boolean {
   return detail.merge_passport.status === 'pass' && detail.summary.mergeable.can_merge;
 }
 
+/** `@alton` and `alton` are the same account. */
+function sameAccount(a: string, b: string): boolean {
+  const normalize = (value: string): string =>
+    value.trim().replace(/^@/, '').toLowerCase();
+  const left = normalize(a);
+  return left.length > 0 && left === normalize(b);
+}
+
+/**
+ * Whether the configured approval requirement is already met. Distinct from
+ * `approvalsSatisfied`: a pull request that requires no approval at all has
+ * no requirement to meet, so its Approve button keeps the exact-SHA wording.
+ */
+export function approvalRequirementMet(
+  review: PullRequestSummary['review']
+): boolean {
+  return review.required_approvals > 0 && approvalsSatisfied(review);
+}
+
+/** One effective approval recorded against the pull request's current head. */
+export interface ApprovalCredit {
+  author: string;
+  /** The short SHA the approval was cast on. */
+  shortSha: string;
+}
+
+function isApprovalState(state: string): boolean {
+  const value = state.trim().toLowerCase();
+  return value === 'approved' || value === 'approve';
+}
+
+/**
+ * Who approved this exact head, from the review audit rows. Rows anchored to
+ * another SHA, dismissed rows and rows the server marked ineffective do not
+ * count, so the credit always matches the SHA the count is about.
+ */
+export function approvalCredits(detail: PullRequestDetail): ApprovalCredit[] {
+  const headSha = detail.summary.head_sha;
+  return (detail.reviews ?? [])
+    .filter(
+      (row) =>
+        row.effective &&
+        !row.stale &&
+        isApprovalState(row.state) &&
+        row.head_sha === headSha
+    )
+    .map((row) => ({ author: row.author, shortSha: headSha.slice(0, 7) }));
+}
+
+/** Name the approvers and the SHA they approved, next to the count. */
+export function approvalAttribution(detail: PullRequestDetail): string | null {
+  const credits = approvalCredits(detail);
+  if (credits.length === 0) return null;
+  const parts = credits.map((c) => `${c.author} at ${c.shortSha}`);
+  return `Approved by ${parts.join(', ')}`;
+}
+
+/** Whether the signed-in account's approval already stands on this head. */
+export function viewerApprovedHead(
+  detail: PullRequestDetail,
+  viewerLogin: string | null | undefined
+): boolean {
+  if (!viewerLogin) return false;
+  return approvalCredits(detail).some((c) => sameAccount(c.author, viewerLogin));
+}
+
+/** What the Approve control shows, and how loudly. */
+export interface ApproveCta {
+  /** False when the viewer's approval already stands on this exact SHA. */
+  show: boolean;
+  label: string;
+  /** True only while the approval is the one thing the merge waits for. */
+  emphasized: boolean;
+}
+
+/**
+ * The Approve control, worded for the approval posture. While the
+ * requirement is unmet the exact-SHA approval is the primary action; once it
+ * is met an extra approval is welcome but optional, so the control is
+ * demoted, and it disappears for a viewer who already approved this head.
+ */
+export function approveCta(
+  detail: PullRequestDetail,
+  viewerLogin: string | null | undefined
+): ApproveCta {
+  if (!approvalRequirementMet(detail.summary.review)) {
+    return {
+      show: true,
+      label: `Approve exact SHA ${detail.summary.head_sha.slice(0, 7)}`,
+      emphasized: primaryAction(detail) === 'approve',
+    };
+  }
+  return {
+    show: !viewerApprovedHead(detail, viewerLogin),
+    label: 'Add your approval',
+    emphasized: false,
+  };
+}
+
+/**
+ * Why the merge is blocked, in one line. "Blocked by the Passport" and "a
+ * gate failed" are the same thing said twice, so the line names the Passport
+ * and the first blocker that holds it shut.
+ */
+export function mergeBlockedLine(detail: PullRequestDetail): string {
+  const first = detail.merge_passport.blockers[0];
+  const cause = first?.message.trim() ?? detail.summary.mergeable.reason?.trim();
+  if (cause && cause.length > 0) {
+    const sentence = /[.!?]$/.test(cause) ? cause : `${cause}.`;
+    return `Merge blocked by the Passport: ${sentence}`;
+  }
+  return 'Merge blocked by the Passport: it has not cleared this head yet.';
+}
+
 /** Exactly one filled button: Approve until approvals are satisfied, then Merge. */
 export function primaryAction(detail: PullRequestDetail): 'approve' | 'merge' | 'none' {
   if (isSettled(detail)) return 'none';
@@ -90,14 +204,6 @@ export interface ApproveAvailability {
   enabled: boolean;
   /** What stands in the way and who clears it; null when approval is open. */
   reason: string | null;
-}
-
-/** `@alton` and `alton` are the same account. */
-function sameAccount(a: string, b: string): boolean {
-  const normalize = (value: string): string =>
-    value.trim().replace(/^@/, '').toLowerCase();
-  const left = normalize(a);
-  return left.length > 0 && left === normalize(b);
 }
 
 /**

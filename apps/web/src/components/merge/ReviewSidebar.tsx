@@ -6,6 +6,16 @@
 // when the server rejects with `merge_sha_stale` the parent surfaces the
 // recovery banner.
 //
+// Once the approval requirement is met the exact-SHA Approve button stops
+// being the primary action — it reads as if the approval were still missing —
+// so it is demoted to "Add your approval" and withdrawn altogether from a
+// reviewer whose approval already stands on this head. The count says who
+// approved and at which SHA.
+//
+// A blocked merge says what blocks it in the same line: "blocked by the
+// Passport" alone leaves the reader asking whether that and a failed gate are
+// two different things.
+//
 // An author cannot approve their own pull request: when the signed-in account
 // is the author the Approve button is disabled and says who has to approve
 // instead, and any refusal the server sends back (`pull_self_approval_forbidden`
@@ -18,11 +28,14 @@ import { ActionButton } from '../action/ActionButton';
 import type { PullRequestDetail } from '../../api/types';
 import { canChangeDraft } from '../../pages/pullDraftModel';
 import {
+  approvalAttribution,
   approvalsLabel,
   approveAvailability,
+  approveCta,
   draftReviewNote,
   isSettled,
   mergeAllowed as canMergeNow,
+  mergeBlockedLine,
   primaryAction,
   settledLine,
   type ApproveRefusal,
@@ -79,6 +92,8 @@ export function ReviewSidebar({
   const reviewState = review.user_review_state ?? null;
   const primary = primaryAction(detail);
   const approve = approveAvailability(detail, viewerLogin);
+  const cta = approveCta(detail, viewerLogin);
+  const attribution = approvalAttribution(detail);
   const draftNote = draftReviewNote(detail);
   const isDraft = detail.summary.draft;
   // The control is offered to whoever the forge would let use it: the author,
@@ -126,6 +141,14 @@ export function ReviewSidebar({
           <p className="review-sidebar__posture">
             <span className="review-sidebar__approvals">{approvalsLabel(review)}</span>
           </p>
+          {attribution ? (
+            <p
+              className="review-sidebar__attribution"
+              data-testid="pr-approval-attribution"
+            >
+              {attribution}
+            </p>
+          ) : null}
         </header>
       </section>
     );
@@ -151,6 +174,14 @@ export function ReviewSidebar({
             </span>
           ) : null}
         </p>
+        {attribution ? (
+          <p
+            className="review-sidebar__attribution"
+            data-testid="pr-approval-attribution"
+          >
+            {attribution}
+          </p>
+        ) : null}
         {reviewState ? (
           <p className="review-sidebar__user-state">
             Your review: <strong>{reviewState}</strong>
@@ -159,15 +190,17 @@ export function ReviewSidebar({
       </header>
 
       <div className="review-sidebar__actions">
-        <ActionButton
-          variant={primary === 'approve' ? 'primary' : 'default'}
-          icon={<Check aria-hidden="true" size={12} />}
-          onClick={handleApprove}
-          disabled={isBusy || !approve.enabled}
-          actionId="pull.approve"
-        >
-          Approve exact SHA {headSha.slice(0, 7)}
-        </ActionButton>
+        {cta.show ? (
+          <ActionButton
+            variant={cta.emphasized ? 'primary' : 'default'}
+            icon={<Check aria-hidden="true" size={12} />}
+            onClick={handleApprove}
+            disabled={isBusy || !approve.enabled}
+            actionId="pull.approve"
+          >
+            {cta.label}
+          </ActionButton>
+        ) : null}
         <ActionButton
           variant="default"
           icon={<XCircle aria-hidden="true" size={12} />}
@@ -305,8 +338,8 @@ export function ReviewSidebar({
         ) : (
           <div className="review-sidebar__merge-blocked">
             <ShieldAlert aria-hidden="true" size={14} />
-            <span>
-              Merge blocked by the Passport. Address blockers below to enable.
+            <span data-testid="pr-merge-blocked">
+              {mergeBlockedLine(detail)} Every blocker is listed below.
             </span>
           </div>
         )}

@@ -43,10 +43,17 @@ const OLD_SHA = '1111111111111111111111111111111111111111';
 const NEW_SHA = '2222222222222222222222222222222222222222';
 const PR_URL = `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/pulls/${PR_NUMBER}`;
 
-/** Locate the Approve button by its exact-SHA label (`head_sha.slice(0,7)`). */
+/**
+ * Locate the Approve button. While the approval requirement is unmet it
+ * carries the exact-SHA label (`head_sha.slice(0,7)`); once the requirement is
+ * met the same control is demoted to "Add your approval".
+ */
 function approveButton(page: import('@playwright/test').Page) {
   return page.getByRole('button', {
-    name: new RegExp(`Approve exact SHA ${OLD_SHA.slice(0, 7)}`, 'i'),
+    name: new RegExp(
+      `Approve exact SHA ${OLD_SHA.slice(0, 7)}|Add your approval`,
+      'i'
+    ),
   });
 }
 

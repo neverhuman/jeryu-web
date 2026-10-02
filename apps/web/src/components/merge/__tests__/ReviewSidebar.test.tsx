@@ -12,7 +12,10 @@
 //      each routing the chosen method into `onMerge`.
 //   4. Disable every action while a mutation is in-flight (`isBusy`).
 //   5. Toggle the request-changes composer and submit a trimmed body.
-//   6. Explain a self-approval: the author's own Approve is disabled and names
+//   6. Say what the approval posture is: once the requirement is met the
+//      exact-SHA Approve stops being the primary action and names who
+//      approved at which SHA, and a blocked merge says what blocks it.
+//   7. Explain a self-approval: the author's own Approve is disabled and names
 //      who has to approve instead, and a refusal from the server is shown with
 //      its next step.
 
@@ -20,7 +23,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { PullRequestDetail } from '../../../api/types';
+import type { PullRequestDetail, PullRequestReview } from '../../../api/types';
 import { ReviewSidebar } from '../ReviewSidebar';
 import { approveRefusal, draftRefusal } from '../pullReviewModel';
 
@@ -39,6 +42,8 @@ function makeDetail(
     state?: 'open' | 'closed' | 'merged';
     author?: string;
     draft?: boolean;
+    reviews?: PullRequestReview[];
+    blockers?: PullRequestDetail['merge_passport']['blockers'];
   } = {}
 ): PullRequestDetail {
   const passport = over.passport ?? 'blocked';
@@ -85,12 +90,13 @@ function makeDetail(
     description: null,
     head_tree_sha: null,
     base_tree_sha: null,
-    reviews: [],
+    reviews: over.reviews ?? [],
     merge_passport: {
       status: passport,
       head_sha: HEAD_SHA,
       blockers:
-        passport === 'blocked'
+        over.blockers ??
+        (passport === 'blocked'
           ? [
               {
                 code: 'passport_blocked_approvals',
@@ -98,10 +104,25 @@ function makeDetail(
                 details: null,
               },
             ]
-          : [],
+          : []),
       evaluated_at: '2026-05-26T00:00:00Z',
     },
     passport_hash: over.passport_hash ?? 'hash-1',
+  };
+}
+
+function approvalRow(over: Partial<PullRequestReview> = {}): PullRequestReview {
+  return {
+    id: 'rev-1',
+    author: '@red-team',
+    state: 'approved',
+    body_markdown: null,
+    submitted_at: '2026-05-26T00:00:00Z',
+    head_sha: HEAD_SHA,
+    dismissed_review_id: null,
+    effective: true,
+    stale: false,
+    ...over,
   };
 }
 
@@ -471,5 +492,113 @@ describe('the draft lifecycle controls', () => {
     const note = screen.getByTestId('pr-draft-error').textContent ?? '';
     expect(note).toContain('Not marked ready for review');
     expect(note).toContain('Ask the author, or an administrator');
+  });
+});
+
+describe('ReviewSidebar approval posture', () => {
+  const met = (): { approvals: number; required_approvals: number; reviews: PullRequestReview[] } => ({
+    approvals: 1,
+    required_approvals: 1,
+    reviews: [approvalRow()],
+  });
+
+  it('demotes Approve once the requirement is met and names the approver', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ ...met(), passport: 'blocked' })}
+        viewerLogin="reviewer"
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(screen.getByText('1 of 1 approvals')).toBeInTheDocument();
+    expect(screen.getByTestId('pr-approval-attribution')).toHaveTextContent(
+      `Approved by @red-team at ${HEAD_SHA.slice(0, 7)}`
+    );
+    // The requirement is met, so no button claims to be the primary action.
+    const approve = screen.getByRole('button', { name: 'Add your approval' });
+    expect(approve).toBeEnabled();
+    expect(approve.className).not.toContain('action-button--primary');
+    expect(
+      screen.queryByRole('button', { name: /Approve exact SHA/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it('withdraws the control from a reviewer who already approved this SHA', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ ...met(), passport: 'blocked' })}
+        viewerLogin="red-team"
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(
+      screen.queryByRole('button', { name: /Add your approval|Approve exact SHA/ })
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('pr-approval-attribution')).toHaveTextContent(
+      '@red-team',
+    );
+  });
+
+  it('keeps the exact-SHA ask when the approval stands on another SHA', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({
+          approvals: 0,
+          required_approvals: 1,
+          reviews: [approvalRow({ head_sha: 'old0000', stale: true, effective: false })],
+        })}
+        viewerLogin="red-team"
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(
+      screen.getByRole('button', { name: /Approve exact SHA/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('pr-approval-attribution')
+    ).not.toBeInTheDocument();
+  });
+
+  it("says what blocks the merge, not only that the Passport blocks it", () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({
+          passport: 'blocked',
+          blockers: [
+            {
+              code: 'passport_blocked_checks',
+              message: 'Required check jeryu-deploy/required is failing.',
+              details: null,
+            },
+            {
+              code: 'passport_blocked_approvals',
+              message: 'Approvals not met.',
+              details: null,
+            },
+          ],
+        })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('pr-merge-blocked')).toHaveTextContent(
+      'Merge blocked by the Passport: Required check jeryu-deploy/required is failing. Every blocker is listed below.'
+    );
+  });
+
+  it('falls back to the mergeability reason when the Passport lists no blocker', () => {
+    render(
+      <ReviewSidebar
+        detail={makeDetail({ passport: 'pass', can_merge: false, blockers: [] })}
+        onApprove={vi.fn()}
+        onMerge={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('pr-merge-blocked')).toHaveTextContent(
+      'Merge blocked by the Passport: Passport blocked.'
+    );
   });
 });

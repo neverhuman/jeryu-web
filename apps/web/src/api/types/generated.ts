@@ -33,6 +33,7 @@ export type { MarkdownHeading } from '../../../../../contracts/generated/Markdow
 export type { MarkdownLink } from '../../../../../contracts/generated/MarkdownLink';
 export type { PullRequestSummary } from '../../../../../contracts/generated/PullRequestSummary';
 export type { PullRequestDetail } from '../../../../../contracts/generated/PullRequestDetail';
+export type { PullRequestReview } from '../../../../../contracts/generated/PullRequestReview';
 export type { PullRequestState } from '../../../../../contracts/generated/PullRequestState';
 export type { MergePassport } from '../../../../../contracts/generated/MergePassport';
 export type { MergePassportBlocker } from '../../../../../contracts/generated/MergePassportBlocker';
