@@ -6,8 +6,10 @@
 // on top, finished todos and finished shifts folded away. Each row wears its
 // family at the far left; the pill filters the whole page to that family
 // (`?family=`), and pressing it again, or All, shows every family. A row expands
-// to the body, note and attempt history; its id opens the todo's own page. Admins get release / block / priority /
-// now-night row actions and "Open review PR" on each shift.
+// to the body, note and attempt history; its id opens the todo's own page.
+// Admins get release / block / priority / now-night row actions and "Open review
+// PR" on each shift. What waits on a person is one red count linking to Needs
+// you, not a copy of that list above the queue.
 
 import { GitBranch, Inbox } from 'lucide-react';
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
@@ -24,7 +26,6 @@ import {
   useShiftShiftsByFamily,
   useShiftTodos,
 } from '../../hooks/useShift';
-import { NeedsYouHere } from '../needsYou/NeedsYouHere';
 import { ShiftError } from './shiftCommon';
 import {
   DEFAULT_QUEUE_FILTERS,
@@ -108,8 +109,6 @@ export function ShiftQueuePage(): JSX.Element {
           Add work, see who is working, and follow every family&apos;s queue to main.
         </p>
       </header>
-
-      <NeedsYouHere area="work" family={family} onFamily={setFamily} />
 
       {families.isPending ? (
         <LoadingState title="Loading shift families…" variant="message" />

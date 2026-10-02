@@ -113,15 +113,15 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('todo-page')).toBeVisible();
     // The badge counts critical + action (not watch) and follows the operator.
     await expect(page.getByTestId('needs-you-badge')).toHaveText('3');
-    // Each page carries its own share, and Work shows its row above the queue.
+    // Each page carries its own share in the nav.
     await expect(page.getByTestId('nav-badge-work')).toHaveText('1');
     await expect(page.getByTestId('nav-badge-releases')).toHaveText('1');
     await expect(page.getByTestId('nav-badge-system')).toHaveText('1');
     await expect(page.getByTestId('nav-badge-pulls')).toHaveCount(0);
+    // Work does not repeat Needs you above the queue: its red count links there.
     await page.getByTestId('todo-page').getByRole('link', { name: 'Work', exact: true }).click();
-    await expect(
-      page.getByTestId('needs-you-here-work').getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66')
-    ).toBeVisible();
+    await expect(page.getByTestId('shift-queue-page')).toBeVisible();
+    await expect(page.getByTestId('needs-you-here-work')).toHaveCount(0);
   });
 
   test('narrow screens: the header never overflows and a Needs-you title keeps its width @action:chrome.narrow_header', async ({
