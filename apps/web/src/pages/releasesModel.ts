@@ -15,6 +15,7 @@ import type {
   EnvironmentSummary,
 } from '../api/types/deployments';
 import { queueHref, repoWorkHref, WORK_PATH } from './shift/workPaths';
+import { IN_FLIGHT_PATH } from './pullRoomModel';
 
 /** Conventional environments shown even before they have a deployment. */
 export const EXPECTED_ENVIRONMENTS = ['production', 'stable', 'canary', 'dev'] as const;
@@ -237,7 +238,7 @@ export function splitEnvironments(rows: EnvironmentRow[]): {
 }
 
 /**
- * Where merged-but-not-released work is read now: the Pull requests timeline,
+ * Where merged-but-not-released work is read now: In flight,
  * whose bands run from "merged, not yet released" down to what production runs.
  * This page answers the other half — what each environment runs — and links
  * across rather than listing pull requests itself.
@@ -248,7 +249,7 @@ export function timelineHref(scope: { repo?: string | null; family?: string | nu
     : scope.repo
       ? `?repo=${encodeURIComponent(scope.repo)}`
       : '';
-  return `/pull-room${query}`;
+  return `${IN_FLIGHT_PATH}${query}`;
 }
 
 /** Work scoped as the Releases page is: to the family, or to the repository's todos. */

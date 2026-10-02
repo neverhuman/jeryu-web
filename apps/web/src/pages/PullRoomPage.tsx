@@ -219,7 +219,7 @@ export function PullRoomPage(): JSX.Element {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
         <header className="page__header">
-          <h1 className="page__title">Pull requests</h1>
+          <h1 className="page__title">In flight</h1>
         </header>
         <p className="page__roadmap-note">Loading pull requests.</p>
       </div>
@@ -230,7 +230,7 @@ export function PullRoomPage(): JSX.Element {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
         <header className="page__header">
-          <h1 className="page__title">Pull requests</h1>
+          <h1 className="page__title">In flight</h1>
         </header>
         <p className="page__roadmap-note">
           {snapshot.error?.message ?? 'Pull requests are unavailable right now.'}
@@ -254,9 +254,9 @@ export function PullRoomPage(): JSX.Element {
     <div className="page page--full pull-room" data-testid="pull-room-page">
       <header className="page__header pull-room__header">
         <div>
-          <h1 className="page__title">Pull requests</h1>
+          <h1 className="page__title">In flight</h1>
           <p className="page__subtitle">
-            Open pull requests across every repository.
+            Every change between claimed work and release, across every repository.
           </p>
           <p className="pull-room__sentence" data-testid="pull-room-sentence">
             {pullCountsSentence(

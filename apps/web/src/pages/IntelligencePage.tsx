@@ -26,6 +26,7 @@ import {
 
 import './page.css';
 import './IntelligencePage.css';
+import { IN_FLIGHT_PATH } from './pullRoomModel';
 
 export function IntelligencePage(): JSX.Element {
   const query = useControlPlane();
@@ -127,7 +128,7 @@ function IntelligenceSnapshot({
           <MetricCard
             icon={<GitPullRequest size={18} aria-hidden="true" />}
             label="Open PRs"
-            to="/pull-room"
+            to={IN_FLIGHT_PATH}
             value={snapshot.summary.openPrCount}
             detail={`${snapshot.summary.missingCheckPrCount} missing checks`}
             state={

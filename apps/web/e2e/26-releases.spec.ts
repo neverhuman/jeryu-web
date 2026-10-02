@@ -123,9 +123,9 @@ test('environments show the live release, rollback target and unshipped PRs @act
     '/repos/jeryu/jeryu/jeryu-deploy/pulls/21'
   );
   await expect(page.getByRole('heading', { name: 'Merged, not yet released' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Pull requests timeline' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'In flight' })).toHaveAttribute(
     'href',
-    '/pull-room?repo=jeryu%2Fjeryu-deploy'
+    '/in-flight?repo=jeryu%2Fjeryu-deploy'
   );
   await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
   // No attention feed for this viewer: no staged banner.

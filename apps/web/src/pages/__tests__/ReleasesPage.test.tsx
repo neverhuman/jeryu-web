@@ -111,14 +111,14 @@ describe('ReleasesPage', () => {
     expect(unpinned).not.toHaveTextContent('jeryu-core');
     expect(within(unpinned).getByRole('link', { name: 'See what a bump would ship' })).toHaveAttribute(
       'href',
-      '/pull-room?repo=jeryu%2Fjeryu-deploy'
+      '/in-flight?repo=jeryu%2Fjeryu-deploy'
     );
     // This page is about environments: pull requests are the timeline's job,
     // and the header says so with a link instead of listing them here.
     expect(screen.queryByRole('heading', { name: 'Merged, not yet released' })).not.toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Pull requests timeline' })
-    ).toHaveAttribute('href', '/pull-room?repo=jeryu%2Fjeryu-deploy');
+      screen.getByRole('link', { name: 'In flight' })
+    ).toHaveAttribute('href', '/in-flight?repo=jeryu%2Fjeryu-deploy');
     // The scope is a real select that always offers the current repository.
     expect(screen.getByLabelText('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
     // Nothing was ever deployed to stable, canary or dev: they are named in a

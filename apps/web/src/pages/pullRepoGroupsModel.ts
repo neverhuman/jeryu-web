@@ -1,4 +1,4 @@
-// pullRepoGroupsModel.ts — the Pull requests timeline grouped the way work is
+// pullRepoGroupsModel.ts — the In flight timeline grouped the way work is
 // actually owned: one section per repository, and inside it ONE list of rows.
 //
 // A row is a branch in flight: either shift work that has reached a branch but

@@ -55,7 +55,7 @@ describe('LeftNav', () => {
       'Needs you',
       'Activity',
       'Work',
-      'Pull requests',
+      'In flight',
       'Releases',
       'Repositories',
     ]);
@@ -105,7 +105,7 @@ describe('LeftNav', () => {
 
   it('names the repository whose pull requests the repo link opens', () => {
     renderAt('/repos/jeryu/jeryu/jeryu-web/code');
-    expect(screen.getByRole('link', { name: 'Pull requests' })).toHaveAttribute('href', '/pull-room');
+    expect(screen.getByRole('link', { name: 'In flight' })).toHaveAttribute('href', '/in-flight');
     expect(screen.getByRole('link', { name: 'Pull requests in jeryu/jeryu-web' })).toHaveAttribute(
       'href',
       '/repos/jeryu/jeryu/jeryu-web/pulls'

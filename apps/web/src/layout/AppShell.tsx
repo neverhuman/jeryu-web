@@ -33,6 +33,7 @@ import { NEEDS_YOU_PATH, homePathFor } from './HomeRedirect';
 import { PublicRepoShell } from './PublicRepoShell';
 
 import './AppShell.css';
+import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 
 const AUTH_PATHS = new Set(['/login', '/signup']);
 
@@ -120,8 +121,8 @@ export function AppShell(): JSX.Element {
     group: 'Navigation',
     enabled: !!auth.user,
   });
-  useKeyboardShortcut('g m', () => navigate('/pull-room'), {
-    label: 'Go to Pull requests',
+  useKeyboardShortcut('g m', () => navigate(IN_FLIGHT_PATH), {
+    label: 'Go to In flight',
     group: 'Navigation',
     enabled: !!auth.user,
   });

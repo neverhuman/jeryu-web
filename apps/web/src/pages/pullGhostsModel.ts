@@ -1,6 +1,6 @@
 // pullGhostsModel.ts — shift work that has not opened a pull request yet.
 //
-// The Pull requests timeline reads future → present → past: these "ghost" rows
+// The In flight timeline reads future → present → past: these "ghost" rows
 // sit above the real PR rows, so incoming work is visible before it exists as a
 // PR. Everything is pure and deterministic given `options.now`; the lifecycle
 // itself is `todoTrace` from the Work page — this module only admits, groups and

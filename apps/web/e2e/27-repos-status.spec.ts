@@ -76,9 +76,9 @@ test('a failing repository opens what is failing and what to do, in place @actio
   await expect(detail).toContainText('score 84 < floor 85');
   await expect(detail).toContainText('caps applied: missing-rendered-ux-qa-lane');
   await expect(detail).toContainText('Raise the audit score to the floor');
-  await expect(detail.getByRole('link', { name: 'Pull requests of jeryu/jeryu-web' })).toHaveAttribute(
+  await expect(detail.getByRole('link', { name: 'In flight for jeryu/jeryu-web' })).toHaveAttribute(
     'href',
-    '/pull-room?repo=jeryu%2Fjeryu-web'
+    '/in-flight?repo=jeryu%2Fjeryu-web'
   );
 
   await chip.click();

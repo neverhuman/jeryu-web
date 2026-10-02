@@ -32,9 +32,9 @@ export const FEATURES: readonly FeatureSlide[] = [
   },
   {
     id: 'pull-room',
-    label: 'PULL REQUESTS',
-    title: 'Pull requests',
-    tagline: 'Every open pull request in one place: triage lanes and three-pane diff review.',
+    label: 'IN FLIGHT',
+    title: 'In flight',
+    tagline: 'Every change on its way to a release: shift work, open pull requests and their checks, in one place.',
     accent: 'var(--color-accent-success)',
     preview: `OPEN ──── CHECKS ──── REVIEW ─── MERGE
  #128     running      2 ✎      ✓ ready

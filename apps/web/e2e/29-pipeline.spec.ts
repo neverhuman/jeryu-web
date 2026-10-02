@@ -299,7 +299,7 @@ test.describe('Pipeline visibility', () => {
     const unpinned = page.getByTestId('releases-unpinned');
     await expect(unpinned).toContainText("jeryu-web has 9 merged commits not in this repo's pin");
     await unpinned.getByRole('link', { name: 'See what a bump would ship' }).click();
-    await expect(page).toHaveURL(/\/pull-room\?repo=jeryu%2Fjeryu-deploy$/);
+    await expect(page).toHaveURL(/\/in-flight\?repo=jeryu%2Fjeryu-deploy$/);
   });
 
   test('an open bump PR is the next step, and an older server stays quiet @action:releases.ready_to_pin', async ({

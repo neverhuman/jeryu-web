@@ -6,6 +6,9 @@ import type {
   PullRequestSummary,
 } from '../api/types';
 
+/** Where every change between claimed work and release is shown (once `/pull-room`). */
+export const IN_FLIGHT_PATH = '/in-flight';
+
 export type CheckPosture =
   | 'missing'
   | 'failing'
@@ -308,12 +311,12 @@ export function cardFacts(item: PullListItem): string[] {
 
 /** Pull Room filtered to one repo (`owner/name`). */
 export function pullRoomHref(repo: string): string {
-  return `/pull-room?repo=${encodeURIComponent(repo)}`;
+  return `${IN_FLIGHT_PATH}?repo=${encodeURIComponent(repo)}`;
 }
 
 /** Pull Room scoped to the repos of one family. */
 export function pullRoomFamilyHref(family: string): string {
-  return `/pull-room?family=${encodeURIComponent(family)}`;
+  return `${IN_FLIGHT_PATH}?family=${encodeURIComponent(family)}`;
 }
 
 /** Keep only PRs whose repo (`owner/name`) is in `repos`; `null` keeps all. */

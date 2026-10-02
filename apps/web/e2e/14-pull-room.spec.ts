@@ -36,7 +36,7 @@ test('Pull requests shows every open pull request as a timeline row, filters, an
   await expect(page.getByTestId('pull-room-sentence')).toHaveText(
     '2 open · 1 waiting on checks · 1 stopped by a failing check'
   );
-  await expect(page.getByText('Open pull requests across every repository.')).toBeVisible();
+  await expect(page.getByText('Every change between claimed work and release, across every repository.')).toBeVisible();
   await expect(page.getByText('Tooling opportunities')).toHaveCount(0);
   await expect(page.getByText(/tool clusters/i)).toHaveCount(0);
 
@@ -88,7 +88,7 @@ test('Pull requests filters by family from a pill, and one repo that does not an
   await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toBeVisible();
 
   await pills.getByRole('button', { name: /^core/ }).click();
-  await expect(page).toHaveURL(/\/pull-room\?family=core$/);
+  await expect(page).toHaveURL(/\/in-flight\?family=core$/);
   await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible();
   await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toHaveCount(0);
   await expect(page.getByText(/did not answer/)).toHaveCount(0);
@@ -113,7 +113,7 @@ test('Pull Room follows repository URLs and browser history @action:pull_room.fi
   await page.getByRole('combobox', { name: 'State', exact: true }).selectOption('open');
 
   await page.evaluate(() => {
-    window.history.pushState(null, '', '/pull-room?repo=bob%2Fjeryu&view=queue');
+    window.history.pushState(null, '', '/in-flight?repo=bob%2Fjeryu&view=queue');
     window.dispatchEvent(new PopStateEvent('popstate'));
   });
   await expect(repo).toHaveValue('bob/jeryu');
@@ -125,7 +125,7 @@ test('Pull Room follows repository URLs and browser history @action:pull_room.fi
   await page.goForward();
   await expect(repo).toHaveValue('bob/jeryu');
   await repo.selectOption('all');
-  await expect(page).toHaveURL(/\/pull-room\?view=queue$/);
+  await expect(page).toHaveURL(/\/in-flight\?view=queue$/);
   await expect(page.getByText('Fix BFF PR list')).toBeVisible();
   await expect(page.getByText('Repair check posture')).toBeVisible();
   await testInfo.attach('pull-room-url-navigation', {
@@ -188,7 +188,7 @@ test('Pull requests reads every open pull request out of a paged snapshot, and e
 
   // Selecting a family scopes the page through `?family=`.
   await pills.getByRole('button', { name: /^tooling/ }).click();
-  await expect(page).toHaveURL(/\/pull-room\?view=board&family=tooling$/);
+  await expect(page).toHaveURL(/\/in-flight\?view=board&family=tooling$/);
   await expect(page.getByTestId('pull-room-sentence')).toHaveText(
     '0 open · 0 waiting on checks · 0 stopped by a failing check'
   );

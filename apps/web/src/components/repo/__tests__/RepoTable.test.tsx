@@ -54,7 +54,7 @@ describe('RepoTable', () => {
     const user = userEvent.setup();
     const router = createMemoryRouter([
       { path: '/', element: <RepoTable repos={[REPO]} /> },
-      { path: '/pull-room', element: <h1>Pull requests</h1> },
+      { path: '/in-flight', element: <h1>Pull requests</h1> },
       { path: '/repos/*', element: <h1>Repository</h1> },
     ]);
     render(<RouterProvider router={router} />);
@@ -64,7 +64,7 @@ describe('RepoTable', () => {
       link.focus();
       await user.keyboard('{Enter}');
     }
-    expect(router.state.location.pathname).toBe('/pull-room');
+    expect(router.state.location.pathname).toBe('/in-flight');
     expect(new URLSearchParams(router.state.location.search).get('repo')).toBe('neverhuman/jeryu-core');
     expect(screen.getByRole('heading', { name: 'Pull requests' })).toBeInTheDocument();
   });
@@ -216,8 +216,8 @@ describe('RepoTable', () => {
     expect(screen.getByText(/^Raise the audit score to the floor/)).toBeInTheDocument();
     expect(calls[0]).toContain('/api/v3/repos/neverhuman/jeryu-core/commits/main/check-runs');
     expect(
-      screen.getByRole('link', { name: 'Pull requests of neverhuman/jeryu-core' })
-    ).toHaveAttribute('href', '/pull-room?repo=neverhuman%2Fjeryu-core');
+      screen.getByRole('link', { name: 'In flight for neverhuman/jeryu-core' })
+    ).toHaveAttribute('href', '/in-flight?repo=neverhuman%2Fjeryu-core');
 
     await user.click(chip);
     expect(chip).toHaveAttribute('aria-expanded', 'false');

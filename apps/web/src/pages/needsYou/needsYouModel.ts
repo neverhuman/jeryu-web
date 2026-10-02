@@ -226,15 +226,15 @@ export function filterByFamily<T extends Pick<AttentionItem, 'family' | 'repo'>>
 
 /**
  * The page where a row's cause lives, so each page can show its own share of
- * "Needs you": todos and shifts on Work, pull requests and their queue on Pull
- * requests, staging, deploys and pins on Releases, gate runners and workers
+ * "Needs you": todos and shifts on Work, pull requests and their queue on In
+ * flight, staging, deploys and pins on Releases, gate runners and workers
  * under System. A kind with no home stays on Needs you only.
  */
 export type AttentionArea = 'work' | 'pulls' | 'releases' | 'system';
 
 export const AREA_LABEL: Record<AttentionArea, string> = {
   work: 'Work',
-  pulls: 'Pull requests',
+  pulls: 'In flight',
   releases: 'Releases',
   system: 'Runners',
 };

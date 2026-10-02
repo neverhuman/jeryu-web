@@ -244,9 +244,9 @@ describe('one Releases page', () => {
   });
 
   it('sends merged-but-not-released questions to the Pull requests timeline', () => {
-    expect(timelineHref({ repo: 'jeryu/jeryu-web' })).toBe('/pull-room?repo=jeryu%2Fjeryu-web');
-    expect(timelineHref({ family: 'jeryu' })).toBe('/pull-room?family=jeryu');
-    expect(timelineHref({})).toBe('/pull-room');
+    expect(timelineHref({ repo: 'jeryu/jeryu-web' })).toBe('/in-flight?repo=jeryu%2Fjeryu-web');
+    expect(timelineHref({ family: 'jeryu' })).toBe('/in-flight?family=jeryu');
+    expect(timelineHref({})).toBe('/in-flight');
   });
 
   it('sends work not yet on a pull request to Work, scoped the same way', () => {

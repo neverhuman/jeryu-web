@@ -42,7 +42,7 @@ describe('ReadyToPin', () => {
     expect(within(web).getByText('9 merged commits not pinned yet')).not.toHaveClass('page__pill--danger');
     expect(within(web).getByRole('link', { name: 'jeryu-web' })).toHaveAttribute(
       'href',
-      '/pull-room?repo=jeryu%2Fjeryu-web'
+      '/in-flight?repo=jeryu%2Fjeryu-web'
     );
     const ships = within(web).getByText('What a bump would ship (2 of 9)');
     expect(ships.closest('details')).not.toHaveAttribute('open');

@@ -43,7 +43,7 @@ describe('useShellCommands', () => {
       useCommandStore.getState().commands.find((c) => c.id === id)?.title;
     // The account control says "Settings", so the palette does not say something else.
     expect(title('nav.settings')).toBe('Go to Settings');
-    expect(title('nav.pull-room')).toBe('Go to Pull requests');
+    expect(title('nav.pull-room')).toBe('Go to In flight');
     expect(title('nav.fleet')).toBe('Go to Runners');
   });
 
@@ -70,7 +70,7 @@ describe('useShellCommands', () => {
       'g w': '/work',
       'g a': '/activity',
       'g l': '/releases',
-      'g m': '/pull-room',
+      'g m': '/in-flight',
       'g f': '/runners',
       'g i': '/intelligence',
       'g t': '/shared-tools',

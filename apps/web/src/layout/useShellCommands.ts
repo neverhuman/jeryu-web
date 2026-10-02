@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { useCommandStore, type Command } from '../stores/commandStore';
 import { usePreferencesStore } from '../stores/preferencesStore';
+import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 
 export function useShellCommands(): void {
   const register = useCommandStore((s) => s.register);
@@ -68,10 +69,10 @@ export function useShellCommands(): void {
       },
       {
         id: 'nav.pull-room',
-        title: 'Go to Pull requests',
-        keywords: ['pr', 'pull', 'merge', 'review', 'pull room'],
+        title: 'Go to In flight',
+        keywords: ['in flight', 'pr', 'pull', 'merge', 'review', 'pull room', 'pull requests'],
         icon: 'git-merge',
-        target: { kind: 'route', path: '/pull-room' },
+        target: { kind: 'route', path: IN_FLIGHT_PATH },
         shortcut: 'g m',
       },
       {

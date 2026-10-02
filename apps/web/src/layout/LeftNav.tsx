@@ -46,6 +46,7 @@ import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
+import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 
 interface NavItem {
   to: string;
@@ -65,8 +66,10 @@ export const PRIMARY_NAV: NavItem[] = [
   { to: NEEDS_YOU_PATH, label: 'Needs you', icon: Siren, badge: 'attention' },
   { to: '/activity', label: 'Activity', icon: Activity },
   { to: '/work', label: 'Work', icon: ClipboardList, badge: 'work' },
-  // The route stays `/pull-room`; the page lists pull requests, so it says so.
-  { to: '/pull-room', label: 'Pull requests', icon: GitMerge, badge: 'pulls' },
+  // Every change between claimed work and release: shift work not yet a pull
+  // request, open pull requests, and what waits for a release. A repository's
+  // own pull requests are its Pull requests tab.
+  { to: IN_FLIGHT_PATH, label: 'In flight', icon: GitMerge, badge: 'pulls' },
   { to: '/releases', label: 'Releases', icon: Rocket, badge: 'releases' },
   { to: '/repos', label: 'Repositories', icon: FolderGit2 },
   // Settings is reached from the top-right account control (UserMenu).

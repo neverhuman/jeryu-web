@@ -74,7 +74,7 @@ export function RepoFailingChecks({
           ))}
         </ul>
       )}
-      <Link to={pullRoomHref(fullName)}>Pull requests of {fullName}</Link>
+      <Link to={pullRoomHref(fullName)}>In flight for {fullName}</Link>
     </div>
   );
 }

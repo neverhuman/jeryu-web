@@ -207,8 +207,8 @@ test.describe('Primary left navigation', () => {
         testId: 'activity-page',
       },
       {
-        label: 'Pull requests',
-        path: '/pull-room',
+        label: 'In flight',
+        path: '/in-flight',
         testId: 'pull-room-page',
       },
       {

@@ -166,7 +166,7 @@ describe('RepositoryFamilyPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: '7 open pull requests, see them' })
-    ).toHaveAttribute('href', '/pull-room?family=veox-split');
+    ).toHaveAttribute('href', '/in-flight?family=veox-split');
     expect(screen.getByLabelText('4 failing checks')).toBeInTheDocument();
     expect(screen.getByLabelText('3 running jobs')).toBeInTheDocument();
     const browser = screen.getByRole('region', {

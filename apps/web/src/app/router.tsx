@@ -47,6 +47,7 @@ import {
   ADOPTION_PATH,
   FINDINGS_PATH,
 } from '../pages/sharedTools/SharedToolsTabs';
+import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 
 const AUDIT_MOVED_TO = {
   what: 'Recorded events (who changed what, and when) are on Activity.',
@@ -58,6 +59,12 @@ const AUDIT_MOVED_TO = {
 function ToolFleetToolRedirect(): JSX.Element {
   const { tool = '' } = useParams();
   return <Navigate to={`${ADOPTION_PATH}/${encodeURIComponent(tool)}`} replace />;
+}
+
+/** `/pull-room` (the page's first name) -> In flight, keeping its query string. */
+function PullRoomRedirect(): JSX.Element {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: IN_FLIGHT_PATH, search, hash }} replace />;
 }
 
 /** An old Work URL -> `/work`, keeping its query string; `hash` names a place on the page. */
@@ -103,7 +110,9 @@ export const router = createBrowserRouter([
       { path: 'work/shift/workers', element: <WorkRedirect hash="workers" /> },
       // The item tracker is retired; its detail links land on Work.
       { path: 'work/:key', element: <Navigate to={WORK_PATH} replace /> },
-      { path: 'pull-room', element: <PullRoomPage /> },
+      { path: IN_FLIGHT_PATH.slice(1), element: <PullRoomPage /> },
+      // The page's first name; links and bookmarks keep working, filters too.
+      { path: 'pull-room', element: <PullRoomRedirect /> },
       // `/releases?family=x` (the board) redirects to `/releases/family/x`.
       { path: 'releases', element: <ReleasesRoute /> },
       // One family's release board; each lane is `#lane-<id>` on it.
