@@ -10,6 +10,7 @@
 import { Link } from 'react-router-dom';
 
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
+import { pillClass } from '../../components/tone/tone';
 import { useAuth } from '../../hooks/useAuth';
 import { useAttention } from '../../hooks/usePipeline';
 import { AttentionRow, useRepoFamilies } from './AttentionRow';
@@ -71,7 +72,7 @@ export function NeedsYouHere({
       data-testid={`needs-you-here-${area}`}
     >
       <h2 className="page__section-title">
-        <span className="page__pill page__pill--danger">{subjects.length}</span>{' '}
+        <span className={pillClass('human')}>{subjects.length}</span>{' '}
         Waiting on you in {AREA_LABEL[area]}
         {/* The family the strip is showing stays on the link: Needs you opens
             on the same rows, not on every family's. */}

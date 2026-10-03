@@ -110,13 +110,14 @@ describe('activityModel', () => {
     expect(minSeq([])).toBeNull();
   });
 
-  it('tones rows: red for needs-human and failures, amber for retries, green for clean finishes', () => {
-    expect(eventTone({ needs_human: true, outcome: 'success' })).toBe('danger');
-    expect(eventTone({ needs_human: false, outcome: 'failure' })).toBe('danger');
-    expect(eventTone({ needs_human: false, outcome: 'timed_out' })).toBe('danger');
-    expect(eventTone({ needs_human: false, outcome: 'retry' })).toBe('warning');
-    expect(eventTone({ needs_human: false, outcome: 'done' })).toBe('success');
-    expect(eventTone({ needs_human: false, outcome: null })).toBe('info');
+  it('keeps the human tone for needs-human alone: a failure gets its own', () => {
+    expect(eventTone({ needs_human: true, outcome: 'success' })).toBe('human');
+    // An agent picks a failed gate up itself, so it is never the red one.
+    expect(eventTone({ needs_human: false, outcome: 'failure' })).toBe('failed');
+    expect(eventTone({ needs_human: false, outcome: 'timed_out' })).toBe('failed');
+    expect(eventTone({ needs_human: false, outcome: 'retry' })).toBe('warn');
+    expect(eventTone({ needs_human: false, outcome: 'done' })).toBe('ok');
+    expect(eventTone({ needs_human: false, outcome: null })).toBe('unknown');
   });
 
   it('links an event to its todo, its PR, or its repo, on the forge it names', () => {

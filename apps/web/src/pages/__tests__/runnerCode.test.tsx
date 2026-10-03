@@ -231,7 +231,7 @@ describe('FleetPage runner code', () => {
     expect(screen.getByTestId('fleet-node-code-gate-b_slot0')).toHaveTextContent('b2c3d4e · differs');
     const build = screen.getByTestId('fleet-forge-build');
     expect(build).toHaveTextContent('Forge 5.0.0 · server b2c3d4e · web c3d4e5f');
-    expect(build.className).not.toContain('fleet__tone--warning');
+    expect(build.className).not.toContain('fleet__tone--warn');
   });
 
   it('warns when the served page is not the web bundle the forge pins', () => {
@@ -241,7 +241,7 @@ describe('FleetPage runner code', () => {
     );
     const build = screen.getByTestId('fleet-forge-build');
     expect(build).toHaveTextContent('web c3d4e5f · this page d4e5f60');
-    expect(build.className).toContain('fleet__tone--warning');
+    expect(build.className).toContain('fleet__tone--warn');
   });
 
   it('looks as before when an older forge sends no code and the page knows no commit', () => {

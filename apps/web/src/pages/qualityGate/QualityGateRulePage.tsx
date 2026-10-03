@@ -8,6 +8,7 @@
 import { ChevronLeft, ShieldCheck } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
+import { pillClass, scoreTone } from '../../components/tone/tone';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useQualityGateRule } from '../../hooks/useQualityGate';
 import { QualityGateQueryState } from './QualityGateQueryState';
@@ -89,13 +90,7 @@ export function QualityGateRulePage(): JSX.Element {
                       <When at={head.scored_at} />
                     </td>
                     <td className="quality-gate__num">
-                      <span
-                        className={
-                          head.score < head.threshold
-                            ? 'page__pill page__pill--danger'
-                            : 'page__pill page__pill--success'
-                        }
-                      >
+                      <span className={pillClass(scoreTone(head.score, head.threshold))}>
                         {head.score} / {head.threshold}
                       </span>
                     </td>

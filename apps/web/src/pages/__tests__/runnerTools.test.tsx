@@ -231,12 +231,12 @@ describe('runner tools model', () => {
     const [audit] = state.audits;
     expect(audit.kind).toBe('audit');
     // Scored means the report was recorded, not that the code passed.
-    expect(rowLast(audit)).toMatchObject({ verb: 'scored', tone: 'neutral', subject: 'acme/widgets#12' });
+    expect(rowLast(audit)).toMatchObject({ verb: 'scored', tone: 'unknown', subject: 'acme/widgets#12' });
     const outcomes: [string, string, RowTone][] = [
-      ['failed', 'failed', 'danger'],
-      ['tool-failed', 'tool failed', 'warning'],
-      ['refused', 'refused', 'warning'],
-      ['cancelled', 'errored', 'danger'],
+      ['failed', 'failed', 'failed'],
+      ['tool-failed', 'tool failed', 'warn'],
+      ['refused', 'refused', 'warn'],
+      ['cancelled', 'errored', 'failed'],
     ];
     for (const [conclusion, verb, tone] of outcomes) {
       const last = audit.lastActivity ? { ...audit.lastActivity, conclusion } : null;
@@ -344,7 +344,7 @@ describe('FleetPage evaluation tools', () => {
     );
     const header = screen.getByTestId('fleet-scorer-summary');
     expect(header).toHaveTextContent('Gates evaluate with jankurai 1.6.11 (b05c03b)');
-    expect(header.className).not.toContain('fleet__tone--warning');
+    expect(header.className).not.toContain('fleet__tone--warn');
   });
 
   it('marks the drifting gate and says the gates are mixed', () => {
@@ -360,7 +360,7 @@ describe('FleetPage evaluation tools', () => {
     expect(screen.getByTestId('fleet-node-gate-a_slot0').className).not.toContain('is-tool-drift');
     const header = screen.getByTestId('fleet-scorer-summary');
     expect(header).toHaveTextContent('Gates evaluate with 2 jankurai builds: b05c03b ×2, 9e6b885 ×1');
-    expect(header.className).toContain('fleet__tone--warning');
+    expect(header.className).toContain('fleet__tone--warn');
   });
 
   it('lists audit runners under Quality audits, and nothing new from an older forge', () => {

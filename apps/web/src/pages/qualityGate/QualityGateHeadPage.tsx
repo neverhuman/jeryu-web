@@ -15,6 +15,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import type { QualityGateAppliedCap, QualityGateFinding } from '../../api/types';
+import { pillClass, scoreTone } from '../../components/tone/tone';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
@@ -64,11 +65,7 @@ export function QualityGateHeadPage(): JSX.Element {
             </h2>
             <p className="quality-gate__score" data-testid="quality-gate-score">
               <span
-                className={
-                  data.passed
-                    ? 'page__pill page__pill--success'
-                    : 'page__pill page__pill--danger'
-                }
+                className={pillClass(scoreTone(data.score, data.threshold))}
               >
                 {data.score} / {data.threshold}
               </span>{' '}

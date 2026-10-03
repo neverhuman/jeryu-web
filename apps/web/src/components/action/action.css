@@ -39,7 +39,7 @@
   filter: brightness(1.05);
 }
 
-.action-button--danger {
+.action-button--human {
   background-color: var(--color-accent-danger-bg);
   color: var(--color-accent-danger);
   border-color: var(--color-accent-danger);

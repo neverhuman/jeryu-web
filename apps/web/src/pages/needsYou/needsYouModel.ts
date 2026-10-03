@@ -1,5 +1,6 @@
 // needsYouModel.ts — pure helpers for the "Needs you" page and its nav badge.
 
+import type { Tone } from '../../components/tone/tone';
 import type { AttentionItem, AttentionResponse, AttentionSeverity } from '../../api/types';
 import { compareInstants } from '../../format/when';
 
@@ -205,8 +206,8 @@ export function groupAttention(items: AttentionItem[]): AttentionGroup[] {
  * Red is reserved for rows where a person is the next step (critical, action).
  * `watch` rows may heal on their own, so they stay neutral.
  */
-export function severityTone(severity: AttentionSeverity): 'danger' | 'neutral' {
-  return severity === 'watch' ? 'neutral' : 'danger';
+export function severityTone(severity: AttentionSeverity): Tone {
+  return severity === 'watch' ? 'unknown' : 'human';
 }
 
 /**

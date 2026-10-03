@@ -28,9 +28,10 @@
   color: var(--color-accent-info);
   background-color: var(--color-accent-info-bg);
 }
-.state-block__icon--danger {
-  color: var(--color-accent-danger);
-  background-color: var(--color-accent-danger-bg);
+.state-block__icon--failed {
+  color: var(--color-accent-warning);
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-accent-warning);
 }
 .state-block__icon--warning {
   color: var(--color-accent-warning);

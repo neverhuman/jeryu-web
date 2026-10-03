@@ -70,7 +70,7 @@ export function RepoDangerZone({ repo }: RepoDangerZoneProps): JSX.Element {
           </p>
         </div>
         <ActionButton
-          variant="danger"
+          variant="human"
           actionId={REGISTRY_ACTION_ID}
           onClick={() => openTier('registry')}
         >
@@ -86,7 +86,7 @@ export function RepoDangerZone({ repo }: RepoDangerZoneProps): JSX.Element {
           </p>
         </div>
         <ActionButton
-          variant="danger"
+          variant="human"
           actionId={STORAGE_ACTION_ID}
           onClick={() => openTier('purge')}
         >

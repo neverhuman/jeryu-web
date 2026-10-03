@@ -45,7 +45,7 @@ describe('MirrorStatusBadge', () => {
     const recent = new Date(Date.now() - 120_000).toISOString();
     render(<MirrorStatusBadge mirror={mirror({ last_success_at: recent })} />);
     const badge = screen.getByRole('status');
-    expect(badge).not.toHaveClass('repo-mirror-badge--danger');
+    expect(badge).not.toHaveClass('repo-mirror-badge--failed');
     expect(badge.getAttribute('title')).toMatch(/^Mirror pushed /);
   });
 
@@ -57,7 +57,7 @@ describe('MirrorStatusBadge', () => {
     );
     const badge = screen.getByRole('status');
     expect(badge).toHaveTextContent('never pushed');
-    expect(badge).not.toHaveClass('repo-mirror-badge--danger');
+    expect(badge).not.toHaveClass('repo-mirror-badge--failed');
   });
 
   it('uses danger styling and a failure title when the last attempt failed', () => {
@@ -71,7 +71,7 @@ describe('MirrorStatusBadge', () => {
       />
     );
     const badge = screen.getByRole('status');
-    expect(badge).toHaveClass('repo-mirror-badge--danger');
+    expect(badge).toHaveClass('repo-mirror-badge--failed');
     expect(badge.getAttribute('title')).toMatch(
       /^Last mirror push failed · last success /
     );

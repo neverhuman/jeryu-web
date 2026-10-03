@@ -17,6 +17,8 @@ import type { ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { fullIdTitle, shortenIds } from '../identifiers/shortId';
 
+import { toneClass } from '../tone/tone';
+
 import './state.css';
 
 export interface ErrorStateProps {
@@ -56,7 +58,7 @@ export function ErrorState({
       role="alert"
       data-testid={testId}
     >
-      <span className="state-block__icon state-block__icon--danger">
+      <span className={toneClass('state-block__icon', 'failed')}>
         <AlertTriangle aria-hidden="true" size={20} />
       </span>
       <h2 className="state-block__title">{title}</h2>

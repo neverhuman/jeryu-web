@@ -3,6 +3,7 @@
 // Everything here is deterministic given its inputs (including `now`) so the
 // filters, shift dating and chart geometry are unit-tested without a DOM.
 
+import type { Tone } from '../../components/tone/tone';
 import type {
   ShiftBranch,
   ShiftBranchKind,
@@ -119,11 +120,12 @@ export function queueOptions(todos: ShiftTodo[]): QueueOptions {
   };
 }
 
-export function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' {
-  if (status === 'done') return 'success';
-  if (status === 'blocked') return 'danger';
-  if (status === 'claimed' || status === 'handoff') return 'warning';
-  return 'info';
+/** A blocked todo waits on a person; everything else is progress or quiet. */
+export function statusTone(status: string): Tone {
+  if (status === 'done') return 'ok';
+  if (status === 'blocked') return 'human';
+  if (status === 'claimed' || status === 'handoff') return 'warn';
+  return 'unknown';
 }
 
 /** "Paste many": one todo per blank-line-separated paragraph. */
@@ -348,15 +350,18 @@ export interface TodoActionChoice {
   label: string;
   /** What the confirmation's button says once the action is spelled out. */
   confirm: string;
-  /** Outlined or quiet: the page's one filled button belongs to the review PR. */
-  variant: 'default' | 'ghost' | 'danger';
+  /**
+   * Outlined or quiet: the page's one filled button belongs to the review PR.
+   * `human` is the red one — a press no agent makes for you.
+   */
+  variant: 'default' | 'ghost' | 'human';
 }
 
 const TODO_ACTIONS: Record<TodoActionId, TodoActionChoice> = {
   release: { id: 'release', label: 'Release', confirm: 'Confirm release', variant: 'default' },
   block: { id: 'block', label: 'Block', confirm: 'Confirm block', variant: 'ghost' },
   done: { id: 'done', label: 'Mark done', confirm: 'Confirm done', variant: 'default' },
-  close: { id: 'close', label: 'Close', confirm: 'Confirm close', variant: 'danger' },
+  close: { id: 'close', label: 'Close', confirm: 'Confirm close', variant: 'human' },
   park: { id: 'park', label: 'Park until…', confirm: 'Confirm park', variant: 'ghost' },
   edit: { id: 'edit', label: 'Edit', confirm: 'Save changes', variant: 'ghost' },
 };

@@ -19,6 +19,7 @@ import { Breadcrumbs } from '../../components/browser/Breadcrumbs';
 import { FamilyPill } from '../../components/family/FamilyPills';
 import { sameFamily } from '../../components/family/familyScope';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
+import { pillClass } from '../../components/tone/tone';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
@@ -151,7 +152,7 @@ function TodoView({
             onPick={(name) => scope.setFamily(name, { to: WORK_PATH, drop: ['todo'] })}
           />
           <span
-            className={`page__pill page__pill--${statusTone(todo.status)}`}
+            className={pillClass(statusTone(todo.status))}
             data-testid="todo-page-status"
           >
             {todo.merged ? 'merged' : todo.status}

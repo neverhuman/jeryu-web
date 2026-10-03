@@ -91,15 +91,20 @@
   border-bottom: 0;
 }
 
-.activity-row--danger {
+.activity-row--human {
   border-left-color: var(--color-accent-danger);
 }
 
-.activity-row--warning {
+.activity-row--failed {
+  border-left-color: var(--color-accent-warning);
+  border-left-style: dashed;
+}
+
+.activity-row--warn {
   border-left-color: var(--color-accent-warning);
 }
 
-.activity-row--success {
+.activity-row--ok {
   border-left-color: var(--color-accent-success);
 }
 
@@ -268,7 +273,7 @@
   line-height: var(--line-height-tight);
 }
 
-.activity__counter--danger .activity__counter-value {
+.activity__counter--human .activity__counter-value {
   color: var(--color-accent-danger);
 }
 

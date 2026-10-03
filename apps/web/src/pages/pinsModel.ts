@@ -5,6 +5,7 @@
 // step per pin, so Releases reads as a pipeline: merged but not
 // pinned, then pinned but not deployed.
 
+import type { Tone } from '../components/tone/tone';
 import { sameFamily } from '../components/family/familyScope';
 import type { Pin, PinConsumer, PinState } from '../api/types';
 import { safeHref } from './needsYou/needsYouModel';
@@ -41,12 +42,12 @@ export function pinLabel(pin: Pin): string {
 }
 
 /**
- * Red only where something is wrong. A commit pin bumps itself and a tag that
- * trails main is a standing fact worth a look, not an alarm: both are neutral.
- * A diverged pin needs a person.
+ * Red only where a person is the next step. A commit pin bumps itself and a
+ * tag that trails main is a standing fact worth a look, not an alarm: both
+ * stay quiet. A diverged pin needs a person.
  */
-export function pinTone(pin: Pin): 'neutral' | 'danger' {
-  return pinStateOf(pin) === 'diverged' ? 'danger' : 'neutral';
+export function pinTone(pin: Pin): Tone {
+  return pinStateOf(pin) === 'diverged' ? 'human' : 'unknown';
 }
 
 export interface PinNextStep {

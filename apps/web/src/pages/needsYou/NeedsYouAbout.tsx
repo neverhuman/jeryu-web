@@ -9,6 +9,7 @@
 
 import { useNavigate } from 'react-router-dom';
 
+import { pillClass } from '../../components/tone/tone';
 import { useAuth } from '../../hooks/useAuth';
 import { useAttention } from '../../hooks/usePipeline';
 import { AttentionRow, useRepoFamilies } from './AttentionRow';
@@ -44,7 +45,7 @@ export function NeedsYouAbout({
       data-testid={testId}
     >
       <h2 className="page__section-title">
-        <span className="page__pill page__pill--danger">{subjects.length}</span> Waiting on you
+        <span className={pillClass('human')}>{subjects.length}</span> Waiting on you
       </h2>
       <ul className="needs-you__list">
         {subjects.map((row) => (

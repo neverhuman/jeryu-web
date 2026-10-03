@@ -61,11 +61,11 @@ describe('pinsModel', () => {
     expect(taggedSummary(1)).toBe('1 dependency has commits since its pinned tag');
   });
 
-  it('is red only where something is wrong: a trailing tag is a standing fact, not an alarm', () => {
-    expect(pinTone(pin({ dependency: 'a/web', behind: 9, state: 'behind' }))).toBe('neutral');
-    expect(pinTone(pin({ dependency: 'a/web', behind: 9, state: 'behind_not_green' }))).toBe('neutral');
-    expect(pinTone(pin({ dependency: 'a/core', kind: 'tag', behind: 3, state: 'behind' }))).toBe('neutral');
-    expect(pinTone(pin({ dependency: 'a/web', state: 'diverged' }))).toBe('danger');
+  it('is red only where a person is needed: a trailing tag is a standing fact, not an alarm', () => {
+    expect(pinTone(pin({ dependency: 'a/web', behind: 9, state: 'behind' }))).toBe('unknown');
+    expect(pinTone(pin({ dependency: 'a/web', behind: 9, state: 'behind_not_green' }))).toBe('unknown');
+    expect(pinTone(pin({ dependency: 'a/core', kind: 'tag', behind: 3, state: 'behind' }))).toBe('unknown');
+    expect(pinTone(pin({ dependency: 'a/web', state: 'diverged' }))).toBe('human');
   });
 
   it('names exactly one next step, the bump PR when one is open', () => {

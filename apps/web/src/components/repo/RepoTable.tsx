@@ -53,6 +53,7 @@ import { repoHref } from './RepoCard';
 import { familyHref } from './RepoFamilyCard';
 
 import './repo.css';
+import { toneClass } from '../tone/tone';
 
 export interface RepoTableProps {
   repos: RepositorySummary[];
@@ -101,7 +102,7 @@ function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
       {repo.failing_checks > 0 ? (
         <button
           type="button"
-          className="repo-status-chip repo-status-chip--danger"
+          className={toneClass('repo-status-chip', 'failed')}
           aria-expanded={expanded}
           aria-controls={detailId(repo)}
           onClick={(e) => {

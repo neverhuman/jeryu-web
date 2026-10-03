@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { PipelineEvent } from '../../api/types';
+import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { formatCost, shortSha } from '../shift/shiftModel';
@@ -38,7 +39,7 @@ export function EventRow({
   const needsHuman = event.needs_human && !resolved;
   // A cleared row keeps its words ("Gate failed") but not its red: what it
   // reports is history, and the colour is for what still wants an answer.
-  const tone = resolved ? 'info' : eventTone(event);
+  const tone = resolved ? 'unknown' : eventTone(event);
   const forgeHost = useForgeHost();
   const host = forgeHost(event.repo ?? undefined);
   const summary = summaryParts(event, host);
@@ -50,7 +51,7 @@ export function EventRow({
 
   return (
     <li
-      className={`activity-row activity-row--${tone}${needsHuman ? ' is-needs-human' : ''}`}
+      className={`${toneClass('activity-row', tone)}${needsHuman ? ' is-needs-human' : ''}`}
       data-testid={`activity-event-${event.seq}`}
     >
       <div className="activity-row__line">
@@ -58,7 +59,7 @@ export function EventRow({
           {clockText(event.ts)}
         </time>
         <span
-          className={tone === 'info' ? 'page__pill' : `page__pill page__pill--${tone}`}
+          className={pillClass(tone)}
           title={event.kind}
         >
           {eventLabel(event)}
@@ -72,8 +73,8 @@ export function EventRow({
           ) : null}
           {summary.after}
         </span>
-        {needsHuman ? <span className="page__pill page__pill--danger">needs you</span> : null}
-        {resolved ? (
+        {needsHuman ? <span className={pillClass('human')}>needs you</span> : null}
+        {event.needs_human && resolved ? (
           <span className="page__pill" title="A later event cleared this">
             resolved
           </span>

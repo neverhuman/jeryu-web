@@ -8,6 +8,8 @@
 //   live checks on node-a 2026-10-01   a note, shown as text
 // A trailing "(…)" is a note about the source and stays in its text.
 
+import type { Tone } from '../../components/tone/tone';
+
 export type SourceTarget =
   | { kind: 'wiki-repo'; path: string }
   | { kind: 'repo'; repo: string; path: string | null };
@@ -57,17 +59,17 @@ export function classifySource(entry: string): WikiSource {
   return { text, target: null };
 }
 
-export type StatusTone = 'success' | 'warning' | 'danger' | 'neutral';
+export type StatusTone = Tone;
 
 /** The pill colour a page status reads as. */
 export function statusTone(status: string): StatusTone {
   const value = status.trim().toLowerCase();
-  if (['current', 'ok', 'active', 'live', 'stable'].includes(value)) return 'success';
-  if (['draft', 'wip', 'review', 'in-progress', 'proposed'].includes(value)) return 'warning';
+  if (['current', 'ok', 'active', 'live', 'stable'].includes(value)) return 'ok';
+  if (['draft', 'wip', 'review', 'in-progress', 'proposed'].includes(value)) return 'warn';
   if (['stale', 'outdated', 'superseded', 'archived', 'retired'].includes(value)) {
-    return 'danger';
+    return 'warn';
   }
-  return 'neutral';
+  return 'unknown';
 }
 
 /** Frontmatter keys the page header and source list show themselves. */

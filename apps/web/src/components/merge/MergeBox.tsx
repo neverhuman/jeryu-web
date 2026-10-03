@@ -249,7 +249,7 @@ export function MergeBox({
             Keep it open
           </ActionButton>
           <ActionButton
-            variant="danger"
+            variant="human"
             icon={<XCircle aria-hidden="true" size={12} />}
             onClick={() => handleSetState('closed')}
             disabled={isBusy}

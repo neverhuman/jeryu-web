@@ -11,6 +11,8 @@ import { CircleStop, TerminalSquare } from 'lucide-react';
 import { sendInterrupt } from './agentControlTransport';
 import { AgentTerminalImpl } from './AgentTerminalImpl';
 
+import { toneClass, type Tone } from '../tone/tone';
+
 import './terminal.css';
 
 export interface AgentTerminalProps {
@@ -33,11 +35,11 @@ export function AgentTerminal({ runId, label }: AgentTerminalProps): JSX.Element
   const onExit = useCallback((code: number) => setExitCode(code), []);
 
   const live = sseStatus === 'open';
-  const statusVariant = live
-    ? 'success'
+  const statusVariant: Tone = live
+    ? 'ok'
     : sseStatus === 'connecting'
-      ? 'warning'
-      : 'danger';
+      ? 'warn'
+      : 'failed';
 
   return (
     <section
@@ -53,14 +55,14 @@ export function AgentTerminal({ runId, label }: AgentTerminalProps): JSX.Element
         </span>
         {exitCode !== null && (
           <span
-            className={`agent-terminal__pill agent-terminal__pill--${exitCode === 0 ? 'success' : 'danger'}`}
+            className={toneClass('agent-terminal__pill', exitCode === 0 ? 'ok' : 'failed')}
             data-testid="agent-terminal-exit"
           >
             exit {exitCode}
           </span>
         )}
         <span
-          className={`agent-terminal__pill agent-terminal__pill--${statusVariant}`}
+          className={toneClass('agent-terminal__pill', statusVariant)}
           data-testid="agent-terminal-status"
         >
           <span

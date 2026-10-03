@@ -159,12 +159,6 @@
   border-color: transparent;
 }
 
-.page__pill--danger {
-  background-color: var(--color-accent-danger-bg);
-  color: var(--color-accent-danger);
-  border-color: transparent;
-}
-
 /* A link inside a sentence is told apart by more than its colour. */
 .page__roadmap-note a {
   text-decoration: underline;

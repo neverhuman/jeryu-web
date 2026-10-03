@@ -46,19 +46,20 @@
   color: var(--color-fg-secondary);
 }
 
-.agent-terminal__pill--success {
+.agent-terminal__pill--ok {
   background: var(--color-accent-success-bg);
   color: var(--color-accent-success);
 }
 
-.agent-terminal__pill--warning {
+.agent-terminal__pill--warn {
   background: var(--color-accent-warning-bg);
   color: var(--color-accent-warning);
 }
 
-.agent-terminal__pill--danger {
-  background: var(--color-accent-danger-bg);
-  color: var(--color-accent-danger);
+.agent-terminal__pill--failed {
+  background: transparent;
+  color: var(--color-accent-warning);
+  box-shadow: inset 0 0 0 1px var(--color-accent-warning);
 }
 
 .agent-terminal__dot {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { pillClass } from '../components/tone/tone';
 import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
 import { ErrorState, LoadingState } from '../components/state';
 import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPlane';
@@ -354,7 +355,7 @@ export function PullRoomPage(): JSX.Element {
 
       {waitingOffRows.length > 0 ? (
         <p className="pull-room__needs-off" data-testid="pull-room-needs-off">
-          <span className="page__pill page__pill--danger">{waitingOffRows.length}</span>{' '}
+          <span className={pillClass('human')}>{waitingOffRows.length}</span>{' '}
           {board ? 'waiting on you' : 'more waiting on you, not on a row below'} ·{' '}
           <Link to={needsYouHref(family)}>open Needs you</Link>
         </p>

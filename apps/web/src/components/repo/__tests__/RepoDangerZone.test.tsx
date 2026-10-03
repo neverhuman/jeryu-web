@@ -150,7 +150,7 @@ describe('RepoDangerZone', () => {
     );
     // Registry tier: no typed confirmation required.
     await user.click(
-      screen.getByRole('dialog').querySelector('.action-button--danger')!
+      screen.getByRole('dialog').querySelector('.action-button--human')!
     );
 
     await screen.findByTestId('repos-index');
@@ -182,7 +182,7 @@ describe('RepoDangerZone', () => {
     );
     const dialog = screen.getByRole('dialog');
     const confirm = dialog.querySelector(
-      '.action-button--danger'
+      '.action-button--human'
     ) as HTMLButtonElement;
     expect(confirm).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -216,7 +216,7 @@ describe('RepoDangerZone', () => {
       screen.getByRole('button', { name: 'Remove from registry' })
     );
     await user.click(
-      screen.getByRole('dialog').querySelector('.action-button--danger')!
+      screen.getByRole('dialog').querySelector('.action-button--human')!
     );
 
     const alert = await screen.findByRole('alert');
@@ -245,7 +245,7 @@ describe('RepoDangerZone', () => {
       screen.getByRole('button', { name: 'Remove from registry' })
     );
     await user.click(
-      screen.getByRole('dialog').querySelector('.action-button--danger')!
+      screen.getByRole('dialog').querySelector('.action-button--human')!
     );
 
     await waitFor(() => {

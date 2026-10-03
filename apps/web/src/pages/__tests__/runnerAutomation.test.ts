@@ -182,13 +182,13 @@ describe('automation runners', () => {
     ).toMatchObject({
       pull: { repo: 'jeryu/jeryu-deploy', pr: 74 },
       link: 'jeryu-deploy#74',
-      tone: 'neutral',
+      tone: 'unknown',
       finishedAt: '2026-09-20T04:10:00Z'
     });
     // Red is for what needs a person: only a failure.
     expect(
       automationDid(timer({ lastActivity: did({ conclusion: 'failed', pr: 74 }) }))
-    ).toMatchObject({ pull: null, link: null, tone: 'danger' });
+    ).toMatchObject({ pull: null, link: null, tone: 'failed' });
     expect(
       automationDid(timer({ lastActivity: did({ conclusion: 'staged' }) }))
     ).toMatchObject({ pull: null, link: null });

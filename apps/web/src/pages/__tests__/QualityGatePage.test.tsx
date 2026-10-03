@@ -202,7 +202,7 @@ describe('QualityGateRulePage', () => {
       '/quality-gate/heads/jeryu/jeryu-web/0863f25ab1c2d3e4f5061728394a5b6c7d8e9f01'
     );
     // Below the floor is called out; the head that passed the floor is not.
-    expect(within(flagged).getByText('71 / 85')).toHaveClass('page__pill--danger');
+    expect(within(flagged).getByText('71 / 85')).toHaveClass('page__pill--failed');
     const passing = screen.getByTestId('quality-gate-head-jeryu/jeryu-deploy@a985cb0f');
     expect(within(passing).getByText('88 / 85')).toHaveClass('page__pill--success');
 

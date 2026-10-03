@@ -484,7 +484,7 @@ describe('FleetPage render', () => {
     // An offline runner is the one thing that turns the sentence red.
     const metrics = screen.getByTestId('fleet-metrics');
     expect(metrics).toHaveTextContent('1 gate runner on xbabe2: 0 busy, 0 idle · 1 offline');
-    expect(metrics.className).toContain('fleet__tone--danger');
+    expect(metrics.className).toContain('fleet__tone--failed');
     expect(screen.getByTestId('fleet-node-now-xbabe2_slot0')).toHaveTextContent('offline');
   });
 });

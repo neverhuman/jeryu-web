@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { pullHref } from '../activity/activityModel';
+import { toneModifier } from '../../components/tone/tone';
 import { When } from '../../format/When';
 import type { RunnerNetworkNode } from '../runnerNetworkModel';
 import { NO_PLACES, runnerAnchorId, type RunnerPlaces } from './releaseIndex';
@@ -107,7 +108,7 @@ function AutomationRow({
         >
           {did ? (
             <>
-              <span className={`fleet__tone--${did.tone}`}>
+              <span className={toneModifier('fleet__tone', did.tone)}>
                 {did.before}
                 {did.pull && did.link ? (
                   <Link to={pullHref(forgeHost(did.pull.repo), did.pull.repo, did.pull.pr)}>
@@ -132,7 +133,7 @@ function AutomationRow({
         >
           {timer.lastUpdated ? (
             <span
-              className={offline ? 'fleet__tone--danger' : 'fleet__node-muted'}
+              className={offline ? toneModifier('fleet__tone', 'failed') : 'fleet__node-muted'}
             >
               {offline ? 'offline, last seen ' : ''}
               <time dateTime={timer.lastUpdated} title={timer.lastUpdated}>
@@ -140,7 +141,7 @@ function AutomationRow({
               </time>
             </span>
           ) : (
-            <span className="fleet__tone--danger">offline, never seen</span>
+            <span className={toneModifier('fleet__tone', 'failed')}>offline, never seen</span>
           )}
         </p>
       </div>

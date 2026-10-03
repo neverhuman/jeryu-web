@@ -31,7 +31,7 @@ describe('NeedsYouPage', () => {
     // Off-site act: the command is the one action, and the title still leads
     // to the row's subject.
     const staged = within(action).getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
-    expect(staged).toHaveClass('needs-you__row--danger');
+    expect(staged).toHaveClass('needs-you__row--human');
     expect(within(staged).getByText(DEPLOY_COMMAND)).toBeInTheDocument();
     expect(
       within(staged).getByRole('link', { name: 'Release prod-20260919T130210Z-01dfe68-unsigned is staged' })
@@ -82,8 +82,8 @@ describe('NeedsYouPage', () => {
     const watch = screen.getByTestId('needs-you-watch');
     expect(watch).not.toHaveAttribute('open');
     expect(within(watch).getByText('1 thing worth a look, none waiting on you')).toBeInTheDocument();
-    expect(watch.querySelector('.needs-you__row--neutral')).not.toBeNull();
-    expect(watch.querySelector('.needs-you__row--danger')).toBeNull();
+    expect(watch.querySelector('.needs-you__row--unknown')).not.toBeNull();
+    expect(watch.querySelector('.needs-you__row--human')).toBeNull();
     expect(screen.queryByTestId('needs-you-pulse')).toBeNull();
   });
 
@@ -198,7 +198,7 @@ describe('NeedsYouPage', () => {
     const watch = screen.getByTestId('needs-you-watch');
     expect(watch).not.toHaveAttribute('open');
     const bumping = within(watch).getByTestId('needs-you-item-pin-behind:veox/jain-deploy:veox/jain-web');
-    expect(bumping).toHaveClass('needs-you__row--neutral');
+    expect(bumping).toHaveClass('needs-you__row--unknown');
     expect(within(bumping).getByRole('link', { name: /^Open the bump PR/ })).toHaveAttribute(
       'href',
       '/repos/jeryu/veox/jain-deploy/pulls/80'

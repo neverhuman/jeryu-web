@@ -733,7 +733,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(header).toHaveText(
       'Gates evaluate with 2 jankurai builds: b05c03b ×2, 9e6b885 ×1'
     );
-    await expect(header).toHaveClass(/fleet__tone--warning/);
+    await expect(header).toHaveClass(/fleet__tone--warn/);
 
     // The audit runner has its own section and the same row anatomy.
     const audits = page.getByTestId('fleet-audits');
@@ -768,7 +768,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
       'Gates evaluate with jankurai 1.6.11 (b05c03b)',
       { timeout: 10_000 }
     );
-    await expect(page.getByTestId('fleet-scorer-summary')).not.toHaveClass(/fleet__tone--warning/);
+    await expect(page.getByTestId('fleet-scorer-summary')).not.toHaveClass(/fleet__tone--warn/);
     await expect(page.getByTestId('fleet-node-gate-b_slot0')).not.toHaveClass(/is-tool-drift/);
     await expect(page.getByTestId('fleet-audits')).toHaveCount(0);
   });

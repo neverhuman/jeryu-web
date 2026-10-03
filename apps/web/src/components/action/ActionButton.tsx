@@ -5,7 +5,8 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import './action.css';
 
-export type ActionButtonVariant = 'default' | 'primary' | 'danger' | 'ghost';
+/** `human` is the red one: an irreversible press no agent makes for you. */
+export type ActionButtonVariant = 'default' | 'primary' | 'human' | 'ghost';
 
 export interface ActionButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement> {

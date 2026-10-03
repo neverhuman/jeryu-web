@@ -15,6 +15,7 @@
 // authoritative local node snapshot first, while still deriving a concise view
 // for active/idle availability, task counts, and last-TTY-line previews.
 
+import type { Tone } from '../components/tone/tone';
 import type {
   EvidenceState,
   ForgeBuild,
@@ -509,7 +510,7 @@ export function runnerTags(node: { labels: readonly string[]; classes: readonly 
 /** No heartbeat for this long and a runner's "seen" is shown as stale. */
 export const RUNNER_SEEN_STALE_MS = 3 * 60_000;
 
-export type RowTone = 'neutral' | 'success' | 'warning' | 'danger';
+export type RowTone = Tone;
 
 /** `owner/name#12`, the label gate runners and reviewers give their task. */
 export interface PullRef {
@@ -675,7 +676,7 @@ export function rowNow(node: RunnerNetworkNode, nowMs: number): RowNow {
       pull: null,
       elapsed: null,
       draining: false,
-      tone: 'danger',
+      tone: 'failed',
     };
   }
   const task = node.tasks[0];
@@ -688,7 +689,7 @@ export function rowNow(node: RunnerNetworkNode, nowMs: number): RowNow {
       pull: null,
       elapsed: null,
       draining: false,
-      tone: 'warning',
+      tone: 'warn',
     };
   }
   if (!task) {
@@ -698,7 +699,7 @@ export function rowNow(node: RunnerNetworkNode, nowMs: number): RowNow {
       pull: null,
       elapsed: null,
       draining,
-      tone: draining ? 'warning' : 'neutral',
+      tone: draining ? 'warn' : 'unknown',
     };
   }
   const pull = pullRefFromLabel(task.label);
@@ -719,7 +720,7 @@ export function rowNow(node: RunnerNetworkNode, nowMs: number): RowNow {
     pull,
     elapsed,
     draining,
-    tone: 'warning',
+    tone: 'warn',
   };
 }
 
@@ -773,11 +774,11 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
       tone:
         verdict === 'approve'
           ? blocked
-            ? 'warning'
-            : 'success'
+            ? 'warn'
+            : 'ok'
           : verdict === 'hold'
-            ? 'danger'
-            : 'warning',
+            ? 'failed'
+            : 'warn',
       blocked
     };
   }
@@ -806,7 +807,7 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
     verbFirst: false,
     duration,
     finishedAt: last.finishedAt,
-    tone: passed ? 'success' : 'danger',
+    tone: passed ? 'ok' : 'failed',
     blocked: null
   };
 }
@@ -821,16 +822,16 @@ export function auditVerb(conclusion: string): { verb: string; tone: RowTone } {
     case 'scored':
     case 'success':
       // The report was recorded; pass or fail is the proof check's verdict.
-      return { verb: 'scored', tone: 'neutral' };
+      return { verb: 'scored', tone: 'unknown' };
     case 'refused':
-      return { verb: 'refused', tone: 'warning' };
+      return { verb: 'refused', tone: 'warn' };
     case 'failed':
     case 'failure':
-      return { verb: 'failed', tone: 'danger' };
+      return { verb: 'failed', tone: 'failed' };
     case 'tool-failed':
-      return { verb: 'tool failed', tone: 'warning' };
+      return { verb: 'tool failed', tone: 'warn' };
     default:
-      return { verb: 'errored', tone: 'danger' };
+      return { verb: 'errored', tone: 'failed' };
   }
 }
 
@@ -894,7 +895,7 @@ export function networkSentence(
   nodes: readonly RunnerNetworkNode[]
 ): NetworkSentence {
   if (nodes.length === 0)
-    return { text: 'No gate runner is reporting.', tone: 'warning' };
+    return { text: 'No gate runner is reporting.', tone: 'warn' };
   const offline = nodes.filter(
     (node) => node.availability === 'offline'
   ).length;
@@ -908,7 +909,7 @@ export function networkSentence(
     // about whether these runners are there at all.
     return {
       text: `${nodes.length} gate runner${nodes.length === 1 ? '' : 's'}${where}: availability unknown`,
-      tone: 'warning'
+      tone: 'warn'
     };
   }
   const doing =
@@ -919,6 +920,6 @@ export function networkSentence(
         : `${busy} busy, ${Math.max(idle, 0)} idle`;
   return {
     text: `${nodes.length} gate runner${nodes.length === 1 ? '' : 's'}${where}: ${doing} · ${offline} offline`,
-    tone: offline > 0 ? 'danger' : 'neutral'
+    tone: offline > 0 ? 'failed' : 'unknown'
   };
 }

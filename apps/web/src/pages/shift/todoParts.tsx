@@ -338,7 +338,7 @@ function TodoActionForm({
       ) : null}
       {choice.id === 'done' ? <span>Mark {todo.id} done?</span> : null}
       <ActionButton
-        variant={choice.id === 'edit' || choice.id === 'done' ? 'default' : 'danger'}
+        variant={choice.id === 'edit' || choice.id === 'done' ? 'default' : 'human'}
         type="submit"
         disabled={pending || (choice.id === 'park' && untilRfc3339(until) === null)}
       >

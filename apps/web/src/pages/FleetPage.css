@@ -18,23 +18,28 @@
 }
 
 /* Tones for words inside a row: what it did, how it went, how fresh it is. */
-.fleet__tone--neutral {
+.fleet__tone--unknown {
   color: var(--color-fg-secondary);
 }
 
-.fleet__tone--success {
+.fleet__tone--ok {
   color: var(--color-accent-success);
 }
 
-.fleet__tone--warning {
+.fleet__tone--warn {
   color: var(--color-accent-warning);
 }
 
-.fleet__tone--danger {
+.fleet__tone--failed {
+  color: var(--color-accent-warning);
+  font-weight: var(--font-weight-semibold);
+}
+
+.fleet__tone--human {
   color: var(--color-accent-danger);
 }
 
-.fleet__sentence.fleet__tone--neutral {
+.fleet__sentence.fleet__tone--unknown {
   color: var(--color-fg-primary);
 }
 
@@ -177,10 +182,6 @@
 .fleet__bar-fill--warning {
   background-color: var(--color-accent-warning);
 }
-.fleet__bar-fill--danger {
-  background-color: var(--color-accent-danger);
-}
-
 .fleet__stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -509,7 +510,7 @@
   color: inherit;
 }
 
-.fleet__build.fleet__tone--warning {
+.fleet__build.fleet__tone--warn {
   color: var(--color-accent-warning);
 }
 

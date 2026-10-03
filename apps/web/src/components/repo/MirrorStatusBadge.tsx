@@ -6,14 +6,16 @@
 //
 //   * Healthy: cloud-upload icon + relative time of the last successful
 //     push ("never pushed" when no success has been recorded yet).
-//   * Failing (`last_attempt_ok === false`): danger tokens + alert icon;
-//     the title spells out the failure and the age of the last success.
+//   * Failing (`last_attempt_ok === false`): the `failed` tone + alert icon;
+//     the title spells out the failure and the age of the last success. The
+//     push is the forge's own job, so the badge is not red.
 
 import { CloudAlert, CloudUpload } from 'lucide-react';
 
 import type { RepositoryMirrorStatus } from '../../api/types';
 
 import { relativeText } from '../../format/when';
+import { toneClass } from '../tone/tone';
 import './repo.css';
 
 export interface MirrorStatusBadgeProps {
@@ -40,11 +42,7 @@ export function MirrorStatusBadge({
 
   return (
     <span
-      className={
-        failed
-          ? 'repo-mirror-badge repo-mirror-badge--danger'
-          : 'repo-mirror-badge'
-      }
+      className={failed ? toneClass('repo-mirror-badge', 'failed') : 'repo-mirror-badge'}
       role="status"
       title={detail}
       aria-label={detail}

@@ -92,7 +92,7 @@ describe('RepoCard', () => {
     );
     expect(
       screen.getByRole('status', { name: /jankurai score 92/ })
-    ).toHaveClass('repo-score-badge--good');
+    ).toHaveClass('repo-score-badge--ok');
     expect(
       screen.getByRole('status', { name: /Mirror pushed/ })
     ).toBeInTheDocument();

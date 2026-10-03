@@ -6,6 +6,7 @@
 // live overlay, the forge's environments read, so it is unit-tested without a
 // page.
 
+import { pillClass as tonePillClass, toneClass, type Tone } from '../../components/tone/tone';
 import { sameFamily } from '../../components/family/familyScope';
 import type { EnvironmentSummary } from '../../api/types/deployments';
 import { relativeText } from '../../format/when';
@@ -34,23 +35,20 @@ export const BOARD_FAMILY_STORAGE_KEY = 'jeryu.releases.board-family';
 /** The note a stage carries when the forge reported a newer deployment. */
 export const OVERLAY_NOTE = 'reported after this snapshot';
 
-export type Tone = 'success' | 'warning' | 'danger' | 'neutral';
-
 const TONE: Record<BoardState, Tone> = {
-  ok: 'success',
-  warn: 'warning',
-  bad: 'danger',
-  none: 'neutral',
+  ok: 'ok',
+  warn: 'warn',
+  bad: 'failed',
+  none: 'unknown',
 };
 
 export function stateTone(state: BoardState): Tone {
   return TONE[state];
 }
 
-/** The `page__pill` modifier for a state; neutral is the plain pill. */
+/** The `page__pill` classes for a state. */
 export function pillClass(state: BoardState): string {
-  const tone = stateTone(state);
-  return tone === 'neutral' ? 'page__pill' : `page__pill page__pill--${tone}`;
+  return tonePillClass(stateTone(state));
 }
 
 const TARGET_WORD: Record<BoardState, string> = {
@@ -100,7 +98,7 @@ export function neverDeployed(stage: BoardStage): boolean {
 
 /** The CSS modifiers of a stage cell. */
 export function stageCellClass(stage: BoardStage, open: boolean): string {
-  const classes = ['release-board__cell', `release-board__cell--${stateTone(stage.state)}`];
+  const classes = [toneClass('release-board__cell', stateTone(stage.state))];
   if (neverDeployed(stage)) classes.push('release-board__cell--never-deployed');
   if (open) classes.push('release-board__cell--open');
   return classes.join(' ');

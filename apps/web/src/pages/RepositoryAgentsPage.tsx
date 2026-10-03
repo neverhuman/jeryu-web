@@ -7,6 +7,7 @@ import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { RepoAgentRunsResponse, RepoAgentSummary } from '../api/types';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
+import { toneClass, type Tone } from '../components/tone/tone';
 import { AgentTerminal } from '../components/terminal/AgentTerminal';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { useRealtime } from '../hooks/useRealtime';
@@ -390,7 +391,7 @@ function AgentRow({
           <Bot size={13} aria-hidden="true" /> {run.agent ?? 'agent'}
         </span>
         <span
-          className={`agents__row-status agents__row-status--${statusVariant(run.status)}`}
+          className={toneClass('agents__row-status', statusVariant(run.status))}
           data-testid={`agent-status-${run.run_id}`}
         >
           {run.status}
@@ -428,7 +429,7 @@ function QueueRow({ run }: { run: RepoQueueRun }): JSX.Element {
           <Cpu size={13} aria-hidden="true" /> {run.model}
         </span>
         <span
-          className={`agents__row-status agents__row-status--${statusVariant(run.outcome)}`}
+          className={toneClass('agents__row-status', statusVariant(run.outcome))}
           data-testid={`agent-queue-status-${run.todoId}`}
         >
           {run.outcome}
@@ -438,18 +439,18 @@ function QueueRow({ run }: { run: RepoQueueRun }): JSX.Element {
   );
 }
 
-function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'muted' {
+function statusVariant(status: string): Tone {
   switch (status) {
     case 'running':
     case 'done':
-      return 'success';
+      return 'ok';
     case 'blocked':
     case 'queued':
-      return 'warning';
+      return 'warn';
     case 'failed':
     case 'errored':
-      return 'danger';
+      return 'failed';
     default:
-      return 'muted';
+      return 'unknown';
   }
 }

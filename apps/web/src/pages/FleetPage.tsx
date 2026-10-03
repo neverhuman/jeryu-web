@@ -34,6 +34,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import { toneModifier } from '../components/tone/tone';
 import { pageWebCommit } from '../build/webCommit';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useControlPlaneRunners } from '../hooks/useControlPlaneRunners';
@@ -159,7 +160,7 @@ export function FleetPage(): JSX.Element {
         </p>
         {build ? (
           <p
-            className={`fleet__build${build.webMismatch ? ' fleet__tone--warning' : ''}`}
+            className={`fleet__build${build.webMismatch ? ' fleet__tone--warn' : ''}`}
             data-testid="fleet-forge-build"
             title={build.title || undefined}
           >
@@ -178,7 +179,7 @@ export function FleetPage(): JSX.Element {
         ) : null}
         {scorers && !runnerNetworkState ? (
           <p
-            className={`fleet__build${scorers.mixed ? ' fleet__tone--warning' : ''}`}
+            className={`fleet__build${scorers.mixed ? ' fleet__tone--warn' : ''}`}
             data-testid="fleet-scorer-summary"
           >
             {scorers.text}
@@ -186,7 +187,7 @@ export function FleetPage(): JSX.Element {
         ) : null}
         {runnerNetworkState ? null : (
           <p
-            className={`fleet__sentence fleet__tone--${sentence.tone}`}
+            className={`fleet__sentence ${toneModifier('fleet__tone', sentence.tone)}`}
             data-testid="fleet-metrics"
             role="status"
           >

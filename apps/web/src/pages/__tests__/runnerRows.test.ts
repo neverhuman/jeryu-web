@@ -85,12 +85,12 @@ describe('runner rows in words', () => {
   it('says what a runner is doing now', () => {
     expect(rowNow(node(), NOW)).toMatchObject({
       text: 'idle',
-      tone: 'neutral',
+      tone: 'unknown',
       subject: null
     });
     expect(rowNow(node({ availability: 'offline' }), NOW)).toMatchObject({
       text: 'offline',
-      tone: 'danger'
+      tone: 'failed'
     });
     const gating = rowNow(
       node({
@@ -116,7 +116,7 @@ describe('runner rows in words', () => {
     // A draining runner finishes what it has and says so.
     expect(rowNow(node({ availability: 'draining' }), NOW)).toMatchObject({
       text: 'draining',
-      tone: 'warning',
+      tone: 'warn',
       draining: true,
     });
     expect(
@@ -143,13 +143,13 @@ describe('runner rows in words', () => {
       verb: 'passed',
       verbFirst: false,
       duration: '2m 7s',
-      tone: 'success'
+      tone: 'ok'
     });
     expect(
       rowLast(node({ lastActivity: { ...last, conclusion: 'failure' } }))
     ).toMatchObject({
       verb: 'failed',
-      tone: 'danger'
+      tone: 'failed'
     });
     expect(
       rowLast(node({ lastActivity: { ...last, conclusion: 'error' } }))?.verb
@@ -164,13 +164,13 @@ describe('runner rows in words', () => {
     expect(reviewer('approve')).toMatchObject({
       verb: 'approved',
       verbFirst: true,
-      tone: 'success',
+      tone: 'ok',
       duration: '14s'
     });
-    expect(reviewer('hold')).toMatchObject({ verb: 'held', tone: 'danger' });
+    expect(reviewer('hold')).toMatchObject({ verb: 'held', tone: 'failed' });
     expect(reviewer('too_large')).toMatchObject({
       verb: 'no usable verdict on',
-      tone: 'warning'
+      tone: 'warn'
     });
   });
 
@@ -201,7 +201,7 @@ describe('runner rows in words', () => {
     );
     expect(refused).toMatchObject({
       verb: 'approved',
-      tone: 'warning',
+      tone: 'warn',
       blocked:
         'queue_merge_commits - the pull request contains merge commits; rebase it onto the base'
     });
@@ -228,7 +228,7 @@ describe('runner rows in words', () => {
         }
       })
     );
-    expect(landed).toMatchObject({ tone: 'success', blocked: null });
+    expect(landed).toMatchObject({ tone: 'ok', blocked: null });
   });
 
   it('reads the merge attempt and grant gaps a reviewer row carries', () => {
@@ -288,7 +288,7 @@ describe('runner rows in words', () => {
     );
     expect(networkSentence(six)).toEqual({
       text: '6 gate runners on xbabe2: all idle · 0 offline',
-      tone: 'neutral'
+      tone: 'unknown'
     });
     const mixed = [
       node({ runnerId: 'xbabe2/slot0', activityState: 'active' }),
@@ -302,14 +302,14 @@ describe('runner rows in words', () => {
     ];
     expect(networkSentence(mixed)).toEqual({
       text: '4 gate runners on xbabe2, xbabe3: 2 busy, 1 idle · 1 offline',
-      tone: 'danger'
+      tone: 'failed'
     });
     expect(networkSentence([node({ activityState: 'active' })]).text).toBe(
       '1 gate runner on xbabe2: all busy · 0 offline'
     );
     expect(networkSentence([])).toEqual({
       text: 'No gate runner is reporting.',
-      tone: 'warning'
+      tone: 'warn'
     });
   });
   it('folds reviewers that have never reviewed anything into one line', () => {

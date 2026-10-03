@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { toneModifier } from '../tone/tone';
+
 import './settings.css';
 
 export interface SettingsNavItem {
@@ -88,7 +90,7 @@ export function SettingsLayout({
               <li
                 key={section.id}
                 className={`settings-layout__nav-item ${
-                  section.danger ? 'settings-layout__nav-item--danger' : ''
+                  section.danger ? toneModifier('settings-layout__nav-item', 'human') : ''
                 } ${active ? 'settings-layout__nav-item--active' : ''}`.trim()}
               >
                 {renderLink({ section, href, active, children: content })}

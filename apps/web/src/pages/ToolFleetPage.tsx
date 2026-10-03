@@ -10,6 +10,7 @@ import { ArrowDown, ArrowUp, Boxes } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
+import { pillClass, type Tone } from '../components/tone/tone';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useToolFleet } from '../hooks/useToolFleet';
 import {
@@ -40,14 +41,14 @@ const COLUMNS: { key: ToolFleetSortKey; label: string; numeric?: boolean }[] = [
   { key: 'missing', label: 'Should adopt', numeric: true },
 ];
 
-const STATUS_PILL: Record<AdoptionStatus, string> = {
-  complete: 'page__pill page__pill--success',
-  partial: 'page__pill page__pill--warning',
-  none: 'page__pill page__pill--danger',
+const STATUS_TONE: Record<AdoptionStatus, Tone> = {
+  complete: 'ok',
+  partial: 'warn',
+  none: 'failed',
 };
 
 export function adoptionPillClass(row: ToolFleetRow): string {
-  return row.total === 0 ? 'page__pill' : STATUS_PILL[row.status];
+  return pillClass(row.total === 0 ? 'unknown' : STATUS_TONE[row.status]);
 }
 
 function SortHeader({

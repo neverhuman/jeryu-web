@@ -168,9 +168,9 @@ describe('needsYouModel', () => {
   });
 
   it('reserves red for critical and action; watch stays neutral', () => {
-    expect(severityTone('critical')).toBe('danger');
-    expect(severityTone('action')).toBe('danger');
-    expect(severityTone('watch')).toBe('neutral');
+    expect(severityTone('critical')).toBe('human');
+    expect(severityTone('action')).toBe('human');
+    expect(severityTone('watch')).toBe('unknown');
   });
 
   it('gives each row exactly one action: the command when there is one, else the link', () => {

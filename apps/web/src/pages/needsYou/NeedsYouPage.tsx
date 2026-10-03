@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
+import { pillClass } from '../../components/tone/tone';
 import { LoadingState, PipelineQueryState } from '../../components/state';
 import { useControlPlaneRunners } from '../../hooks/useControlPlaneRunners';
 import {
@@ -76,7 +77,7 @@ export function NeedsYouPage(): JSX.Element {
           {waiting > 0 ? (
             <>
               {' '}
-              <span className="page__pill page__pill--danger" data-testid="needs-you-count">
+              <span className={pillClass('human')} data-testid="needs-you-count">
                 {waiting}
               </span>
             </>
@@ -151,7 +152,9 @@ function AttentionSection({
       data-testid={`needs-you-${group.severity}`}
     >
       <h2 className="page__section-title">
-        <span className="page__pill page__pill--danger">{group.subjects.length}</span>{' '}
+        <span className={pillClass(severityTone(group.severity))}>
+          {group.subjects.length}
+        </span>{' '}
         {group.label}
       </h2>
       <AttentionList group={group} now={now} {...familyProps} />

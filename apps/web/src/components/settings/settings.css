@@ -59,8 +59,8 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.settings-layout__nav-item--danger a,
-.settings-layout__nav-item--danger button {
+.settings-layout__nav-item--human a,
+.settings-layout__nav-item--human button {
   color: var(--color-accent-danger);
 }
 

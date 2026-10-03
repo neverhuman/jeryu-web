@@ -1,6 +1,7 @@
 // activityModel.ts — pure helpers for the Activity page, its wall mode, the
 // live dock, and the per-PR events panel. Deterministic given `now`.
 
+import type { Tone } from '../../components/tone/tone';
 import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
 import { localDayKey, zoneLabel } from '../../format/when';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
@@ -161,20 +162,21 @@ export function minSeq(events: PipelineEvent[]): number | null {
   return events.length === 0 ? null : events.reduce((min, event) => Math.min(min, event.seq), Infinity);
 }
 
-export type EventTone = 'danger' | 'warning' | 'success' | 'info';
+export type EventTone = Tone;
 
 const BAD = new Set(['failure', 'failed', 'error', 'blocked', 'timed_out', 'request_changes', 'inputs_changed']);
 const SHAKY = new Set(['retry', 'ratelimit', 'dequeued', 'pending', 'in_progress', 'queued', 'hold']);
 const GOOD = new Set(['success', 'done', 'approve', 'approved', 'landed', 'merged']);
 
-/** Red when a human is needed or something failed; green on a clean finish. */
+/** Red only when a human is needed; a failure the pipeline owns gets its own
+ *  tone, and a clean finish is green. */
 export function eventTone(event: Pick<PipelineEvent, 'needs_human' | 'outcome'>): EventTone {
-  if (event.needs_human) return 'danger';
+  if (event.needs_human) return 'human';
   const outcome = (event.outcome ?? '').toLowerCase();
-  if (BAD.has(outcome)) return 'danger';
-  if (SHAKY.has(outcome)) return 'warning';
-  if (GOOD.has(outcome)) return 'success';
-  return 'info';
+  if (BAD.has(outcome)) return 'failed';
+  if (SHAKY.has(outcome)) return 'warn';
+  if (GOOD.has(outcome)) return 'ok';
+  return 'unknown';
 }
 
 export interface EventLink {

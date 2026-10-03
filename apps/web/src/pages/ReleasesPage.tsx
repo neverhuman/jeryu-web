@@ -32,6 +32,7 @@ import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-r
 
 import { sameFamily } from '../components/family/familyScope';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { pillClass, type Tone } from '../components/tone/tone';
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
@@ -66,14 +67,14 @@ import './page.css';
 import './ReleasesPage.css';
 import { When } from '../format/When';
 
-const STATE_PILL: Record<string, string> = {
-  success: 'page__pill--success',
-  inactive: '',
-  failure: 'page__pill--danger',
-  error: 'page__pill--danger',
-  in_progress: 'page__pill--warning',
-  queued: 'page__pill--warning',
-  pending: 'page__pill--warning',
+const STATE_TONE: Record<string, Tone> = {
+  success: 'ok',
+  inactive: 'unknown',
+  failure: 'failed',
+  error: 'failed',
+  in_progress: 'warn',
+  queued: 'warn',
+  pending: 'warn',
 };
 
 /**
@@ -431,7 +432,7 @@ function Attempt({ attempt }: { attempt: DeployedRef }): JSX.Element {
   const label = attemptLabel(attempt);
   return (
     <>
-      <span className={`page__pill ${STATE_PILL[attempt.state] ?? ''}`} title={attempt.release ?? attempt.sha}>
+      <span className={pillClass(STATE_TONE[attempt.state] ?? 'unknown')} title={attempt.release ?? attempt.sha}>
         {label.words}
         {label.shortSha ? ` ${label.shortSha}` : ''}
       </span>
@@ -460,7 +461,7 @@ function StagedRelease(): JSX.Element | null {
   return (
     <section className="releases__staged" role="status" aria-label="Staged release" data-testid="releases-staged">
       <p className="releases__staged-title">
-        <span className="page__pill page__pill--danger">Staged, awaiting deploy</span> {staged.title}
+        <span className={pillClass('human')}>Staged, awaiting deploy</span> {staged.title}
       </p>
       {staged.reason ? <p className="releases__muted">{staged.reason}</p> : null}
       {staged.action?.command ? (

@@ -202,7 +202,7 @@ describe('MergeBox', () => {
     expect(screen.queryByLabelText('Closing comment')).toBeNull();
     const ask = screen.getByTestId('pr-close');
     expect(ask.className).toContain('action-button--ghost');
-    expect(ask.className).not.toContain('action-button--danger');
+    expect(ask.className).not.toContain('action-button--human');
 
     await userEvent.click(ask);
     await userEvent.type(
@@ -210,7 +210,7 @@ describe('MergeBox', () => {
       'Superseded by #33.'
     );
     const confirm = screen.getByTestId('pr-close-confirm');
-    expect(confirm.className).toContain('action-button--danger');
+    expect(confirm.className).toContain('action-button--human');
     await userEvent.click(confirm);
     expect(onSetState).toHaveBeenCalledWith({
       state: 'closed',

@@ -144,7 +144,7 @@ describe('WikiPage', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Setting up' })).toBeInTheDocument();
     // Frontmatter: date + status pill top right, summary in its box, other keys as fields.
     const badges = screen.getByTestId('wiki-page-badges');
-    expect(within(badges).getByText('current')).toHaveClass('wiki-doc__status--success');
+    expect(within(badges).getByText('current')).toHaveClass('wiki-doc__status--ok');
     expect(within(badges).getByText(/2026/)).toHaveAttribute('dateTime', '2026-09-30');
     expect(screen.getByText('How a new machine gets the tools')).toHaveClass('wiki-doc__summary');
     expect(screen.getByText('platform')).toBeInTheDocument();

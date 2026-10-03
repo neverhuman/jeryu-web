@@ -27,7 +27,7 @@ export function RunnerEvaluates({
         evaluates with{' '}
         {line.scorer ? (
           <>
-            <span className={scorerDiffers ? 'fleet__tone--warning' : undefined}>
+            <span className={scorerDiffers ? 'fleet__tone--warn' : undefined}>
               {line.scorer}
               {line.scorerBuild ? (
                 <>
@@ -38,7 +38,7 @@ export function RunnerEvaluates({
             </span>
             {scorerDiffers ? (
               <span
-                className="fleet__tone--warning"
+                className="fleet__tone--warn"
                 data-testid={`${testId}-differs`}
               >
                 {' '}
@@ -47,7 +47,7 @@ export function RunnerEvaluates({
             ) : null}
             {line.pathCopy ? (
               <span
-                className="fleet__tone--warning"
+                className="fleet__tone--warn"
                 data-testid={`${testId}-path`}
               >
                 {' '}

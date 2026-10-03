@@ -130,7 +130,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           <p className="page__subtitle">
             Every step the pipeline takes, as it happens: todos claimed and finished,
             gates, reviews, the merge queue, staged releases and deploys. Rows that
-            need a person are red.
+            need a person are red; a failure an agent will pick up is outlined.
           </p>
         )}
       </header>
@@ -333,7 +333,7 @@ function WallCounters({ events }: { events: Parameters<typeof wallCounters>[0] }
   const counters = wallCounters(events, new Date());
   const tiles: Array<[string, string, string?]> = [
     ['Todos finished', String(counters.todosFinished)],
-    ['Blocked', String(counters.blocked), counters.blocked > 0 ? 'danger' : undefined],
+    ['Blocked', String(counters.blocked), counters.blocked > 0 ? 'human' : undefined],
     ['Pull requests merged', String(counters.prsMerged)],
     ['Deploys', String(counters.deploys)],
     ['Spent', formatCost(counters.spentUsd)],

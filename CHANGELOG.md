@@ -8,8 +8,10 @@
   `/needs-you`, Work no longer counts its own queue but shows the Work share of that list,
   labelled "in Work", with the rows under it, Needs you's family pills count by the same
   severity rule its rows use, and an In flight ghost row wears red when the list names its todo
-  rather than deciding from the todo's status. Runners shows the strip its badge counts
-  (downed workers and gate runners), and a strip's "N more in Needs you" link keeps `?family=`.
+  rather than deciding from the todo's status. In flight marks each waiting pull request on its
+  own row and counts above the list only what no row below carries. Runners shows the strip its
+  badge counts (downed workers and gate runners), and a strip's "N more in Needs you" link
+  keeps `?family=`.
 - The family filter is one shell-wide scope that survives navigation. The header carries a chip
   ("Family: acme ×") with a picker; every left-nav link, every `g x` chord and every palette route
   carries the scope, in whichever form that page states it (`?family=<key>`, or the path

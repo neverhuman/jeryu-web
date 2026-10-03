@@ -608,16 +608,21 @@ a.global-header__live:hover {
   font-size: var(--font-size-xs);
 }
 
-.activity-dock__item--danger {
+.activity-dock__item--human {
   border-left-color: var(--color-accent-danger);
   color: var(--color-accent-danger);
 }
 
-.activity-dock__item--warning {
+.activity-dock__item--failed {
+  border-left-color: var(--color-accent-warning);
+  border-left-style: dashed;
+}
+
+.activity-dock__item--warn {
   border-left-color: var(--color-accent-warning);
 }
 
-.activity-dock__item--success {
+.activity-dock__item--ok {
   border-left-color: var(--color-accent-success);
 }
 

@@ -90,11 +90,11 @@ export function automationDid(node: RunnerNetworkNode): AutomationDid | null {
             before: 'opened ',
             link: `${repoName(pull.repo)}#${pull.pr}`,
             after: '',
-            tone: 'neutral'
+            tone: 'unknown'
           }
-        : plain(`opened a pull request for ${sha}`, 'neutral');
+        : plain(`opened a pull request for ${sha}`, 'unknown');
     case 'staged':
-      return plain(`staged ${sha}`, 'neutral');
+      return plain(`staged ${sha}`, 'unknown');
     case 'waiting':
       return pull
         ? {
@@ -102,12 +102,12 @@ export function automationDid(node: RunnerNetworkNode): AutomationDid | null {
             before: 'waiting for ',
             link: `#${pull.pr}`,
             after: ' to land',
-            tone: 'neutral'
+            tone: 'unknown'
           }
-        : plain(`waiting for ${sha} to go green`, 'neutral');
+        : plain(`waiting for ${sha} to go green`, 'unknown');
     case 'failed':
-      return plain(`failed on ${sha}`, 'danger');
+      return plain(`failed on ${sha}`, 'failed');
     default:
-      return plain(`${last.conclusion} ${sha}`, 'neutral');
+      return plain(`${last.conclusion} ${sha}`, 'unknown');
   }
 }

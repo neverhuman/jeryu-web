@@ -39,7 +39,7 @@ describe('ReadyToPin', () => {
     expect(within(web).getByText('9 merged commits not pinned yet')).toBeInTheDocument();
     expect(within(web).getByText('the pin bump opens by itself within minutes')).toBeInTheDocument();
     // A pin that bumps itself is not red.
-    expect(within(web).getByText('9 merged commits not pinned yet')).not.toHaveClass('page__pill--danger');
+    expect(within(web).getByText('9 merged commits not pinned yet')).not.toHaveClass('page__pill--human');
     expect(within(web).getByRole('link', { name: 'jeryu-web' })).toHaveAttribute(
       'href',
       '/in-flight?repo=jeryu%2Fjeryu-web'

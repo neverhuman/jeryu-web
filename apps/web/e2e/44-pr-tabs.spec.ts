@@ -352,13 +352,13 @@ test('Close is the quietest button, and is not red until confirmed @action:pr.cl
   await expect(ask).toBeVisible({ timeout: 15_000 });
   // Quiet until asked: no red, and no comment box taking up the box.
   await expect(ask).toHaveClass(/action-button--ghost/);
-  await expect(ask).not.toHaveClass(/action-button--danger/);
+  await expect(ask).not.toHaveClass(/action-button--human/);
   await expect(page.getByLabel('Closing comment')).toHaveCount(0);
 
   await ask.click();
   await page.getByLabel('Closing comment').fill('Superseded by #33.');
   const confirm = page.getByTestId('pr-close-confirm');
-  await expect(confirm).toHaveClass(/action-button--danger/);
+  await expect(confirm).toHaveClass(/action-button--human/);
   await confirm.click();
 
   await expect.poll(() => patched.join(','), { timeout: 10_000 }).toBe('closed');

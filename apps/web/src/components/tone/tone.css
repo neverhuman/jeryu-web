@@ -1,0 +1,20 @@
+/* tone.css — the two tones page.css has no pill for.
+ *
+ * `human` is the only red on the site: a row, pill or button in this tone
+ * says a person has to act. `failed` sits next to it for everything the
+ * pipeline will pick up itself — an outline in the warning hue, so a failure
+ * reads as its own thing at a glance without competing with red. The amber
+ * and green tones reuse `page__pill--warning` / `page__pill--success`; see
+ * `pillClass`. */
+
+.page__pill--human {
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+  border-color: transparent;
+}
+
+.page__pill--failed {
+  background-color: transparent;
+  color: var(--color-accent-warning);
+  border-color: var(--color-accent-warning);
+}

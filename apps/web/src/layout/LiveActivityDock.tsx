@@ -10,6 +10,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+import { pillClass, toneClass } from '../components/tone/tone';
 import { absoluteText, clockText, zoneLabel } from '../format/when';
 import { useAuth } from '../hooks/useAuth';
 import { PIPELINE_KEY, useAttention, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
@@ -92,7 +93,7 @@ export function LiveActivityDock(): JSX.Element | null {
             className="activity-dock__needs-you"
             data-testid="activity-dock-needs-you"
           >
-            <span className="page__pill page__pill--danger">{waiting} need you</span>
+            <span className={pillClass('human')}>{waiting} need you</span>
           </Link>
         ) : null}
         <Link to={ACTIVITY_PATH} className="activity-dock__all">
@@ -108,7 +109,7 @@ export function LiveActivityDock(): JSX.Element | null {
               events.map((event) => (
                 <li
                   key={event.seq}
-                  className={`activity-dock__item activity-dock__item--${eventTone(event)}`}
+                  className={toneClass('activity-dock__item', eventTone(event))}
                 >
                   <time className="activity-dock__meta" dateTime={event.ts} title={absoluteText(event.ts)}>
                     {clockText(event.ts)}

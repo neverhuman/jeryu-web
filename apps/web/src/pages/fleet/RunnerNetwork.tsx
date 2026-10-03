@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { pullHref } from '../activity/activityModel';
+import { toneModifier } from '../../components/tone/tone';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
 import { When } from '../../format/When';
 import {
@@ -203,7 +204,7 @@ function RunnerRow({
                 <>
                   {' '}
                   <span
-                    className="fleet__tone--warning"
+                    className="fleet__tone--warn"
                     data-testid={`${testId}-code-differs-${nodeId}`}
                   >
                     · differs
@@ -226,7 +227,7 @@ function RunnerRow({
           ) : null}
         </div>
         <p
-          className={`fleet__node-now fleet__tone--${now.tone}`}
+          className={`fleet__node-now ${toneModifier('fleet__tone', now.tone)}`}
           data-label={heads[1]}
           data-testid={`${testId}-now-${nodeId}`}
         >
@@ -250,13 +251,13 @@ function RunnerRow({
             <>
               {last.verbFirst ? (
                 <>
-                  <span className={`fleet__tone--${last.tone}`}>
+                  <span className={toneModifier('fleet__tone', last.tone)}>
                     {last.verb}
                   </span>{' '}
                   <LastSubject last={last} />
                   {last.blocked ? (
                     <span
-                      className="fleet__tone--warning"
+                      className="fleet__tone--warn"
                       data-testid={`${testId}-merge-blocked-${nodeId}`}
                     >
                       {' '}- merge blocked: {last.blocked}
@@ -266,7 +267,7 @@ function RunnerRow({
               ) : (
                 <>
                   <LastSubject last={last} />{' '}
-                  <span className={`fleet__tone--${last.tone}`}>
+                  <span className={toneModifier('fleet__tone', last.tone)}>
                     {last.verb}
                   </span>
                 </>
@@ -283,20 +284,20 @@ function RunnerRow({
         <p className="fleet__node-seen" data-label={heads[3]}>
           {node.lastUpdated ? (
             <time
-              className={stale ? 'fleet__tone--warning' : 'fleet__node-muted'}
+              className={stale ? 'fleet__tone--warn' : 'fleet__node-muted'}
               dateTime={node.lastUpdated}
               title={node.lastUpdated}
             >
               <When at={node.lastUpdated} />
             </time>
           ) : (
-            <span className="fleet__tone--warning">never</span>
+            <span className="fleet__tone--warn">never</span>
           )}
         </p>
       </div>
       {node.mergeGrantGaps?.length ? (
         <p
-          className="fleet__node-last fleet__tone--warning"
+          className="fleet__node-last fleet__tone--warn"
           data-testid={`${testId}-merge-grant-${nodeId}`}
         >
           {node.mergeGrantGaps.map((gap) => gap.message).join(' · ')}

@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { apiDelete, apiGet, apiSend } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import { ActionButton } from '../components/action/ActionButton';
+import { pillClass } from '../components/tone/tone';
 import { ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { InternalWikiPanel } from './InternalWikiPanel';
@@ -40,9 +41,7 @@ export function AdminSettingsPage(): JSX.Element {
             : 'Your preferences and this session.'}
         </p>
         <div className="page__inline-actions">
-          <span className="page__pill page__pill--warning">
-            Theme preferences
-          </span>
+          <span className={pillClass('unknown')}>Theme preferences</span>
         </div>
       </header>
 
@@ -107,7 +106,7 @@ function SessionPanel({ login }: { login: string | null }): JSX.Element {
         <span className="page__pill">{login ? `Logged in as ${login}` : 'Logged in'}</span>
         <ActionButton
           actionId="auth.logout"
-          variant="danger"
+          variant="human"
           icon={<LogOut size={14} aria-hidden="true" />}
           disabled={logout.isPending}
           onClick={() => logout.mutate()}
@@ -293,7 +292,7 @@ function RepoAccessPanel(): JSX.Element {
                       <td className="admin-users__actions">
                         <ActionButton
                           actionId="admin.revoke_repo"
-                          variant="danger"
+                          variant="human"
                           aria-label={`Revoke ${entry.login}`}
                           disabled={revoke.isPending}
                           onClick={() => revoke.mutate(entry.login)}

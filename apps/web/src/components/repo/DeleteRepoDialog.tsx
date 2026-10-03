@@ -72,7 +72,7 @@ export function DeleteRepoDialog({
       onConfirm={onConfirm}
       onCancel={onCancel}
       confirmLabel={confirmLabel ?? (purge ? 'Purge everything' : 'Remove')}
-      confirmVariant="danger"
+      confirmVariant="human"
       confirmDisabled={busy || !nameConfirmed}
     >
       {errorMessage ? (

@@ -191,16 +191,17 @@
   background-color: var(--color-bg-2);
 }
 
-.release-board__cell--success {
+.release-board__cell--ok {
   border-top-color: var(--color-accent-success);
 }
 
-.release-board__cell--warning {
+.release-board__cell--warn {
   border-top-color: var(--color-accent-warning);
 }
 
-.release-board__cell--danger {
-  border-top-color: var(--color-accent-danger);
+.release-board__cell--failed {
+  border-top-color: var(--color-accent-warning);
+  border-top-style: dashed;
 }
 
 .release-board__cell--never-deployed {

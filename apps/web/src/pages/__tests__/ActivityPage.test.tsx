@@ -83,6 +83,54 @@ describe('ActivityPage', () => {
     );
   });
 
+  it('paints red on the needs-you rows alone, and a failed gate in its own tone', async () => {
+    mockPipelineApi();
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+    const page = screen.getByTestId('activity-page');
+
+    // Every element in the human tone — the red one — sits in a row that
+    // says a person is needed, and those rows are the fixture's own.
+    const red = [...page.querySelectorAll('[class*="--human"]')];
+    expect(red.length).toBeGreaterThan(0);
+    const reddened = new Set(red.map((el) => el.closest('.is-needs-human')));
+    expect(reddened.has(null)).toBe(false);
+    expect([...reddened].map((row) => row?.getAttribute('data-testid')).sort()).toEqual(
+      EVENTS.filter((event) => event.needs_human).map((event) => `activity-event-${event.seq}`).sort()
+    );
+
+    // The fixture's gate failure was cleared by the merge after it, so it
+    // keeps its words and loses its colour; either way it is never red.
+    const gate = screen.getByTestId('activity-event-10');
+    expect(gate).toHaveClass('activity-row--unknown');
+    expect(gate.querySelector('[class*="--human"]')).toBeNull();
+  });
+
+  it('reads a failed gate as a failure, not as a row waiting on a person', async () => {
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events'
+        ? json({
+            events: [
+              pipelineEvent({
+                seq: 50,
+                kind: 'gate.log',
+                repo: 'acme/widgets',
+                pr: 7,
+                outcome: 'failure',
+                summary: 'Gate failed on acme/widgets#7',
+              }),
+            ],
+            latest_seq: 50,
+          })
+        : undefined
+    );
+    renderPage();
+    const gate = await screen.findByTestId('activity-event-50');
+    expect(gate).toHaveClass('activity-row--failed');
+    expect(gate.querySelector('[class*="--human"]')).toBeNull();
+    expect(within(gate).getByText('Gate failed')).toHaveClass('page__pill--failed');
+  });
+
   it('separates the days, so a clock time can be placed', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-19T14:00:00Z') });
     try {
@@ -150,8 +198,9 @@ describe('ActivityPage', () => {
     );
     renderPage();
     const failed = await screen.findByTestId('activity-event-40');
-    expect(failed).toHaveClass('activity-row--info');
-    expect(failed).not.toHaveClass('activity-row--danger');
+    // A cleared row keeps its words but not its colour: neutral, not red.
+    expect(failed).toHaveClass('activity-row--unknown');
+    expect(failed).not.toHaveClass('activity-row--human');
     expect(within(failed).queryByText('needs you')).toBeNull();
     expect(within(failed).getByText('resolved')).toBeInTheDocument();
     expect(within(failed).getByText('Gate failed')).toBeInTheDocument();

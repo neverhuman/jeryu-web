@@ -363,19 +363,14 @@
   text-transform: lowercase;
 }
 
-.wiki-doc__status--success {
+.wiki-doc__status--ok {
   color: var(--color-accent-success);
   background-color: var(--color-accent-success-bg);
 }
 
-.wiki-doc__status--warning {
+.wiki-doc__status--warn {
   color: var(--color-accent-warning);
   background-color: var(--color-accent-warning-bg);
-}
-
-.wiki-doc__status--danger {
-  color: var(--color-accent-danger);
-  background-color: var(--color-accent-danger-bg);
 }
 
 /* The frontmatter summary: one quiet box under the title, no label. */

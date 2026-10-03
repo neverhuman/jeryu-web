@@ -22,6 +22,7 @@ import type { AttentionItem } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
 import { ActionPreviewDialog } from '../../components/action/ActionPreviewDialog';
 import { FamilyPill } from '../../components/family/FamilyPills';
+import { toneClass, type Tone } from '../../components/tone/tone';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import { useAttentionAction } from '../../hooks/useAttentionAction';
 import { useRepositories } from '../../hooks/useRepositories';
@@ -61,7 +62,7 @@ export function AttentionRow({
   picked,
 }: {
   subject: AttentionSubject;
-  tone: 'danger' | 'neutral';
+  tone: Tone;
   now: Date;
 } & FamilyProps): JSX.Element {
   const item = subject.primary;
@@ -72,7 +73,7 @@ export function AttentionRow({
   // Only an admin ever sees a row: `/api/v1/attention` is admin-only.
   const target = acknowledgeTarget(item);
   return (
-    <li className={`needs-you__row needs-you__row--${tone}`} data-testid={`needs-you-item-${item.id}`}>
+    <li className={toneClass('needs-you__row', tone)} data-testid={`needs-you-item-${item.id}`}>
       <FamilyPill family={family} picked={picked} onPick={onPick} />
       <div className="needs-you__main">
         <p className="needs-you__title-line">

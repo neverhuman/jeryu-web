@@ -53,11 +53,11 @@ describe('classifySource', () => {
 });
 
 describe('statusTone and fieldValue', () => {
-  it('colours current as success, drafts as warning, stale as danger', () => {
-    expect(statusTone('current')).toBe('success');
-    expect(statusTone('Draft')).toBe('warning');
-    expect(statusTone('superseded')).toBe('danger');
-    expect(statusTone('someday')).toBe('neutral');
+  it('colours current as done, drafts and stale pages as worth a look', () => {
+    expect(statusTone('current')).toBe('ok');
+    expect(statusTone('Draft')).toBe('warn');
+    expect(statusTone('superseded')).toBe('warn');
+    expect(statusTone('someday')).toBe('unknown');
   });
 
   it('finds a field without case and treats blank as absent', () => {

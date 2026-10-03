@@ -161,7 +161,7 @@ describe('FleetPage automation', () => {
     expect(within(stage).queryAllByRole('link')).toHaveLength(0);
     const seen = screen.getByTestId('fleet-automation-seen-xbabe0_auto-stage');
     expect(seen.textContent).toContain('offline, last seen');
-    expect(seen.querySelector('.fleet__tone--danger')).not.toBeNull();
+    expect(seen.querySelector('.fleet__tone--failed')).not.toBeNull();
     expect(within(section).queryAllByRole('button')).toHaveLength(0);
   });
 

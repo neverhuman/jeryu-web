@@ -9,6 +9,7 @@
 import { Link } from 'react-router-dom';
 
 import type { Pin } from '../api/types';
+import { pillClass } from '../components/tone/tone';
 import { useAuth } from '../hooks/useAuth';
 import { isPipelineForbidden, isPipelineUnavailable, usePins } from '../hooks/usePipeline';
 import {
@@ -107,8 +108,8 @@ function PinRow({ pin }: { pin: Pin }): JSX.Element {
       <p className="pins__line">
         <Link to={timelineHref({ repo: pin.dependency })}>{shortRepo(pin.dependency)}</Link>
         {': '}
-        {pinTone(pin) === 'danger' ? (
-          <span className="page__pill page__pill--danger">{pinLabel(pin)}</span>
+        {pinTone(pin) === 'human' ? (
+          <span className={pillClass('human')}>{pinLabel(pin)}</span>
         ) : (
           <span className="pins__label">{pinLabel(pin)}</span>
         )}

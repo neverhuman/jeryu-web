@@ -20,6 +20,7 @@ import type { ShiftBranch, ShiftFamily, ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
 import { relativeText } from '../../format/when';
 import { FamilyPill, FamilyStrip } from '../../components/family/FamilyPills';
+import { pillClass } from '../../components/tone/tone';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
@@ -243,7 +244,7 @@ function FamilyQueue({
               to={needsYou.href}
               data-testid="shift-needs-human"
             >
-              <span className="page__pill page__pill--danger">{waiting}</span> in{' '}
+              <span className={pillClass('human')}>{waiting}</span> in{' '}
               {AREA_LABEL.work} · open Needs you
             </Link>
           ) : null}
@@ -465,7 +466,7 @@ function TodoRow({
           <TodoTrace todo={todo} refs={refs} />
         </td>
         <td>
-          <span className={`page__pill page__pill--${statusTone(todo.status)}`}>
+          <span className={pillClass(statusTone(todo.status))}>
             {todo.merged ? 'merged' : todo.status}
           </span>
         </td>

@@ -11,23 +11,23 @@ import { describe, expect, it } from 'vitest';
 import { JankuraiScoreBadge } from '../JankuraiScoreBadge';
 
 describe('JankuraiScoreBadge', () => {
-  it('renders a good pill at the 85 threshold', () => {
+  it('renders a passing pill at the 85 threshold', () => {
     render(<JankuraiScoreBadge score={85} scoredAt="2026-06-09T08:30:00Z" />);
     const badge = screen.getByRole('status');
     expect(badge).toHaveTextContent('85');
-    expect(badge).toHaveClass('repo-score-badge--good');
+    expect(badge).toHaveClass('repo-score-badge--ok');
   });
 
-  it('renders a good pill above the threshold', () => {
+  it('renders a passing pill above the threshold', () => {
     render(<JankuraiScoreBadge score={92} decision="pass" />);
-    expect(screen.getByRole('status')).toHaveClass('repo-score-badge--good');
+    expect(screen.getByRole('status')).toHaveClass('repo-score-badge--ok');
   });
 
-  it('renders a warn pill below the threshold', () => {
+  it('renders a failing pill below the threshold', () => {
     render(<JankuraiScoreBadge score={84} decision="fail" />);
     const badge = screen.getByRole('status');
     expect(badge).toHaveTextContent('84');
-    expect(badge).toHaveClass('repo-score-badge--warn');
+    expect(badge).toHaveClass('repo-score-badge--failed');
   });
 
   it('renders "audit failed" when the tool could not score the tree', () => {
@@ -40,16 +40,17 @@ describe('JankuraiScoreBadge', () => {
     );
     const badge = screen.getByRole('status');
     expect(badge).toHaveTextContent('audit failed');
-    expect(badge).toHaveClass('repo-score-badge--danger');
+    expect(badge).toHaveClass('repo-score-badge--failed');
     expect(badge.getAttribute('aria-label')).toContain('tool-failed');
   });
 
-  it('renders "--" as a warning when no audit exists', () => {
+  it('renders "--" as nothing known when no audit exists', () => {
     render(<JankuraiScoreBadge />);
     const badge = screen.getByRole('status');
     expect(badge).toHaveTextContent('--');
     expect(badge).not.toHaveTextContent('no score');
-    expect(badge).toHaveClass('repo-score-badge--warn');
+    // No audit is not a failure, so the pill stays neutral.
+    expect(badge).toHaveClass('repo-score-badge--unknown');
   });
 
   it('keeps "no score" in the title and aria-label of an unscored pill', () => {

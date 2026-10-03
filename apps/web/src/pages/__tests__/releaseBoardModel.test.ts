@@ -205,10 +205,10 @@ describe('stage track', () => {
   it('dashes a never-deployed stage and says it was never deployed to', () => {
     const idle = stage('forge-server', 'dev', GLOBEX_BOARD);
     expect(stageCellClass(idle, false)).toBe(
-      'release-board__cell release-board__cell--neutral release-board__cell--never-deployed'
+      'release-board__cell release-board__cell--unknown release-board__cell--never-deployed'
     );
     expect(stageCellClass(stage('cloud-app', 'prod'), true)).toBe(
-      'release-board__cell release-board__cell--danger release-board__cell--open'
+      'release-board__cell release-board__cell--failed release-board__cell--open'
     );
     expect(noPromoteText(idle)).toMatch(/never deployed to/);
     expect(noPromoteText(stage('cloud-app', 'main'))).toBe("This is the lane's source; nothing promotes into it.");
@@ -217,7 +217,7 @@ describe('stage track', () => {
   it('maps states to pills and target words', () => {
     expect(pillClass('ok')).toBe('page__pill page__pill--success');
     expect(pillClass('warn')).toBe('page__pill page__pill--warning');
-    expect(pillClass('bad')).toBe('page__pill page__pill--danger');
+    expect(pillClass('bad')).toBe('page__pill page__pill--failed');
     expect(pillClass('none')).toBe('page__pill');
     const states: BoardState[] = ['ok', 'warn', 'bad', 'none'];
     expect(states.map(targetStateText)).toEqual([

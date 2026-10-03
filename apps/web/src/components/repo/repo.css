@@ -598,20 +598,18 @@
   white-space: nowrap;
 }
 
-/* A passing score needs no action, so it is muted rather than green. */
-.repo-score-badge--good {
+/* A passing score needs no action, so it is muted rather than green; an
+   unscored tree is quieter still. */
+.repo-score-badge--ok,
+.repo-score-badge--unknown {
   background-color: var(--color-bg-2);
   color: var(--color-fg-muted);
 }
 
-.repo-score-badge--warn {
-  background-color: var(--color-accent-warning-bg);
+.repo-score-badge--failed {
+  background-color: transparent;
   color: var(--color-accent-warning);
-}
-
-.repo-score-badge--danger {
-  background-color: var(--color-accent-danger-bg);
-  color: var(--color-accent-danger);
+  box-shadow: inset 0 0 0 1px var(--color-accent-warning);
 }
 
 .repo-mirror-badge {
@@ -620,9 +618,10 @@
   font-weight: var(--font-weight-medium);
 }
 
-.repo-mirror-badge--danger {
-  background-color: var(--color-accent-danger-bg);
-  color: var(--color-accent-danger);
+.repo-mirror-badge--failed {
+  background-color: transparent;
+  color: var(--color-accent-warning);
+  box-shadow: inset 0 0 0 1px var(--color-accent-warning);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -659,16 +658,16 @@
   white-space: nowrap;
 }
 
-.repo-status-chip--danger {
-  background-color: var(--color-accent-danger-bg);
-  color: var(--color-accent-danger);
-  border-color: var(--color-accent-danger);
+.repo-status-chip--failed {
+  background-color: transparent;
+  color: var(--color-accent-warning);
+  border-color: var(--color-accent-warning);
   cursor: pointer;
 }
 
-.repo-status-chip--danger:hover,
-.repo-status-chip--danger[aria-expanded='true'] {
-  background-color: var(--color-accent-danger);
+.repo-status-chip--failed:hover,
+.repo-status-chip--failed[aria-expanded='true'] {
+  background-color: var(--color-accent-warning);
   color: var(--color-bg-0, #05070a);
 }
 

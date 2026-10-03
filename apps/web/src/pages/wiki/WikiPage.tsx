@@ -16,6 +16,7 @@ import { BookOpen, ExternalLink, FilePlus2, FileText, Folder, GitCommitHorizonta
 import { endpoints } from '../../api/endpoints';
 import type { BlameResponse, WikiRepository } from '../../api/types/wiki';
 import { MarkdownSource } from '../../components/browser/MarkdownSource';
+import { toneClass } from '../../components/tone/tone';
 import { When } from '../../format/When';
 import { dateText } from '../../format/when';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
@@ -314,7 +315,7 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
                 </time>
               ) : null}
               {status ? (
-                <span className={`page__pill wiki-doc__status wiki-doc__status--${statusTone(status)}`}>
+                <span className={`page__pill ${toneClass('wiki-doc__status', statusTone(status))}`}>
                   {status}
                 </span>
               ) : null}

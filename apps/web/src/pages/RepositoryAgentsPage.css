@@ -202,22 +202,28 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.agents__row-status--success {
+.agents__row-status--ok {
   background: var(--color-accent-success-bg);
   color: var(--color-accent-success);
 }
 
-.agents__row-status--warning {
+.agents__row-status--warn {
   background: var(--color-accent-warning-bg);
   color: var(--color-accent-warning);
 }
 
-.agents__row-status--danger {
+.agents__row-status--failed {
+  background: transparent;
+  color: var(--color-accent-warning);
+  box-shadow: inset 0 0 0 1px var(--color-accent-warning);
+}
+
+.agents__row-status--human {
   background: var(--color-accent-danger-bg);
   color: var(--color-accent-danger);
 }
 
-.agents__row-status--muted {
+.agents__row-status--unknown {
   background: var(--color-bg-3);
   color: var(--color-fg-muted);
 }

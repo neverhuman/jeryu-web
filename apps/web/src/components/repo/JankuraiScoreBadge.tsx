@@ -4,11 +4,11 @@
 // (`jankurai_score` / `jankurai_decision` / `jankurai_scored_at`, all
 // TS-optional). The pill points at problems, so a passing score is muted
 // and everything needing action is coloured. Four states:
-//   * score >= 85           → good (muted, nothing to do)
-//   * score <  85           → warn (warning tokens)
-//   * no score + a decision → "audit failed" danger pill (the tool ran but
-//                              could not score the tree, e.g. `tool-failed`)
-//   * no score, no decision → warn pill reading "--" (no audit ingested
+//   * score >= 85           → ok (muted, nothing to do)
+//   * score <  85           → failed (the gate's own problem, not a person's)
+//   * no score + a decision → "audit failed" in the same tone (the tool ran
+//                              but could not score the tree, e.g. `tool-failed`)
+//   * no score, no decision → unknown pill reading "--" (no audit ingested
 //                              yet); the dash keeps the column aligned with
 //                              scored rows while title/aria-label say
 //                              "no score"
@@ -19,6 +19,7 @@
 import { Gauge } from 'lucide-react';
 
 import { relativeText } from '../../format/when';
+import { scoreTone, toneClass, type Tone } from '../tone/tone';
 import './repo.css';
 
 /** Stand-in for the number on unscored rows, so the pill stays the same shape. */
@@ -33,7 +34,7 @@ export interface JankuraiScoreBadgeProps {
   scoredAt?: string | null;
 }
 
-type Variant = 'good' | 'warn' | 'danger';
+
 
 function scoredSuffix(scoredAt: string | null | undefined): string {
   return scoredAt ? ` · scored ${relativeText(scoredAt)}` : '';
@@ -43,24 +44,23 @@ function resolve(
   score: number | null | undefined,
   decision: string | null | undefined,
   scoredAt: string | null | undefined
-): { variant: Variant; text: string; detail: string } {
+): { tone: Tone; text: string; detail: string } {
   if (score === null || score === undefined) {
     if (decision !== null && decision !== undefined) {
       return {
-        variant: 'danger',
+        tone: 'failed',
         text: 'audit failed',
         detail: `jankurai audit failed (${decision})${scoredSuffix(scoredAt)}`,
       };
     }
     return {
-      variant: 'warn',
+      tone: 'unknown',
       text: NO_SCORE_TEXT,
       detail: 'no score · no jankurai audit recorded for this repository.',
     };
   }
-  const variant: Variant = score >= JANKURAI_GOOD_THRESHOLD ? 'good' : 'warn';
   return {
-    variant,
+    tone: scoreTone(score, JANKURAI_GOOD_THRESHOLD),
     text: String(score),
     detail: `jankurai score ${score}${scoredSuffix(scoredAt)}`,
   };
@@ -71,10 +71,10 @@ export function JankuraiScoreBadge({
   decision,
   scoredAt,
 }: JankuraiScoreBadgeProps): JSX.Element {
-  const { variant, text, detail } = resolve(score, decision, scoredAt);
+  const { tone, text, detail } = resolve(score, decision, scoredAt);
   return (
     <span
-      className={`repo-score-badge repo-score-badge--${variant}`}
+      className={toneClass('repo-score-badge', tone)}
       role="status"
       title={detail}
       aria-label={detail}
