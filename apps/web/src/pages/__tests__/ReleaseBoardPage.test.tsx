@@ -308,6 +308,37 @@ describe('ReleasesPage — family release board', () => {
     expect(problems).toHaveTextContent('ssh node-c: connection timed out');
   });
 
+  it('warns at the top of the board about everything not shipped yet', async () => {
+    serveBoards();
+    open('/releases/family/initech');
+    const banner = await screen.findByTestId('release-board-unshipped');
+    expect(banner).toHaveTextContent('Not shipped yet: 1 stage marked for attention');
+    expect(banner).toHaveTextContent('8 of 9 pinned repos not level');
+    expect(within(banner).getByRole('link', { name: 'Package · tagged' })).toHaveAttribute(
+      'href',
+      '#lane-free-download'
+    );
+    expect(banner).toHaveTextContent(': main 13 ahead');
+    expect(banner).toHaveTextContent('Main ahead (see Pinned vs released): packager 105, engine-core 56');
+    // The read-only lane is the owning family's to warn about.
+    expect(banner).not.toHaveTextContent('Runtime image');
+  });
+
+  it('draws no not-shipped banner when everything ships', async () => {
+    const level: ReleaseBoard = {
+      ...ACME_BOARD,
+      lanes: ACME_BOARD.lanes.map((lane) => ({
+        ...lane,
+        stages: lane.stages.map((stage) => ({ ...stage, state: 'ok' as const })),
+      })),
+      work: undefined,
+    };
+    serveBoards([level]);
+    open('/releases/family/acme');
+    expect(await screen.findByTestId('release-board-summary')).toBeInTheDocument();
+    expect(screen.queryByTestId('release-board-unshipped')).toBeNull();
+  });
+
   it('does not flag a snapshot taken a few minutes ago', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-28T15:45:00Z'));

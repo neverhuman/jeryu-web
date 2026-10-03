@@ -14,7 +14,12 @@ import { filterByFamily, needsYouHref, urgentInArea } from './needsYou/needsYouM
 import { attentionByPull, attentionOffRows, pullAttentionKey } from './pullAttentionModel';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
-import { awaitingReleaseCount } from './pullRepoGroupsModel';
+import {
+  awaitingReleaseByRepo,
+  awaitingReleaseCount,
+  awaitingReleaseWarning,
+} from './pullRepoGroupsModel';
+import { RELEASES_PATH, releaseFamilyPath } from './releaseBoard/links';
 import { pullGhostGroups, type GhostGroup } from './pullGhostsModel';
 import { releaseLadder } from './releaseChannelsModel';
 import {
@@ -272,6 +277,8 @@ export function PullRoomPage(): JSX.Element {
     : summaryCounts(snapshot.data.summary);
   // Anything the page reads that the snapshot cut short is said out loud.
   const truncated = truncatedCollections(snapshot.data.page, ['pull_requests']);
+  // Merged work that reached no release is a warning, not just a count.
+  const unshipped = board ? null : awaitingReleaseWarning(awaitingReleaseByRepo(rows, ladderFor));
 
   return (
     <div className="page page--full pull-room" data-testid="pull-room-page">
@@ -297,6 +304,15 @@ export function PullRoomPage(): JSX.Element {
           </button>
         </div>
       </header>
+
+      {unshipped ? (
+        <p className="pull-room__unshipped" role="status" data-testid="pull-room-unshipped">
+          {unshipped}{' '}
+          <Link to={family ? releaseFamilyPath(family) : RELEASES_PATH}>
+            {family ? `Open the ${family} release board` : 'Open the release boards'}
+          </Link>
+        </p>
+      ) : null}
 
       {waitingOffRows.length > 0 ? (
         <p className="pull-room__needs-off" data-testid="pull-room-needs-off">

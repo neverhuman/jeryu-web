@@ -1,6 +1,6 @@
 // BoardPanels.tsx — the parts of a family release board besides its lanes:
-// the "Work reached" bar, the pinned-vs-released table, the release notes,
-// and the sources the collector could not read.
+// the "Not shipped yet" banner, the "Work reached" bar, the pinned-vs-released
+// table, the release notes, and the sources the collector could not read.
 
 import { useId } from 'react';
 
@@ -9,11 +9,16 @@ import type {
   BoardPins,
   BoardProblem,
   BoardWork,
+  ReleaseBoard,
 } from '../../api/types/releaseBoard';
+import { laneAnchorId } from './links';
 import {
   pillClass,
   pinBehindState,
   pinColumns,
+  unshipped,
+  unshippedHeadline,
+  unshippedPinsText,
   workShares,
   workShareText,
   workSummary,
@@ -139,6 +144,41 @@ export function NotesPanel({ notes }: { notes: BoardNotes | undefined }): JSX.El
         )}
       </div>
       <p className="release-board__muted">{notes.coverage}</p>
+    </div>
+  );
+}
+
+/**
+ * What has not shipped, at the top of the board: the stages the collector
+ * marked warn or bad, the pins that are not level, and merged or stranded
+ * work. Yellow unless something is bad. Absent when everything ships.
+ */
+export function UnshippedBanner({ board }: { board: ReleaseBoard }): JSX.Element | null {
+  const found = unshipped(board);
+  if (!found) return null;
+  return (
+    <div
+      className={`release-board__unshipped release-board__unshipped--${found.state}`}
+      role="status"
+      data-testid="release-board-unshipped"
+    >
+      <p className="release-board__label">{unshippedHeadline(found)}</p>
+      <ul className="release-board__list">
+        {found.stages.map((stage) => (
+          <li key={`${stage.laneId}-${stage.stage}`}>
+            <a href={`#${laneAnchorId(stage.laneId)}`}>
+              <strong>{stage.lane}</strong> · {stage.stage}
+            </a>
+            : {stage.status}
+          </li>
+        ))}
+        {found.pins.length > 0 ? (
+          <li>
+            <strong>{found.pinLabel}</strong> (see Pinned vs released):{' '}
+            {unshippedPinsText(found.pins)}
+          </li>
+        ) : null}
+      </ul>
     </div>
   );
 }

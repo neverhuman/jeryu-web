@@ -471,11 +471,52 @@ export function awaitingReleaseCount(
   pulls: readonly PullRequestSummary[],
   ladderFor: (pr: PullRequestSummary) => ReleaseLadder
 ): number {
-  return pulls.filter((pr) => {
-    if (pr.state !== 'merged') return false;
-    const ladder = ladderFor(pr);
-    return ladder.kind !== 'none' && !ladder.furthest && !ladder.uncertain;
-  }).length;
+  return pulls.filter((pr) => awaitsRelease(pr, ladderFor)).length;
+}
+
+function awaitsRelease(
+  pr: PullRequestSummary,
+  ladderFor: (pr: PullRequestSummary) => ReleaseLadder
+): boolean {
+  if (pr.state !== 'merged') return false;
+  const ladder = ladderFor(pr);
+  return ladder.kind !== 'none' && !ladder.furthest && !ladder.uncertain;
+}
+
+export interface AwaitingRepo {
+  repo: string;
+  count: number;
+}
+
+/**
+ * The same merged-but-shipped-nowhere PRs, per repository, most first: what
+ * the page's "not shipped yet" warning names.
+ */
+export function awaitingReleaseByRepo(
+  pulls: readonly PullRequestSummary[],
+  ladderFor: (pr: PullRequestSummary) => ReleaseLadder
+): AwaitingRepo[] {
+  const counts = new Map<string, number>();
+  for (const pr of pulls) {
+    if (!awaitsRelease(pr, ladderFor)) continue;
+    const repo = repoOf(pr);
+    counts.set(repo, (counts.get(repo) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([repo, count]) => ({ repo, count }))
+    .sort((a, b) => b.count - a.count || a.repo.localeCompare(b.repo));
+}
+
+/** The warning in one line, or null when nothing waits. */
+export function awaitingReleaseWarning(repos: readonly AwaitingRepo[], shown = 5): string | null {
+  const total = repos.reduce((sum, entry) => sum + entry.count, 0);
+  if (total === 0) return null;
+  const head = repos.slice(0, shown).map((entry) => `${entry.repo.split('/')[1] ?? entry.repo} ${entry.count}`);
+  const rest = repos.length - head.length;
+  const list = rest > 0 ? `${head.join(', ')} and ${rest} more` : head.join(', ');
+  const prs = total === 1 ? '1 merged pull request has' : `${total} merged pull requests have`;
+  const where = repos.length === 1 ? '1 repository' : `${repos.length} repositories`;
+  return `Not shipped yet: ${prs} reached no release in ${where} (${list}).`;
 }
 
 /**
