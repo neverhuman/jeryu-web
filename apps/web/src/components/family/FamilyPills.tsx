@@ -7,6 +7,8 @@
 
 import { Link } from 'react-router-dom';
 
+import { sameFamily } from './familyScope';
+
 import './FamilyPills.css';
 
 export interface FamilyCountEntry {
@@ -26,7 +28,9 @@ export function FamilyPill({
   onPick: (family: string) => void;
   className?: string;
 }): JSX.Element {
-  const active = picked === family;
+  // `acme` and `acme-split` are one family: a row filed under either name
+  // reads as picked while that family is the scope.
+  const active = sameFamily(picked, family) && picked !== '';
   return (
     <button
       type="button"
@@ -68,7 +72,7 @@ export function FamilyPicker({
             key={entry}
             to={hrefOf(entry)}
             className="family-pill"
-            aria-current={family === entry ? 'page' : undefined}
+            aria-current={sameFamily(family, entry) ? 'page' : undefined}
             onClick={() => onPick(entry)}
           >
             {entry}
@@ -78,7 +82,7 @@ export function FamilyPicker({
           key={entry}
           type="button"
           className="family-pill"
-          aria-pressed={family === entry}
+          aria-pressed={sameFamily(family, entry)}
           onClick={() => onPick(entry)}
         >
           {entry}
@@ -115,7 +119,7 @@ export function FamilyStrip({
           key={entry.family}
           type="button"
           className="family-pill"
-          aria-pressed={family === entry.family}
+          aria-pressed={sameFamily(family, entry.family) && family !== ''}
           onClick={() => onPick(entry.family)}
         >
           {entry.family} <span className="family-pill__count">{entry.count}</span>

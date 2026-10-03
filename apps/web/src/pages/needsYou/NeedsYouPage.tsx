@@ -15,7 +15,8 @@ import { Link } from 'react-router-dom';
 
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
-import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
+import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
+import { LoadingState, PipelineQueryState } from '../../components/state';
 import { useControlPlaneRunners } from '../../hooks/useControlPlaneRunners';
 import {
   ATTENTION_QUERY_KEY,
@@ -84,7 +85,7 @@ export function NeedsYouPage(): JSX.Element {
           ) : null}
           {urgent.length === 0 ? (
             <>
-              <EmptyState
+              <ScopedEmptyState
                 icon={CircleCheck}
                 title="Nothing needs you."
                 description={`Checked ${relativeText(attention.data.generated_at, now)}.`}

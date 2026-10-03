@@ -85,6 +85,20 @@ describe('withFamilyScope', () => {
     expect(withFamilyScope('/releases?family=globex', 'acme')).toBe('/releases/family/acme');
   });
 
+  it('keeps the query form where /releases is a view of its own', () => {
+    // The per-repository view is an address of its own: the family stays a
+    // parameter so `?view=repositories&family=<key>` remains one address.
+    expect(withFamilyScope('/releases?view=repositories', 'acme')).toBe(
+      '/releases?view=repositories&family=acme'
+    );
+    expect(withFamilyScope('/releases?view=repositories&family=globex', 'acme')).toBe(
+      '/releases?view=repositories&family=acme'
+    );
+    expect(withFamilyScope('/releases?repo=acme%2Fweb', 'acme')).toBe(
+      '/releases?repo=acme%2Fweb&family=acme'
+    );
+  });
+
   it('takes the scope back off for every family', () => {
     expect(withFamilyScope('/work?family=acme&todo=7', '')).toBe('/work?todo=7');
     expect(withFamilyScope('/releases/family/acme', '')).toBe('/releases');

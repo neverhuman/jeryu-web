@@ -4,6 +4,9 @@
 // left nav, the `g x` shortcuts and the palette are carrying, the select
 // changes it, and the × shows every family again. The palette's "Switch
 // family…" opens the select from the keyboard (see useShellCommands).
+//
+// On a page reached by a link into another family the chip says so — "outside
+// acme" — and offers the one click that carries that other family instead.
 
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
@@ -33,7 +36,7 @@ export function FamilyScopeChip(): JSX.Element {
   const select = useRef<HTMLSelectElement | null>(null);
   const options = familyOptions(
     families.data?.families.map((family) => family.name) ?? [],
-    scope.family
+    scope.carried
   );
 
   // "Switch family…" in the palette is this control, reached from the keyboard.
@@ -47,7 +50,7 @@ export function FamilyScopeChip(): JSX.Element {
     <div
       className={`family-scope${scope.active ? ' family-scope--active' : ''}`}
       data-testid="family-scope"
-      data-family={scope.family}
+      data-family={scope.carried}
     >
       <label className="family-scope__label" htmlFor="family-scope-select">
         Family:
@@ -57,7 +60,7 @@ export function FamilyScopeChip(): JSX.Element {
         ref={select}
         className="family-scope__select"
         data-testid="family-scope-select"
-        value={scope.family}
+        value={scope.carried}
         onChange={(event) => scope.setFamily(event.target.value)}
       >
         <option value="">All families</option>
@@ -67,13 +70,24 @@ export function FamilyScopeChip(): JSX.Element {
           </option>
         ))}
       </select>
-      {scope.active ? (
+      {scope.outside ? (
+        <button
+          type="button"
+          className="family-scope__outside"
+          data-testid="family-scope-switch"
+          title={`This page is outside ${scope.label || 'the scope'}`}
+          onClick={() => scope.switchToOutside()}
+        >
+          outside {familyLabel(scope.carried)} · switch to {familyLabel(scope.outside)}
+        </button>
+      ) : null}
+      {scope.carried ? (
         <button
           type="button"
           className="family-scope__clear"
           data-testid="family-scope-clear"
           title="Show all families"
-          aria-label={`Showing only ${scope.label}: show all families`}
+          aria-label={`Showing only ${familyLabel(scope.carried)}: show all families`}
           onClick={() => scope.clearFamily()}
         >
           <X size={12} aria-hidden="true" />

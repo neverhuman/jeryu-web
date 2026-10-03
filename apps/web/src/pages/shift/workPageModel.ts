@@ -8,6 +8,7 @@ import type {
   ShiftTodo,
   ShiftWorker,
 } from '../../api/types';
+import { sameFamily } from '../../components/family/familyScope';
 import { familyName } from '../needsYou/needsYouModel';
 import { isFinishedTodo, isLongStale } from './shiftModel';
 import { isSupervisor } from './workersModel';
@@ -132,7 +133,7 @@ export function budgetSpentLines(
   return (data?.items ?? [])
     .filter((item) => item.kind === 'shift_budget_spent')
     .map((item) => ({ item, name: familyName(item.family) ?? 'unknown' }))
-    .filter((row) => !family || row.name === family)
+    .filter((row) => !family || sameFamily(row.name, family))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(({ item, name }) => {
       const waiting = typeof item.budget?.waiting === 'number' ? item.budget.waiting : null;

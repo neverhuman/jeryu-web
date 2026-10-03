@@ -5,6 +5,7 @@
 // step per pin, so Releases reads as a pipeline: merged but not
 // pinned, then pinned but not deployed.
 
+import { sameFamily } from '../components/family/familyScope';
 import type { Pin, PinConsumer, PinState } from '../api/types';
 import { safeHref } from './needsYou/needsYouModel';
 
@@ -118,7 +119,7 @@ export function taggedSummary(count: number): string {
 export interface PinScope {
   /** `?repo=owner/name`, when the page is scoped to one repository. */
   repo: string | null;
-  /** `?family=`, when the page is scoped to a family. */
+  /** The family in scope, canonical, when the page is scoped to one. */
   family: string | null;
   /** The family's repositories as `owner/name`, once listed. */
   familyRepos: readonly string[];
@@ -132,7 +133,9 @@ export interface PinScope {
 export function scopeConsumers(consumers: PinConsumer[], scope: PinScope): PinConsumer[] {
   return consumers.filter((consumer) => {
     if (scope.family) {
-      return consumer.family === scope.family || scope.familyRepos.includes(consumer.repo);
+      // `acme` and `acme-split` name one family: a deploy repo filed under
+      // either belongs on the page scoped to it.
+      return sameFamily(consumer.family, scope.family) || scope.familyRepos.includes(consumer.repo);
     }
     if (!scope.repo) return true;
     return (

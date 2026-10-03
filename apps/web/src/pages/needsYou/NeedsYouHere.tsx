@@ -5,14 +5,16 @@
 // left-nav count, this strip and that page always agree. Nothing waiting here
 // renders nothing: calm pages stay calm.
 
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
+import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { useAuth } from '../../hooks/useAuth';
 import { useAttention } from '../../hooks/usePipeline';
 import { AttentionRow, useRepoFamilies } from './AttentionRow';
 import {
   AREA_LABEL,
   attentionSubjects,
+  NEEDS_YOU_PATH,
   familyOf,
   filterByFamily,
   severityTone,
@@ -39,7 +41,7 @@ export function NeedsYouHere({
   const { user } = useAuth();
   const attention = useAttention(user?.role === 'admin');
   const repoFamilies = useRepoFamilies();
-  const navigate = useNavigate();
+  const scope = useFamilyScope();
 
   // One row per subject here too, so this strip and /needs-you count the same
   // things: three items about one pull request are one row on both.
@@ -50,11 +52,10 @@ export function NeedsYouHere({
 
   const shown = subjects.slice(0, SHOWN);
   const more = subjects.length - shown.length;
+  // Without a filter of its own, a pill takes the family to Needs you — as
+  // the shell's scope, so the pages after it open on that family too.
   const pick =
-    onFamily ??
-    ((next: string): void => {
-      void navigate(`/needs-you?family=${encodeURIComponent(next)}`);
-    });
+    onFamily ?? ((next: string): void => scope.setFamily(next, { to: NEEDS_YOU_PATH }));
   const now = new Date();
   const title = `${subjects.length} waiting on you in ${AREA_LABEL[area]}`;
 

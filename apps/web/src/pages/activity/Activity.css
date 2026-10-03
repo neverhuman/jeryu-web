@@ -34,6 +34,22 @@
   padding-bottom: var(--space-1);
 }
 
+/* Wall mode has no filter row: this line says which family it counts. */
+.activity__wall-family {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.activity__wall-family button {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent-primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .activity__wall-toggle {
   display: inline-flex;
   align-items: center;

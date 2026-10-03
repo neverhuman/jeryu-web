@@ -5,8 +5,8 @@
 // pressing "More options" opens the full form in place: several lines, "paste
 // many" (one
 // todo per blank-line-separated paragraph), repos, priority, blocked by. The
-// family starts at the page's family filter, so work is filed where the operator
-// is looking. Without
+// family starts at the shell's family scope, so work is filed where the
+// operator is looking. Without
 // a title and repos the server files the todo untriaged and a worker triages
 // it. Filing is admin-only; after filing the composer clears and closes, and
 // the page highlights the new todos in the queue below.
@@ -16,6 +16,7 @@ import { useLocation } from 'react-router-dom';
 
 import type { ShiftFamily, ShiftMode, ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
+import { sameFamily } from '../../components/family/familyScope';
 import { useFileShiftTodos } from '../../hooks/useShift';
 import { SHIFT_PRIORITIES, parseList, splitParagraphs } from './shiftModel';
 import { WORK_ADD_ID } from './workPaths';
@@ -27,7 +28,7 @@ export function WorkComposer({
   onFiled,
 }: {
   families: ShiftFamily[];
-  /** The page's family filter ('' = every family): preselects the composer. */
+  /** The shell's family scope ('' = every family): preselects the composer. */
   family: string;
   isAdmin: boolean;
   onFiled: (family: string, todos: ShiftTodo[]) => void;
@@ -45,14 +46,14 @@ export function WorkComposer({
   const lineRef = useRef<HTMLInputElement>(null);
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
-  // The page's family filter is the composer's family, from the first paint on:
+  // The shell's family scope is the composer's family, from the first paint on:
   // work is filed where the operator is looking. The select still changes it,
-  // and that pick stands until the filter moves; with no filter, the first
-  // family of the list does.
+  // and that pick stands until the scope moves; with no scope the composer
+  // still needs a choice, and the first family of the list is it.
   if (pick && pick.under !== family) setPick(null);
   const target =
     families.find((f) => f.name === pick?.name) ??
-    families.find((f) => f.name === family) ??
+    families.find((f) => sameFamily(f.name, family)) ??
     families[0];
 
   // `/work#add` ("Add work" in the palette, the old Add tab) lands in the text.

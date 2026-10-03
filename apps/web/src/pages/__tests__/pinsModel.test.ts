@@ -118,6 +118,11 @@ describe('pinsModel', () => {
     expect(names({ repo: null, family: 'jain', familyRepos: [] })).toEqual(['veox/jain-deploy']);
     expect(names({ repo: null, family: 'x', familyRepos: ['jeryu/jeryu-deploy'] })).toEqual(['jeryu/jeryu-deploy']);
     expect(names({ repo: 'other/repo', family: null, familyRepos: [] })).toEqual([]);
+    // The family scope is one key per family: a deploy repo filed under the
+    // split spelling belongs on the page scoped to the family either names.
+    expect(
+      names({ repo: null, family: 'jain', familyRepos: [] })
+    ).toEqual(scopeConsumers(all, { repo: null, family: 'jain-split', familyRepos: [] }).map((c) => c.repo));
   });
 
   it('gives Releases one line per commit pin that is behind, and none for tags', () => {

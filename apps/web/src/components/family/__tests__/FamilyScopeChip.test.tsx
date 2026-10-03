@@ -5,9 +5,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FamilyScopeChip } from '../FamilyScopeChip';
+import { FAMILY_SCOPE_STORAGE_KEY } from '../familyScope';
 import { FamilyScopeProvider } from '../FamilyScopeProvider';
 
 const FAMILIES = {
@@ -48,6 +49,7 @@ function renderAt(path: string): void {
 }
 
 describe('FamilyScopeChip', () => {
+  beforeEach(() => window.sessionStorage.clear());
   afterEach(() => vi.restoreAllMocks());
 
   it('says which family is in scope and offers the way out', async () => {
@@ -77,6 +79,21 @@ describe('FamilyScopeChip', () => {
     await waitFor(() => expect(screen.getByRole('option', { name: 'globex' })).toBeDefined());
     fireEvent.change(select, { target: { value: 'globex' } });
     expect(screen.getByTestId('where').textContent).toBe('/work?family=globex');
+  });
+
+  it('says a page is outside the scope, and switches to it in one click', async () => {
+    mockApi();
+    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_KEY, 'acme');
+    renderAt('/work?family=globex');
+    const select = screen.getByTestId('family-scope-select');
+    // The chip keeps saying which family the tab carries everywhere else.
+    expect(select).toHaveValue('acme');
+    const switcher = screen.getByTestId('family-scope-switch');
+    expect(switcher).toHaveTextContent('outside acme · switch to globex');
+
+    fireEvent.click(switcher);
+    await waitFor(() => expect(select).toHaveValue('globex'));
+    expect(screen.queryByTestId('family-scope-switch')).toBeNull();
   });
 
   it('keeps the scope choosable when the families cannot be read', async () => {

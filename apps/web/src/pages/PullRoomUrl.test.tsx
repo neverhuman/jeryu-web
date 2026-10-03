@@ -241,8 +241,9 @@ describe('Pull Room URL navigation', () => {
   it('says so when a family has nothing open, with the way back', async () => {
     const user = userEvent.setup();
     const router = setup(['/pull-room?family=nobody']);
-    expect(screen.getByTestId('pull-room-empty')).toHaveTextContent('No open pull requests.');
-    await user.click(screen.getByRole('button', { name: 'Show every family' }));
+    // Scoped and empty, the page names the family rather than looking broken.
+    expect(screen.getByTestId('pull-room-empty')).toHaveTextContent('Nothing for nobody here');
+    await user.click(screen.getByRole('button', { name: 'Show all families' }));
     expect(router.state.location.search).toBe('');
     expect(screen.getByTestId('pull-timeline-owner/a-1')).toBeInTheDocument();
   });

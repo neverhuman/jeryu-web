@@ -5,17 +5,20 @@
 // status, why it is stuck, the work trace, what waits on you here, repos,
 // commits, then the body,
 // note and every attempt, with the admin actions beside them. Ids are unique
-// across families; `?family=` only settles the rare id two families share.
+// across families; the family scope (`?family=`) only settles the rare id two
+// families share, and the pill carries this todo's family to Work.
 
 import { Inbox } from 'lucide-react';
 import { useMemo } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import type { ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
 import { relativeText } from '../../format/when';
 import { Breadcrumbs } from '../../components/browser/Breadcrumbs';
 import { FamilyPill } from '../../components/family/FamilyPills';
+import { sameFamily } from '../../components/family/familyScope';
+import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
@@ -48,8 +51,8 @@ const NO_REFS: RepoRefs = () => null;
 export function TodoPage(): JSX.Element {
   const { key = '' } = useParams();
   usePageTitle(key || 'Work');
-  const [params] = useSearchParams();
-  const family = params.get('family') ?? '';
+  const scope = useFamilyScope();
+  const family = scope.family;
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   // Every family's todos, the same request Work makes: going back is instant.
@@ -59,7 +62,7 @@ export function TodoPage(): JSX.Element {
   const matches = useMemo(
     () =>
       (todos.data?.todos ?? []).filter(
-        (todo) => todo.id === key && (!family || todo.family === family)
+        (todo) => todo.id === key && (!family || sameFamily(todo.family, family))
       ),
     [todos.data, key, family]
   );
@@ -129,7 +132,7 @@ function TodoView({
   refs: RepoRefs;
   isAdmin: boolean;
 }): JSX.Element {
-  const navigate = useNavigate();
+  const scope = useFamilyScope();
   const now = new Date();
   const stuck = todo.status === 'blocked' || todo.status === 'handoff';
   const attempts = attemptSummary(todo);
@@ -140,10 +143,12 @@ function TodoView({
       <header className="page__header">
         <h1 className="page__title">{todo.title}</h1>
         <p className="page__subtitle shift-todo-page__meta">
+          {/* The pill is this todo's family: pressing it takes the scope with
+              it to the queue, so Work opens on the family just read. */}
           <FamilyPill
             family={todoFamily(todo)}
-            picked=""
-            onPick={(name) => navigate(queueHref(name))}
+            picked={scope.family}
+            onPick={(name) => scope.setFamily(name, { to: WORK_PATH, drop: ['todo'] })}
           />
           <span
             className={`page__pill page__pill--${statusTone(todo.status)}`}

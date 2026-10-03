@@ -29,8 +29,9 @@ import {
   useShiftTodos,
 } from '../../hooks/useShift';
 import { ShiftError } from './shiftCommon';
-import { sameFamily } from '../../components/family/familyScope';
+import { canonicalFamily, sameFamily } from '../../components/family/familyScope';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
+import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import {
   DEFAULT_QUEUE_FILTERS,
   SHIFT_MODES,
@@ -79,9 +80,10 @@ export function ShiftQueuePage(): JSX.Element {
   // The shell's family scope filters the whole page, and is stated here as
   // `?family=`; a scope on a family this queue does not know means all.
   const scope = useFamilyScope();
-  // The queue's own spelling of the scope (`acme` and `acme-split` are one
-  // family), so rows filed under either name match the scope set elsewhere.
-  const family = list.find((f) => sameFamily(f.name, scope.family))?.name ?? '';
+  // `acme` and `acme-split` are one family: the queue it names, when this
+  // queue knows it at all, and the one key the rows and counts are filed under.
+  const queue = list.find((f) => sameFamily(f.name, scope.family));
+  const family = queue ? canonicalFamily(queue.name) : '';
   // A family filter is about the whole queue, so the filed-todo focus goes.
   const setFamily = (name: string): void => {
     scope.setFamily(name === family ? '' : name, { drop: ['todo'] });
@@ -91,7 +93,7 @@ export function ShiftQueuePage(): JSX.Element {
       (current) => {
         const next = new URLSearchParams(current);
         // Keep a family filter pointed at where the new todos went.
-        if (family && family !== filedFamily) next.set('family', filedFamily);
+        if (family && !sameFamily(family, filedFamily)) next.set('family', filedFamily);
         next.set('todo', todos.map((todo) => todo.id).join(','));
         return next;
       },
@@ -122,7 +124,14 @@ export function ShiftQueuePage(): JSX.Element {
         />
       ) : (
         <>
-          <WorkComposer families={list} family={family} isAdmin={isAdmin} onFiled={onFiled} />
+          {/* The composer files into a queue, so it wants the queue's own
+              name; everything else reads the one canonical key. */}
+          <WorkComposer
+            families={list}
+            family={queue?.name ?? ''}
+            isAdmin={isAdmin}
+            onFiled={onFiled}
+          />
           <WorkersStrip todos={all} family={family} />
           <FamilyQueue
             families={list}
@@ -195,7 +204,7 @@ function FamilyQueue({
   );
   const showFinished = params.get('finished') === '1';
   const filtersInUse = Object.values(filters).some((value) => value !== 'all');
-  const inScope = family ? families.filter((f) => f.name === family) : families;
+  const inScope = family ? families.filter((f) => sameFamily(f.name, family)) : families;
 
   const set = (key: keyof QueueFilters) => (value: string) => {
     if (key !== 'repo') {
@@ -243,10 +252,7 @@ function FamilyQueue({
             </div>
           </details>
           {focusIds.length > 0 ? (
-            <Link
-              to={family ? `?family=${encodeURIComponent(family)}` : '?'}
-              className="shift__muted"
-            >
+            <Link to={withoutFocus(params)} className="shift__muted">
               Showing {focusIds.length} filed todo{focusIds.length === 1 ? '' : 's'} · show all
             </Link>
           ) : null}
@@ -258,13 +264,13 @@ function FamilyQueue({
         ) : todos.isError ? (
           <ShiftError title="Could not load the queue." error={todos.error} />
         ) : scoped.length === 0 ? (
-          <EmptyState
+          <ScopedEmptyState
             icon={Inbox}
-            title={family ? `The ${family} queue is empty.` : 'The queue is empty.'}
+            title="The queue is empty."
             description="File a todo with the box at the top of this page, or with todoq add."
           />
         ) : filtered.length === 0 ? (
-          <EmptyState icon={Inbox} title="No todos match the current filters." />
+          <ScopedEmptyState icon={Inbox} title="No todos match the current filters." />
         ) : (
           <>
             {live.length === 0 ? (
@@ -306,6 +312,18 @@ function FamilyQueue({
       />
     </>
   );
+}
+
+/**
+ * The queue without the filed-todo focus, and with everything else the address
+ * says — the family among it, so "show all" is about the todos and not the
+ * family scope.
+ */
+function withoutFocus(params: URLSearchParams): string {
+  const next = new URLSearchParams(params);
+  next.delete('todo');
+  const query = next.toString();
+  return query ? `?${query}` : '?';
 }
 
 interface RowFamilyProps {

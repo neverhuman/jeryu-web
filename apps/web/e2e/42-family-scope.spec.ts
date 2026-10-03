@@ -11,6 +11,8 @@ import { expect, test, type Page } from './fixtures/test';
 
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
+import { mockPipelineApi } from './fixtures/pipelineMocks';
+import { mockPullRoom } from './fixtures/pullRoomMocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -170,5 +172,200 @@ test.describe('Family scope', () => {
     await shell.openCommandPalette();
     await page.getByRole('option', { name: 'Show all families' }).click();
     await expectScope(page, '');
+  });
+});
+
+/** One queue per invented family, so Work has a row of each to filter. */
+async function mockShiftQueue(page: Page): Promise<void> {
+  const todo = (id: string, family: string, title: string): Record<string, unknown> => ({
+    id,
+    family,
+    title,
+    body: '',
+    repos: [],
+    mode: 'night',
+    priority: 3,
+    blocked_by: [],
+    status: 'open',
+    attempts: 0,
+    requested_by: 'alton',
+    filed_at: new Date(Date.now() - 3_600_000).toISOString(),
+    claim_by: null,
+    lease_until: null,
+    lease_live: false,
+    shift: null,
+    change_set: null,
+    commits: {},
+    merged: false,
+    note: '',
+    triaged: true,
+    worked_by: [],
+  });
+  await page.route('**/api/v1/shift/todos**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generated_at: new Date().toISOString(),
+        todos: [
+          todo('20261003-0001-aaa', 'acme-split', 'Teach the chip to say outside'),
+          todo('20261003-0002-bbb', 'globex', 'Carry the scope into every link'),
+        ],
+      }),
+    });
+  });
+  await page.route('**/api/v1/shift/shifts**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"shifts":[]}' });
+  });
+}
+
+/** The repositories of the invented families, as /repos and In flight read them. */
+/** Where each left-nav destination points, badge or no badge. */
+const NAV_PATH: Record<string, string> = {
+  'Needs you': '/needs-you',
+  Activity: '/activity',
+  Work: '/work',
+  'In flight': '/in-flight',
+  Releases: '/releases',
+  Repositories: '/repos',
+};
+
+const SCOPE_REPOS = [
+  {
+    id: { host: 'jeryu', owner: 'acme', name: 'acme-web' },
+    default_branch: 'main',
+    description: 'A repository of the acme family',
+    visibility: 'private' as const,
+    family: 'acme-split',
+    open_pull_requests: 1,
+  },
+  {
+    id: { host: 'jeryu', owner: 'globex', name: 'globex-api' },
+    default_branch: 'main',
+    description: 'A repository of the globex family',
+    visibility: 'private' as const,
+    family: 'globex',
+    open_pull_requests: 0,
+  },
+];
+
+test.describe('Family scope, page by page', () => {
+  test("each page's own family control shows the scope, and setting it there carries to the next @action:chrome.family_scope_pages", async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    await mockShiftFamilies(page);
+    await mockShiftQueue(page);
+    await mockPullRoom(page);
+    // After the pull-room list, so the families of these repositories win.
+    await mockRepoList(page, SCOPE_REPOS);
+
+    const shell = new AppShellPage(page);
+    // A left-nav destination by its path: a red "needs you" count joins the
+    // accessible name of the ones that have work waiting on a person.
+    const nav = page.getByRole('navigation', { name: 'Primary' });
+    const navTo = (path: string) => nav.locator(`a[href^="${path}"]`).first();
+    await shell.goto('/repos');
+    await shell.assertShellLoaded();
+    await expectScope(page, '');
+
+    // 1. Repositories: the family facet is the scope, and it reaches the URL,
+    //    so a reload or Back keeps the list where the operator left it.
+    const facets = page.getByRole('group', { name: 'Filter by family' });
+    await facets.getByRole('button', { name: 'Family: acme-split' }).click();
+    await page.waitForURL(/\/repos\?family=acme$/);
+    await expect(facets.getByRole('button', { name: 'Family: acme-split' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expectScope(page, 'acme');
+    await expect(page.getByText('globex/globex-api')).toHaveCount(0);
+    await page.reload();
+    await expect(facets.getByRole('button', { name: 'Family: acme-split' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+
+    // 2. Work: the family strip and the composer both open on that family.
+    await Promise.all([
+      page.waitForURL('**/work?family=acme'),
+      navTo(NAV_PATH['Work']).click(),
+    ]);
+    const strip = page.getByRole('group', { name: 'Filter by family' });
+    await expect(strip.getByRole('button', { name: /^acme 1$/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expect(page.getByTestId('shift-todo-20261003-0001-aaa')).toBeVisible();
+    await expect(page.getByTestId('shift-todo-20261003-0002-bbb')).toHaveCount(0);
+    await expect(page.getByLabel('Family', { exact: true })).toHaveValue('acme-split');
+
+    // A pill on a row of another family moves the one scope, for every page.
+    await strip.getByRole('button', { name: /^globex 1$/ }).click();
+    await page.waitForURL('**/work?family=globex');
+    await expectScope(page, 'globex');
+
+    // 3. In flight: its own family bar is on the scope it was handed.
+    await Promise.all([
+      page.waitForURL('**/in-flight?family=globex'),
+      navTo(NAV_PATH['In flight']).click(),
+    ]);
+    const families = page.getByTestId('pull-room-families');
+    await expect(families.getByRole('button', { name: /^globex/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expect(families.getByRole('button', { name: /^All/ })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+
+    // 4. Activity: the Family select shows it, and changing it there is the scope.
+    await Promise.all([
+      page.waitForURL('**/activity?family=globex'),
+      navTo(NAV_PATH['Activity']).click(),
+    ]);
+    const activityFamily = page.getByTestId('activity-family');
+    await expect(activityFamily).toHaveValue('globex');
+    // Nothing happened for globex, which reads as a quiet family, not an outage.
+    await expect(page.getByText('Nothing for globex here')).toBeVisible();
+    await activityFamily.selectOption('acme');
+    await page.waitForURL('**/activity?family=acme');
+    await expectScope(page, 'acme');
+
+    // 5. Releases: the lane family is a path, and it follows the same scope.
+    await Promise.all([
+      page.waitForURL('**/releases/family/acme'),
+      navTo(NAV_PATH['Releases']).click(),
+    ]);
+    await expectScope(page, 'acme');
+
+    // 6. A link into ANOTHER family opens it without moving the scope, and
+    //    says so with the one click that switches.
+    await page.goto('/work?family=globex');
+    await shell.assertShellLoaded();
+    await expectScope(page, 'acme');
+    const switcher = page.getByTestId('family-scope-switch');
+    await expect(switcher).toHaveText('outside acme · switch to globex');
+    await expect(page.getByTestId('shift-todo-20261003-0002-bbb')).toBeVisible();
+    await switcher.click();
+    await expectScope(page, 'globex');
+    await expect(page.getByTestId('family-scope-switch')).toHaveCount(0);
+
+    // 7. And a scoped page with nothing on it hands back every family.
+    await Promise.all([
+      page.waitForURL('**/needs-you?family=globex'),
+      navTo(NAV_PATH['Needs you']).click(),
+    ]);
+    await expect(page.getByText('Nothing for globex here')).toBeVisible();
+    await page.getByTestId('family-scope-show-all').click();
+    await page.waitForURL('**/needs-you');
+    await expectScope(page, '');
+    await Promise.all([
+      page.waitForURL('**/repos'),
+      navTo(NAV_PATH['Repositories']).click(),
+    ]);
+    await expect(page.getByText('globex/globex-api')).toBeVisible();
   });
 });

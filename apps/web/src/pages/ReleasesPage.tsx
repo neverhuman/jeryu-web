@@ -30,6 +30,7 @@
 
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
+import { sameFamily } from '../components/family/familyScope';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
@@ -98,7 +99,9 @@ export function ReleasesPage(): JSX.Element {
     pathFamily ?? (perRepository ? null : params.get('family') ?? (scope.family || null));
   usePageTitle(boardFamily ? `Releases · ${boardFamily}` : 'Releases');
   const repositoryView = (
-    <RepositoryReleases scope={perRepository ? scopeFrom(params) : DEFAULT_SCOPE} />
+    <RepositoryReleases
+      scope={perRepository ? scopeFrom(params, scope.family) : DEFAULT_SCOPE}
+    />
   );
 
   return (
@@ -160,11 +163,14 @@ const DEFAULT_SCOPE: RepositoryScope = { repo: null, family: null, branch: 'main
 
 /**
  * The per-repository view's scope. On the board `?family=` picks the board;
- * here it scopes to every repository of the family, which only
- * `?view=repositories&family=<name>` asks for.
+ * here it scopes to every repository of the family, which
+ * `?view=repositories&family=<name>` asks for — and so does
+ * `?view=repositories` under a shell-wide family scope, which that address is
+ * the per-repository view of.
  */
-function scopeFrom(params: URLSearchParams): RepositoryScope {
-  const family = params.get('view') === REPOSITORY_VIEW ? params.get('family') : null;
+function scopeFrom(params: URLSearchParams, scoped: string): RepositoryScope {
+  const family =
+    params.get('view') === REPOSITORY_VIEW ? params.get('family') ?? (scoped || null) : null;
   return {
     family,
     repo: family ? null : params.get('repo'),
@@ -178,6 +184,7 @@ function scopeFrom(params: URLSearchParams): RepositoryScope {
  */
 function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element {
   const [, setParams] = useSearchParams();
+  const familyScope = useFamilyScope();
   const { user } = useAuth();
   const { family, branch } = scope;
   // The deploy repos and families the forge knows feed the scope select, and
@@ -186,18 +193,19 @@ function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element 
   const pins = usePins(user?.role === 'admin');
   const repoId = scope.repo ?? pins.data?.consumers[0]?.repo ?? null;
 
-  const members = useRepositories(
-    { family: family ?? undefined, sort: 'name' },
-    { enabled: family !== null }
-  );
+  // Every repository, narrowed here rather than in the query: the scope is one
+  // key per family (`acme`) where this list may spell it `acme-split`.
+  const members = useRepositories({ sort: 'name' }, { enabled: family !== null });
   let repos: { id: string; branch: string }[] = [];
   if (repoId) {
     repos = [{ id: repoId, branch }];
   } else if (members.data) {
-    repos = members.data.repositories.map((r) => ({
-      id: `${r.id.owner}/${r.id.name}`,
-      branch: r.default_branch || 'main',
-    }));
+    repos = members.data.repositories
+      .filter((r) => sameFamily(r.family, family))
+      .map((r) => ({
+        id: `${r.id.owner}/${r.id.name}`,
+        branch: r.default_branch || 'main',
+      }));
   }
 
   const options = releaseScopeOptions({ repo: repoId, family }, pins.data?.consumers ?? []);
@@ -206,7 +214,12 @@ function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element 
   const setScope = (value: string): void => {
     const next = scopeParams(value);
     if (!next) return;
-    setParams('family' in next ? { view: REPOSITORY_VIEW, family: next.family } : next);
+    if ('family' in next) {
+      // Scoping this view to a family scopes the shell to it.
+      familyScope.setFamily(next.family, { to: `/releases?view=${REPOSITORY_VIEW}` });
+      return;
+    }
+    setParams(next);
   };
 
   return (

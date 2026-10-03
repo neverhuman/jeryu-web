@@ -23,6 +23,13 @@ const FAMILY_PATH_BASES = ['/releases', '/repos'] as const;
 const FAMILY_PATH_DEFAULTS = new Set<string>(['/releases']);
 
 /**
+ * Parameters that make `/releases` a view of its own rather than the family
+ * board: those addresses state the family in the query, as every other page
+ * does, so `?view=repositories&family=<key>` stays one address.
+ */
+const PATH_FORM_BLOCKERS = ['view', 'repo'] as const;
+
+/**
  * One key per family: the repositories list says `acme-split`, the shift queue
  * and Needs you say `acme`, and a scope set on one page has to match rows on
  * the other. '' means every family.
@@ -81,7 +88,9 @@ export function withFamilyScope(href: string, family: string): string {
   const key = canonicalFamily(family);
   const params = new URLSearchParams(search);
   const pathBase = FAMILY_PATH_BASES.find((base) => pathname.startsWith(`${base}/family/`));
-  const base = pathBase ?? (FAMILY_PATH_DEFAULTS.has(pathname) ? pathname : null);
+  const takesPathForm =
+    FAMILY_PATH_DEFAULTS.has(pathname) && !PATH_FORM_BLOCKERS.some((name) => params.has(name));
+  const base = pathBase ?? (takesPathForm ? pathname : null);
   let nextPath = pathname;
   if (base) {
     // The path form and the query form never both hold the family.

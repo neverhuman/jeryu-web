@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
 import { ErrorState, LoadingState } from '../components/state';
 import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPlane';
 import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
@@ -498,14 +499,15 @@ export function PullRoomPage(): JSX.Element {
             {rows.length === 0 && ghosts.length === 0 && lists.loading.length > 0 ? (
               <LoadingState variant="message" title="Loading pull requests." />
             ) : rows.length === 0 && ghosts.length === 0 ? (
-              <p className="pull-list__empty" data-testid="pull-room-empty">
-                {filtersActive ? 'No pull requests match the current filters.' : 'No open pull requests.'}{' '}
-                {family ? (
-                  <button type="button" className="pull-room__scope-clear" onClick={() => setFamily('')}>
-                    Show every family
-                  </button>
-                ) : null}
-              </p>
+              <div className="pull-list__empty" data-testid="pull-room-empty">
+                <ScopedEmptyState
+                  title={
+                    filtersActive
+                      ? 'No pull requests match the current filters.'
+                      : 'No open pull requests.'
+                  }
+                />
+              </div>
             ) : (
               <PullRequestTimeline
                 pulls={rows}

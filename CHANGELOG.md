@@ -10,6 +10,16 @@
   palette also has "Switch family…", which opens the picker. `acme` and `acme-split` resolve to
   one key, so a scope set on one page matches rows on another, and the page title names the
   family while a scope is active.
+- Every family-aware page now reads and writes that one scope, so picking a family anywhere sets
+  it everywhere and "All" clears it everywhere. The repositories list keeps its family facet in
+  the scope and the URL (it survives a reload and Back); Work's strip and row pills, the composer's
+  family, a todo page's pill, In flight's family bar, Activity's Family select (and its wall, which
+  says which family it counts), Needs you's strip and the strips a page shows above its own
+  content, and the release board and its per-repository view (`?view=repositories`) all show and
+  set the same family, under either spelling of its name. A link to an item of ANOTHER family
+  still opens that item and leaves the scope alone: the chip says "outside acme · switch to
+  globex", which is the one click that carries the other family. A scoped page with nothing on it
+  says "Nothing for acme here" and offers "Show all families" rather than reading as an outage.
 - Releases and Runners point at each other. A family's board is `/releases/family/<family>` (the
   family pills link there; `/releases?family=<family>` redirects, keeping other parameters and the
   hash), and each lane is the anchor `#lane-<id>`, scrolled to and ringed briefly when a URL names

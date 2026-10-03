@@ -17,6 +17,8 @@ function Probe(): JSX.Element {
     <div>
       <p data-testid="where">{`${pathname}${search}`}</p>
       <p data-testid="family">{scope.family}</p>
+      <p data-testid="carried">{scope.carried}</p>
+      <p data-testid="outside">{scope.outside}</p>
       <p data-testid="label">{scope.label}</p>
       <p data-testid="active">{String(scope.active)}</p>
       <p data-testid="work-link">{scope.scopedPath('/work')}</p>
@@ -30,6 +32,12 @@ function Probe(): JSX.Element {
       </button>
       <button type="button" onClick={() => scope.clearFamily()}>
         all
+      </button>
+      <button type="button" onClick={() => scope.switchToOutside()}>
+        switch
+      </button>
+      <button type="button" onClick={() => scope.setFamily('initech', { to: '/work' })}>
+        initech on Work
       </button>
     </div>
   );
@@ -118,6 +126,31 @@ describe('useFamilyScope', () => {
     click('all');
     expect(text('family')).toBe('');
     expect(text('where')).toBe('/work');
+  });
+
+  it('opens another family without moving the scope, until that is asked for', () => {
+    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_KEY, 'acme');
+    renderAt('/work?family=globex&todo=7');
+    // The page shows the family its address states; the tab still carries acme.
+    expect(text('family')).toBe('globex');
+    expect(text('carried')).toBe('acme');
+    expect(text('outside')).toBe('globex');
+    // And a link out of this page carries the scope, not the visited family.
+    expect(text('work-link')).toBe('/work?family=acme');
+    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBe('acme');
+
+    click('switch');
+    expect(text('carried')).toBe('globex');
+    expect(text('outside')).toBe('');
+    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBe('globex');
+  });
+
+  it('takes the family to another page when one is asked for', () => {
+    renderAt('/work/7');
+    click('initech on Work');
+    expect(text('where')).toBe('/work?family=initech');
+    expect(text('family')).toBe('initech');
+    expect(text('outside')).toBe('');
   });
 
   it('works where browser storage does not', () => {

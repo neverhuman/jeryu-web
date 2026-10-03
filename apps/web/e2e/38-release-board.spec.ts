@@ -86,12 +86,18 @@ test('the board opens on the first family, a pill switches family and the URL ke
     { timeout: 15_000 }
   );
 
-  // The per-repository view is one link away, and names no repository itself:
-  // it opens on the first deploy repository the forge reports.
+  // The per-repository view is one link away. The board left the shell scoped
+  // to initech, and `?view=repositories` under a scope is that family's
+  // repositories; asking for every family again opens on the first deploy
+  // repository the forge reports.
   await page.getByRole('link', { name: 'Per repository' }).click();
   await expect(page).toHaveURL(/\/releases\?view=repositories$/);
-  await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
+  await expect(page.getByLabel('Repository or family')).toHaveValue('family:initech');
   await expect(page.getByTestId('release-board')).toHaveCount(0);
+
+  await page.getByTestId('family-scope-clear').click();
+  await expect(page).toHaveURL(/\/releases\?view=repositories$/);
+  await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
 });
 
 test('a stage opens into its targets, what promoting ships and the command @action:releases.board.stage-detail', async ({

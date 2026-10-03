@@ -10,6 +10,7 @@ import { Search } from 'lucide-react';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
+import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
 import {
   RepoTable,
   formatFamilyName,
@@ -161,7 +162,7 @@ export function RepositoriesBody({
   }
   if (repos.length === 0) {
     return (
-      <EmptyState
+      <ScopedEmptyState
         title="No repositories match"
         description="Try adjusting your filters or search."
         icon={Search}

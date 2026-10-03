@@ -48,6 +48,17 @@
   color: var(--color-fg-primary);
 }
 
+/* This page is outside the carried family: say so, and offer the switch. */
+.family-scope__outside {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-accent-primary);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* A phone has no room for the word: the select keeps its accessible name. */
 @media (max-width: 480px) {
   .family-scope__label {

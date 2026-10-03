@@ -7,6 +7,7 @@
 // when its head sha is one of those compare commits. A capped compare cannot
 // establish the complete PR count; retain only its exact commit count.
 
+import { sameFamily } from '../components/family/familyScope';
 import type { PullRequestSummary } from '../../../../contracts/generated/PullRequestSummary';
 import type {
   CompareResponse,
@@ -160,7 +161,11 @@ export function releaseScopeOptions(
     if (entry.family) families.add(entry.family);
   }
   if (current.repo) repos.add(current.repo);
-  if (current.family) families.add(current.family);
+  // One option per family: the scope says `acme` where a deploy repo may be
+  // filed under `acme-split`, and both name the one family.
+  if (current.family && ![...families].some((name) => sameFamily(name, current.family))) {
+    families.add(current.family);
+  }
   const options: ReleaseScopeOption[] = [];
   for (const repo of Array.from(repos).sort()) options.push({ value: `repo:${repo}`, label: repo });
   for (const family of Array.from(families).sort()) {

@@ -8,8 +8,10 @@ import { Fragment, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
+import { canonicalFamily } from '../../components/family/familyScope';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
-import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
+import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
+import { LoadingState, PipelineQueryState } from '../../components/state';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
@@ -123,7 +125,10 @@ export function ActivityPage(): JSX.Element {
       </header>
 
       {wall ? (
-        <WallCounters events={events} />
+        <>
+          <ScopedWallNote />
+          <WallCounters events={events} />
+        </>
       ) : (
         <Filters
           filters={filters}
@@ -137,7 +142,7 @@ export function ActivityPage(): JSX.Element {
       ) : feed.base.isError ? (
         <PipelineQueryState what="the activity feed" error={feed.base.error} />
       ) : events.length === 0 ? (
-        <EmptyState
+        <ScopedEmptyState
           icon={Activity}
           title={hasActiveFilters(filters) ? 'No events match these filters.' : 'No pipeline events yet.'}
           description="Events appear as workers, gates, reviewers and releases report in."
@@ -196,7 +201,15 @@ function Filters({
   onChip: (chip: (typeof ACTIVITY_CHIPS)[number]) => void;
 }): JSX.Element {
   const families = useShiftFamilies();
-  const names = families.data?.families.map((family) => family.name) ?? [];
+  // One option per family, in the scope's own spelling: `acme` and
+  // `acme-split` are one family, and the scope is what this select sets.
+  const names = [
+    ...new Set(
+      (families.data?.families ?? [])
+        .map((family) => canonicalFamily(family.name))
+        .filter(Boolean)
+    ),
+  ];
   const current = activeChip(filters);
   const needsYou = useNeedsYou(filters.family);
   return (
@@ -225,9 +238,13 @@ function Filters({
       {names.length > 1 || filters.family ? (
         <label className="activity__family">
           Family
-          <select value={filters.family} onChange={(event) => onChange('family', event.target.value)}>
+          <select
+            data-testid="activity-family"
+            value={filters.family}
+            onChange={(event) => onChange('family', event.target.value)}
+          >
             <option value="">All</option>
-            {[...new Set([...names, filters.family].filter(Boolean))].map((name) => (
+            {[...new Set([...names, canonicalFamily(filters.family)].filter(Boolean))].map((name) => (
               <option key={name} value={name}>
                 {name}
               </option>
@@ -278,6 +295,23 @@ function FilterInput({
         if (event.key === 'Enter') onCommit(event.currentTarget.value.trim());
       }}
     />
+  );
+}
+
+/**
+ * Wall mode has no filter row, so the wall itself says which family it is
+ * counting, and gives back every family in one click.
+ */
+function ScopedWallNote(): JSX.Element | null {
+  const scope = useFamilyScope();
+  if (!scope.active) return null;
+  return (
+    <p className="activity__wall-family" data-testid="activity-wall-family">
+      {scope.label} only{' '}
+      <button type="button" onClick={() => scope.clearFamily()}>
+        Show all families
+      </button>
+    </p>
   );
 }
 

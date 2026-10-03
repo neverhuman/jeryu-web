@@ -8,8 +8,12 @@
 // session storage so a second tab can look at a second family. "All families"
 // clears it everywhere.
 //
-// The scope is also the page title while it is set, so a window in the taskbar
-// says which family it is watching.
+// A link to an item of ANOTHER family still opens that item: the page shows the
+// family its address states, the tab keeps carrying the one it was given, and
+// the header chip says the page is outside the scope and offers the switch.
+//
+// The document title is each page's own (usePageTitle): a page whose subject
+// is one family names it there, so the scope does not write the title too.
 
 import {
   createContext,
@@ -34,12 +38,28 @@ import {
   FAMILY_SCOPE_STORAGE_KEY,
   familyFromHref,
   familyFromLocation,
+  sameFamily,
   withFamilyScope,
 } from './familyScope';
 
 export interface FamilyScope {
-  /** The family in scope, canonical; '' means every family. */
+  /**
+   * The family this page shows, canonical; '' means every family. It is the
+   * family the address states, else the one the tab carries.
+   */
   family: string;
+  /**
+   * The family the tab carries from page to page, canonical; every link gets
+   * this one. It differs from `family` only while this address is a link into
+   * another family (see `outside`).
+   */
+  carried: string;
+  /**
+   * The family this address states while the tab carries another one: a link
+   * to an item of another family opens it without moving the scope, and the
+   * header chip offers the switch. '' whenever the two agree.
+   */
+  outside: string;
   /** What a reader calls it ('' when every family is in scope). */
   label: string;
   /** True while one family is in scope. */
@@ -48,7 +68,12 @@ export interface FamilyScope {
    * Put `family` in scope ('' for every family) and keep the current page.
    * `drop` names query parameters the page wants taken off at the same time.
    */
-  setFamily: (family: string, options?: { drop?: readonly string[] }) => void;
+  setFamily: (
+    family: string,
+    options?: { drop?: readonly string[]; to?: string }
+  ) => void;
+  /** Carry the family this address states ('' when it is already carried). */
+  switchToOutside: () => void;
   /** Show every family again, here and on every page after this one. */
   clearFamily: () => void;
   /** `to` carrying the scope, unless it already names a family of its own. */
@@ -60,9 +85,12 @@ export interface FamilyScope {
 
 const ALL_FAMILIES: FamilyScope = {
   family: '',
+  carried: '',
+  outside: '',
   label: '',
   active: false,
   setFamily: () => {},
+  switchToOutside: () => {},
   clearFamily: () => {},
   scopedPath: (to) => to,
   pickerOpen: false,
@@ -95,27 +123,37 @@ export function FamilyScopeProvider({ children }: { children: ReactNode }): JSX.
   const chosen = useRef<string | null>(null);
 
   const stated = familyFromLocation(location.pathname, location.search);
+  // The page shows what its address states; where it states nothing, the
+  // family this tab carries.
   const family = stated ?? remembered;
+  // A link into another family opens that family's item without moving the
+  // scope: the chip says the page is outside what the tab carries, and offers
+  // the one click that switches.
+  const outside = stated && remembered && !sameFamily(stated, remembered) ? stated : '';
 
-  // What the URL says is what this tab remembers from here on.
+  // An address that states a family where the tab carries none is a choice:
+  // the tab carries it from here on. One that disagrees with a carried family
+  // is a visit, not a choice, so it leaves the scope where it was.
   useEffect(() => {
     if (chosen.current !== null) {
       if ((stated ?? '') === chosen.current) chosen.current = null;
       return;
     }
-    if (stated === null || stated === remembered) return;
+    if (stated === null || remembered !== '') return;
     setRemembered(stated);
     remember(stated);
   }, [stated, remembered]);
 
   const setFamily = useCallback(
-    (next: string, options?: { drop?: readonly string[] }): void => {
+    (next: string, options?: { drop?: readonly string[]; to?: string }): void => {
       const key = canonicalFamily(next);
       chosen.current = key;
       setRemembered(key);
       remember(key);
+      // `to` is another page: the family goes with it, and it is a step
+      // forward in the history. Here, the scope replaces the address.
       const here = withFamilyScope(
-        `${location.pathname}${location.search}${location.hash}`,
+        options?.to ?? `${location.pathname}${location.search}${location.hash}`,
         key
       );
       const [path, query = ''] = here.split('#')[0].split('?');
@@ -123,7 +161,9 @@ export function FamilyScopeProvider({ children }: { children: ReactNode }): JSX.
       for (const name of options?.drop ?? []) params.delete(name);
       const rest = params.toString();
       const hash = here.includes('#') ? `#${here.split('#').slice(1).join('#')}` : '';
-      void navigate(`${path}${rest ? `?${rest}` : ''}${hash}`, { replace: true });
+      void navigate(`${path}${rest ? `?${rest}` : ''}${hash}`, {
+        replace: options?.to === undefined,
+      });
     },
     [location.hash, location.pathname, location.search, navigate]
   );
@@ -132,9 +172,16 @@ export function FamilyScopeProvider({ children }: { children: ReactNode }): JSX.
     setFamily('');
   }, [setFamily]);
 
+  const switchToOutside = useCallback((): void => {
+    if (outside) setFamily(outside);
+  }, [outside, setFamily]);
+
   const scopedPath = useCallback(
-    (to: string): string => (familyFromHref(to) === null ? withFamilyScope(to, family) : to),
-    [family]
+    (to: string): string =>
+      // A link carries the scope, not the family of the item being visited:
+      // on a page outside the scope that is the family the tab still carries.
+      familyFromHref(to) === null ? withFamilyScope(to, outside ? remembered : family) : to,
+    [family, outside, remembered]
   );
 
   const label = family ? familyLabel(family) : '';
@@ -142,15 +189,28 @@ export function FamilyScopeProvider({ children }: { children: ReactNode }): JSX.
   const value = useMemo<FamilyScope>(
     () => ({
       family,
+      carried: remembered,
+      outside,
       label,
       active: family !== '',
       setFamily,
+      switchToOutside,
       clearFamily,
       scopedPath,
       pickerOpen,
       setPickerOpen,
     }),
-    [clearFamily, family, label, pickerOpen, scopedPath, setFamily]
+    [
+      clearFamily,
+      family,
+      label,
+      outside,
+      pickerOpen,
+      remembered,
+      scopedPath,
+      setFamily,
+      switchToOutside,
+    ]
   );
 
   return <FamilyScopeContext.Provider value={value}>{children}</FamilyScopeContext.Provider>;
