@@ -115,32 +115,17 @@ describe('LeftNav', () => {
     );
   });
 
-  it('names the repository whose pull requests the repo link opens', () => {
-    renderAt('/repos/jeryu/jeryu/jeryu-web/code');
+  it('leaves one repository to its own tab bar: no repo block here', () => {
+    renderAt('/repos/jeryu/jeryu/jeryu-web/blob/main/README.md');
+    // The repository's own navigation is the tab bar on its pages
+    // (components/repo/RepoLayout), so the shell nav names no repository.
+    expect(screen.queryByRole('link', { name: 'Code' })).toBeNull();
+    expect(screen.queryByTestId('left-nav-agents')).toBeNull();
+    expect(screen.queryByText('jeryu/jeryu-web')).toBeNull();
+    // In flight is still the shell's own pull request destination.
     expect(screen.getByRole('link', { name: 'In flight' })).toHaveAttribute('href', '/in-flight');
-    expect(screen.getByRole('link', { name: 'Pull requests in jeryu/jeryu-web' })).toHaveAttribute(
-      'href',
-      '/repos/jeryu/jeryu/jeryu-web/pulls'
-    );
   });
 
-  it('points Code at the repository front page, active wherever code is read; no Tracker', () => {
-    for (const path of [
-      '/repos/jeryu/jeryu/jeryu-web',
-      '/repos/jeryu/jeryu/jeryu-web/blob/main/README.md',
-      '/repos/jeryu/jeryu/jeryu-web/code',
-    ]) {
-      const { unmount } = renderAt(path);
-      const code = screen.getByRole('link', { name: 'Code' });
-      expect(code).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-web');
-      expect(code).toHaveAttribute('aria-current', 'page');
-      expect(screen.queryByRole('link', { name: 'Tracker' })).toBeNull();
-      unmount();
-    }
-    const { unmount } = renderAt('/repos/jeryu/jeryu/jeryu-web/pulls');
-    expect(screen.getByRole('link', { name: 'Code' })).not.toHaveAttribute('aria-current');
-    unmount();
-  });
   // Needs you, Activity and Work read admin-only endpoints: offered to another
   // role they are three links into a permission-denied page.
   it('leaves out the admin-only destinations for every other role', () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, GitBranch, Server, Bot, Radio, ListChecks, Cpu } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -19,6 +19,11 @@ import './page.css';
 import './RepositoryAgentsPage.css';
 
 const MAX_AGENT_PANES = 3;
+
+/** A run whose terminal is worth opening by itself: it is still running. */
+function isLiveRun(run: RepoAgentSummary): boolean {
+  return run.tty_live || run.status === 'running';
+}
 
 /** A single agent pane shown in the top split. */
 interface ActivePane {
@@ -100,6 +105,11 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
     [queueTodos.data, repoName]
   );
 
+  // Opened with no run named, the page used to show an empty "Choose a run"
+  // pane beside a list of live runs. A live run is what the operator came for,
+  // so the first one opens itself — once, so choosing another one sticks.
+  const autoOpened = useRef(false);
+
   // Deep-link: when the runs list loads, add the splat run if it exists on
   // the server and isn't already in the active panes. Also backfill
   // shellRunId for any panes that were added before the list arrived.
@@ -136,6 +146,27 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
       return changed ? next : prev;
     });
   }, [splatRunId, items]);
+
+  // Opened with no run named: the first live run opens itself. Its own effect,
+  // not a branch of the one above — a state updater runs more than once, and
+  // deciding "only the first time" inside one skipped the pane it had added.
+  useEffect(() => {
+    if (splatRunId || autoOpened.current || items.length === 0) return;
+    if (activePanes.length > 0) {
+      autoOpened.current = true;
+      return;
+    }
+    const live = items.find((r: RepoAgentSummary) => isLiveRun(r));
+    if (!live) return;
+    autoOpened.current = true;
+    setActivePanes([
+      {
+        runId: live.run_id,
+        shellRunId: live.shell_run_id ?? null,
+        label: `${live.agent ?? 'agent'} · ${live.branch}`,
+      },
+    ]);
+  }, [splatRunId, items, activePanes.length]);
 
   // Click a row from the list → replace all panes with just that one.
   function onSelectRun(run: RepoAgentSummary): void {

@@ -53,16 +53,27 @@ const FILTER_HINT: Partial<Record<(typeof MORE_FILTER_KEYS)[number], string>> = 
   kind: 'todo. or gate.finished',
 };
 
-export function ActivityPage(): JSX.Element {
-  usePageTitle('Activity');
+export interface ActivityPageProps {
+  /** `owner/name`: the repository shell's Activity tab pins the feed to one
+   *  repository. Pinned, the repository is the scope, so the shell's family is
+   *  not applied on top of it and the Repo field is not one more filter. */
+  repo?: string;
+}
+
+export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
+  usePageTitle(repo ? `${repo} · Activity` : 'Activity');
   const [params, setParams] = useSearchParams();
   const wall = isWallMode(params);
   // The family comes from the shell's scope: `?family=` when this address
   // states one, else the family this tab last chose anywhere.
   const scope = useFamilyScope();
   const filters = useMemo(
-    () => ({ ...parseActivityFilters(params), family: scope.family }),
-    [params, scope.family]
+    () => ({
+      ...parseActivityFilters(params),
+      family: repo ? '' : scope.family,
+      ...(repo ? { repo } : {}),
+    }),
+    [params, scope.family, repo]
   );
   const query = useMemo(() => filtersToQuery(filters), [filters]);
   const feed = useActivityFeed(query);
@@ -132,6 +143,7 @@ export function ActivityPage(): JSX.Element {
       ) : (
         <Filters
           filters={filters}
+          pinnedRepo={Boolean(repo)}
           onChange={update}
           onChip={(chip) => setParams(applyChip(params, chip), { replace: true })}
         />
@@ -193,10 +205,12 @@ function wallHref(params: URLSearchParams, wall: boolean): string {
 
 function Filters({
   filters,
+  pinnedRepo,
   onChange,
   onChip,
 }: {
   filters: ActivityFilters;
+  pinnedRepo: boolean;
   onChange: (key: string, value: string) => void;
   onChip: (chip: (typeof ACTIVITY_CHIPS)[number]) => void;
 }): JSX.Element {
@@ -235,7 +249,7 @@ function Filters({
           {needsYou.count === null ? '' : ` (${needsYou.count})`}.
         </p>
       ) : null}
-      {names.length > 1 || filters.family ? (
+      {pinnedRepo ? null : names.length > 1 || filters.family ? (
         <label className="activity__family">
           Family
           <select
@@ -255,7 +269,7 @@ function Filters({
       <details className="activity__more" open={hasMoreFilters(filters) || undefined}>
         <summary>More filters</summary>
         <div className="activity__more-fields">
-          {MORE_FILTER_KEYS.map((key) => (
+          {MORE_FILTER_KEYS.filter((key) => !(pinnedRepo && key === 'repo')).map((key) => (
             <label key={key}>
               {FILTER_LABEL[key]}
               <FilterInput

@@ -84,8 +84,13 @@ test('renders the active-agents list with branch / runner / status / tty-live @a
   await expect(page.getByTestId('agent-status-run-2')).toHaveText('blocked');
   await expect(page.getByTestId('agent-tty-run-2')).not.toHaveClass(/is-live/);
 
-  // No run selected yet → the terminal pane shows the empty prompt.
-  await expect(page.getByTestId('agents-no-selection')).toBeVisible();
+  // Nothing was asked for by name, so the live run opened itself rather than
+  // leaving an empty "choose a run" pane beside a list with a live run in it.
+  await expect(page.getByTestId('agents-no-selection')).toHaveCount(0);
+  await expect(page.getByTestId('agent-terminal').first()).toHaveAttribute(
+    'data-run-id',
+    'run-1'
+  );
 });
 
 test('clicking a run row opens its live terminal @action:agents.select_run', async ({ page }) => {

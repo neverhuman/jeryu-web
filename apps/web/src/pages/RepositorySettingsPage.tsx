@@ -198,7 +198,9 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
   const sectionTitle = sectionTitleFor(activeSection);
 
   return (
-    <div className="page page--full">
+    // Named like every other state of this page, so a test or a reader can say
+    // "the settings page" whether it loaded, failed or was refused.
+    <div className="page page--full" data-testid="repo-settings-page">
       <header className="page__header">
         <h1 className="page__title">Settings · {current.general.name}</h1>
         <p className="page__subtitle">{sectionTitle}</p>

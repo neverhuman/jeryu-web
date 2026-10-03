@@ -37,7 +37,9 @@ test.describe('Permission-denied UI state (W-T-17)', () => {
     await mockBootstrap(page, {
       login: '@reader',
       display_name: 'Read-only Reader',
-      global_permissions: ['repo.read'],
+      // A writer, so the repository shell lets the page open at all; the
+      // refusal under test is the read-gated GET, not the tab bar's.
+      global_permissions: ['repo.read', 'code.write'],
     });
     // Resolve the repo from the list, then force the read-gated settings GET
     // to 403 so the page renders the real permission-denied surface.
@@ -62,7 +64,7 @@ test.describe('Permission-denied UI state (W-T-17)', () => {
     await mockBootstrap(page, {
       login: '@reader',
       display_name: 'Read-only Reader',
-      global_permissions: ['repo.read'],
+      global_permissions: ['repo.read', 'code.write'],
     });
     await mockRepoList(page, [{ id: REPO, default_branch: 'main' }]);
     await mockSettings(page);
@@ -96,7 +98,7 @@ test.describe('Permission-denied UI state (W-T-17)', () => {
     // The settings page boots (its read GET is mocked 200) without crashing.
     await page.goto(SETTINGS_URL);
     await expect(
-      page.locator('h1').first().or(page.getByRole('alert'))
+      page.locator('h1').or(page.getByRole('alert')).first()
     ).toBeVisible({ timeout: 15_000 });
 
     // Drive the mutating call from the page's network stack so the

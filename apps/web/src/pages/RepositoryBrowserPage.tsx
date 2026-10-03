@@ -21,11 +21,6 @@ import {
   ReadmePanel,
 } from '../components/browser';
 import type { BreadcrumbSegment } from '../components/browser';
-import { JankuraiScoreBadge } from '../components/repo/JankuraiScoreBadge';
-import { RepoAutomationPanel } from '../components/repo/RepoAutomationPanel';
-import { RepoHealthPill } from '../components/repo/RepoHealthPill';
-import { RepoArchivedBadge } from '../components/repo/RepoArchivedBadge';
-import { RepoRoleBadge } from '../components/repo/RepoRoleBadge';
 import {
   EmptyState,
   ErrorState,
@@ -43,24 +38,18 @@ import { useSelectionStore } from '../stores/selectionStore';
 import type { TreeEntry } from '../api/types';
 
 import { RepoFileContent } from './RepoFileContent';
-import { QUALITY_GATE_PATH } from './qualityGate/qualityGateModel';
 import {
   FILES_PANEL_KEY,
   asksForFilesOpen,
   blobPath,
   folderToReveal,
-  healthOpensChecks,
   initialPanelOpen,
   openPullsLabel,
   panelChoiceText,
   parseRefAndPath,
   repoFrontPath,
 } from './repoBrowserModel';
-import {
-  RepoCommitSummary,
-  RepoHealthChecks,
-  RepoHealthChip,
-} from './repositoryOverviewFacts';
+import { RepoCommitSummary } from './repositoryOverviewFacts';
 import { ClonePopover } from './repositoryOverviewParts';
 
 import '../components/browser/browser.css';
@@ -103,8 +92,6 @@ export function RepositoryBrowserPage({
       initialPanelOpen(readBrowserText('durable', FILES_PANEL_KEY), window.innerWidth)
   );
   const [finderOpen, setFinderOpen] = useState(false);
-  // The header's health chip stands for failing checks; pressing it lists them.
-  const [checksOpen, setChecksOpen] = useState(false);
 
   // A repository whose source is hosted elsewhere has no tree here. The root
   // listing is the same query the panel uses, so this costs no second request.
@@ -241,39 +228,9 @@ export function RepositoryBrowserPage({
     <div className="page" data-testid={testId}>
       <Breadcrumbs segments={crumbs} />
 
+      {/* The repository's name, health, score and badges are the shell's
+          header (components/repo/RepoLayout), above the tab bar. */}
       <header className="page__header">
-        <div className="repo-overview__head">
-          <h1 className="repo-overview__title">{summary.id.name}</h1>
-          {healthOpensChecks(summary) ? (
-            <RepoHealthChip
-              repo={summary}
-              open={checksOpen}
-              onToggle={() => setChecksOpen((v) => !v)}
-            />
-          ) : (
-            <RepoHealthPill health={summary.health} />
-          )}
-          {/* The score links to the quality gate, as it does in the table. */}
-          <Link
-            to={QUALITY_GATE_PATH}
-            className="repo-overview__score-link"
-            title="See what produced this score"
-            data-testid="repo-overview-score"
-          >
-            <JankuraiScoreBadge
-              score={summary.jankurai_score}
-              decision={summary.jankurai_decision}
-              scoredAt={summary.jankurai_scored_at}
-            />
-          </Link>
-          <RepoRoleBadge role={summary.repo_role} />
-          <RepoArchivedBadge archived={summary.archived} />
-          <span className="page__pill">{summary.visibility}</span>
-          {summary.language ? <span className="page__pill">{summary.language}</span> : null}
-        </div>
-        {!onFile && summary.description ? (
-          <p className="page__subtitle">{summary.description}</p>
-        ) : null}
         {onFile ? null : (
           <RepoCommitSummary
             provider={provider}
@@ -312,9 +269,6 @@ export function RepositoryBrowserPage({
             </>
           )}
         </div>
-        {checksOpen && healthOpensChecks(summary) ? (
-          <RepoHealthChecks repo={summary} />
-        ) : null}
       </header>
 
       <section
@@ -360,10 +314,6 @@ export function RepositoryBrowserPage({
           />
         </aside>
       </section>
-
-      {/* What runs on the repository, and where it is copied to. Only on the
-          front page: a reader opening a file wants the file. */}
-      {onFile ? null : <RepoAutomationPanel repoId={repoId} />}
 
       <FileFinder
         open={finderOpen}

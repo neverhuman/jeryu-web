@@ -12,18 +12,25 @@
 //   /repos/jeryu/jeryu/jankurai/tree/main/docs → front page, Files open on docs/
 //   /repos/jeryu/jeryu/jankurai/commits/main?path=src/main.rs → that file's history
 //   /repos/jeryu/jeryu/jankurai/commit/<sha> → one commit, message and diff
+//   /repos/jeryu/jeryu/jankurai/automation → what runs on the repository
+//   /repos/jeryu/jeryu/jankurai/activity → the event log, pinned to this repo
 //   /repos/jeryu/jeryu/jankurai/code     → redirects to the front page, Files open
 //   /repos/jeryu/jeryu/jankurai/work     → redirects to the front page (tracker retired)
 
 import { Navigate, useLocation, useParams } from 'react-router-dom';
+
+import { RepoLayout } from '../components/repo/RepoLayout';
 
 import { RepositoryAgentsPage } from './RepositoryAgentsPage';
 import { RepositoryBrowserPage } from './RepositoryBrowserPage';
 import { RepositoryCommitPage } from './RepositoryCommitPage';
 import { RepositoryCommitsPage } from './RepositoryCommitsPage';
 import { RepositoryPullRequestsPage } from './RepositoryPullRequestsPage';
+import { RepositoryActivityPage } from './RepositoryActivityPage';
+import { RepositoryAutomationPage } from './RepositoryAutomationPage';
 import { RepositorySettingsPage } from './RepositorySettingsPage';
 import { PullRequestPage } from './PullRequestPage';
+import { activeRepoTab } from './repoShellModel';
 import { usePageTitle } from '../hooks/usePageTitle';
 import {
   OPEN_FILES_STATE,
@@ -103,10 +110,24 @@ export function RepoRouter(): JSX.Element {
   const front = repoFrontPath(provider, fullName);
   usePageTitle(repoPageTitle(fullName, subPath, subTail));
 
+  // Every page of a repository is drawn inside the one shell: its header and
+  // its tab bar. Only the redirects below skip it — they render nothing.
+  const inShell = (page: JSX.Element): JSX.Element => (
+    <RepoLayout provider={provider} fullName={fullName} tab={activeRepoTab(subPath)}>
+      {page}
+    </RepoLayout>
+  );
+
   // Dispatch to the correct sub-page based on the sub-path.
   switch (subPath) {
     case 'agents':
-      return <RepositoryAgentsPage provider={provider} fullName={fullName} splatTail={subTail} />;
+      return inShell(
+        <RepositoryAgentsPage provider={provider} fullName={fullName} splatTail={subTail} />
+      );
+    case 'automation':
+      return inShell(<RepositoryAutomationPage provider={provider} fullName={fullName} />);
+    case 'activity':
+      return inShell(<RepositoryActivityPage fullName={fullName} />);
     case 'code':
       // The Files panel of the front page is the code browser.
       return <Navigate to={{ pathname: front, search }} state={OPEN_FILES_STATE} replace />;
@@ -137,13 +158,16 @@ export function RepoRouter(): JSX.Element {
     case 'blob':
       // The same component as the front page, in the same position, so the
       // Files panel keeps its state while the reader moves between files.
-      return <RepositoryBrowserPage provider={provider} fullName={fullName} blobSplat={subTail} />;
+      return inShell(
+        <RepositoryBrowserPage provider={provider} fullName={fullName} blobSplat={subTail} />
+      );
     case 'pulls': {
       // /pulls or /pulls/:number
       if (subTail) {
+        // One pull request is its own cockpit, not a tab of the repository.
         return <PullRequestPage provider={provider} fullName={fullName} prNumber={subTail} />;
       }
-      return <RepositoryPullRequestsPage provider={provider} fullName={fullName} />;
+      return inShell(<RepositoryPullRequestsPage provider={provider} fullName={fullName} />);
     }
     case 'issues':
     case 'work':
@@ -151,9 +175,15 @@ export function RepoRouter(): JSX.Element {
       // old links land on the repository instead of a 404.
       return <Navigate to={front} replace />;
     case 'settings':
-      return <RepositorySettingsPage provider={provider} fullName={fullName} section={subTail || undefined} />;
+      return inShell(
+        <RepositorySettingsPage
+          provider={provider}
+          fullName={fullName}
+          section={subTail || undefined}
+        />
+      );
     default:
       // No known sub-path: the repository front page.
-      return <RepositoryBrowserPage provider={provider} fullName={fullName} />;
+      return inShell(<RepositoryBrowserPage provider={provider} fullName={fullName} />);
   }
 }

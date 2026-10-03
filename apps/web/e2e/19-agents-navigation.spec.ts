@@ -1,9 +1,7 @@
 // 19-agents-navigation.spec.ts — Agents page discoverability and navigation.
 //
-// Tests that the operator can reach the Agents page from:
-// 1. The repo card "Agents" quick-action link on the Repositories page
-// 2. The left-nav repo-context sub-navigation
-// 3. The repo overview "Agents" button and sidebar link
+// Tests that the operator can reach the Agents page from the repository's own
+// tab bar, which is on every one of its pages (components/repo/RepoLayout).
 
 import { expect, test, type Page } from './fixtures/test';
 
@@ -48,7 +46,7 @@ async function seed(page: Page): Promise<void> {
 }
 
 test.describe('Agents page navigation and discoverability', () => {
-  test('left-nav shows repo-context navigation with Agents link when inside a repo @action:agents.left_nav_visible', async ({
+  test('the repository tab bar has Agents on every repository page @action:agents.repo_tab_visible', async ({
     page,
   }) => {
     await seed(page);
@@ -57,13 +55,14 @@ test.describe('Agents page navigation and discoverability', () => {
     await shell.goto(`${REPO_PATH}`);
     await shell.assertShellLoaded();
 
-    // The left nav should now show the repo-context sub-navigation.
-    const agentsNavLink = page.getByTestId('left-nav-agents');
-    await expect(agentsNavLink).toBeVisible();
-    await expect(agentsNavLink).toContainText('Agents');
+    const agentsTab = page.getByTestId('repo-tab-agents');
+    await expect(agentsTab).toBeVisible();
+    await expect(agentsTab).toContainText('Agents');
+    // Three agents are at work on it, and the tab says so.
+    await expect(page.getByTestId('repo-tab-count-agents')).toHaveText('3');
   });
 
-  test('left-nav Agents link navigates to the agents URL @action:agents.left_nav_navigate', async ({
+  test('the Agents tab opens the agents URL @action:agents.repo_tab_navigate', async ({
     page,
   }) => {
     await seed(page);
@@ -72,12 +71,10 @@ test.describe('Agents page navigation and discoverability', () => {
     await shell.goto(`${REPO_PATH}`);
     await shell.assertShellLoaded();
 
-    // Verify the Agents link in the left-nav has the correct href.
-    const agentsNavLink = page.getByTestId('left-nav-agents');
-    await expect(agentsNavLink).toHaveAttribute('href', /\/agents$/);
+    const agentsTab = page.getByTestId('repo-tab-agents');
+    await expect(agentsTab).toHaveAttribute('href', /\/agents$/);
 
-    // Click the link and verify the URL updates.
-    await agentsNavLink.click();
+    await agentsTab.click();
     await expect(page).toHaveURL(/\/agents/, { timeout: 10000 });
   });
 });

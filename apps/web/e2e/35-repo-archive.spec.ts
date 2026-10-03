@@ -90,7 +90,7 @@ test.describe('Repository archive', () => {
 
     await page.goto('/repos/jeryu/veox/redline');
     await expect(
-      page.locator('.repo-overview__head').getByText('Archived', { exact: true })
+      page.locator('.repo-shell__head').getByText('Archived', { exact: true })
     ).toBeVisible({ timeout: 10_000 });
 
     await page.goto('/repos');

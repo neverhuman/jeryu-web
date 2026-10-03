@@ -1,5 +1,5 @@
-// 39-repo-automation.spec.ts — the repository page's Automation and Mirrors
-// sections: what runs on the repository, who reviews and merges it (and
+// 39-repo-automation.spec.ts — the repository's Automation tab and its Mirrors
+// section: what runs on the repository, who reviews and merges it (and
 // whether their grants exist), what last deployed it, and where it is copied
 // to. Every repository, identity, host and target below is invented.
 
@@ -111,14 +111,14 @@ const FULL_VIEW = {
   ],
 };
 
-test('the repository page names its checks, reviewer, merger, deployer, grants and mirror @action:repo.automation', async ({
+test('the Automation tab names its checks, reviewer, merger, deployer, grants and mirror @action:repo.automation', async ({
   page,
 }) => {
   await mockBootstrap(page);
   await mockRepoList(page, [REPO]);
   await mockRepoAutomation(page, FULL_VIEW);
 
-  await page.goto('/repos/acme/acme/widget-www');
+  await page.goto('/repos/acme/acme/widget-www/automation');
 
   const automation = page.getByTestId('repo-automation');
   await expect(
@@ -181,7 +181,7 @@ test('a repository with nothing registered and no mirror says so @action:repo.au
   ]);
   await mockRepoAutomation(page, { repo: 'acme/quiet-lib' });
 
-  await page.goto('/repos/acme/acme/quiet-lib');
+  await page.goto('/repos/acme/acme/quiet-lib/automation');
 
   const automation = page.getByTestId('repo-automation');
   await expect(automation).toContainText('Nothing is registered to act on', {

@@ -7,22 +7,20 @@
 // icon, badge and shortcut — come from NAV_DESTINATIONS, the one registry the
 // palette and the keyboard read too. A destination the registry marks
 // `adminOnly` reads an admin-only endpoint, so it is left out entirely for
-// another role rather than offered as a link into a refusal. The disclosure is closed by default,
-// remembers what the operator chose, and is
-// open whenever the current page is inside it. When the current URL is inside a
-// repository route (`/repos/:provider/:fullName/*`), a contextual
-// sub-navigation appears below the workspace links so the operator can
-// jump directly to Code / Pulls / Agents / Settings without going through
-// the overview page first.
+// another role rather than offered as a link into a refusal. The disclosure is
+// closed by default, remembers what the operator chose, and is open whenever
+// the current page is inside it.
+//
+// One repository is navigated from its own tab bar, at the top of every one of
+// its pages (components/repo/RepoLayout) — not from here.
 //
 // Every workspace link carries the family scope (see
 // components/family/FamilyScopeProvider), so picking a family on one page and
-// clicking another destination keeps that family. The repository links below
-// are about one repository and carry nothing.
+// clicking another destination keeps that family.
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Bot, ChevronDown, ChevronRight, Code2, Cog, GitMerge } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { useAttention } from '../hooks/usePipeline';
@@ -33,7 +31,6 @@ import {
   areaBadgeCount,
   attentionBadgeCount,
 } from '../pages/needsYou/needsYouModel';
-import { repoUrl } from '../pages/repoBrowserModel';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NAV_DESTINATIONS, navGroup, type NavDestination } from './navDestinations';
 
@@ -74,40 +71,8 @@ export function isSystemPath(pathname: string): boolean {
   return SYSTEM_NAV.some((item) => isActivePath(pathname, item.path, item.end));
 }
 
-/** A URL segment as the builder wants it: decoded, or as-is when it cannot be. */
-function safeDecode(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
-
-/** Extract the repo base path from the current pathname, if any.
- *  Matches `/repos/:provider/:fullName` (where fullName may include slashes). */
-function extractRepoBase(
-  pathname: string
-): { base: string; repoName: string } | undefined {
-  // URL pattern: /repos/{provider}/{owner}/{name}[/{subPath}[/{...tail}]]
-  // Always exactly 3 segments after /repos/, then optional sub-path.
-  const match = pathname.match(
-    /^\/repos\/([^/]+)\/([^/]+)\/([^/]+)(?:\/(code|pulls|agents|settings|blob|tree|work|issues)(?:\/.*)?)?$/
-  );
-  if (!match) return;
-  const [, provider = '', owner = '', name = ''] = match;
-  // The segments are already URL-shaped, so the builder reads them decoded.
-  const base = repoUrl({
-    host: safeDecode(provider),
-    owner: safeDecode(owner),
-    name: safeDecode(name),
-  });
-  const repoName = `${owner}/${name}`;
-  return { base, repoName };
-}
-
 export function LeftNav(): JSX.Element {
   const { pathname } = useLocation();
-  const repo = extractRepoBase(pathname);
   const scope = useFamilyScope();
   // The badge is visible from every page. Attention is admin-only, so other
   // roles never ask; an older server answers once and the query stops polling.
@@ -198,56 +163,7 @@ export function LeftNav(): JSX.Element {
         {systemOpen ? system.map((item) => renderItem(item)) : null}
       </div>
 
-      {repo ? (
-        <>
-          <div className="left-nav__divider" />
-          <span className="left-nav__group">
-            {repo.repoName}
-          </span>
-          <Link
-            // The repository front page is the code: README and the Files panel.
-            to={repo.base}
-            className={`left-nav__item${isCodePath(pathname, repo.base) ? ' is-active' : ''}`}
-            aria-current={isCodePath(pathname, repo.base) ? 'page' : undefined}
-          >
-            <Code2 aria-hidden="true" size={16} />
-            Code
-          </Link>
-          <Link
-            to={`${repo.base}/pulls`}
-            className={`left-nav__item${isActivePath(pathname, `${repo.base}/pulls`) ? ' is-active' : ''}`}
-            // "Pull requests" is also a primary destination: say whose these are.
-            aria-label={`Pull requests in ${repo.repoName}`}
-          >
-            <GitMerge aria-hidden="true" size={16} />
-            Pull requests
-          </Link>
-          <Link
-            to={`${repo.base}/agents`}
-            className={`left-nav__item${isActivePath(pathname, `${repo.base}/agents`) ? ' is-active' : ''}`}
-            data-testid="left-nav-agents"
-          >
-            <Bot aria-hidden="true" size={16} />
-            Agents
-          </Link>
-          <Link
-            to={`${repo.base}/settings`}
-            className={`left-nav__item${isActivePath(pathname, `${repo.base}/settings`) ? ' is-active' : ''}`}
-          >
-            <Cog aria-hidden="true" size={16} />
-            Settings
-          </Link>
-        </>
-      ) : null}
     </nav>
-  );
-}
-
-/** Code is where a file is read, whichever route shows it. */
-function isCodePath(pathname: string, base: string): boolean {
-  return (
-    pathname === base ||
-    ['code', 'blob', 'tree'].some((part) => isActivePath(pathname, `${base}/${part}`))
   );
 }
 

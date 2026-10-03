@@ -32,6 +32,8 @@ const ROUTES = [
   { tail: '/work', testId: 'repo-overview-page', redirectsToFrontPage: true },
   { tail: '/issues', testId: 'repo-overview-page', redirectsToFrontPage: true },
   { tail: '/pulls', testId: 'repo-pulls-page' },
+  { tail: '/automation', testId: 'repo-automation-page' },
+  { tail: '/activity', testId: 'activity-page' },
   { tail: '/settings', testId: 'repo-settings-page' },
 ] as const;
 
@@ -63,7 +65,7 @@ async function seed(page: Page): Promise<void> {
 }
 
 test.describe('Repository sub-page routing', () => {
-  test('every repo sub-path resolves to its page @action:repo.overview @action:repo.route_agents @action:repo.route_agent_run @action:repo.route_code @action:repo.route_pulls @action:repo.route_settings', async ({
+  test('every repo sub-path resolves to its page @action:repo.overview @action:repo.route_agents @action:repo.route_agent_run @action:repo.route_code @action:repo.route_pulls @action:repo.route_automation @action:repo.route_activity @action:repo.route_settings', async ({
     page,
   }) => {
     await seed(page);
@@ -91,7 +93,7 @@ test.describe('Repository sub-page routing', () => {
       'run-1'
     );
 
-    // The front page owns Code; the retired tracker has no nav entry.
+    // The front page owns Code; the retired tracker has no tab.
     await shell.goto(REPO_PATH);
     await expect(
       page.getByRole('button', { name: 'Files', exact: true })
@@ -100,20 +102,5 @@ test.describe('Repository sub-page routing', () => {
     await expect(
       page.getByRole('link', { name: 'Code', exact: true })
     ).toHaveAttribute('href', REPO_PATH);
-  });
-
-  test('left-nav shows repo context (Code, Agents, Pulls, Settings) inside a repo @action:repo.context_nav', async ({
-    page,
-  }) => {
-    await seed(page);
-    const shell = new AppShellPage(page);
-    await shell.goto(REPO_PATH);
-    await shell.assertShellLoaded();
-
-    // The left nav should show the repo-context navigation.
-    const agentsLink = page.getByTestId('left-nav-agents');
-    await expect(agentsLink).toBeVisible();
-    // The agents link should point to the correct URL.
-    await expect(agentsLink).toHaveAttribute('href', `${REPO_PATH}/agents`);
   });
 });

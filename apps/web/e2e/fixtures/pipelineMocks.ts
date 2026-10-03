@@ -171,7 +171,8 @@ export function reviewHoldBody(): Record<string, unknown> {
   };
 }
 
-function event(overrides: Record<string, unknown>): Record<string, unknown> {
+/** One `GET /api/v1/events` row, with every field a row may read defaulted. */
+export function pipelineEvent(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
     source: 'forge',
     reporter: 'forge',
@@ -197,7 +198,7 @@ function event(overrides: Record<string, unknown>): Record<string, unknown> {
 /** Newest first, like `GET /api/v1/events` without `after_seq`. */
 export function pipelineEvents(): Array<Record<string, unknown>> {
   return [
-    event({
+    pipelineEvent({
       seq: 12,
       ts: minutesAgo(12),
       source: 'auto-stage',
@@ -207,7 +208,7 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
       needs_human: true,
       reason: 'Awaiting the deploy command.',
     }),
-    event({
+    pipelineEvent({
       seq: 11,
       ts: minutesAgo(15),
       kind: 'pr.merged',
@@ -217,7 +218,7 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
       outcome: 'success',
       summary: 'Merged neverhuman/jeryu#99',
     }),
-    event({
+    pipelineEvent({
       seq: 10,
       ts: minutesAgo(20),
       source: 'pr-gate',
@@ -231,7 +232,7 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
       summary: 'Gate failed on neverhuman/jeryu#99',
       log_tail: 'error[E0432]: unresolved import\ngate: FAILED',
     }),
-    event({
+    pipelineEvent({
       seq: 9,
       ts: minutesAgo(30),
       source: 'todoq',
