@@ -30,6 +30,7 @@
 
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
@@ -88,10 +89,13 @@ export function ReleasesRoute(): JSX.Element {
 export function ReleasesPage(): JSX.Element {
   const [params] = useSearchParams();
   const { family: pathFamily } = useParams();
+  const scope = useFamilyScope();
   const perRepository = params.has('repo') || params.get('view') === REPOSITORY_VIEW;
   // On the board the family comes from the path; `?family=` still works when
-  // the page is mounted without the redirect in front of it.
-  const boardFamily = pathFamily ?? (perRepository ? null : params.get('family'));
+  // the page is mounted without the redirect in front of it, and an address
+  // that names none draws the board of the family the shell is scoped to.
+  const boardFamily =
+    pathFamily ?? (perRepository ? null : params.get('family') ?? (scope.family || null));
   usePageTitle(boardFamily ? `Releases · ${boardFamily}` : 'Releases');
   const repositoryView = (
     <RepositoryReleases scope={perRepository ? scopeFrom(params) : DEFAULT_SCOPE} />
@@ -126,7 +130,7 @@ export function ReleasesPage(): JSX.Element {
         </nav>
       </header>
 
-      <NeedsYouHere area="releases" family={pathFamily ?? params.get('family') ?? ''} />
+      <NeedsYouHere area="releases" family={pathFamily ?? params.get('family') ?? scope.family} />
 
       {perRepository ? (
         repositoryView

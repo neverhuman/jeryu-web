@@ -4,9 +4,13 @@
 // may grow and shrink, a list of hook calls may not. Aliases (a destination's
 // earlier chord, kept for one release) bind the same way but stay out of the
 // shortcuts overlay, so the overlay lists the letters that match the labels.
+//
+// A chord carries the family scope, the same way a left-nav link does: `g w`
+// from a page scoped to acme opens acme's work, not everyone's.
 
 import { useNavigate } from 'react-router-dom';
 
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { useKeyboardShortcut } from '../hooks/useKeyboard';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -26,7 +30,8 @@ function NavShortcut({
   inHelp: boolean;
 }): null {
   const navigate = useNavigate();
-  useKeyboardShortcut(combo, () => navigate(destination.path), {
+  const scope = useFamilyScope();
+  useKeyboardShortcut(combo, () => navigate(scope.scopedPath(destination.path)), {
     label: navCommandTitle(destination),
     group: 'Navigation',
     registerInHelp: inHelp,

@@ -28,7 +28,6 @@ export interface FilterState {
   search: string;
   host?: string;
   visibility?: 'public' | 'internal' | 'private';
-  family?: string;
   archived: boolean;
   sort: RepoSort;
 }

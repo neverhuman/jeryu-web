@@ -9,8 +9,14 @@
 // A page whose name depends on data it is still loading passes `null` until
 // the name is known, which leaves the product name alone rather than flashing
 // a placeholder into the history entry.
+//
+// While one family is in scope the title says so too — "Needs you · acme ·
+// JeRyu" — so a window in the taskbar says which family it is watching. A page
+// whose own name already states the family (the release board) is left alone.
 
 import { useEffect } from 'react';
+
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 
 /** The product name, last in every title and the whole title on its own. */
 export const TITLE_SUFFIX = 'JeRyu';
@@ -21,16 +27,24 @@ export function pageTitle(name: string | null | undefined): string {
   return trimmed ? `${trimmed} · ${TITLE_SUFFIX}` : TITLE_SUFFIX;
 }
 
+/** `name`, with the family in scope added unless the name already says it. */
+function withFamily(name: string | null | undefined, family: string): string | null {
+  const trimmed = name?.trim() ?? '';
+  if (!family || trimmed.includes(family)) return trimmed || null;
+  return trimmed ? `${trimmed} · ${family}` : family;
+}
+
 /**
  * Keep `document.title` at `"<name> · JeRyu"` while this page is mounted.
  * Leaving the page restores the bare product name, so the next page's own
  * title is the only one a reader can see.
  */
 export function usePageTitle(name: string | null | undefined): void {
+  const { label } = useFamilyScope();
   useEffect(() => {
-    document.title = pageTitle(name);
+    document.title = pageTitle(withFamily(name, label));
     return () => {
       document.title = TITLE_SUFFIX;
     };
-  }, [name]);
+  }, [name, label]);
 }

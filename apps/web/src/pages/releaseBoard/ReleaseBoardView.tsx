@@ -23,6 +23,7 @@ import { useLocation } from 'react-router-dom';
 import { ApiError } from '../../api/client';
 import type { ReleaseBoard, ReleaseBoardListEntry } from '../../api/types/releaseBoard';
 import { FamilyPicker } from '../../components/family/FamilyPills';
+import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -143,13 +144,16 @@ function BoardForFamily({
   boards: ReleaseBoardListEntry[];
   requested: string | null;
 }): JSX.Element {
+  const scope = useFamilyScope();
   const family =
     pickFamily(boards, requested, readBrowserText('durable', BOARD_FAMILY_STORAGE_KEY)) ?? '';
   const families = boards.map((entry) => entry.family);
   if (family && !families.includes(family)) families.push(family);
 
+  // Picking a board is picking a family: the whole shell follows it.
   const remember = (next: string): void => {
     writeBrowserText('durable', BOARD_FAMILY_STORAGE_KEY, next);
+    scope.setFamily(next);
   };
 
   return (

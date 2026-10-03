@@ -39,6 +39,7 @@ import { BootScreen } from '../pages/boot/BootScreen';
 import { homePathFor } from './HomeRedirect';
 import { PublicRepoShell } from './PublicRepoShell';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
+import { FamilyScopeProvider } from '../components/family/FamilyScopeProvider';
 
 import './AppShell.css';
 
@@ -73,6 +74,59 @@ export function isPublicRepoPath(pathname: string): boolean {
 }
 
 export function AppShell(): JSX.Element {
+  const location = useLocation();
+  const auth = useAuth();
+  const authRouteMode = location.pathname === '/signup' ? 'signup' : 'login';
+  const isAuthRoute = AUTH_PATHS.has(location.pathname);
+  const returnTo = isAuthRoute ? returnPathFrom(location.search) : null;
+
+  if (auth.isPending) {
+    return (
+      <main className="auth-page">
+        <LoadingState title="Loading account…" variant="message" />
+      </main>
+    );
+  }
+
+  if (!auth.user) {
+    // A public repository reads without an account.
+    if (isPublicRepoPath(location.pathname)) {
+      return <PublicRepoShell />;
+    }
+    // Any other deep link opened signed out goes to login and remembers where
+    // it was headed; `/` keeps the story landing.
+    if (!isAuthRoute && location.pathname !== '/') {
+      const next = `${location.pathname}${location.search}${location.hash}`;
+      return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
+    }
+    return (
+      <BootScreen
+        initialMode={authRouteMode}
+        initialAuthOpen={isAuthRoute}
+        returnTo={returnTo}
+      />
+    );
+  }
+
+  if (isAuthRoute) {
+    return <Navigate to={returnTo ?? homePathFor(auth.user)} replace />;
+  }
+
+  if (auth.user.mustChangePassword) {
+    return <AuthPage forcePasswordChange />;
+  }
+
+  // The family scope wraps the whole shell: the header chip, the left nav, the
+  // `g x` chords and the palette all read the one scope.
+  return (
+    <FamilyScopeProvider>
+      <Shell />
+    </FamilyScopeProvider>
+  );
+}
+
+/** The signed-in shell: its layout, its commands and its shortcuts. */
+function Shell(): JSX.Element {
   const location = useLocation();
   const auth = useAuth();
   const openPalette = useCommandStore((s) => s.open);
@@ -142,43 +196,6 @@ export function AppShell(): JSX.Element {
     group: 'Navigation',
     enabled: !!auth.user,
   });
-
-
-  if (auth.isPending) {
-    return (
-      <main className="auth-page">
-        <LoadingState title="Loading account…" variant="message" />
-      </main>
-    );
-  }
-
-  if (!auth.user) {
-    // A public repository reads without an account.
-    if (isPublicRepoPath(location.pathname)) {
-      return <PublicRepoShell />;
-    }
-    // Any other deep link opened signed out goes to login and remembers where
-    // it was headed; `/` keeps the story landing.
-    if (!isAuthRoute && location.pathname !== '/') {
-      const next = `${location.pathname}${location.search}${location.hash}`;
-      return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
-    }
-    return (
-      <BootScreen
-        initialMode={authRouteMode}
-        initialAuthOpen={isAuthRoute}
-        returnTo={returnTo}
-      />
-    );
-  }
-
-  if (isAuthRoute) {
-    return <Navigate to={returnTo ?? homePathFor(auth.user)} replace />;
-  }
-
-  if (auth.user.mustChangePassword) {
-    return <AuthPage forcePasswordChange />;
-  }
 
   return (
     <div className={`app-shell${sidebarCollapsed ? ' app-shell--sidebar-collapsed' : ''}`}>

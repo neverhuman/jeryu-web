@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { ErrorState, LoadingState } from '../components/state';
 import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPlane';
 import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
@@ -101,6 +102,7 @@ export function PullRoomPage(): JSX.Element {
     }
     view.write(written, 'replace');
   };
+  const scope = useFamilyScope();
   // Five controls for a handful of pull requests is more to read than the list
   // itself: they fold away unless one of them is doing something.
   const filtersActive =
@@ -110,9 +112,10 @@ export function PullRoomPage(): JSX.Element {
     filters.checkPosture !== DEFAULT_PULL_ROOM_FILTERS.checkPosture ||
     filters.search !== DEFAULT_PULL_ROOM_FILTERS.search;
   const [filtersOpen, setFiltersOpen] = useState(filtersActive);
-  // `?family=` scopes everything on the page to that family's repos. The
-  // repository list (already cached for /repos) says which family a repo is in.
-  const family = view.read('family');
+  // The shell's family scope scopes everything on the page to that family's
+  // repos, and is stated here as `?family=`. The repository list (already
+  // cached for /repos) says which family a repo is in.
+  const family = scope.family;
   const repositories = useRepositories({});
   const forgeHost = useForgeHost();
   const members = useMemo(
@@ -129,9 +132,10 @@ export function PullRoomPage(): JSX.Element {
       ),
     [members]
   );
-  // A family pill and the board toggle are view switches: they push, so Back
-  // returns to the family or the view before them.
-  const setFamily = (value: string): void => view.write({ family: value }, 'push');
+  // A family pill sets the shell's scope: it replaces the address, so Back
+  // leaves the page rather than undoing a pill. The board toggle is a view
+  // switch and pushes, so Back returns to the view before it.
+  const setFamily = (value: string): void => scope.setFamily(value);
   const setRepo = (value: string): void => setFilters({ repo: value });
   // The timeline is the page; the lane board stays one click away.
   const board = isBoardView(view.read('view'));

@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+
+import { FamilyScopeProvider } from '../../components/family/FamilyScopeProvider';
 import { vi } from 'vitest';
 
 import { ATTENTION } from './pipelineTestData';
@@ -82,9 +84,12 @@ export function renderAt(path: string, route: string, element: ReactElement): vo
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path={route} element={element} />
-        </Routes>
+        {/* The shell's family scope: pages read their family from it. */}
+        <FamilyScopeProvider>
+          <Routes>
+            <Route path={route} element={element} />
+          </Routes>
+        </FamilyScopeProvider>
       </MemoryRouter>
     </QueryClientProvider>
   );

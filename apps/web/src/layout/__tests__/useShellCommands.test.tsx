@@ -31,6 +31,8 @@ describe('useShellCommands', () => {
       'nav.work-add',
       'nav.activity-wall',
       'help.shortcuts',
+      'family.switch',
+      'family.all',
       'theme.light',
       'theme.dark',
       'theme.high-contrast',
@@ -58,11 +60,26 @@ describe('useShellCommands', () => {
       'nav.shared-tools',
       'nav.settings',
       'help.shortcuts',
+      'family.switch',
+      'family.all',
       'theme.light',
       'theme.dark',
       'theme.high-contrast',
       'theme.system',
     ]);
+  });
+
+  it('groups the two family commands apart from the themes', () => {
+    renderHook(() => useShellCommands());
+    const groups = Object.fromEntries(
+      useCommandStore
+        .getState()
+        .commands.filter((c) => c.target.kind === 'action')
+        .map((c) => [c.id, c.group])
+    );
+    expect(groups['family.switch']).toBe('Family');
+    expect(groups['family.all']).toBe('Family');
+    expect(groups['theme.dark']).toBeUndefined();
   });
 
   it('names each page the way the nav names it', () => {

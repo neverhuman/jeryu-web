@@ -6,6 +6,7 @@
 // live overlay, the forge's environments read, so it is unit-tested without a
 // page.
 
+import { sameFamily } from '../../components/family/familyScope';
 import type { EnvironmentSummary } from '../../api/types/deployments';
 import { relativeText } from '../../format/when';
 import type {
@@ -242,8 +243,13 @@ export function pickFamily(
   requested: string | null,
   remembered: string | null
 ): string | null {
-  if (requested) return requested;
-  if (remembered && boards.some((b) => b.family === remembered)) return remembered;
+  if (requested) {
+    // `acme` and `acme-split` are one family: draw the board either names.
+    return boards.find((b) => sameFamily(b.family, requested))?.family ?? requested;
+  }
+  if (remembered && boards.some((b) => sameFamily(b.family, remembered))) {
+    return boards.find((b) => sameFamily(b.family, remembered))?.family ?? remembered;
+  }
   return boards[0]?.family ?? null;
 }
 

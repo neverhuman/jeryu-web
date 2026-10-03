@@ -1,0 +1,65 @@
+/* The family scope chip, in the shell header: on every page, because the
+   scope is. It reads as one pill: the word, the family, and the way out. */
+.family-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-2);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.family-scope--active {
+  border-color: var(--color-accent-primary);
+}
+
+.family-scope__label {
+  color: var(--color-fg-muted);
+}
+
+.family-scope__select {
+  border: none;
+  background: none;
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  max-width: 14ch;
+}
+
+.family-scope__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+
+.family-scope__clear:hover {
+  color: var(--color-fg-primary);
+}
+
+/* A phone has no room for the word: the select keeps its accessible name. */
+@media (max-width: 480px) {
+  .family-scope__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .family-scope__select {
+    max-width: 8ch;
+  }
+}

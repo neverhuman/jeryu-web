@@ -30,6 +30,8 @@ export interface Command {
   icon?: string;
   permission?: string;
   target: CommandTarget;
+  /** Which palette group lists this command; action commands only. */
+  group?: 'Family' | 'Theme';
   shortcut?: string;
   riskTier?: CommandRiskTier;
   run?: () => void;

@@ -8,6 +8,7 @@ import { Fragment, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
+import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { usePipelineNudge } from '../../hooks/usePipeline';
@@ -54,7 +55,13 @@ export function ActivityPage(): JSX.Element {
   usePageTitle('Activity');
   const [params, setParams] = useSearchParams();
   const wall = isWallMode(params);
-  const filters = useMemo(() => parseActivityFilters(params), [params]);
+  // The family comes from the shell's scope: `?family=` when this address
+  // states one, else the family this tab last chose anywhere.
+  const scope = useFamilyScope();
+  const filters = useMemo(
+    () => ({ ...parseActivityFilters(params), family: scope.family }),
+    [params, scope.family]
+  );
   const query = useMemo(() => filtersToQuery(filters), [filters]);
   const feed = useActivityFeed(query);
   usePipelineNudge(feed.base.isSuccess, activityTailKey(query));
@@ -72,6 +79,11 @@ export function ActivityPage(): JSX.Element {
   }, [wall, newest]);
 
   const update = (key: string, value: string): void => {
+    // The family is the shell's scope, not one more filter in this URL.
+    if (key === 'family') {
+      scope.setFamily(value);
+      return;
+    }
     setParams(
       (current) => {
         const next = new URLSearchParams(current);

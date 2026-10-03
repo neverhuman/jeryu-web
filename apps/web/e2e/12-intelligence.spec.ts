@@ -54,6 +54,7 @@ test.describe('Intelligence control-plane page', () => {
     await shell.goto('/');
     await shell.assertShellLoaded();
 
+
     // Intelligence lives in the nav's System group, closed until asked for.
     const nav = page.getByRole('navigation', { name: 'Primary' });
     await nav.getByRole('button', { name: 'System' }).click();
@@ -74,7 +75,6 @@ test.describe('Dependencies graph view', () => {
     const shell = new AppShellPage(page);
     await shell.goto('/');
     await shell.assertShellLoaded();
-
     const nav = page.getByRole('navigation', { name: 'Primary' });
     await nav.getByRole('button', { name: 'System' }).click();
     await nav.getByRole('link', { name: 'Dependencies', exact: true }).click();

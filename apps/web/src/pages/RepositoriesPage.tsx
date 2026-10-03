@@ -20,6 +20,8 @@ import {
 } from 'react-router-dom';
 
 import { ActionButton } from '../components/action/ActionButton';
+import { sameFamily } from '../components/family/familyScope';
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { CreateRepoDialog } from '../components/repo';
 import {
   useRepositories,
@@ -52,6 +54,9 @@ export function RepositoriesPage({
   const effectiveMode =
     mode ?? (params.get('new') === '1' ? 'create' : 'list');
 
+  // The family is the shell's scope, not a filter of this page's own: the
+  // facets say how this list spells it (`acme-split`), the scope which family.
+  const scope = useFamilyScope();
   const [filter, setFilter] = useState<FilterState>(DEFAULT_FILTER);
   const [searchInput, setSearchInput] = useState('');
   const [dialogOpen, setDialogOpen] = useState(effectiveMode === 'create');
@@ -79,7 +84,6 @@ export function RepositoriesPage({
       search: filter.search || undefined,
       host: filter.host,
       visibility: filter.visibility,
-      family: filter.family,
       archived: filter.archived || undefined,
       sort: filter.sort,
     }),
@@ -94,7 +98,11 @@ export function RepositoriesPage({
     }
   };
 
-  const repos = list.data?.repositories ?? [];
+  // The scope is applied here, not in the query: this list spells a family
+  // `acme-split` where the rest of the app says `acme`, and the facet chips
+  // have to keep naming every family while one of them is in scope.
+  const all = list.data?.repositories ?? [];
+  const repos = scope.active ? all.filter((repo) => sameFamily(repo.family, scope.family)) : all;
   const facets = list.data?.facets;
 
   return (
@@ -158,11 +166,9 @@ export function RepositoriesPage({
           {facets && facets.families.length > 0 ? (
             <FilterChips
               label="Family"
-              value={filter.family}
+              value={facets.families.find((name) => sameFamily(name, scope.family))}
               options={facets.families}
-              onChange={(family) =>
-                setFilter((prev) => ({ ...prev, family }))
-              }
+              onChange={(family) => scope.setFamily(family ?? '')}
               ariaLabel="Filter by family"
             />
           ) : null}
@@ -213,6 +219,7 @@ export function RepositoriesPage({
         onClearFilters={() => {
           setFilter(DEFAULT_FILTER);
           setSearchInput('');
+          scope.clearFamily();
         }}
       />
 

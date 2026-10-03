@@ -93,8 +93,14 @@ test('Pull requests filters by family from a pill, and one repo that does not an
   await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toHaveCount(0);
   await expect(page.getByText(/did not answer/)).toHaveCount(0);
 
-  // A pill is a navigation: the back button undoes it.
-  await page.goBack();
+  // A pill sets the shell-wide family scope: it replaces the address rather
+  // than stacking one, and the tab keeps the family across a reload. The
+  // chip's × in the header asks for every family again.
+  await page.reload();
+  await expect(page).toHaveURL(/\/in-flight\?family=core$/);
+  await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toHaveCount(0);
+  await page.getByTestId('family-scope-clear').click();
+  await expect(page).toHaveURL(/\/in-flight$/);
   await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toBeVisible();
 });
 

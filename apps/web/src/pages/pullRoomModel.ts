@@ -1,3 +1,4 @@
+import { canonicalFamily, sameFamily } from '../components/family/familyScope';
 import type {
   ControlPlanePageReport,
   ControlPlaneSummary,
@@ -361,18 +362,22 @@ export function isBoardView(view: string | null): boolean {
  * the forge's own key so existing `?family=jeryu-split` links still work.
  */
 export function familyLabel(family: string): string {
-  return family.replace(/-split$/, '');
+  return canonicalFamily(family);
 }
 
 /** Family of repos the forge assigns no family to. */
 export const OTHER_FAMILY = 'other';
 
-/** The family a repo (`owner/name`) belongs to; unknown or unassigned is "other". */
+/**
+ * The family a repo (`owner/name`) belongs to, canonical, so a scope set where
+ * the family is called `acme` matches a repository list that calls it
+ * `acme-split`. Unknown or unassigned is "other".
+ */
 export function familyOfRepo(
   repo: string,
   families: ReadonlyMap<string, string | null>
 ): string {
-  return families.get(repo) || OTHER_FAMILY;
+  return canonicalFamily(families.get(repo)) || OTHER_FAMILY;
 }
 
 /** Keep the pull requests of one family; an empty family keeps them all. */
@@ -381,7 +386,9 @@ export function scopeToFamily(
   family: string,
   families: ReadonlyMap<string, string | null>
 ): PullListItem[] {
-  return family ? items.filter((item) => familyOfRepo(item.repo, families) === family) : items;
+  return family
+    ? items.filter((item) => sameFamily(familyOfRepo(item.repo, families), family))
+    : items;
 }
 
 export interface FamilyPill {

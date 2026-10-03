@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+
+import { FamilyScopeProvider } from '../components/family/FamilyScopeProvider';
 import { describe, expect, it, vi } from 'vitest';
 import { PullRoomPage } from './PullRoomPage';
 
@@ -136,9 +138,21 @@ vi.mock('../hooks/useShift', () => ({
 }));
 
 function setup(entries: string[]) {
-  const router = createMemoryRouter([{ path: '/pull-room', element: <PullRoomPage /> }], {
-    initialEntries: entries,
-  });
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/pull-room',
+        element: (
+          <FamilyScopeProvider>
+            <PullRoomPage />
+          </FamilyScopeProvider>
+        ),
+      },
+    ],
+    {
+      initialEntries: entries,
+    }
+  );
   render(
     <StrictMode>
       <RouterProvider router={router} />

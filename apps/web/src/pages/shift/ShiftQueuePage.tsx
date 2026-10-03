@@ -29,6 +29,8 @@ import {
   useShiftTodos,
 } from '../../hooks/useShift';
 import { ShiftError } from './shiftCommon';
+import { sameFamily } from '../../components/family/familyScope';
+import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import {
   DEFAULT_QUEUE_FILTERS,
   SHIFT_MODES,
@@ -74,20 +76,15 @@ export function ShiftQueuePage(): JSX.Element {
   const families = useShiftFamilies();
   const list = useMemo(() => families.data?.families ?? [], [families.data]);
   const [params, setParams] = useSearchParams();
-  // `?family=` filters the whole page; anything that is not a family means all.
-  const wanted = params.get('family') ?? '';
-  const family = list.some((f) => f.name === wanted) ? wanted : '';
+  // The shell's family scope filters the whole page, and is stated here as
+  // `?family=`; a scope on a family this queue does not know means all.
+  const scope = useFamilyScope();
+  // The queue's own spelling of the scope (`acme` and `acme-split` are one
+  // family), so rows filed under either name match the scope set elsewhere.
+  const family = list.find((f) => sameFamily(f.name, scope.family))?.name ?? '';
+  // A family filter is about the whole queue, so the filed-todo focus goes.
   const setFamily = (name: string): void => {
-    setParams(
-      (current) => {
-        const next = new URLSearchParams(current);
-        if (name && name !== family) next.set('family', name);
-        else next.delete('family');
-        next.delete('todo');
-        return next;
-      },
-      { replace: true }
-    );
+    scope.setFamily(name === family ? '' : name, { drop: ['todo'] });
   };
   const onFiled = (filedFamily: string, todos: ShiftTodo[]): void => {
     setParams(

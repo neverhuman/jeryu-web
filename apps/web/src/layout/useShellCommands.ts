@@ -4,9 +4,15 @@
 // left nav renders and the keyboard binds), then the few entries that are not
 // destinations: two admin deep links, the shortcuts overlay, and the themes.
 // `/search` reads the same commands, so a destination is findable there too.
+//
+// Every route command carries the family scope, so jumping from the palette
+// keeps the family the shell is scoped to; the two Family commands change that
+// scope ("Switch family…" opens the header picker, "Show all families" clears
+// it) without leaving the page.
 
 import { useEffect } from 'react';
 
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { useCommandStore, type Command } from '../stores/commandStore';
 import { usePreferencesStore } from '../stores/preferencesStore';
 import { useShortcutsStore } from '../stores/shortcutsStore';
@@ -23,6 +29,7 @@ export function useShellCommands(isAdmin = false): void {
   const unregister = useCommandStore((s) => s.unregister);
   const setTheme = usePreferencesStore((s) => s.setTheme);
   const openShortcuts = useShortcutsStore((s) => s.open);
+  const scope = useFamilyScope();
 
   useEffect(() => {
     const destinations: Command[] = visibleDestinations(NAV_DESTINATIONS, isAdmin).map(
@@ -78,6 +85,24 @@ export function useShellCommands(isAdmin = false): void {
         run: () => openShortcuts(),
       },
       {
+        id: 'family.switch',
+        title: 'Switch family…',
+        keywords: ['family', 'scope', 'filter', 'switch', 'pick'],
+        icon: 'boxes',
+        target: { kind: 'action', actionId: 'family.switch' },
+        group: 'Family',
+        run: () => scope.setPickerOpen(true),
+      },
+      {
+        id: 'family.all',
+        title: 'Show all families',
+        keywords: ['family', 'scope', 'all', 'clear', 'every'],
+        icon: 'boxes',
+        target: { kind: 'action', actionId: 'family.all' },
+        group: 'Family',
+        run: () => scope.clearFamily(),
+      },
+      {
         id: 'theme.light',
         title: 'Theme: Light',
         keywords: ['theme', 'appearance', 'light'],
@@ -110,7 +135,13 @@ export function useShellCommands(isAdmin = false): void {
         run: () => setTheme('system'),
       },
     ];
-    register(commands);
+    register(
+      commands.map((command) =>
+        command.target.kind === 'route'
+          ? { ...command, target: { kind: 'route', path: scope.scopedPath(command.target.path) } }
+          : command
+      )
+    );
     return () => unregister(commands.map((c) => c.id));
-  }, [register, unregister, setTheme, openShortcuts, isAdmin]);
+  }, [register, unregister, setTheme, openShortcuts, isAdmin, scope]);
 }

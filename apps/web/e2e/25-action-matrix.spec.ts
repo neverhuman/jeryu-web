@@ -73,6 +73,7 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await expect(page.getByRole('banner').getByRole('link', { name: 'JeRyu home' })).toHaveAttribute('href', '/');
   await expect(page.getByRole('banner').getByRole('status')).toHaveAccessibleName(/^Live updates /);
 
+
   // One search-or-jump control: pages, repositories by name, a pull request by name#n.
   const jump = page.getByRole('button', { name: /^Search or jump to/ });
   await jump.click();

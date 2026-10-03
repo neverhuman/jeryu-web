@@ -4,7 +4,8 @@
 // (typed as `owner/name#12` or `name#12`), Search (hands the typed text to the
 // linkable /search?q= page) and Theme. The repository list is
 // loaded the first time the palette opens, not with the shell. Focus returns
-// to whatever opened the palette when it closes.
+// to whatever opened the palette when it closes. Family holds the two commands
+// that change the shell-wide family scope.
 
 import { Command } from 'cmdk';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -70,7 +71,9 @@ export function CommandPalette(): JSX.Element {
   const typed = query.trim() !== '';
 
   const pages = useMemo(() => commands.filter((c) => c.target.kind === 'route'), [commands]);
-  const themes = useMemo(() => commands.filter((c) => c.target.kind !== 'route'), [commands]);
+  const actions = useMemo(() => commands.filter((c) => c.target.kind !== 'route'), [commands]);
+  const familyCommands = useMemo(() => actions.filter((c) => c.group === 'Family'), [actions]);
+  const themes = useMemo(() => actions.filter((c) => c.group !== 'Family'), [actions]);
 
   if (!isOpen) return <></>;
 
@@ -169,6 +172,21 @@ export function CommandPalette(): JSX.Element {
               >
                 <span>See all results for “{query.trim()}”</span>
               </Command.Item>
+            </Command.Group>
+          ) : null}
+          {familyCommands.length > 0 ? (
+            <Command.Group heading={<span className="command-palette__group">Family</span>}>
+              {familyCommands.map((cmd) => (
+                <Command.Item
+                  key={cmd.id}
+                  value={cmd.title}
+                  keywords={cmd.keywords}
+                  className="command-palette__item"
+                  onSelect={() => execute(cmd.id, (path) => navigate(path))}
+                >
+                  <span>{cmd.title}</span>
+                </Command.Item>
+              ))}
             </Command.Group>
           ) : null}
           <Command.Group heading={<span className="command-palette__group">Theme</span>}>

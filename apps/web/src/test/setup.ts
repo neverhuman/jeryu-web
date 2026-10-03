@@ -11,6 +11,19 @@
 // from this file. `jest-dom.d.ts` declares the matchers for TypeScript.
 
 import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
-import { expect } from 'vitest';
+import { afterEach, expect } from 'vitest';
 
 expect.extend(jestDomMatchers);
+
+// Browser storage outlives a test in jsdom: a remembered family scope or an
+// open disclosure must not reach the next test in the file.
+afterEach(() => {
+  // A test may have replaced a storage with one that refuses every call.
+  for (const area of ['sessionStorage', 'localStorage'] as const) {
+    try {
+      window[area].clear();
+    } catch {
+      // Nothing to clear.
+    }
+  }
+});

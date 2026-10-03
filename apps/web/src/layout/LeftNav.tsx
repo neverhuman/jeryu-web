@@ -14,11 +14,17 @@
 // sub-navigation appears below the workspace links so the operator can
 // jump directly to Code / Pulls / Agents / Settings without going through
 // the overview page first.
+//
+// Every workspace link carries the family scope (see
+// components/family/FamilyScopeProvider), so picking a family on one page and
+// clicking another destination keeps that family. The repository links below
+// are about one repository and carry nothing.
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Bot, ChevronDown, ChevronRight, Code2, Cog, GitMerge } from 'lucide-react';
 
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { useAttention } from '../hooks/usePipeline';
 import { useAuth } from '../hooks/useAuth';
 import { useSiteSettings } from '../hooks/useSiteSettings';
@@ -102,6 +108,7 @@ function extractRepoBase(
 export function LeftNav(): JSX.Element {
   const { pathname } = useLocation();
   const repo = extractRepoBase(pathname);
+  const scope = useFamilyScope();
   // The badge is visible from every page. Attention is admin-only, so other
   // roles never ask; an older server answers once and the query stops polling.
   const { user } = useAuth();
@@ -131,11 +138,12 @@ export function LeftNav(): JSX.Element {
   // every click (it did), which re-authenticates, reconnects the live socket
   // ("Connecting…" on each navigation), refetches every query and shifts the page.
   // `title`/`aria-keyshortcuts`: the chord that goes here, said where the
-  // destination is, not only in the shortcuts overlay.
+  // destination is, not only in the shortcuts overlay. Every link carries the
+  // family scope, so leaving a page does not widen it back to every family.
   const renderItem = (item: NavDestination, title?: string): JSX.Element => (
     <Link
       key={item.id}
-      to={item.path}
+      to={scope.scopedPath(item.path)}
       title={title ?? `${item.label} (${item.shortcut})`}
       aria-keyshortcuts={item.shortcut}
       className={`left-nav__item${

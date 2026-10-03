@@ -196,7 +196,6 @@ test.describe('Primary left navigation', () => {
     const shell = new AppShellPage(page);
     await shell.goto('/');
     await shell.assertShellLoaded();
-
     const routes = [
       {
         label: 'Needs you',

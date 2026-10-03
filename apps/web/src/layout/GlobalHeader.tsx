@@ -1,13 +1,15 @@
 // GlobalHeader.tsx — top bar (W-FE-01).
 //
 // Owns, left to right: the brand (the way home), where you are (inside a
-// repository only), one search-or-jump control, the live pill and the account.
+// repository only), which family is in scope, one search-or-jump control, the
+// live pill and the account.
 // Each child is its own file so the shell layout stays scannable.
 
 import { Menu, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { JeryuLogo } from '../components/brand/JeryuLogo';
+import { FamilyScopeChip } from '../components/family/FamilyScopeChip';
 import { useBootstrap } from '../hooks/useBootstrap';
 import { useRealtimeStore } from '../stores/realtimeStore';
 import { useCommandStore } from '../stores/commandStore';
@@ -46,6 +48,7 @@ export function GlobalHeader({ onOpenNav }: GlobalHeaderProps = {}): JSX.Element
         <JeryuLogo variant="header" />
       </Link>
       <RepoSwitcher />
+      <FamilyScopeChip />
       <span className="global-header__spacer" aria-hidden="true" />
       <button
         type="button"

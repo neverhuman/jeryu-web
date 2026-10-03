@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+
+import { FamilyScopeProvider } from '../components/family/FamilyScopeProvider';
 import { describe, expect, it, vi } from 'vitest';
 import { PullRoomPage } from './PullRoomPage';
 
@@ -80,9 +82,21 @@ vi.mock('../hooks/useShift', () => ({
 }));
 
 function setup(initialEntries: string[]) {
-  const router = createMemoryRouter([{ path: '/pull-room', element: <PullRoomPage /> }], {
-    initialEntries,
-  });
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/pull-room',
+        element: (
+          <FamilyScopeProvider>
+            <PullRoomPage />
+          </FamilyScopeProvider>
+        ),
+      },
+    ],
+    {
+      initialEntries,
+    }
+  );
   render(<StrictMode><RouterProvider router={router} /></StrictMode>);
   return router;
 }
@@ -175,9 +189,10 @@ describe('Pull Room URL navigation', () => {
     expect(screen.getByTestId('pull-timeline-owner/a-1')).toBeInTheDocument();
     expect(screen.queryByTestId('pull-timeline-owner/b-1')).not.toBeInTheDocument();
 
-    // The back button undoes a pill: a pill is a navigation, not a replace.
+    // A pill sets the shell-wide family scope: it replaces the address rather
+    // than stacking one, and the tab keeps it even where the URL states none.
     await act(async () => { await router.navigate(-1); });
-    expect(screen.getByTestId('pull-timeline-owner/b-1')).toBeInTheDocument();
+    expect(screen.getByTestId('pull-timeline-owner/a-1')).toBeInTheDocument();
 
     await act(async () => { await router.navigate('/pull-room?family=other'); });
     expect(screen.getByTestId('pull-timeline-owner/b-1')).toBeInTheDocument();

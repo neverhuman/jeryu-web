@@ -11,9 +11,10 @@
 // system is doing, so calm reads as alive rather than broken.
 
 import { CircleCheck } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { FamilyStrip } from '../../components/family/FamilyPills';
+import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { EmptyState, LoadingState, PipelineQueryState } from '../../components/state';
 import { useControlPlaneRunners } from '../../hooks/useControlPlaneRunners';
 import {
@@ -43,16 +44,14 @@ export function NeedsYouPage(): JSX.Element {
   usePageTitle('Needs you');
   const attention = useAttention();
   usePipelineNudge(attention.isSuccess, ATTENTION_QUERY_KEY);
-  // `?family=` keeps one family's rows: a pill on any row, or in the strip above,
-  // sets it, so "everything waiting on me for jeryu" is one click and a link.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const family = searchParams.get('family') ?? '';
+  // The shell's family scope keeps one family's rows: a pill on any row, or in
+  // the strip above, sets it, so "everything waiting on me for one family" is
+  // one click, a link (`?family=`), and the scope every page after this opens with.
+  const scope = useFamilyScope();
+  const family = scope.family;
   const repoFamilies = useRepoFamilies();
   const setFamily = (next: string): void => {
-    const params = new URLSearchParams(searchParams);
-    if (next && next !== family) params.set('family', next);
-    else params.delete('family');
-    setSearchParams(params, { replace: true });
+    scope.setFamily(next === family ? '' : next);
   };
   const allItems = attention.data?.items ?? [];
   const counts = familyCounts(

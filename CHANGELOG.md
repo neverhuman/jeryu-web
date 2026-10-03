@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- The family filter is one shell-wide scope that survives navigation. The header carries a chip
+  ("Family: acme ×") with a picker; every left-nav link, every `g x` chord and every palette route
+  carries the scope, in whichever form that page states it (`?family=<key>`, or the path
+  `/releases/family/<key>`). The URL is authoritative; where an address states no family the tab
+  falls back to the one it last chose (session storage, so a second tab can watch a second
+  family), and the chip's × or the palette's "Show all families" clears it everywhere. The
+  palette also has "Switch family…", which opens the picker. `acme` and `acme-split` resolve to
+  one key, so a scope set on one page matches rows on another, and the page title names the
+  family while a scope is active.
 - Releases and Runners point at each other. A family's board is `/releases/family/<family>` (the
   family pills link there; `/releases?family=<family>` redirects, keeping other parameters and the
   hash), and each lane is the anchor `#lane-<id>`, scrolled to and ringed briefly when a URL names
