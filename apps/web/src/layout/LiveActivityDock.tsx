@@ -12,7 +12,9 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { absoluteText, clockText, zoneLabel } from '../format/when';
 import { useAuth } from '../hooks/useAuth';
-import { PIPELINE_KEY, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
+import { PIPELINE_KEY, useAttention, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { attentionBadgeCount, needsYouHref } from '../pages/needsYou/needsYouModel';
 import {
   ACTIVITY_PATH,
   eventLabel,
@@ -34,6 +36,7 @@ export function LiveActivityDock(): JSX.Element | null {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { pathname } = useLocation();
+  const scope = useFamilyScope();
   const [collapsed, setCollapsed] = useState(
     () => readBrowserText('durable', EXPANDED_KEY) !== '1'
   );
@@ -42,6 +45,10 @@ export function LiveActivityDock(): JSX.Element | null {
     refetchInterval: 10_000,
   });
   usePipelineNudge(feed.isSuccess, [...PIPELINE_KEY, 'events', DOCK_QUERY]);
+  // What needs a person is Needs you's answer, not "how many of the last eight
+  // events were flagged": the dock showed 1 beside a nav badge of 3. It counts
+  // and links to the same rows as every other surface, on the same family.
+  const attention = useAttention(user?.role === 'admin');
 
   // The Activity page (and its wall) is this feed at full size.
   if (pathname === ACTIVITY_PATH) return null;
@@ -49,7 +56,7 @@ export function LiveActivityDock(): JSX.Element | null {
   // a cached answer in the query client might still hold.
   if (!isAdmin || !feed.isSuccess) return null;
   const events = foldEchoes(feed.data.events).slice(0, DOCK_EVENTS);
-  const waiting = events.filter((event) => event.needs_human).length;
+  const waiting = attentionBadgeCount(attention.data);
 
   const toggle = (): void => {
     setCollapsed((prev) => {
@@ -80,7 +87,13 @@ export function LiveActivityDock(): JSX.Element | null {
           </span>
         ) : null}
         {waiting > 0 ? (
-          <span className="page__pill page__pill--danger">{waiting} need you</span>
+          <Link
+            to={needsYouHref(scope.family)}
+            className="activity-dock__needs-you"
+            data-testid="activity-dock-needs-you"
+          >
+            <span className="page__pill page__pill--danger">{waiting} need you</span>
+          </Link>
         ) : null}
         <Link to={ACTIVITY_PATH} className="activity-dock__all">
           All activity

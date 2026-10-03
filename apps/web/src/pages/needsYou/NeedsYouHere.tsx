@@ -1,9 +1,11 @@
 // NeedsYouHere.tsx — the slice of "Needs you" that belongs to the page it sits
 // on, shown above that page's own content: staged or failed releases on
-// Releases. (Work links its red count to Needs you instead, and In flight
-// marks each pull request's own row.) It lists the rows /needs-you lists, from one shared query, so the
-// left-nav count, this strip and that page always agree. Nothing waiting here
-// renders nothing: calm pages stay calm.
+// Releases, downed workers and gate runners on Runners, the Work share on Work.
+// Every page a nav badge counts for shows this strip, so the badge always leads
+// to the rows it counted. (In flight marks each pull request's own row instead.)
+// It lists the rows /needs-you lists, from one shared query, so the left-nav
+// count, this strip and that page always agree. Nothing waiting here renders
+// nothing: calm pages stay calm.
 
 import { Link } from 'react-router-dom';
 
@@ -17,6 +19,7 @@ import {
   NEEDS_YOU_PATH,
   familyOf,
   filterByFamily,
+  needsYouHref,
   severityTone,
   urgentInArea,
   type AttentionArea
@@ -39,6 +42,8 @@ export function NeedsYouHere({
   onFamily?: (family: string) => void;
 }): JSX.Element | null {
   const { user } = useAuth();
+  // The one polled attention query, shared with the nav badge and Needs you.
+  // The read is admin-only, so other roles never ask.
   const attention = useAttention(user?.role === 'admin');
   const repoFamilies = useRepoFamilies();
   const scope = useFamilyScope();
@@ -67,8 +72,10 @@ export function NeedsYouHere({
     >
       <h2 className="page__section-title">
         <span className="page__pill page__pill--danger">{subjects.length}</span>{' '}
-        Waiting on you here
-        <Link className="needs-you__here-all" to="/needs-you">
+        Waiting on you in {AREA_LABEL[area]}
+        {/* The family the strip is showing stays on the link: Needs you opens
+            on the same rows, not on every family's. */}
+        <Link className="needs-you__here-all" to={needsYouHref(family)}>
           {more > 0 ? `${more} more in Needs you →` : 'All of Needs you →'}
         </Link>
       </h2>

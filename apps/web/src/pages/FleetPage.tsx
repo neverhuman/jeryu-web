@@ -47,6 +47,7 @@ import {
   idleReviewerSentence
 } from './runnerNetworkModel';
 import { AuditList, AutomationList, ReviewerList, RunnerNodeList } from './fleet';
+import { NeedsYouHere } from './needsYou/NeedsYouHere';
 import { scorerSummary } from './fleet/runnerTools';
 import {
   forgeReleaseLane,
@@ -204,6 +205,10 @@ export function FleetPage(): JSX.Element {
           </p>
         ) : null}
       </header>
+
+      {/* The Runners badge counts worker and gate-runner rows; this is where
+          they are, so the badge leads to the rows it counted. */}
+      <NeedsYouHere area="system" />
 
       <section className="page__section" aria-labelledby="fleet-runners">
         <h2 className="page__section-title" id="fleet-runners">

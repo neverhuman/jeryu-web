@@ -573,6 +573,11 @@ a.global-header__live:hover {
   color: var(--color-fg-secondary);
 }
 
+.activity-dock__needs-you {
+  display: inline-flex;
+  text-decoration: none;
+}
+
 .activity-dock__all {
   margin-left: auto;
   font-size: var(--font-size-xs);

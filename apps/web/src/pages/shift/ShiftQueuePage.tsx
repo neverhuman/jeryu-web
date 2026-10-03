@@ -8,8 +8,9 @@
 // (`?family=`), and pressing it again, or All, shows every family. A row expands
 // to the body, note and attempt history; its id opens the todo's own page.
 // Admins get release / block / priority / now-night row actions and "Open review
-// PR" on each shift. What waits on a person is one red count linking to Needs
-// you, not a copy of that list above the queue.
+// PR" on each shift. What waits on a person is the Work share of Needs you —
+// the same strip every other page shows, plus a red count of it labelled "in
+// Work" — never a second answer computed from the queue's own rows.
 
 import { GitBranch, Inbox } from 'lucide-react';
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
@@ -38,7 +39,6 @@ import {
   SHIFT_STATUSES,
   attemptSummary,
   commitHref,
-  countNeedsHuman,
   filterShiftTodos,
   formatCost,
   todoCost,
@@ -59,6 +59,8 @@ import { RepoName, TodoActions, TodoDetail, TodoTrace, WhyStuck } from './todoPa
 import { WorkComposer } from './WorkComposer';
 import { todoHref } from './workPaths';
 import { WorkersStrip } from './WorkersStrip';
+import { NeedsYouHere } from '../needsYou/NeedsYouHere';
+import { AREA_LABEL } from '../needsYou/needsYouModel';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { groupLive, liveFamilyCounts, todoFamily, todosOfFamily } from './workPageModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -111,6 +113,11 @@ export function ShiftQueuePage(): JSX.Element {
           Add work, see who is working, and follow every family&apos;s queue to main.
         </p>
       </header>
+
+      {/* The rows themselves, as every other page shows them, rather than a
+          sentence of this page's own about how many wait. Above the queue's own
+          state, so a queue that cannot be read still says what waits on you. */}
+      <NeedsYouHere area="work" family={family} onFamily={setFamily} />
 
       {families.isPending ? (
         <LoadingState title="Loading shift families…" variant="message" />
@@ -191,10 +198,10 @@ function FamilyQueue({
     return (name) => byFamily.get(name) ?? NO_REFS;
   }, [families, forgeHost]);
   // What waits on a person is Needs you's answer, not a second one computed
-  // here; the queue's own count stands in only until that answer arrives.
-  const needsYou = useNeedsYou(family);
-  const localWaiting = useMemo(() => countNeedsHuman(scoped), [scoped]);
-  const waiting = needsYou.count ?? localWaiting;
+  // here: this is the Work share of that list, counted and listed by the same
+  // derivation the nav badge and the strip below use.
+  const needsYou = useNeedsYou(family, 'work');
+  const waiting = needsYou.count ?? 0;
   // What is live or waits on someone is the page; what is finished folds away.
   // A todo someone asked for by id, or a status filter, is shown as asked.
   const asked = focusIds.length > 0 || filters.status !== 'all';
@@ -236,8 +243,8 @@ function FamilyQueue({
               to={needsYou.href}
               data-testid="shift-needs-human"
             >
-              <span className="page__pill page__pill--danger">{waiting}</span> need
-              {waiting === 1 ? 's' : ''} a human · open Needs you
+              <span className="page__pill page__pill--danger">{waiting}</span> in{' '}
+              {AREA_LABEL.work} · open Needs you
             </Link>
           ) : null}
           <details className="shift__more-filters" open={filtersInUse || undefined}>

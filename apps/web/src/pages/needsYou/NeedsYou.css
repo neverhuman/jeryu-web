@@ -145,7 +145,7 @@
   }
 }
 
-/* "Waiting on you here": the page's own share of Needs you, above its content. */
+/* "Waiting on you in <area>": the page's own share of Needs you, above its content. */
 .needs-you__here {
   display: flex;
   flex-direction: column;

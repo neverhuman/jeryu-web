@@ -9,13 +9,11 @@ import {
   attemptSummary,
   capacityGeometry,
   commitHref,
-  countNeedsHuman,
   dateInTz,
   filterShiftTodos,
   isLastNight,
   isLongStale,
   lastNightDate,
-  needsHuman,
   normalizeShiftKind,
   latestWorker,
   layoutSegments,
@@ -188,7 +186,7 @@ describe('slotLabel', () => {
     expect(todoCost(todo({ worked_by: [attempt({ cost_usd: null })] }))).toBeNull();
     expect(todoCost(todo({ worked_by: [attempt({ cost_usd: 1.25 }), attempt({ cost_usd: null }), attempt({ cost_usd: 0.5 })] }))).toBe(1.75);
   });
-  it('puts todos that wait on a person first and can filter to them', () => {
+  it('puts todos that wait on a person first', () => {
     const blocked = todo({ id: 'blk', status: 'blocked', priority: 4 });
     const handoff = todo({ id: 'hand', status: 'handoff' });
     const untriaged = todo({ id: 'new', triaged: false });
@@ -199,12 +197,6 @@ describe('slotLabel', () => {
       'handoff',
       'claimed',
     ]);
-    expect(needsHuman(blocked)).toBe(true);
-    // An open untriaged todo is the workers' own to triage on their next pass.
-    expect(needsHuman(untriaged)).toBe(false);
-    expect(needsHuman(doneUntriaged)).toBe(false);
-    expect(needsHuman(TODOS[0])).toBe(false);
-    expect(countNeedsHuman(all)).toBe(2);
   });
 
   it('traces a todo from queued to released, saying unknown on an older server', () => {
@@ -369,7 +361,6 @@ describe('todo actions', () => {
       expect(actions.more).toEqual([]);
     }
     expect(isFinishedTodo({ status: 'closed' })).toBe(true);
-    expect(needsHuman({ status: 'closed' })).toBe(false);
   });
 
   it('sends an until as an RFC 3339 instant in UTC, and refuses a non-date', () => {

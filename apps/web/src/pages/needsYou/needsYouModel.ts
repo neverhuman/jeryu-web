@@ -210,16 +210,12 @@ export function severityTone(severity: AttentionSeverity): 'danger' | 'neutral' 
 }
 
 /**
- * The nav badge: critical + action. Counts come from the items when the
- * server's `counts` is missing or malformed.
+ * The nav badge: critical + action, counted from the rows themselves
+ * (`urgentAttention`) rather than the server's `counts`, so the badge, the
+ * dock, each page's strip and Needs you itself can never disagree.
  */
 export function attentionBadgeCount(data: AttentionResponse | undefined): number {
-  if (!data) return 0;
-  const { counts } = data;
-  if (counts && Number.isFinite(counts.critical) && Number.isFinite(counts.action)) {
-    return Math.max(0, counts.critical) + Math.max(0, counts.action);
-  }
-  return (data.items ?? []).filter((item) => severityOf(item) !== 'watch').length;
+  return urgentAttention(data).length;
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -560,6 +556,19 @@ export function needsYouHref(family?: string | null): string {
  */
 export function urgentAttention(data: AttentionResponse | undefined): AttentionItem[] {
   return (data?.items ?? []).filter((item) => severityOf(item) !== 'watch');
+}
+
+/**
+ * The todos a person is the next step for, by id. Rows elsewhere (the In
+ * flight ghosts) read membership here instead of deciding from a todo's own
+ * status, so one todo is never "needs a human" on one page and calm on another.
+ */
+export function attentionTodoIds(data: AttentionResponse | undefined): Set<string> {
+  const ids = new Set<string>();
+  for (const item of urgentAttention(data)) {
+    if (item.todo_id) ids.add(item.todo_id);
+  }
+  return ids;
 }
 
 /** `owner/name` → family, as the repository list reports it. */

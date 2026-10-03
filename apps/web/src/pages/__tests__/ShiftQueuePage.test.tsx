@@ -220,29 +220,34 @@ describe('ShiftQueuePage', () => {
     expect(within(done).getByRole('list', { name: /Pull request #48, Merged, Released not yet/ })).toBeInTheDocument();
     expect(within(done).getByText('$2.50')).toBeInTheDocument();
 
-    // The chip counts the rows Needs you shows (3 urgent attention items), not
-    // the queue's own idea of which todos wait, and it links to that page.
+    // The chip counts Work's own share of the rows Needs you shows (one of its
+    // three urgent items is a todo), not the queue's own idea of which todos
+    // wait, and it links to that page.
     const chip = await waitFor(() => {
       const found = screen.getByTestId('shift-needs-human');
-      expect(found).toHaveTextContent('3 need a human');
+      expect(found).toHaveTextContent('1 in Work');
       return found;
     });
     expect(chip).toHaveAttribute('href', '/needs-you');
+    // And the rows themselves are on the page, as on every other page.
+    const strip = screen.getByTestId('needs-you-here-work');
+    expect(within(strip).getByText(/^Blocked todo · jeryu/)).toBeInTheDocument();
   });
 
   it('scopes the needs-a-human chip to the picked family', async () => {
     mockShiftApi();
     renderQueue('/work?family=jeryu');
-    // Only jeryu's row of the attention list counts; jain's does not.
+    // Only jeryu's Work row of the attention list counts; jain's worker row is
+    // neither jeryu's nor Work's.
     const chip = await waitFor(() => {
       const found = screen.getByTestId('shift-needs-human');
-      expect(found).toHaveTextContent('1 needs a human');
+      expect(found).toHaveTextContent('1 in Work');
       return found;
     });
     expect(chip).toHaveAttribute('href', '/needs-you?family=jeryu');
   });
 
-  it('falls back to the queue count while the Needs you list is unavailable', async () => {
+  it('says nothing waits while the Needs you list is unavailable, rather than a second count', async () => {
     mockShiftApi((req) => {
       if (req.pathname === '/api/v1/attention') return errorResponse(503, 'down');
       return req.pathname === '/api/v1/shift/todos'
@@ -253,10 +258,11 @@ describe('ShiftQueuePage', () => {
         : undefined;
     });
     renderQueue();
-    const chip = await screen.findByTestId('shift-needs-human');
-    // The queue knows of one blocked todo, so the chip still tells the truth.
-    expect(chip).toHaveTextContent('1 needs a human');
-    expect(chip).toHaveAttribute('href', '/needs-you');
+    // The queue holds a blocked todo, but what waits on a person is Needs
+    // you's answer alone: with that unreadable there is no count to show.
+    expect(await screen.findByTestId('shift-todo-blk-2')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-needs-human')).toBeNull();
+    expect(screen.queryByTestId('needs-you-here-work')).toBeNull();
   });
 
   it('shows shifts still in review, folds finished ones, and links repos under their hosting owner', async () => {

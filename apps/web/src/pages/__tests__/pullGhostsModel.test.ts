@@ -149,7 +149,18 @@ describe('pullGhostGroups when', () => {
   it('words blocked and handoff for a human', () => {
     const [group] = groups([todo('a', { status: 'blocked' }), todo('b', { status: 'handoff' })]);
     expect(whens(group)).toEqual(['blocked — needs a human', 'handed off — needs a human']);
-    expect(group.rows.map((r) => r.attention)).toEqual([true, true]);
+  });
+
+  it('wears red only for the todos the Needs you list names', () => {
+    const [group] = groups([todo('a', { status: 'blocked' }), todo('b', { status: 'handoff' })], {
+      attentionTodoIds: new Set(['b']),
+    });
+    expect(group.rows.map((r) => r.attention)).toEqual([false, true]);
+  });
+
+  it('marks no row while the Needs you list is unknown', () => {
+    const [group] = groups([todo('a', { status: 'blocked' })]);
+    expect(group.rows[0]?.attention).toBe(false);
   });
 
   it('says PR pending for done work with no PR', () => {

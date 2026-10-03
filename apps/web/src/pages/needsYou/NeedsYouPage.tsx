@@ -34,6 +34,7 @@ import {
   filterByFamily,
   severityTone,
   systemPulse,
+  urgentAttention,
   type SubjectGroup,
 } from './needsYouModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -55,19 +56,32 @@ export function NeedsYouPage(): JSX.Element {
     scope.setFamily(next === family ? '' : next);
   };
   const allItems = attention.data?.items ?? [];
-  const counts = familyCounts(
-    allItems.filter((item) => item.severity !== 'watch'),
-    repoFamilies
-  );
+  // The pills count the rows this page shows in red — `urgentAttention`, the
+  // one derivation of that set, so a row with an unknown severity is counted
+  // as the `watch` row it is displayed as.
+  const counts = familyCounts(urgentAttention(attention.data), repoFamilies);
   const groups = groupSubjects(filterByFamily(allItems, family, repoFamilies));
   const urgent = groups.filter((group) => group.severity !== 'watch');
   const watch = groups.find((group) => group.severity === 'watch');
+  // The one number this page is about, next to its title, so the nav badge,
+  // each page's strip and this header are visibly the same count.
+  const waiting = urgent.reduce((total, group) => total + group.subjects.length, 0);
   const now = new Date();
 
   return (
     <div className="page page--wide" data-testid="needs-you-page">
       <header className="page__header">
-        <h1 className="page__title">Needs you</h1>
+        <h1 className="page__title">
+          Needs you
+          {waiting > 0 ? (
+            <>
+              {' '}
+              <span className="page__pill page__pill--danger" data-testid="needs-you-count">
+                {waiting}
+              </span>
+            </>
+          ) : null}
+        </h1>
         <p className="page__subtitle">
           Where the pipeline is waiting on a person. Rows clear themselves when
           the cause is fixed.

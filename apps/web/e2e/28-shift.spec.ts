@@ -7,6 +7,7 @@
 import { expect, test } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
+import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { NIGHT, mockShiftApi } from './fixtures/shiftMocks';
 
 test.describe('Work, one page', () => {
@@ -135,8 +136,11 @@ test.describe('Work, one page', () => {
   test('todos that wait on a person come first, and a row traces queue to release @action:shift.needs_human @action:shift.lifecycle', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'user' } });
+    // What waits on a person comes from the Needs you list, which is an
+    // admin read, so this one is signed in as one.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockShiftApi(page);
+    await mockPipelineApi(page);
     await page.goto('/work');
     const blocked = page.getByTestId('shift-todo-20260919-0930-ddd');
     await expect(blocked).toBeVisible({ timeout: 15_000 });
@@ -166,7 +170,7 @@ test.describe('Work, one page', () => {
     // The red count does not decide for itself what waits on a person: it is one
     // link to Needs you, which is the list the operator was promised.
     const chip = page.getByTestId('shift-needs-human');
-    await expect(chip).toContainText('a human · open Needs you');
+    await expect(chip).toContainText('in Work · open Needs you');
     await chip.click();
     await expect(page).toHaveURL(/\/needs-you$/);
   });

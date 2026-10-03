@@ -11,6 +11,8 @@ import { PullRoomPage } from './PullRoomPage';
 // pullAttentionModel, e2e 29-pipeline); these URL tests mock every data hook.
 vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: null }) }));
 vi.mock('../hooks/usePipeline', () => ({ useAttention: () => ({ data: undefined }) }));
+// Ghost rows wear red from the same list; here it names no todo.
+vi.mock('./needsYou/useNeedsYou', () => ({ useAttentionTodoIds: () => new Set<string>() }));
 
 vi.mock('../hooks/useControlPlane', () => ({ CONTROL_PLANE_MAX_LIMIT: 500, useControlPlane: () => ({
   isLoading: false, isError: false,

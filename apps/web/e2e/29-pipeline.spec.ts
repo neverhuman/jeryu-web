@@ -125,10 +125,14 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('nav-badge-releases')).toHaveText('1');
     await expect(page.getByTestId('nav-badge-system')).toHaveText('1');
     await expect(page.getByTestId('nav-badge-pulls')).toHaveCount(0);
-    // Work does not repeat Needs you above the queue: its red count links there.
+    // Work shows its own share of Needs you, as every other page does: the
+    // rows the Work badge counted, above the queue's own state. (Its red count
+    // of that share is in the queue's toolbar; 28-shift holds that.)
     await page.getByTestId('todo-page').getByRole('link', { name: 'Work', exact: true }).click();
     await expect(page.getByTestId('shift-queue-page')).toBeVisible();
-    await expect(page.getByTestId('needs-you-here-work')).toHaveCount(0);
+    const here = page.getByTestId('needs-you-here-work');
+    await expect(here).toHaveAttribute('aria-label', '1 waiting on you in Work');
+    await expect(here.getByText('Allow PATCH of repo default_branch')).toBeVisible();
   });
 
   test('a Needs-you row about a todo is acknowledged until a date @action:needs_you.acknowledge', async ({
@@ -401,7 +405,13 @@ test.describe('Pipeline visibility', () => {
       timeout: 15_000,
     });
     await expect(dock.getByRole('log')).toHaveCount(0);
-    await expect(dock).toContainText('1 need you');
+    // The count is the Needs you list, the same number the nav badge shows,
+    // and the pill opens that list.
+    await expect(dock).toContainText('3 need you');
+    await expect(dock.getByTestId('activity-dock-needs-you')).toHaveAttribute(
+      'href',
+      '/needs-you'
+    );
     await dock.getByRole('button', { name: 'Live activity' }).click();
     await expect(dock.getByRole('log')).toContainText('Merged neverhuman/jeryu#99');
     await expect(dock.getByRole('log')).toContainText('Pull request merged');

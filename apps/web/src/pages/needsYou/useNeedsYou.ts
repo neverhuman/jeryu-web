@@ -8,7 +8,15 @@ import { useMemo } from 'react';
 
 import { useAttention } from '../../hooks/usePipeline';
 import { useRepositories } from '../../hooks/useRepositories';
-import { filterByFamily, needsYouHref, repoFamilyMap, urgentAttention } from './needsYouModel';
+import {
+  attentionTodoIds,
+  filterByFamily,
+  needsYouHref,
+  repoFamilyMap,
+  urgentAttention,
+  urgentInArea,
+  type AttentionArea,
+} from './needsYouModel';
 
 export interface NeedsYouSummary {
   /** Rows Needs you shows in red for this family; null until they are known. */
@@ -17,8 +25,12 @@ export interface NeedsYouSummary {
   href: string;
 }
 
-/** `family` is '' for every family. Shares the polled attention query. */
-export function useNeedsYou(family = ''): NeedsYouSummary {
+/**
+ * `family` is '' for every family. `area` keeps only the rows whose cause lives
+ * on the calling page, so a page says what on *it* waits rather than repeating
+ * the whole pipeline's count. Shares the polled attention query.
+ */
+export function useNeedsYou(family = '', area?: AttentionArea): NeedsYouSummary {
   const attention = useAttention();
   const repositories = useRepositories({});
   const families = useMemo(
@@ -28,9 +40,22 @@ export function useNeedsYou(family = ''): NeedsYouSummary {
   const count = useMemo(
     () =>
       attention.data
-        ? filterByFamily(urgentAttention(attention.data), family, families).length
+        ? filterByFamily(
+            area ? urgentInArea(attention.data, area) : urgentAttention(attention.data),
+            family,
+            families
+          ).length
         : null,
-    [attention.data, family, families]
+    [attention.data, area, family, families]
   );
   return { count, href: needsYouHref(family) };
+}
+
+/**
+ * The todos a person is the next step for, by id, for rows that are not
+ * attention rows themselves (the In flight ghosts). Shares the polled query.
+ */
+export function useAttentionTodoIds(): ReadonlySet<string> {
+  const attention = useAttention();
+  return useMemo(() => attentionTodoIds(attention.data), [attention.data]);
 }

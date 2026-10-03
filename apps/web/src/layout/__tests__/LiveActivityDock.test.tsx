@@ -56,7 +56,10 @@ describe('LiveActivityDock', () => {
     expect(screen.getByText(/Release staged · Staged prod-20260919T130210Z/)).toBeInTheDocument();
     expect(screen.queryByText('Merged jeryu/jeryu-web#35')).toBeNull();
     expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?limit=16')).toBe(true);
-    expect(screen.getByText('2 need you')).toBeInTheDocument();
+    // The count is the Needs you list (3 urgent rows), not how many of the
+    // last few events were flagged, and it opens that list.
+    expect(screen.getByText('3 need you')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-dock-needs-you')).toHaveAttribute('href', '/needs-you');
     expect(screen.getByRole('link', { name: 'All activity' })).toHaveAttribute('href', '/activity');
 
     fireEvent.click(toggle);

@@ -12,7 +12,6 @@ import {
   compareTodos,
   dateInTz,
   latestWorker,
-  needsHuman,
   normalizeShiftKind,
   todoTrace,
   type TraceStep,
@@ -40,7 +39,7 @@ export interface GhostRow {
   steps: TraceStep[];
   /** Short truthful "when": never an invented ETA. */
   when: string;
-  /** A person is the next step (needsHuman). */
+  /** A person is the next step: this todo is on the Needs you list. */
   attention: boolean;
   /** Worker holding it, e.g. `alton/w2`, else null. */
   worker: string | null;
@@ -66,11 +65,19 @@ export interface GhostOptions {
   family?: string;
   /** Open todos shown per group before the rest collapse into `queued`. Default 3. */
   openLimit?: number;
+  /**
+   * Todo ids the Needs you list is waiting on a person for. A ghost row wears
+   * red when its todo is one of them, so the row and that list agree instead of
+   * this module deciding from the todo's status. Unknown (the list is not
+   * readable, or has not arrived) marks no row.
+   */
+  attentionTodoIds?: ReadonlySet<string>;
 }
 
 const DEFAULT_TZ = 'America/Denver';
 const DEFAULT_OPEN_LIMIT = 3;
 const STALE_DONE_MS = 7 * 24 * 60 * 60 * 1000;
+const NO_ATTENTION: ReadonlySet<string> = new Set<string>();
 
 /** Key `repo#number` → todo id, so a real PR row can link back to its todo. */
 export function todoByPr(todos: readonly ShiftTodo[]): Map<string, string> {
@@ -118,7 +125,14 @@ export function pullGhostGroups(
     const rows = sorted
       .filter((todo) => todo.status !== 'open' || shownOpens.has(todo.id))
       .map((todo) =>
-        row(todo, kind, date, options.now, queuePosition.get(todo.id) ?? 0)
+        row(
+          todo,
+          kind,
+          date,
+          options.now,
+          queuePosition.get(todo.id) ?? 0,
+          options.attentionTodoIds ?? NO_ATTENTION
+        )
       );
     if (rows.length === 0 && queued === 0) continue;
     groups.push({
@@ -176,7 +190,8 @@ function row(
   kind: ShiftKind,
   date: string | null,
   now: Date,
-  queuePosition: number
+  queuePosition: number,
+  attentionTodoIds: ReadonlySet<string>
 ): GhostRow {
   return {
     todoId: todo.id,
@@ -188,7 +203,7 @@ function row(
     date,
     steps: todoTrace(todo),
     when: whenOf(todo, now, queuePosition),
-    attention: needsHuman(todo),
+    attention: attentionTodoIds.has(todo.id),
     worker: latestWorker(todo),
   };
 }

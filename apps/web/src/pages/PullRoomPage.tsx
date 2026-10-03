@@ -15,6 +15,7 @@ import { useRepositories } from '../hooks/useRepositories';
 import { useShiftTodos } from '../hooks/useShift';
 import { useRepoFamilies } from './needsYou/AttentionRow';
 import { filterByFamily, needsYouHref, urgentInArea } from './needsYou/needsYouModel';
+import { useAttentionTodoIds } from './needsYou/useNeedsYou';
 import { attentionByPull, attentionOffRows, pullAttentionKey } from './pullAttentionModel';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
@@ -240,6 +241,9 @@ export function PullRoomPage(): JSX.Element {
 
   // Shift work that has not opened a pull request yet, filed under its repo.
   const todos = useShiftTodos(undefined);
+  // A ghost row is red when the Needs you list names its todo, so the row, the
+  // strip above and the nav badge are one answer.
+  const attentionTodoIds = useAttentionTodoIds();
   const ghosts: GhostGroup[] = useMemo(
     () =>
       board
@@ -248,8 +252,9 @@ export function PullRoomPage(): JSX.Element {
             now: new Date(),
             repos: repo === 'all' ? null : new Set([repo]),
             family,
+            attentionTodoIds,
           }),
-    [board, family, repo, todos.data]
+    [board, family, repo, todos.data, attentionTodoIds]
   );
   // What waits on a person here is marked on its own row; only what no row
   // below carries is counted above the list, with the way to Needs you.

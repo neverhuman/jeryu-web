@@ -20,6 +20,10 @@ import {
 } from '../../hooks/useRunnerReleaseBoards';
 import { ACME_BOARD, ALL_BOARDS, GLOBEX_BOARD, listResponse } from '../../test/fixtures/releaseBoard';
 import { FleetPage } from '../FleetPage';
+// The page's "Waiting on you" strip is Needs you's own list, with its own query
+// and tests (needsYouAreas); these runner tests leave it out.
+vi.mock('../needsYou/NeedsYouHere', () => ({ NeedsYouHere: () => null }));
+
 import { REVIEWER_LABEL } from '../runnerNetworkModel';
 import {
   forgeReleaseLane,
