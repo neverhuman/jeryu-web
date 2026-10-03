@@ -2,8 +2,10 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import type { PullRequestSummary, ShiftTodo } from '../../api/types';
+import type { AttentionItem, PullRequestSummary, ShiftTodo } from '../../api/types';
 import { PullRequestTimeline } from '../PullRequestTimeline';
+import { attentionByPull } from '../pullAttentionModel';
+import { attentionItem } from './pipelineTestData';
 import { pullGhostGroups } from '../pullGhostsModel';
 import {
   CHANNEL_ORDER,
@@ -16,6 +18,55 @@ import { renderAt } from './shiftPageHelpers';
 const sha = (c: string) => c.repeat(40);
 
 describe('the Pull requests timeline', () => {
+  it('marks a pull request that waits on a person on its own row, with what to do', () => {
+    const attention = attentionByPull([
+      attentionItem({
+        id: 'checks-7',
+        kind: 'pr_checks_failing',
+        title: 'Checks failing',
+        reason: 'acme/required failed',
+        repo: 'acme/widgets',
+        pr: 7,
+        href: '/repos/jeryu/acme/widgets/pulls/7',
+        action: { label: 'Open checks', command: null },
+      }),
+      attentionItem({
+        id: 'conflict-8',
+        kind: 'queue_conflict',
+        title: 'Queue conflict',
+        repo: 'acme/widgets',
+        pr: 8,
+        action: { label: 'Rebase', command: 'git rebase origin/main', run_in: 'build-1' },
+      }),
+    ]);
+    render(
+      [
+        pull(7, 'open', { repo: 'acme/widgets' }),
+        pull(8, 'open', { repo: 'acme/widgets' }),
+        pull(9, 'open', { repo: 'acme/widgets' }),
+      ],
+      undefined,
+      attention
+    );
+
+    const seven = screen.getByTestId('pull-timeline-acme/widgets-7');
+    expect(seven).toHaveClass('needs-human');
+    const needs = within(seven).getByTestId('pull-needs-checks-7');
+    expect(needs).toHaveTextContent('Checks failing · acme/required failed');
+    expect(within(needs).getByRole('link', { name: 'Open checks →' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/acme/widgets/pulls/7'
+    );
+
+    const eight = screen.getByTestId('pull-timeline-acme/widgets-8');
+    expect(eight).toHaveClass('needs-human');
+    expect(within(eight).getByTestId('pull-needs-conflict-8')).toHaveTextContent('git rebase origin/main');
+
+    const nine = screen.getByTestId('pull-timeline-acme/widgets-9');
+    expect(nine).not.toHaveClass('needs-human');
+    expect(nine.querySelector('.pull-timeline__needs')).toBeNull();
+  });
+
   it('heads a section per repository and lists it as one run, furthest from done first', () => {
     const ladders = new Map<number, ReleaseLadder>([
       [3, ladder(null)],
@@ -276,12 +327,19 @@ describe('the Pull requests timeline', () => {
 
 function render(
   pulls: PullRequestSummary[],
-  ladderFor?: (pr: PullRequestSummary) => ReleaseLadder
+  ladderFor?: (pr: PullRequestSummary) => ReleaseLadder,
+  attention?: ReadonlyMap<string, AttentionItem[]>
 ): void {
   renderAt(
     '/pull-room',
     '/pull-room',
-    <PullRequestTimeline pulls={pulls} emptyMessage="none" showRepo ladderFor={ladderFor} />
+    <PullRequestTimeline
+      pulls={pulls}
+      emptyMessage="none"
+      showRepo
+      ladderFor={ladderFor}
+      attention={attention}
+    />
   );
 }
 

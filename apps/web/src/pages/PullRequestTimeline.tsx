@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import type { PullRequestSummary } from '../api/types';
+import type { AttentionItem, PullRequestSummary } from '../api/types';
+import { CopyCommand } from '../components/shellCommand/CopyCommand';
+import { primaryAction } from './needsYou/needsYouModel';
+import { pullAttentionKey } from './pullAttentionModel';
 import type { GhostGroup } from './pullGhostsModel';
 import {
   branchWorkHref,
@@ -34,6 +37,9 @@ import './PullRoomPage.css';
  *
  * Queued todos have no branch yet and belong to the Work page; only the queue's
  * numbers are said here, once, above the sections.
+ *
+ * A pull request that waits on a person is marked on its own row, red, with
+ * what to do — not repeated in a list above the timeline.
  */
 export function PullRequestTimeline({
   pulls,
@@ -42,6 +48,7 @@ export function PullRequestTimeline({
   ladderFor,
   ghosts = [],
   repoKeyFor,
+  attention = NO_ATTENTION,
 }: {
   pulls: PullRequestSummary[];
   emptyMessage: string;
@@ -53,6 +60,8 @@ export function PullRequestTimeline({
   ghosts?: GhostGroup[];
   /** Resolves a todo's bare repo name to an `owner/name` section key. */
   repoKeyFor?: (repo: string) => string | null;
+  /** "Needs you" rows by `owner/name#number` (see `attentionByPull`). */
+  attention?: ReadonlyMap<string, AttentionItem[]>;
 }): JSX.Element {
   const timeline = buildRepoGroups(pulls, {
     ladderFor: ladderFor ?? (() => UNKNOWN_LADDER),
@@ -102,13 +111,23 @@ export function PullRequestTimeline({
       ) : null}
 
       {timeline.groups.map((group) => (
-        <RepoSection key={group.repo} group={group} showRepo={showRepo} />
+        <RepoSection key={group.repo} group={group} showRepo={showRepo} attention={attention} />
       ))}
     </div>
   );
 }
 
-function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean }): JSX.Element {
+const NO_ATTENTION: ReadonlyMap<string, AttentionItem[]> = new Map();
+
+function RepoSection({
+  group,
+  showRepo,
+  attention,
+}: {
+  group: RepoGroup;
+  showRepo: boolean;
+  attention: ReadonlyMap<string, AttentionItem[]>;
+}): JSX.Element {
   // "16 closed" in the heading opens History, where closed work lives.
   const [historyOpen, setHistoryOpen] = useState(false);
   const history = useRef<HTMLDetailsElement>(null);
@@ -126,7 +145,13 @@ function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean 
       ) : null}
       <ol className="pull-timeline__rows">
         {group.rows.map((row) => (
-          <FlowRowView key={flowKey(row)} row={row} repo={group.repo} showRepo={showRepo} />
+          <FlowRowView
+            key={flowKey(row)}
+            row={row}
+            repo={group.repo}
+            showRepo={showRepo}
+            attention={attention}
+          />
         ))}
       </ol>
       {group.older.length > 0 ? (
@@ -140,7 +165,13 @@ function RepoSection({ group, showRepo }: { group: RepoGroup; showRepo: boolean 
           <summary>History ({group.older.length})</summary>
           <ol className="pull-timeline__rows">
             {group.older.map((row) => (
-              <FlowRowView key={flowKey(row)} row={row} repo={group.repo} showRepo={showRepo} />
+              <FlowRowView
+            key={flowKey(row)}
+            row={row}
+            repo={group.repo}
+            showRepo={showRepo}
+            attention={attention}
+          />
             ))}
           </ol>
         </details>
@@ -194,16 +225,17 @@ function FlowRowView({
   row,
   repo,
   showRepo,
+  attention,
 }: {
   row: FlowRow;
   repo: string;
   showRepo: boolean;
+  attention: ReadonlyMap<string, AttentionItem[]>;
 }): JSX.Element {
-  return row.kind === 'branch' ? (
-    <BranchRowView row={row} scope={repo} />
-  ) : (
-    <PullRowView row={row} showRepo={showRepo} />
-  );
+  if (row.kind === 'branch') return <BranchRowView row={row} scope={repo} />;
+  const { pr } = row.row;
+  const waiting = attention.get(pullAttentionKey(`${pr.repo.owner}/${pr.repo.name}`, pr.number));
+  return <PullRowView row={row} showRepo={showRepo} waiting={waiting ?? []} />;
 }
 
 function rowId(row: PullRow, showRepo: boolean): string {
@@ -212,13 +244,22 @@ function rowId(row: PullRow, showRepo: boolean): string {
   return showRepo ? `${pr.repo.owner}/${pr.repo.name}-${pr.number}` : String(pr.number);
 }
 
-function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JSX.Element {
+function PullRowView({
+  row,
+  showRepo,
+  waiting,
+}: {
+  row: PullRow;
+  showRepo: boolean;
+  /** What this pull request waits on a person for; empty when nothing. */
+  waiting: AttentionItem[];
+}): JSX.Element {
   const { pr, ladder, supersedes } = row.row;
   const repo = `${pr.repo.owner}/${pr.repo.name}`;
   const id = rowId(row, showRepo);
   return (
     <li
-      className={`pull-timeline__row is-${pr.state}`}
+      className={`pull-timeline__row is-${pr.state}${waiting.length > 0 ? ' needs-human' : ''}`}
       data-testid={`pull-timeline-${id}`}
       data-state={row.state}
     >
@@ -263,6 +304,9 @@ function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JS
             </span>
           ) : null}
         </span>
+        {waiting.map((item) => (
+          <PullWaiting key={item.id} item={item} />
+        ))}
       </div>
       <ol className="pull-timeline__track" aria-label={`Status of ${repo}#${pr.number}`}>
         {/* A pull request exists, so its branch is pushed: the Branch column is behind it. */}
@@ -299,6 +343,31 @@ function PullRowView({ row, showRepo }: { row: PullRow; showRepo: boolean }): JS
         ))}
       </ol>
     </li>
+  );
+}
+
+/** One thing a pull request waits on a person for, and the one thing to do about it. */
+function PullWaiting({ item }: { item: AttentionItem }): JSX.Element {
+  const action = primaryAction(item);
+  return (
+    <div className="pull-timeline__needs" data-testid={`pull-needs-${item.id}`}>
+      <p className="pull-timeline__needs-text" title={item.reason ?? undefined}>
+        <span aria-label="needs a human">⚠ </span>
+        <strong>{item.title}</strong>
+        {item.reason ? ` · ${item.reason}` : null}
+      </p>
+      {action?.type === 'command' ? (
+        <CopyCommand
+          command={action.command}
+          where={action.where}
+          label={`${action.label} command for ${item.title}`}
+        />
+      ) : action?.type === 'link' ? (
+        <Link className="pull-timeline__needs-open" to={action.to}>
+          {action.label} →
+        </Link>
+      ) : null}
+    </div>
   );
 }
 

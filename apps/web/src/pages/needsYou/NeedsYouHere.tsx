@@ -1,7 +1,7 @@
 // NeedsYouHere.tsx — the slice of "Needs you" that belongs to the page it sits
-// on, shown above that page's own content: failing checks and queue failures on
-// Pull requests, blocked todos and shifts without a PR on Work, staged or failed
-// releases on Releases. It lists the rows /needs-you lists, from one shared query, so the
+// on, shown above that page's own content: staged or failed releases on
+// Releases. (Work links its red count to Needs you instead, and In flight
+// marks each pull request's own row.) It lists the rows /needs-you lists, from one shared query, so the
 // left-nav count, this strip and that page always agree. Nothing waiting here
 // renders nothing: calm pages stay calm.
 

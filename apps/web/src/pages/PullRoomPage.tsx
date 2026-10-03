@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
 import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPlane';
 import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
 import { useRepoPullLists } from '../hooks/useRepoPullLists';
+import { useAuth } from '../hooks/useAuth';
+import { useAttention } from '../hooks/usePipeline';
 import { useRepositories } from '../hooks/useRepositories';
 import { useShiftTodos } from '../hooks/useShift';
-import { NeedsYouHere } from './needsYou/NeedsYouHere';
+import { useRepoFamilies } from './needsYou/AttentionRow';
+import { filterByFamily, needsYouHref, urgentInArea } from './needsYou/needsYouModel';
+import { attentionByPull, attentionOffRows, pullAttentionKey } from './pullAttentionModel';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
 import { awaitingReleaseCount } from './pullRepoGroupsModel';
@@ -215,6 +219,25 @@ export function PullRoomPage(): JSX.Element {
           }),
     [board, family, repo, todos.data]
   );
+  // What waits on a person here is marked on its own row; only what no row
+  // below carries is counted above the list, with the way to Needs you.
+  const { user } = useAuth();
+  const attention = useAttention(user?.role === 'admin');
+  const repoFamilies = useRepoFamilies();
+  const waiting = useMemo(
+    () => filterByFamily(urgentInArea(attention.data, 'pulls'), family, repoFamilies),
+    [attention.data, family, repoFamilies]
+  );
+  const waitingByPull = useMemo(() => attentionByPull(waiting), [waiting]);
+  const waitingOffRows = useMemo(
+    () =>
+      attentionOffRows(
+        waiting,
+        new Set(board ? [] : rows.map((pr) => pullAttentionKey(`${pr.repo.owner}/${pr.repo.name}`, pr.number)))
+      ),
+    [waiting, board, rows]
+  );
+
   if (snapshot.isLoading) {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
@@ -275,7 +298,13 @@ export function PullRoomPage(): JSX.Element {
         </div>
       </header>
 
-      <NeedsYouHere area="pulls" family={family} onFamily={setFamily} />
+      {waitingOffRows.length > 0 ? (
+        <p className="pull-room__needs-off" data-testid="pull-room-needs-off">
+          <span className="page__pill page__pill--danger">{waitingOffRows.length}</span>{' '}
+          {board ? 'waiting on you' : 'more waiting on you, not on a row below'} ·{' '}
+          <Link to={needsYouHref(family)}>open Needs you</Link>
+        </p>
+      ) : null}
 
       <nav className="pull-room__families" aria-label="Family" data-testid="pull-room-families">
         <button
@@ -443,6 +472,7 @@ export function PullRoomPage(): JSX.Element {
                 ladderFor={ladderFor}
                 ghosts={ghosts}
                 repoKeyFor={repoKeyFor}
+                attention={waitingByPull}
               />
             )}
           </>

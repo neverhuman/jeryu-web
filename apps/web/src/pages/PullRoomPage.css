@@ -389,6 +389,38 @@
   padding: var(--space-3);
 }
 
+/* Red means a person is the next step, as on Needs you: the row itself says
+   so, with what to do under its title. */
+.pull-timeline__row.needs-human {
+  border-color: var(--color-accent-danger);
+  border-left-width: 3px;
+}
+
+.pull-timeline__needs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.pull-timeline__needs-text {
+  margin: 0;
+  color: var(--color-accent-danger);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.pull-timeline__needs-open {
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.pull-room__needs-off {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
 /* Finished rows are dimmed without `opacity` on the row: that blends every
    label into the background and (stacked with the closed block's) pushed the muted "#81" number below AA
    contrast. The title steps down a tone and only the track fades. */
@@ -760,7 +792,7 @@ button.pull-repo__count-link {
 }
 
 .pull-timeline__row.is-branch.needs-human {
-  border-color: var(--color-accent-warning);
+  border-color: var(--color-accent-danger);
 }
 
 .pull-branch__col {

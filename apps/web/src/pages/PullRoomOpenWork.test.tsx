@@ -4,9 +4,10 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { PullRoomPage } from './PullRoomPage';
 
-// The page's "Waiting on you here" strip has its own query and tests
-// (needsYouModel, e2e 29-pipeline); these tests mock every data hook.
-vi.mock('./needsYou/NeedsYouHere', () => ({ NeedsYouHere: () => null }));
+// What waits on a person is marked on its own row (PullTimelineRepoStates,
+// pullAttentionModel, e2e 29-pipeline); these tests mock every data hook.
+vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: null }) }));
+vi.mock('../hooks/usePipeline', () => ({ useAttention: () => ({ data: undefined }) }));
 
 // A forge with 509 pull requests, 22 of them open in repositories whose names
 // sort last. The snapshot cuts every collection to a page, so the page the

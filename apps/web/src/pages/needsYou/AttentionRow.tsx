@@ -1,7 +1,7 @@
 // AttentionRow.tsx — one "Needs you" row: a title, one line of reason, and
 // exactly one thing to do. Shared by the Needs you page and the "Needs you
-// here" strip at the top of Work, Pull requests and Releases, so a row reads
-// the same wherever it appears.
+// here" strip at the top of Releases, so a row reads the same wherever it
+// appears.
 
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
