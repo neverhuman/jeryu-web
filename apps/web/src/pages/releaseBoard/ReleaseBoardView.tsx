@@ -6,8 +6,9 @@
 // `/releases/family/<name>`, and the last pick is remembered. Each lane is
 // `#lane-<id>`: a URL with that hash scrolls to the lane once the board has
 // loaded and rings it briefly (without the glide under reduced motion). The
-// board says how old its snapshot is and who took it, lists any source the collector could not read, and has three
-// views: the deliverables (lanes of stages plus the work bar), pinned against
+// board says how old its snapshot is and who took it, warns about anything not
+// shipped yet (stages marked warn or bad, pins not level, merged or stranded
+// work), lists any source the collector could not read, and has three views: the deliverables (lanes of stages plus the work bar), pinned against
 // released (when the family sends pins) and the release notes.
 //
 // When there is no board to show — a non-admin session, a server without the
@@ -30,7 +31,7 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { BoardLanes } from './BoardLanes';
 import { laneAnchorId, laneFromHash, releaseFamilyPath } from './links';
-import { NotesPanel, PinsTable, ProblemList, WorkBar } from './BoardPanels';
+import { NotesPanel, PinsTable, ProblemList, UnshippedBanner, WorkBar } from './BoardPanels';
 import {
   BOARD_FAMILY_STORAGE_KEY,
   boardFreshness,
@@ -183,6 +184,7 @@ function FamilyBoard({ family }: { family: string }): JSX.Element {
   return (
     <>
       <BoardHeader board={board} fetchedAt={query.dataUpdatedAt} />
+      <UnshippedBanner board={board} />
       <ProblemList problems={board.problems} />
       <BoardTabs board={board} environments={environments} />
     </>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
 import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPlane';
@@ -10,7 +10,12 @@ import { useShiftTodos } from '../hooks/useShift';
 import { NeedsYouHere } from './needsYou/NeedsYouHere';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
-import { awaitingReleaseCount } from './pullRepoGroupsModel';
+import {
+  awaitingReleaseByRepo,
+  awaitingReleaseCount,
+  awaitingReleaseWarning,
+} from './pullRepoGroupsModel';
+import { RELEASES_PATH, releaseFamilyPath } from './releaseBoard/links';
 import { pullGhostGroups, type GhostGroup } from './pullGhostsModel';
 import { releaseLadder } from './releaseChannelsModel';
 import {
@@ -249,6 +254,8 @@ export function PullRoomPage(): JSX.Element {
     : summaryCounts(snapshot.data.summary);
   // Anything the page reads that the snapshot cut short is said out loud.
   const truncated = truncatedCollections(snapshot.data.page, ['pull_requests']);
+  // Merged work that reached no release is a warning, not just a count.
+  const unshipped = board ? null : awaitingReleaseWarning(awaitingReleaseByRepo(rows, ladderFor));
 
   return (
     <div className="page page--full pull-room" data-testid="pull-room-page">
@@ -274,6 +281,15 @@ export function PullRoomPage(): JSX.Element {
           </button>
         </div>
       </header>
+
+      {unshipped ? (
+        <p className="pull-room__unshipped" role="status" data-testid="pull-room-unshipped">
+          {unshipped}{' '}
+          <Link to={family ? releaseFamilyPath(family) : RELEASES_PATH}>
+            {family ? `Open the ${family} release board` : 'Open the release boards'}
+          </Link>
+        </p>
+      ) : null}
 
       <NeedsYouHere area="pulls" family={family} onFamily={setFamily} />
 

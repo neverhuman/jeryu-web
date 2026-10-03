@@ -34,6 +34,9 @@ import {
   stageConnector,
   stageOverlay,
   targetStateText,
+  unshipped,
+  unshippedHeadline,
+  unshippedPinsText,
   versionNamesSha,
   workShares,
   workSummary,
@@ -293,5 +296,49 @@ describe('pickFamily', () => {
     expect(pickFamily(boards, null, 'gone')).toBe('acme');
     expect(pickFamily(boards, null, null)).toBe('acme');
     expect(pickFamily([], null, 'globex')).toBeNull();
+  });
+});
+
+describe('unshipped', () => {
+  it('collects warn and bad stages, pins that are not level, and merged or stranded work', () => {
+    const found = unshipped(INITECH_BOARD);
+    expect(found?.stages).toEqual([
+      { laneId: 'free-download', lane: 'Package', stage: 'tagged', status: 'main 13 ahead', state: 'warn' },
+    ]);
+    expect(found?.pins.map((pin) => pin.repo)).toEqual([
+      'packager',
+      'engine-core',
+      'reports',
+      'cli',
+      'starforge',
+      'contracts',
+      'engine',
+      'numerics',
+    ]);
+    expect(found?.pinLabel).toBe('Main ahead');
+    expect(found?.merged).toBe(1);
+    expect(found?.stranded).toBe(1);
+    // A pin more than 20 behind is bad, so the banner is too.
+    expect(found?.state).toBe('bad');
+    expect(found && unshippedHeadline(found)).toBe(
+      'Not shipped yet: 1 stage marked for attention · 8 of 9 pinned repos not level · ' +
+        '1 done todo merged, not released · 1 done todo stranded on a branch.'
+    );
+    expect(unshippedPinsText(found?.pins ?? [])).toBe(
+      'packager 105, engine-core 56, reports 22, cli 18, starforge 16 and 3 more'
+    );
+  });
+
+  it('stays yellow when nothing is bad, and is null when everything ships', () => {
+    const level = {
+      ...GLOBEX_BOARD,
+      lanes: GLOBEX_BOARD.lanes.map((lane) => ({
+        ...lane,
+        stages: lane.stages.map((stage) => ({ ...stage, state: 'ok' as const })),
+      })),
+    };
+    const pins = { note: '', columns: ['Repo', 'Behind'], rows: [{ repo: 'tracker', cells: [], behind: 4 }] };
+    expect(unshipped({ ...level, pins, work: undefined })?.state).toBe('warn');
+    expect(unshipped({ ...level, pins: undefined, work: undefined })).toBeNull();
   });
 });

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import type { PullRequestSummary } from '../../api/types';
 import {
+  awaitingReleaseByRepo,
   awaitingReleaseCount,
+  awaitingReleaseWarning,
   buildRepoGroups,
   linkSupersessions,
   countsSentence,
@@ -443,6 +445,36 @@ describe('awaitingReleaseCount', () => {
     ]);
     const pulls = [pull(1, 'merged'), pull(2, 'merged'), pull(3, 'merged'), pull(4, 'merged'), pull(5, 'open')];
     expect(awaitingReleaseCount(pulls, (pr) => ladders.get(pr.number) ?? UNKNOWN_LADDER)).toBe(1);
+  });
+});
+
+describe('awaitingReleaseByRepo / awaitingReleaseWarning', () => {
+  it('groups merged work that shipped nowhere by repository, most first, and says it once', () => {
+    const ladders = new Map<number, ReleaseLadder>([
+      [1, ladder(null)],
+      [2, ladder(null)],
+      [3, ladder(null)],
+      [4, ladder('dev')],
+    ]);
+    const pulls = [
+      pull(1, 'merged', { repo: 'acme/engine' }),
+      pull(2, 'merged', { repo: 'acme/packager' }),
+      pull(3, 'merged', { repo: 'acme/packager' }),
+      pull(4, 'merged', { repo: 'acme/engine' }),
+      pull(5, 'open', { repo: 'acme/engine' }),
+    ];
+    const repos = awaitingReleaseByRepo(pulls, (pr) => ladders.get(pr.number) ?? UNKNOWN_LADDER);
+    expect(repos).toEqual([
+      { repo: 'acme/packager', count: 2 },
+      { repo: 'acme/engine', count: 1 },
+    ]);
+    expect(awaitingReleaseWarning(repos)).toBe(
+      'Not shipped yet: 3 merged pull requests have reached no release in 2 repositories (packager 2, engine 1).'
+    );
+    expect(awaitingReleaseWarning(repos, 1)).toBe(
+      'Not shipped yet: 3 merged pull requests have reached no release in 2 repositories (packager 2 and 1 more).'
+    );
+    expect(awaitingReleaseWarning([])).toBeNull();
   });
 });
 

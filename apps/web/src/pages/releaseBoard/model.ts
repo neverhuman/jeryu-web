@@ -283,6 +283,106 @@ export function pinColumns(pins: BoardPins): { repo: string; cells: string[]; be
   return { repo, cells, behind };
 }
 
+// ── Not shipped yet ──────────────────────────────────────────────────────
+
+/** One stage the collector itself marked as needing attention. */
+export interface UnshippedStage {
+  laneId: string;
+  lane: string;
+  stage: string;
+  status: string;
+  state: 'warn' | 'bad';
+}
+
+export interface UnshippedPin {
+  repo: string;
+  behind: number;
+}
+
+/**
+ * Everything on a board that says work has not got where it should: stages
+ * marked warn or bad, pin rows that are not level, and done work that merged
+ * but shipped nowhere or never reached main. Read-only lanes belong to another
+ * family's board and are left to it.
+ */
+export interface Unshipped {
+  stages: UnshippedStage[];
+  /** Pin rows that are behind, most behind first. */
+  pins: UnshippedPin[];
+  pinRows: number;
+  /** The pins table's behind column, e.g. "Main ahead". */
+  pinLabel: string;
+  merged: number;
+  stranded: number;
+  /** The worst state among everything listed. */
+  state: 'warn' | 'bad';
+}
+
+/** What waits to ship on this board, or null when nothing does. */
+export function unshipped(board: ReleaseBoard): Unshipped | null {
+  const stages: UnshippedStage[] = [];
+  for (const lane of board.lanes) {
+    if (lane.read_only) continue;
+    for (const stage of lane.stages) {
+      if (stage.state !== 'warn' && stage.state !== 'bad') continue;
+      stages.push({
+        laneId: lane.id,
+        lane: lane.name,
+        stage: stage.name,
+        status: stage.status,
+        state: stage.state,
+      });
+    }
+  }
+  const pins: UnshippedPin[] = [];
+  for (const row of board.pins?.rows ?? []) {
+    if (row.behind !== null && row.behind > 0) pins.push({ repo: row.repo, behind: row.behind });
+  }
+  pins.sort((a, b) => b.behind - a.behind || a.repo.localeCompare(b.repo));
+  const count = (key: WorkPartKey): number =>
+    Math.max(0, board.work?.parts.find((part) => part.key === key)?.count ?? 0);
+  const merged = count('merged');
+  const stranded = count('stranded');
+  if (stages.length === 0 && pins.length === 0 && merged === 0 && stranded === 0) return null;
+  const bad =
+    stages.some((stage) => stage.state === 'bad') ||
+    pins.some((pin) => pinBehindState(pin.behind) === 'bad');
+  return {
+    stages,
+    pins,
+    pinRows: board.pins?.rows.length ?? 0,
+    pinLabel: board.pins ? pinColumns(board.pins).behind : 'Behind',
+    merged,
+    stranded,
+    state: bad ? 'bad' : 'warn',
+  };
+}
+
+function plural(count: number, one: string, many = `${one}s`): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** The banner's headline: everything that waits, in one line. */
+export function unshippedHeadline(found: Unshipped): string {
+  const parts: string[] = [];
+  if (found.stages.length > 0) {
+    parts.push(`${plural(found.stages.length, 'stage')} marked for attention`);
+  }
+  if (found.pins.length > 0) {
+    parts.push(`${found.pins.length} of ${found.pinRows} pinned repos not level`);
+  }
+  if (found.merged > 0) parts.push(`${plural(found.merged, 'done todo')} merged, not released`);
+  if (found.stranded > 0) parts.push(`${plural(found.stranded, 'done todo')} stranded on a branch`);
+  return `Not shipped yet: ${parts.join(' · ')}.`;
+}
+
+/** The most-behind pins in a few words: "repo-a 112, repo-b 59 and 3 more". */
+export function unshippedPinsText(pins: readonly UnshippedPin[], shown = 5): string {
+  const head = pins.slice(0, shown).map((pin) => `${pin.repo} ${pin.behind}`);
+  const rest = pins.length - head.length;
+  return rest > 0 ? `${head.join(', ')} and ${rest} more` : head.join(', ');
+}
+
 // ── Live overlay ─────────────────────────────────────────────────────────
 
 export interface StageOverlay {
