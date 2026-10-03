@@ -4,7 +4,7 @@
 // runs against a mocked PullRequestDetail. We assert the cockpit page
 // renders the PR title and surfaces (one of):
 //
-//   1. The full Phase 3 cockpit (three-pane review layout).
+//   1. The full Phase 3 pull request page (its tab bar and Conversation).
 //   2. The NotImplementedRoute envelope (`Planned · W-FE-11`).
 //   3. An ErrorState if the live API errored and the mocked detail was
 //      not reached (e.g. when the SPA prefetches some other endpoint we
@@ -111,8 +111,12 @@ test.describe('PR cockpit (W-T-13)', () => {
     await expect(page.getByRole('button', { name: 'Merge', exact: true })).toHaveCount(0);
     await expect(page.getByText(/Merge blocked/)).toHaveCount(0);
     await expect(page.getByText(/Passport: BLOCKED/)).toHaveCount(0);
-    // A pull request that changes no files says so instead of spinning.
-    await expect(page.getByTestId('pr-diff-note')).toHaveText('This pull request changes no files.');
+    // A pull request that changes no files says so on its Files tab, instead
+    // of spinning.
+    await page.goto(`/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}/files`);
+    await expect(page.getByTestId('pr-diff-note')).toHaveText(
+      'This pull request changes no files.'
+    );
     // The repository is a link back to where the pull request lives.
     await expect(page.getByRole('link', { name: `${REPO.owner}/${REPO.name}` }).first()).toHaveAttribute(
       'href',

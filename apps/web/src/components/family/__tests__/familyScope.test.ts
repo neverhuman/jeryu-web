@@ -65,7 +65,7 @@ describe('familyFromLocation', () => {
 });
 
 describe('withFamilyScope', () => {
-  it('carries the scope as a query parameter on the pages that use one', () => {
+  it('puts the scope in the query string, on the pages that use one', () => {
     expect(withFamilyScope('/work', 'acme')).toBe('/work?family=acme');
     expect(withFamilyScope('/needs-you', 'acme-split')).toBe('/needs-you?family=acme');
     expect(withFamilyScope('/activity?wall=1', 'globex')).toBe('/activity?wall=1&family=globex');

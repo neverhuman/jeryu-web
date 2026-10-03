@@ -1,67 +1,132 @@
-/* merge.css — styles for the merge cockpit (W-FE-11).
+/* merge.css — styles for the pull request page (W-FE-11).
  *
- * Only design tokens are used; no raw colours / spacing. The cockpit lives
- * inside `.page` and stretches to fill the shell viewport with a 3-pane
- * grid (file tree · diff · review sidebar) on wide displays and stacks on
- * narrow widths.
+ * Only design tokens are used; no raw colours / spacing. The page is one
+ * header, one tab bar and one full-width body: the Conversation reads down a
+ * single column, and the Files tab is the only two-column surface left (a
+ * resizable tree beside the diff).
  */
 
-/* ─── Cockpit layout (3-pane) ─────────────────────────────────────── */
+/* ─── Page body ───────────────────────────────────────────────────── */
 
-.pr-cockpit {
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns:
-    minmax(180px, 240px)
-    minmax(0, 1fr)
-    minmax(260px, 320px);
-  align-items: start;
+.pr-page__body {
+  padding: var(--space-4) var(--space-5);
 }
 
-.pr-cockpit__pane {
+.pr-page__panel {
   background-color: var(--color-bg-1);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-1);
+}
+
+.pr-conversation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  /* A column of prose, not a column stretched across a 1440px display. */
+  max-width: 68rem;
+}
+
+.pr-conversation__description {
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+}
+
+.pr-conversation__description p {
+  margin: 0;
+}
+
+/* ─── Files tab: a resizable tree beside the diff ─────────────────── */
+
+.pr-files--split {
+  display: grid;
+  grid-template-columns: var(--pr-tree-width, 320px) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0;
+}
+
+.pr-files__tree {
+  min-width: 280px;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* The drag handle between the two columns; arrow keys move it too. */
+.pr-files__handle {
+  width: var(--space-3);
+  align-self: stretch;
+  min-height: 120px;
+  cursor: col-resize;
+  background: transparent;
+  border: 0;
+}
+
+.pr-files__handle:hover,
+.pr-files__handle:focus-visible {
+  background-color: var(--color-accent-primary-bg);
+  outline: none;
+}
+
+.pr-files__diff {
+  min-width: 0;
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
-.pr-cockpit__pane--files {
-  position: sticky;
-  top: 0;
-  max-height: calc(100vh - 120px);
-  overflow: auto;
+.pr-files--narrow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.pr-cockpit__pane--diff {
+.pr-files__picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.pr-files__picker-control {
+  flex: 1 1 auto;
   min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-1);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
 }
 
-.pr-cockpit__pane--review {
-  position: sticky;
-  top: 0;
-  max-height: calc(100vh - 120px);
-  overflow: auto;
+.pr-files__note {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
 }
 
-@media (max-width: 1100px) {
-  .pr-cockpit {
-    grid-template-columns: 1fr;
-  }
-  .pr-cockpit__pane--files,
-  .pr-cockpit__pane--review {
-    position: static;
-    max-height: none;
-  }
-}
+/* ─── Page header and tab bar ─────────────────────────────────────── */
 
 .pr-cockpit__header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: var(--space-4) var(--space-5) var(--space-2);
+  background-color: var(--color-bg-1);
+}
+
+/* The bar is the repository shell's own; it only needs the page's gutter. */
+.pr-page > .repo-tabs {
+  padding: 0 var(--space-5);
   background-color: var(--color-bg-1);
 }
 
@@ -87,42 +152,6 @@
   background-color: var(--color-bg-2);
   border-radius: var(--radius-sm);
   padding: 2px 4px;
-}
-
-.pr-cockpit__passport-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.pr-cockpit__passport-pill--pass {
-  background-color: var(--color-accent-success-bg);
-  color: var(--color-accent-success);
-}
-
-.pr-cockpit__passport-pill--blocked {
-  background-color: var(--color-accent-danger-bg);
-  color: var(--color-accent-danger);
-}
-
-.pr-cockpit__passport-pill--pending {
-  background-color: var(--color-bg-2);
-  color: var(--color-fg-muted);
-}
-
-.pr-cockpit__pane-title {
-  margin: 0;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-fg-muted);
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .pr-cockpit__recovery {
@@ -169,7 +198,7 @@
 
 .diff-file-tree__row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
   border-radius: var(--radius-sm);
   padding: 2px var(--space-2);
@@ -228,27 +257,18 @@
   background-color: var(--color-accent-warning-bg);
 }
 
+/* The whole path, wrapped if it has to be: never cut to `ca` or `login`. */
 .diff-file-tree__path {
   flex: 1 1 auto;
-  display: flex;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
 }
 
-.diff-file-tree__prior-path,
-.diff-file-tree__dir {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* The basename never shrinks: the directory prefix gives way first. */
 .diff-file-tree__base {
-  flex: 0 0 auto;
+  font-weight: var(--font-weight-medium);
 }
 
 .diff-file-tree__dir {
@@ -275,6 +295,8 @@
   color: var(--color-accent-danger);
 }
 
+/* Viewed is offered when the row is pointed at or focused, and stays once
+ * ticked: a checkbox per row, always on, was half the width of the column. */
 .diff-file-tree__viewed {
   display: inline-flex;
   align-items: center;
@@ -283,7 +305,28 @@
   color: var(--color-fg-muted);
   cursor: pointer;
   white-space: nowrap;
+  opacity: 0;
 }
+
+.diff-file-tree__row:hover .diff-file-tree__viewed,
+.diff-file-tree__row:focus-within .diff-file-tree__viewed,
+.diff-file-tree__row--viewed .diff-file-tree__viewed {
+  opacity: 1;
+}
+
+/* One dot for the risk tier; the tooltip and the screen reader say which. */
+.diff-file-tree__risk {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-fg-muted);
+}
+
+.diff-file-tree__risk--low { background-color: var(--color-accent-success); }
+.diff-file-tree__risk--medium { background-color: var(--color-accent-info); }
+.diff-file-tree__risk--high { background-color: var(--color-accent-warning); }
+.diff-file-tree__risk--critical { background-color: var(--color-accent-danger); }
 
 .diff-file-tree__viewed input {
   margin: 0;
@@ -498,126 +541,6 @@
   font-size: var(--font-size-xs);
 }
 
-/* ─── MergeGatePanel ────────────────────────────────────────────── */
-
-.merge-gate {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-3);
-}
-
-.merge-gate__header {
-  display: flex;
-  gap: var(--space-2);
-  align-items: flex-start;
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-}
-
-.merge-gate__header--pass {
-  background-color: var(--color-accent-success-bg);
-  color: var(--color-accent-success);
-}
-
-.merge-gate__header--blocked {
-  background-color: var(--color-accent-danger-bg);
-  color: var(--color-accent-danger);
-}
-
-.merge-gate__header--pending {
-  background-color: var(--color-bg-2);
-  color: var(--color-fg-muted);
-}
-
-.merge-gate__title {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-fg-primary);
-}
-
-.merge-gate__subtitle {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-secondary);
-}
-
-.merge-gate__sha {
-  font-family: var(--font-mono);
-}
-
-.merge-gate__meta {
-  color: var(--color-fg-muted);
-}
-
-.merge-gate__pass {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-accent-success);
-  font-size: var(--font-size-sm);
-}
-
-.merge-gate__blockers {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.merge-gate__blocker {
-  display: flex;
-  gap: var(--space-2);
-  background-color: var(--color-bg-2);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-2);
-}
-
-.merge-gate__blocker-icon {
-  flex: 0 0 auto;
-  color: var(--color-accent-danger);
-  margin-top: 2px;
-}
-
-.merge-gate__blocker-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.merge-gate__blocker-title {
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
-}
-
-.merge-gate__blocker-hint {
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-xs);
-}
-
-.merge-gate__blocker-details {
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-xs);
-  font-family: var(--font-mono);
-}
-
-/* The button that clears the blocker beside it, not a full-width control. */
-.merge-gate__blocker-action {
-  align-self: flex-start;
-  margin-top: var(--space-1);
-}
-
-.merge-gate__blocker-code {
-  align-self: flex-start;
-  background-color: var(--color-bg-3);
-  border-radius: var(--radius-sm);
-  padding: 0 4px;
-  font-size: var(--font-size-xs);
-}
-
 /* ─── ChecksPanel ───────────────────────────────────────────────── */
 
 .checks-panel {
@@ -810,6 +733,9 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .thread-list__header {
@@ -821,6 +747,7 @@
 
 .thread-list__title {
   margin: 0;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -832,29 +759,25 @@
 .thread-list__items {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
+}
+
+.thread-list__item {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-bg-1);
 }
 
 .thread-list__item--resolved {
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
-.thread-list__button {
+.thread-list__item-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  background: transparent;
-  border: 0;
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  color: var(--color-fg-primary);
-}
-
-.thread-list__button:hover {
-  background-color: var(--color-bg-2);
+  font-size: var(--font-size-xs);
 }
 
 .thread-list__icon {
@@ -862,30 +785,44 @@
   color: var(--color-fg-muted);
 }
 
-.thread-list__meta {
+/* The anchor is read whole: the path is the reader's only bearing. */
+.thread-list__path {
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
-  color: var(--color-fg-secondary);
-  flex: 0 0 auto;
-  min-width: 0;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-.thread-list__snippet {
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-secondary);
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.thread-list__state {
+  margin-left: auto;
+  color: var(--color-fg-muted);
 }
 
 .thread-list__general {
   font-style: italic;
+  color: var(--color-fg-secondary);
+}
+
+.thread-list__comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.thread-list__comment-meta {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.thread-list__comment-body {
+  margin: 2px 0 0;
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .thread-list__empty {
@@ -894,56 +831,123 @@
   font-size: var(--font-size-sm);
 }
 
-/* ─── ReviewSidebar ─────────────────────────────────────────────── */
+/* ─── MergeBox ──────────────────────────────────────────────────── */
 
-.review-sidebar {
+.merge-box {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
 }
 
-.review-sidebar__header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.review-sidebar__title {
+/* The verdict, said once. */
+.merge-box__headline {
   margin: 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
 }
 
-.review-sidebar__posture {
+.merge-box__checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.merge-box__row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.merge-box__row-icon {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--color-fg-muted);
+}
+
+.merge-box__row--needed .merge-box__row-icon {
+  color: var(--color-accent-warning);
+}
+
+.merge-box__row--done .merge-box__row-icon {
+  color: var(--color-accent-success);
+}
+
+.merge-box__row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.merge-box__row-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.merge-box__row-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+}
+
+.merge-box__row-action {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+}
+
+.merge-box__posture {
   margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-fg-secondary);
 }
 
-.review-sidebar__approvals { color: var(--color-fg-primary); font-weight: var(--font-weight-medium); }
-.review-sidebar__changes  { color: var(--color-accent-danger); }
-.review-sidebar__threads  { color: var(--color-accent-warning); }
-
-.review-sidebar__attribution {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-muted);
+.merge-box__approvals {
+  color: var(--color-fg-primary);
+  font-weight: var(--font-weight-medium);
 }
 
-.review-sidebar__user-state {
+.merge-box__attribution,
+.merge-box__note {
   margin: 0;
   font-size: var(--font-size-xs);
-  color: var(--color-fg-muted);
+  color: var(--color-fg-secondary);
 }
 
-.review-sidebar__actions {
+.merge-box__actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-3);
+}
+
+.merge-box__merge-methods {
+  display: flex;
   gap: var(--space-2);
 }
 
-.review-sidebar__changes-form {
+.merge-box__method {
+  padding: 4px var(--space-2);
+  background-color: var(--color-bg-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.merge-box__method:hover:not(:disabled) {
+  background-color: var(--color-bg-3);
+}
+
+.merge-box__changes-form,
+.merge-box__close-form {
   background-color: var(--color-bg-2);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
@@ -953,7 +957,7 @@
   gap: var(--space-2);
 }
 
-.review-sidebar__textarea {
+.merge-box__textarea {
   width: 100%;
   padding: var(--space-2);
   border: 1px solid var(--color-border-subtle);
@@ -963,49 +967,28 @@
   font-size: var(--font-size-sm);
 }
 
-.review-sidebar__changes-actions {
+.merge-box__close-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
 }
 
-.review-sidebar__merge {
+/* Close / Reopen: the quietest control, at the very end. */
+.merge-box__settle {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-2);
+}
+
+.merge-box__error {
+  margin: 0;
+  color: var(--color-accent-danger);
+  font-size: var(--font-size-sm);
+}
+
+.merge-box__refusal {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  border-top: 1px solid var(--color-border-subtle);
-  padding-top: var(--space-3);
-}
-
-.review-sidebar__merge-hint {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-accent-success);
-}
-
-.review-sidebar__merge-methods {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.review-sidebar__method {
-  flex: 1 1 0;
-  padding: 4px var(--space-2);
-  background-color: var(--color-bg-2);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  cursor: pointer;
-}
-
-.review-sidebar__method:hover:not(:disabled) {
-  background-color: var(--color-bg-3);
-}
-
-.review-sidebar__merge-blocked {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   background-color: var(--color-accent-danger-bg);
   color: var(--color-accent-danger);
   border-radius: var(--radius-sm);
@@ -1013,13 +996,17 @@
   font-size: var(--font-size-xs);
 }
 
-.pr-cockpit__review-error {
+.merge-box__refusal-message {
+  font-weight: var(--font-weight-medium);
+}
+
+.merge-box__settled {
   margin: 0;
-  color: var(--color-accent-danger);
+  color: var(--color-fg-secondary);
   font-size: var(--font-size-sm);
 }
 
-/* Pull request state, settled line, empty diff, pipeline under the diff. */
+/* The one neutral state pill in the page header. */
 .pr-cockpit__state {
   display: inline-flex;
   align-items: center;
@@ -1040,53 +1027,4 @@
 
 .pr-cockpit__state--merged {
   color: var(--color-fg-primary);
-}
-
-.pr-cockpit__diff-note {
-  margin: 0;
-  padding: var(--space-4);
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.pr-cockpit__pipeline {
-  margin-top: var(--space-3);
-  border-top: 1px solid var(--color-border-subtle);
-  padding-top: var(--space-2);
-}
-
-.review-sidebar__settled {
-  margin: 0 0 var(--space-1);
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.review-sidebar__approve-note {
-  margin: 0;
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-xs);
-}
-
-.review-sidebar__approve-refusal {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  background-color: var(--color-accent-danger-bg);
-  color: var(--color-accent-danger);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2);
-  font-size: var(--font-size-xs);
-}
-
-.review-sidebar__approve-refusal-message {
-  font-weight: var(--font-weight-medium);
-}
-
-/* Close / Reopen: a decision of its own, under the review actions. */
-.review-sidebar__close {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--color-border-subtle);
 }

@@ -1,37 +1,38 @@
-// ThreadList.tsx — unresolved review threads (W-FE-11).
+// ThreadList.tsx — the review threads of a pull request, on the Conversation.
 //
-// Renders a compact list of conversation threads, prioritising unresolved
-// ones at the top. Each item links to the file + line that anchors the
-// thread; the parent page wires this up to scroll the diff viewer.
+// A thread used to be a single truncated line with no comment in it, so the
+// reader learned that somebody had said something about `ca…` and nothing
+// more. Each thread is now a card: where it is anchored (a link that opens
+// that file at that line on the Files tab), who wrote it, and the body of
+// every comment, oldest first. Unresolved threads come first.
 
 import { MessageSquare, MessageSquareOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { compareInstants } from '../../format/when';
+import { When } from '../../format/When';
 import type { ReviewThread } from '../../api/types';
 
 import './merge.css';
 
 export interface ThreadListProps {
   threads: ReviewThread[];
-  /** Called when the user clicks a thread, passing the anchor coordinate. */
-  onJump?: (thread: ReviewThread) => void;
+  /**
+   * Where a thread's anchor is read: the Files tab with that file open at
+   * that line. Absent for a thread anchored to no file.
+   */
+  anchorHref?: (thread: ReviewThread) => string | null;
   className?: string;
 }
 
 export function ThreadList({
   threads,
-  onJump,
+  anchorHref,
   className,
 }: ThreadListProps): JSX.Element {
-  if (threads.length === 0) {
-    return (
-      <div className={`thread-list ${className ?? ''}`.trim()}>
-        <p className="thread-list__empty">No conversation threads.</p>
-      </div>
-    );
-  }
+  const unresolved = threads.filter((thread) => !thread.resolved).length;
 
-  // Sort: unresolved first, then by most-recent update.
+  // Unresolved first, then most recently updated.
   const sorted = [...threads].sort((a, b) => {
     if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
     return compareInstants(b.updated_at, a.updated_at);
@@ -41,53 +42,76 @@ export function ThreadList({
     <section
       className={`thread-list ${className ?? ''}`.trim()}
       aria-label="Review threads"
+      id="pr-threads"
+      data-testid="pr-threads"
     >
       <header className="thread-list__header">
-        <h3 className="thread-list__title">Threads</h3>
-        <span className="thread-list__count">
-          {threads.filter((t) => !t.resolved).length} unresolved
+        <h2 className="thread-list__title">Threads</h2>
+        <span className="thread-list__count" data-testid="pr-threads-count">
+          {unresolved} unresolved
         </span>
       </header>
-      <ul className="thread-list__items">
-        {sorted.map((thread) => {
-          const first = thread.comments[0];
-          const snippet = first?.body_markdown?.slice(0, 120) ?? '';
-          const Icon = thread.resolved ? MessageSquareOff : MessageSquare;
-          return (
-            <li
-              key={thread.id}
-              className={`thread-list__item ${thread.resolved ? 'thread-list__item--resolved' : ''}`.trim()}
-            >
-              <button
-                type="button"
-                className="thread-list__button"
-                onClick={() => onJump?.(thread)}
+      {sorted.length === 0 ? (
+        <p className="thread-list__empty" data-testid="pr-threads-empty">
+          No conversation threads on this pull request yet.
+        </p>
+      ) : (
+        <ul className="thread-list__items">
+          {sorted.map((thread) => {
+            const Icon = thread.resolved ? MessageSquareOff : MessageSquare;
+            const href = anchorHref?.(thread) ?? null;
+            const anchor = thread.file_path
+              ? `${thread.file_path}${thread.line ? `:${thread.line}` : ''}`
+              : null;
+            return (
+              <li
+                key={thread.id}
+                className={`thread-list__item ${
+                  thread.resolved ? 'thread-list__item--resolved' : ''
+                }`.trim()}
+                data-testid="pr-thread"
+                data-resolved={thread.resolved ? 'true' : 'false'}
               >
-                <Icon
-                  aria-hidden="true"
-                  size={12}
-                  className="thread-list__icon"
-                />
-                <span className="thread-list__meta">
-                  {thread.file_path ? (
-                    <>
-                      <code className="thread-list__path">
-                        {thread.file_path}
-                      </code>
-                      {thread.line ? (
-                        <span aria-hidden="true">:{thread.line}</span>
-                      ) : null}
-                    </>
+                <header className="thread-list__item-header">
+                  <Icon aria-hidden="true" size={12} className="thread-list__icon" />
+                  {anchor ? (
+                    href ? (
+                      <Link className="thread-list__path" to={href}>
+                        {anchor}
+                      </Link>
+                    ) : (
+                      <code className="thread-list__path">{anchor}</code>
+                    )
                   ) : (
-                    <span className="thread-list__general">General</span>
+                    <span className="thread-list__general">
+                      On the pull request
+                    </span>
                   )}
-                </span>
-                <span className="thread-list__snippet">{snippet}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                  <span className="thread-list__state">
+                    {thread.resolved ? 'resolved' : 'unresolved'}
+                  </span>
+                </header>
+                <ol className="thread-list__comments">
+                  {thread.comments.map((comment) => (
+                    <li key={comment.id} className="thread-list__comment">
+                      <span className="thread-list__comment-meta">
+                        <strong>{comment.author}</strong>
+                        <When at={comment.created_at} />
+                      </span>
+                      <p
+                        className="thread-list__comment-body"
+                        data-testid="pr-thread-body"
+                      >
+                        {comment.body_markdown}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }

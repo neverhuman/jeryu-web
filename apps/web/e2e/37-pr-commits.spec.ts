@@ -16,7 +16,8 @@ import {
 const REPO = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
 const PR_NUMBER = '89';
 const PR_SHA = '1234567890abcdef1234567890abcdef12345678';
-const PR_URL = `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}`;
+// The commits are the pull request's own tab.
+const PR_URL = `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}/commits`;
 
 const COMMITS = [
   {

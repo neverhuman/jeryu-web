@@ -12,6 +12,8 @@
 //   /repos/jeryu/jeryu/jankurai/tree/main/docs → front page, Files open on docs/
 //   /repos/jeryu/jeryu/jankurai/commits/main?path=src/main.rs → that file's history
 //   /repos/jeryu/jeryu/jankurai/commit/<sha> → one commit, message and diff
+//   /repos/jeryu/jeryu/jankurai/pulls/42        → one pull request, Conversation
+//   /repos/jeryu/jeryu/jankurai/pulls/42/files   → its Files tab
 //   /repos/jeryu/jeryu/jankurai/automation → what runs on the repository
 //   /repos/jeryu/jeryu/jankurai/activity → the event log, pinned to this repo
 //   /repos/jeryu/jeryu/jankurai/code     → redirects to the front page, Files open
@@ -30,6 +32,7 @@ import { RepositoryActivityPage } from './RepositoryActivityPage';
 import { RepositoryAutomationPage } from './RepositoryAutomationPage';
 import { RepositorySettingsPage } from './RepositorySettingsPage';
 import { PullRequestPage } from './PullRequestPage';
+import { parsePullTail } from './pullTabsModel';
 import { activeRepoTab } from './repoShellModel';
 import { usePageTitle } from '../hooks/usePageTitle';
 import {
@@ -162,10 +165,21 @@ export function RepoRouter(): JSX.Element {
         <RepositoryBrowserPage provider={provider} fullName={fullName} blobSplat={subTail} />
       );
     case 'pulls': {
-      // /pulls or /pulls/:number
+      // /pulls, /pulls/:number, or one of that pull request's own tabs
+      // (/files, /checks, /commits).
       if (subTail) {
-        // One pull request is its own cockpit, not a tab of the repository.
-        return <PullRequestPage provider={provider} fullName={fullName} prNumber={subTail} />;
+        const { prNumber, tab } = parsePullTail(subTail);
+        if (prNumber) {
+          // One pull request is its own cockpit, not a tab of the repository.
+          return (
+            <PullRequestPage
+              provider={provider}
+              fullName={fullName}
+              prNumber={prNumber}
+              tab={tab}
+            />
+          );
+        }
       }
       return inShell(<RepositoryPullRequestsPage provider={provider} fullName={fullName} />);
     }

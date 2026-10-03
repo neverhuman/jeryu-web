@@ -21,7 +21,7 @@
 //      drift (old → new) with a Refresh button.
 //
 // The Approve button always carries the head SHA the reviewer saw
-// (`ReviewSidebar` reads `detail.summary.head_sha`), so clicking it is the
+// (`MergeBox` reads `detail.summary.head_sha`), so clicking it is the
 // real driver of the exact-SHA body the backend gates on.
 
 import { expect, test } from './fixtures/test';
@@ -97,7 +97,9 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     await request.click();
     await page.getByLabel('Requested changes').fill('Please add a regression test.');
     await page.getByRole('button', { name: 'Submit' }).click();
-    await expect(page.locator('.review-sidebar__changes')).toContainText('1 changes requested');
+    await expect(page.getByTestId('pr-merge-row-approvals')).toContainText(
+      '1 asking for changes'
+    );
     expect(reviews).toEqual([
       {
         verdict: 'request_changes',
@@ -230,9 +232,9 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     await expect(approve).toBeVisible();
     await approve.click();
 
-    // Success: the sidebar reflects the new approval posture and NO recovery
+    // Success: the merge box reflects the new approval posture and NO recovery
     // banner appears (the banner only renders on a 409 drift).
-    await expect(page.locator('.review-sidebar__approvals')).toHaveText(
+    await expect(page.locator('.merge-box__approvals')).toHaveText(
       /1 of 1 approvals/,
       { timeout: 10_000 }
     );
@@ -474,7 +476,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     );
     // The refusal is not head drift, so no recovery banner, and no approval.
     await expect(page.locator('.pr-cockpit__recovery')).toHaveCount(0);
-    await expect(page.locator('.review-sidebar__approvals')).toHaveText(
+    await expect(page.locator('.merge-box__approvals')).toHaveText(
       /0 of 1 approvals/
     );
   });

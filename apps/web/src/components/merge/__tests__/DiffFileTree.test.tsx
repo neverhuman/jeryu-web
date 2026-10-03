@@ -56,3 +56,46 @@ describe('DiffFileTree', () => {
     }
   });
 });
+
+describe('DiffFileTree rows', () => {
+  const file = (over: Partial<PullRequestDiffFile>): PullRequestDiffFile =>
+    ({
+      path: 'src/login.rs',
+      old_path: null,
+      status: 'modified',
+      additions: 3,
+      deletions: 1,
+      risk: null,
+      is_binary: false,
+      hunks: [],
+      ...over,
+    }) as PullRequestDiffFile;
+
+  it('shows the whole path, not just the file name', () => {
+    render(
+      <DiffFileTree
+        files={[file({})]}
+        activePath={null}
+        viewedPaths={new Set()}
+        onSelect={vi.fn()}
+        onToggleViewed={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /src\/login\.rs/ })).toBeInTheDocument();
+  });
+
+  it('carries the risk as one dot that names its tier', () => {
+    render(
+      <DiffFileTree
+        files={[file({ risk: 'critical' })]}
+        activePath={null}
+        viewedPaths={new Set()}
+        onSelect={vi.fn()}
+        onToggleViewed={vi.fn()}
+      />,
+    );
+    const dot = screen.getByTestId('diff-risk-critical');
+    expect(dot).toHaveAttribute('title', 'Risk: Critical');
+    expect(dot).toHaveTextContent('Risk: Critical');
+  });
+});

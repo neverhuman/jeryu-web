@@ -2,13 +2,16 @@
 //
 // One row per file, with:
 //   * Status icon (added / modified / removed / renamed).
-//   * Risk badge — when the backend tags a file with low / medium / high /
-//     critical risk we surface it inline. Reviewers can spot critical files
-//     before opening them.
-//   * Viewed checkbox — local state only; remembered across navigation but
-//     not yet persisted server-side (the §35.2.4 spec carries it client-side
-//     for now).
+//   * Risk dot — when the backend tags a file with low / medium / high /
+//     critical risk, one coloured dot carries it, named in its tooltip and to
+//     a screen reader. A full word per row cost the path its room.
+//   * Viewed checkbox — appears when the row is hovered or focused, and stays
+//     once ticked. Local state only; remembered across navigation but not yet
+//     persisted server-side (the §35.2.4 spec carries it client-side for now).
 //   * Additions / deletions counters.
+//
+// The path is shown whole: `src/login.rs` reading as `login` or `ca` told the
+// reviewer nothing, so a long path wraps rather than being cut.
 
 import {
   CircleDot,
@@ -20,7 +23,6 @@ import {
 } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 
-import { RiskBadge, type RiskTier } from '../action/RiskBadge';
 import type {
   PullRequestDiffFile,
   PullRequestFileStatus,
@@ -52,9 +54,29 @@ export function splitPath(path: string): { dir: string; base: string } {
   return { dir: path.slice(0, cut + 1), base: path.slice(cut + 1) };
 }
 
-function riskTier(file: PullRequestDiffFile): RiskTier | undefined {
-  if (!file.risk) return;
-  return file.risk;
+const RISK_LABELS: Record<NonNullable<PullRequestDiffFile['risk']>, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  critical: 'Critical',
+};
+
+/** The file's risk, as one dot that says what it is when pointed at. */
+function RiskDot({
+  risk,
+}: {
+  risk: NonNullable<PullRequestDiffFile['risk']>;
+}): JSX.Element {
+  const label = `Risk: ${RISK_LABELS[risk]}`;
+  return (
+    <span
+      className={`diff-file-tree__risk diff-file-tree__risk--${risk}`}
+      title={label}
+      data-testid={`diff-risk-${risk}`}
+    >
+      <span className="sr-only">{label}</span>
+    </span>
+  );
 }
 
 export interface DiffFileTreeProps {
@@ -92,7 +114,6 @@ export function DiffFileTree({
       <ul className="diff-file-tree__list">
         {files.map((file) => {
           const Icon = STATUS_ICONS[file.status] ?? CircleDot;
-          const tier = riskTier(file);
           const isActive = file.path === activePath;
           const isViewed = viewedPaths.has(file.path);
           const checkboxId = `diff-viewed-${file.path.replace(/[^a-z0-9]/gi, '-')}`;
@@ -144,7 +165,7 @@ export function DiffFileTree({
                       −{file.deletions}
                     </span>
                   </span>
-                  {tier ? <RiskBadge tier={tier} /> : null}
+                  {file.risk ? <RiskDot risk={file.risk} /> : null}
                 </button>
                 <label
                   className="diff-file-tree__viewed"

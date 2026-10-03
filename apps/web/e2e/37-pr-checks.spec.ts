@@ -91,7 +91,10 @@ async function openPullRequest(page: import('@playwright/test').Page): Promise<v
       body: JSON.stringify({ head_sha: PR_SHA, base_sha: PR_SHA, files: [], truncated: false }),
     })
   );
-  await page.goto(`/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}`);
+  // The checks of a pull request are a tab of their own, at full width.
+  await page.goto(
+    `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}/checks`
+  );
 }
 
 test.describe('PR checks say why', () => {

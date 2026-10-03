@@ -1,35 +1,38 @@
-// PullRequestPage.tsx — Phase 3 PR review cockpit (W-FE-11).
+// PullRequestPage.tsx — one pull request, as four tabs behind one bar.
 //
-// Three-pane layout per FINAL §4.6:
-//   ┌────────────────────────────────────────────────────────────────────┐
-//   │ PR #42: title  head abc123  base main  Passport: BLOCKED          │
-//   ├──────────────┬──────────────────────────────────┬──────────────────┤
-//   │ Files        │ Diff/File Viewer                 │ Review Panel     │
-//   │ filters      │ inline comments                  │ Passport         │
-//   │ risk badges  │ syntax highlighted               │ Checks           │
-//   │ viewed       │ virtualized                      │ Threads          │
-//   └──────────────┴──────────────────────────────────┴──────────────────┘
+//   ┌──────────────────────────────────────────────────────────────────┐
+//   │ PR #42: title   Open   acme/widget-api · by dana   head → base   │
+//   ├──────────────────────────────────────────────────────────────────┤
+//   │ Conversation | Files 3 | Checks 1 | Commits 5                    │
+//   └──────────────────────────────────────────────────────────────────┘
+//
+// Conversation is the default: the description, one merge box saying where
+// the merge stands, the threads, and the pipeline timeline. Files, Checks and
+// Commits are their own URLs (`/pulls/:n/files?path=`, `/checks`, `/commits`),
+// so each one has the whole width and none of them sits below the fold of a
+// nested scroller. The header carries one neutral state pill — Open, Draft,
+// Merged or Closed — and the merge verdict is stated once, in the box.
 //
 // A refused approval that is not head drift (`pull_self_approval_forbidden`
 // above all, since an author cannot approve their own pull request) is worded
 // by `approveRefusal` and shown next to the Approve button.
 //
 // A merge queue entry that failed or left the queue is the one case where the
-// queue stops and a person starts: the page then offers "Queue again"
-// (`components/merge/QueueAgain`).
+// queue stops and a person starts: Conversation then offers "Queue again"
+// (`components/merge/QueueAgain`), above the box.
 //
-// Below the cockpit the Work section says where the change stands on the
+// Conversation also carries the Work section: where the change stands on the
 // twelve-stage work trace, which todos the pull request carries, and the
-// Needs-you row about this pull request (`PullRequestWork`).
+// Needs-you row about it (`PullRequestWork`).
 //
 // On approve mutation 409 with `merge_sha_stale`, the page shows a recovery
 // banner with the previous/current SHA and a Refresh button that re-runs the
 // detail query. The banner also appears for `merge_passport_stale` /
 // `concurrency_conflict` so reviewers see all known drift cases.
 
-import { GitBranch, GitMerge, RefreshCcw, ShieldAlert } from 'lucide-react';
+import { GitBranch, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
@@ -60,13 +63,24 @@ import { mergeAttemptLine } from '../components/merge/mergeAttemptModel';
 import {
   approveRefusal,
   draftRefusal,
+  failingChecksBlockMerge,
   isSettled,
   pullStateBadge,
 } from '../components/merge/pullReviewModel';
 import { When } from '../format/When';
-import { PullRequestCockpit } from './PullRequestCockpit';
+import { ChecksPanel } from '../components/merge';
+import { TabBar } from '../components/repo/TabBar';
+import { PullConversationTab } from './PullConversationTab';
+import { PullFilesTab } from './PullFilesTab';
 import { PullRequestCommits } from './PullRequestCommits';
 import { PullRequestWork } from './PullRequestWork';
+import {
+  PULL_TABS,
+  pullBasePath,
+  pullTabCount,
+  pullTabHref,
+  type PullTabKey,
+} from './pullTabsModel';
 import {
   extractDrift,
   type HeadDriftInfo,
@@ -83,6 +97,8 @@ export interface PullRequestPageProps {
   provider?: string;
   fullName?: string;
   prNumber?: string;
+  /** Which tab the URL is on; Conversation when the URL names none. */
+  tab?: PullTabKey;
 }
 
 export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
@@ -90,6 +106,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const provider = props.provider ?? params.provider ?? 'unknown';
   const fullName = props.fullName ?? fullNameFromParams(params);
   const prNumber = props.prNumber ?? params.number ?? null;
+  const tab: PullTabKey = props.tab ?? 'conversation';
 
   const authUser = useAuth().user;
   const viewerLogin = authUser?.login ?? null;
@@ -141,18 +158,26 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
 
   const setDraft = useSetPullDraft(repoId, prNumber);
 
-  // Diff viewer state.
-  const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
+  // Which file of the diff is open is a property of the URL, so a thread, a
+  // review comment or a bookmark can point at one file.
+  const [search, setSearch] = useSearchParams();
   const [viewedPaths, setViewedPaths] = useState<Set<string>>(() => new Set());
   const diffMode = usePreferencesStore((s) => s.diffMode);
   const setDiffMode = usePreferencesStore((s) => s.setDiffMode);
 
-  // Default to the first file once the diff arrives.
-  useEffect(() => {
-    if (!activeFilePath && diff.data && diff.data.files.length > 0) {
-      setActiveFilePath(diff.data.files[0]?.path ?? null);
-    }
-  }, [activeFilePath, diff.data]);
+  const requestedPath = search.get('path');
+  // With no file named, the first changed file is the one on screen.
+  const activeFilePath =
+    requestedPath ?? diff.data?.files[0]?.path ?? null;
+
+  const setActiveFilePath = useCallback(
+    (path: string) => {
+      const next = new URLSearchParams(search);
+      next.set('path', path);
+      setSearch(next, { replace: true });
+    },
+    [search, setSearch]
+  );
 
   const activeFile = useMemo(() => {
     if (!diff.data || !activeFilePath) return;
@@ -330,14 +355,30 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
 
   const data = detail.data;
   const summary = data.summary;
-  const passportTone: 'pass' | 'blocked' | 'pending' =
-    data.merge_passport?.status ?? 'pending';
 
   const badge = pullStateBadge(summary);
   const settled = isSettled(data);
+  const base = pullBasePath(provider, fullName, prNumber ?? '');
+  const isBusy =
+    approve.isPending ||
+    mergeMutation.isPending ||
+    review.isPending ||
+    setState.isPending ||
+    setDraft.isPending;
+
+  const tabs = PULL_TABS.map((entry) => ({
+    key: entry.key,
+    label: entry.label,
+    href: pullTabHref(base, entry),
+    count: pullTabCount(entry.key, {
+      files: diff.data?.files.length ?? null,
+      failingChecks: checks.data?.failing ?? null,
+      commits: commits.data?.length ?? null,
+    }),
+  }));
 
   return (
-    <div className="page page--full">
+    <div className="page page--full pr-page" data-testid="pr-page">
       <div className="pr-cockpit__header">
         <h1 className="pr-cockpit__title">
           Pull request #{summary.number}: {summary.title}
@@ -367,15 +408,15 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         <span className="pr-cockpit__meta">
           <code title={summary.head_sha}>{summary.head_sha.slice(0, 7)}</code>
         </span>
-        {settled ? null : (
-          <span
-            className={`pr-cockpit__passport-pill pr-cockpit__passport-pill--${passportTone}`}
-          >
-            <GitMerge aria-hidden="true" size={12} />
-            Passport: {passportTone.toUpperCase()}
-          </span>
-        )}
       </div>
+
+      <TabBar
+        label="Pull request"
+        items={tabs}
+        current={tab}
+        testId="pr-tabs"
+        idPrefix="pr-tab"
+      />
 
       {headDrift ? (
         <div className="pr-cockpit__recovery" role="alert">
@@ -421,63 +462,88 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         </div>
       ) : null}
 
-      <QueueAgain repoId={repoId} prNumber={prNumber} enabled={!settled} />
-
-      <PullRequestCockpit
-        data={data}
-        diff={diff}
-        checks={checks}
-        threads={threads}
-        activeFilePath={activeFilePath}
-        activeFile={activeFile}
-        viewedPaths={viewedPaths}
-        diffMode={diffMode}
-        isBusy={
-          approve.isPending ||
-          mergeMutation.isPending ||
-          review.isPending ||
-          setState.isPending ||
-          setDraft.isPending
-        }
-        reviewError={review.error && !headDrift ? review.error.message : null}
-        mergeError={mergeMutation.error && !headDrift ? mergeMutation.error.message : null}
-        approveRefusal={
-          approve.error && !headDrift ? approveRefusal(approve.error, data) : null
-        }
-        viewerLogin={viewerLogin}
-        closeError={setState.error ? setState.error.message : null}
-        viewer={viewer}
-        viewerRole={authUser?.role ?? null}
-        onSetDraft={handleSetDraft}
-        draftRefusal={
-          setDraft.error
-            ? draftRefusal(setDraft.error, setDraft.variables?.draft ?? false)
-            : null
-        }
-        repoFullName={fullName}
-        prNumber={prNumber}
-        onRequestChanges={handleRequestChanges}
-        onSelectFile={setActiveFilePath}
-        onToggleViewed={handleToggleViewed}
-        onDiffModeChange={(m: DiffViewerMode) => setDiffMode(m)}
-        onApprove={handleApprove}
-        onMerge={handleMerge}
-        onSetState={handleSetState}
-      />
-
-      <PullRequestWork
-        summary={summary}
-        commits={commits.data}
-        repoId={repoId}
-        repoFullName={fullName}
-        prNumber={prNumber}
-      />
-
-      <PullRequestCommits
-        commits={commits.data}
-        isPending={commits.isPending}
-        error={commits.error}
-      />
+      <div className="pr-page__body">
+        {tab === 'files' ? (
+          <PullFilesTab
+            diff={diff}
+            activePath={activeFilePath}
+            activeFile={activeFile}
+            viewedPaths={viewedPaths}
+            diffMode={diffMode}
+            onSelectFile={setActiveFilePath}
+            onToggleViewed={handleToggleViewed}
+            onDiffModeChange={(mode: DiffViewerMode) => setDiffMode(mode)}
+          />
+        ) : tab === 'checks' ? (
+          <div data-testid="pr-checks-tab">
+            <ChecksPanel
+              checks={checks.data ?? null}
+              isLoading={checks.isPending}
+              failuresBlockMerge={!settled && failingChecksBlockMerge(data)}
+              className="pr-page__panel"
+            />
+          </div>
+        ) : tab === 'commits' ? (
+          <PullRequestCommits
+            commits={commits.data}
+            isPending={commits.isPending}
+            error={commits.error}
+          />
+        ) : (
+          <PullConversationTab
+            base={base}
+            description={data.description}
+            threads={threads}
+            repoFullName={fullName}
+            prNumber={prNumber}
+            queueAgain={
+              <QueueAgain repoId={repoId} prNumber={prNumber} enabled={!settled} />
+            }
+            work={
+              <PullRequestWork
+                summary={summary}
+                commits={commits.data}
+                repoId={repoId}
+                repoFullName={fullName}
+                prNumber={prNumber}
+              />
+            }
+            merge={{
+              detail: data,
+              checks: checks.data ?? null,
+              checksLoading: checks.isPending,
+              hrefs: {
+                threads: `${base}#pr-threads`,
+                checks: `${base}/checks`,
+                commits: `${base}/commits`,
+              },
+              viewer,
+              viewerLogin,
+              viewerRole: authUser?.role ?? null,
+              isBusy,
+              onApprove: handleApprove,
+              onRequestChanges: handleRequestChanges,
+              onMerge: handleMerge,
+              onSetState: handleSetState,
+              onSetDraft: handleSetDraft,
+              approveRefusal:
+                approve.error && !headDrift
+                  ? approveRefusal(approve.error, data)
+                  : null,
+              draftRefusal: setDraft.error
+                ? draftRefusal(setDraft.error, setDraft.variables?.draft ?? false)
+                : null,
+              reviewError:
+                review.error && !headDrift ? review.error.message : null,
+              mergeError:
+                mergeMutation.error && !headDrift
+                  ? mergeMutation.error.message
+                  : null,
+              closeError: setState.error ? setState.error.message : null,
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }

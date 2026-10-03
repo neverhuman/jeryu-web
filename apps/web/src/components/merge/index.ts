@@ -12,13 +12,10 @@ export type {
 } from './InlineComment';
 export { ChecksPanel } from './ChecksPanel';
 export type { ChecksPanelProps } from './ChecksPanel';
-export { MergeGatePanel } from './MergeGatePanel';
-export type { MergeGatePanelProps } from './MergeGatePanel';
+export { MergeBox } from './MergeBox';
+export type { MergeBoxProps } from './MergeBox';
+export { gateExplanation } from './passportGates';
 export { QueueAgain } from './QueueAgain';
 export type { QueueAgainProps } from './QueueAgain';
-export { PullCloseControls } from './PullCloseControls';
-export type { PullCloseControlsProps } from './PullCloseControls';
-export { ReviewSidebar } from './ReviewSidebar';
-export type { ReviewSidebarProps } from './ReviewSidebar';
 export { ThreadList } from './ThreadList';
 export type { ThreadListProps } from './ThreadList';

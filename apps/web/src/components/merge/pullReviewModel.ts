@@ -159,21 +159,6 @@ export function approveCta(
   };
 }
 
-/**
- * Why the merge is blocked, in one line. "Blocked by the Passport" and "a
- * gate failed" are the same thing said twice, so the line names the Passport
- * and the first blocker that holds it shut.
- */
-export function mergeBlockedLine(detail: PullRequestDetail): string {
-  const first = detail.merge_passport.blockers[0];
-  const cause = first?.message.trim() ?? detail.summary.mergeable.reason?.trim();
-  if (cause && cause.length > 0) {
-    const sentence = /[.!?]$/.test(cause) ? cause : `${cause}.`;
-    return `Merge blocked by the Passport: ${sentence}`;
-  }
-  return 'Merge blocked by the Passport: it has not cleared this head yet.';
-}
-
 /** Exactly one filled button: Approve until approvals are satisfied, then Merge. */
 export function primaryAction(detail: PullRequestDetail): 'approve' | 'merge' | 'none' {
   if (isSettled(detail)) return 'none';

@@ -24,8 +24,8 @@ const FAMILY_PATH_DEFAULTS = new Set<string>(['/releases']);
 
 /**
  * Parameters that make `/releases` a view of its own rather than the family
- * board: those addresses state the family in the query, as every other page
- * does, so `?view=repositories&family=<key>` stays one address.
+ * board. Those addresses state the family the way every other page states it,
+ * so `?view=repositories&family=<key>` stays one address.
  */
 const PATH_FORM_BLOCKERS = ['view', 'repo'] as const;
 

@@ -4,10 +4,9 @@
 // with no control anywhere to mark it ready, so the only way forward was an
 // undocumented API call. This drives the control that closes that gap:
 //
-//   1. On a draft, the Review sidebar offers "Ready for review" and the
-//      Passport's draft blocker carries the same button. Clicking either
-//      POSTs `/pulls/{n}/ready`; the server's new detail swaps in and the
-//      draft blocker is gone from the Passport.
+//   1. On a draft, the merge box's draft row says it is still a draft and
+//      carries "Ready for review". Clicking it POSTs `/pulls/{n}/ready`; the
+//      server's new detail swaps in and the row is done.
 //   2. On the now-open pull request the control reads "Convert to draft".
 //   3. A refusal (403 `pull_draft_forbidden`) is worded next to the control
 //      and leaves the PR a draft.
@@ -79,24 +78,28 @@ test.describe('Draft pull requests', () => {
 
     await page.goto(PR_URL);
     await expect(page.getByTestId('pr-state-badge')).toHaveText('Draft');
-    // Before the click, the Passport says why and carries the way out.
-    const passport = page.locator('[data-code="passport_blocked_draft"]');
-    await expect(passport).toContainText('Draft pull request');
-    await expect(page.getByTestId('pr-passport-ready-for-review')).toBeVisible();
-    // The sidebar names the same move, and the draft note points at it.
+    // Before the click, the draft row says so and carries the way out.
+    const row = page.getByTestId('pr-merge-row-draft');
+    await expect(row).toHaveAttribute('data-state', 'needed');
+    await expect(row).toContainText('Still a draft');
+    await expect(row.getByTestId('pr-ready-for-review')).toBeVisible();
+    // The note beside the actions names the same move.
     await expect(page.getByTestId('pr-draft-note')).toContainText('Ready for review');
 
     await page.getByTestId('pr-ready-for-review').click();
 
     await expect(page.getByTestId('pr-state-badge')).toHaveText('Open');
-    await expect(page.locator('[data-code="passport_blocked_draft"]')).toHaveCount(0);
-    await expect(page.getByTestId('pr-passport-ready-for-review')).toHaveCount(0);
+    await expect(page.getByTestId('pr-merge-row-draft')).toHaveAttribute(
+      'data-state',
+      'done'
+    );
+    await expect(page.getByTestId('pr-ready-for-review')).toHaveCount(0);
     expect(posted).toHaveLength(1);
     // And the way back is now on offer instead.
     await expect(page.getByTestId('pr-convert-to-draft')).toBeVisible();
   });
 
-  test('the Passport blocker button marks it ready too @action:pr.passport_ready', async ({
+  test('an admin may mark somebody else\'s draft ready @action:pr.passport_ready', async ({
     page,
   }) => {
     await mockBootstrap(page, { login: 'root', auth: { role: 'admin' } });
@@ -122,8 +125,9 @@ test.describe('Draft pull requests', () => {
 
     await page.goto(PR_URL);
     // An admin may move somebody else's draft.
-    await expect(page.getByTestId('pr-ready-for-review')).toBeVisible();
-    await page.getByTestId('pr-passport-ready-for-review').click();
+    const row = page.getByTestId('pr-merge-row-draft');
+    await expect(row.getByTestId('pr-ready-for-review')).toBeVisible();
+    await row.getByTestId('pr-ready-for-review').click();
     await expect(page.getByTestId('pr-state-badge')).toHaveText('Open');
   });
 

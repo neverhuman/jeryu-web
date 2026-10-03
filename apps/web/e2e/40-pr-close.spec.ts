@@ -4,7 +4,7 @@
 //   PATCH /api/v3/repos/{owner}/{repo}/pulls/{number} {"state":"closed"}
 // with an optional comment posted first to the pull request's issue thread.
 //
-//   1. Close — type a reason, click Close pull request. The comment lands on
+//   1. Close — ask to close, type a reason, confirm. The comment lands on
 //      /issues/{number}/comments BEFORE the PATCH, and the page repaints as
 //      closed (the state badge and the settled line) with no reload.
 //   2. Reopen — the now-closed pull request offers Reopen, which PATCHes
@@ -100,14 +100,16 @@ test.describe('Close and reopen a pull request', () => {
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('pr-state-badge')).toHaveText('Open');
 
-    // 1. Close, with a reason.
+    // 1. Close, with a reason. Close asks first: the comment field and the
+    // red confirmation appear only once the reader has asked to close.
+    await page.getByTestId('pr-close').click();
     await page.getByLabel('Closing comment').fill('Superseded by the new shift.');
-    await page.getByRole('button', { name: 'Close pull request' }).click();
+    await page.getByTestId('pr-close-confirm').click();
 
     await expect(page.getByTestId('pr-state-badge')).toHaveText('Closed', {
       timeout: 10_000,
     });
-    await expect(page.locator('.review-sidebar__settled')).toContainText(
+    await expect(page.locator('.merge-box__settled')).toContainText(
       'Closed into main'
     );
     await expect(page.getByTestId('pr-close-error')).toHaveCount(0);
@@ -117,7 +119,7 @@ test.describe('Close and reopen a pull request', () => {
 
     // 2. Reopen — no comment box on a closed pull request, so no comment call.
     await expect(page.getByLabel('Closing comment')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Reopen pull request' }).click();
+    await page.getByTestId('pr-reopen').click();
 
     await expect(page.getByTestId('pr-state-badge')).toHaveText('Open', {
       timeout: 10_000,

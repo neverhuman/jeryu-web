@@ -640,6 +640,10 @@ export interface MockPullRequestDetail {
   /** When true, `mergeable.can_merge` is set so the merge CTA enables. */
   can_merge?: boolean;
   passport_hash?: string | null;
+  /** The pull request's own description, shown on the Conversation tab. */
+  description?: string | null;
+  /** Reviewers whose approval the detail reports against this head. */
+  reviews?: Array<Record<string, unknown>>;
 }
 
 /**
@@ -700,7 +704,8 @@ export async function mockPullRequestDetail(
         { action_id: 'pull.merge', label: 'Merge', risk: 'medium' },
       ],
     },
-    description: pr.title ?? null,
+    description: pr.description ?? pr.title ?? null,
+    reviews: pr.reviews ?? [],
     merge_passport: {
       status,
       head_sha: pr.head_sha,
@@ -733,6 +738,131 @@ export async function mockPullRequestDetail(
     }
   );
   return detail;
+}
+
+/** One changed file of `GET /pulls/{n}/diff`. */
+export interface MockDiffFile {
+  path: string;
+  status?: 'added' | 'modified' | 'removed' | 'renamed';
+  additions?: number;
+  deletions?: number;
+  risk?: 'low' | 'medium' | 'high' | 'critical' | null;
+  /** Unified-diff body lines of the single hunk this file carries. */
+  lines?: string[];
+}
+
+/**
+ * Mock `GET /api/v1/repos/{id}/pulls/{number}/diff`. Pass `status` (or an
+ * `error`) to rehearse the failure the Files tab must report as an alert
+ * rather than as a pull request that changes nothing.
+ */
+export async function mockPullRequestDiff(
+  page: Page,
+  options: {
+    headSha: string;
+    files?: MockDiffFile[];
+    status?: number;
+  }
+): Promise<void> {
+  const files = (options.files ?? []).map((file) => {
+    const lines = file.lines ?? ['+ added a line', '- removed a line'];
+    return {
+      path: file.path,
+      old_path: null,
+      status: file.status ?? 'modified',
+      additions: file.additions ?? lines.filter((line) => line.startsWith('+')).length,
+      deletions: file.deletions ?? lines.filter((line) => line.startsWith('-')).length,
+      risk: file.risk ?? null,
+      is_binary: false,
+      hunks: [
+        {
+          header: `@@ -1,${lines.length} +1,${lines.length} @@`,
+          old_start: 1,
+          old_lines: lines.length,
+          new_start: 1,
+          new_lines: lines.length,
+          lines,
+        },
+      ],
+    };
+  });
+  const status = options.status ?? 200;
+  await page.route(/\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/diff$/, (route: Route) =>
+    route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        status === 200
+          ? {
+              head_sha: options.headSha,
+              base_sha: options.headSha,
+              files,
+              truncated: false,
+            }
+          : {
+              error: {
+                code: 'diff_unavailable',
+                message: 'the diff of this head could not be read',
+                details: {},
+              },
+            }
+      ),
+    })
+  );
+}
+
+/** One review thread of `GET /pulls/{n}/threads`. */
+export interface MockReviewThread {
+  id: string;
+  resolved?: boolean;
+  file_path?: string | null;
+  line?: number | null;
+  author?: string;
+  body: string;
+}
+
+/** Mock `GET /api/v1/repos/{id}/pulls/{number}/threads`. */
+export async function mockPullRequestThreads(
+  page: Page,
+  threads: MockReviewThread[],
+  repo: { host: string; owner: string; name: string } = {
+    host: 'jeryu',
+    owner: 'neverhuman',
+    name: 'jeryu',
+  }
+): Promise<void> {
+  const body = {
+    threads: threads.map((thread, index) => ({
+      id: thread.id,
+      repo: { id: `${repo.host}:${repo.owner}/${repo.name}`, ...repo },
+      pr_number: index + 1,
+      resolved: thread.resolved ?? false,
+      file_path: thread.file_path ?? null,
+      line: thread.line ?? null,
+      anchor_sha: null,
+      comments: [
+        {
+          id: `${thread.id}-c1`,
+          author: thread.author ?? '@red-team',
+          body_markdown: thread.body,
+          body_html: null,
+          created_at: '2026-05-26T00:00:00Z',
+          edited_at: null,
+          suggestion: null,
+          evidence: null,
+        },
+      ],
+      created_at: '2026-05-26T00:00:00Z',
+      updated_at: '2026-05-26T00:00:00Z',
+    })),
+  };
+  await page.route(/\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/threads$/, (route: Route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    })
+  );
 }
 
 /** One commit of the GitHub-shaped `pulls/{n}/commits` list. */

@@ -46,7 +46,7 @@ The Storybook build emits stories for the components in the §6.14 matrix:
 - `RepoCard` — healthy / warning / critical / archived / private.
 - `ReadmePanel` — loading / empty / rendered / malicious-HTML-sanitized.
 - `DiffViewer` — small / huge / binary / generated / with-comments.
-- `MergeGatePanel` — pass / blocked / stale-SHA / approval-required / agent-evidence.
+- `MergeBox` — ready / blocked / stale-SHA / approval-required / agent-evidence.
 - `SettingsDiffPreview` — safe / reversible / irreversible / production-impact.
 - `RiskBadge` — low / medium / high / critical.
 - `CommandPalette` — closed / open-empty / open-typing / open-many.

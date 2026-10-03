@@ -6,18 +6,19 @@
 // repository used to be navigated from a block at the bottom of the global left
 // navigation, which had no counts and offered Settings to everyone.
 //
-// The bar is a `<nav aria-label="Repository">` of links: the current one
-// carries `aria-current="page"`, arrow keys move between them (one tab stop for
-// the whole bar), and below 720px it scrolls sideways instead of wrapping.
+// The bar is the shared `TabBar`: a `<nav aria-label="Repository">` of links,
+// the current one carrying `aria-current="page"`, arrow keys moving between
+// them. The pull request page is navigated by the same component.
 
 import { AlertTriangle } from 'lucide-react';
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
 import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoHealthPill } from './RepoHealthPill';
 import { RepoRoleBadge } from './RepoRoleBadge';
+import { TabBar } from './TabBar';
 import { PermissionDeniedState } from '../state';
 import { useBootstrap } from '../../hooks/useBootstrap';
 import { useAuth } from '../../hooks/useAuth';
@@ -33,7 +34,6 @@ import {
   canSeeRepoSettings,
   repoTabCount,
   repoTabHref,
-  rovingIndex,
   visibleRepoTabs,
   type RepoTabKey,
 } from '../../pages/repoShellModel';
@@ -161,65 +161,31 @@ function RepoTabs({
   // the same one the Automation tab reads, so the mark costs no extra request.
   const automation = useRepoAutomation(repoId);
   const warned = (automation.data?.warnings.length ?? 0) > 0;
-  const links = useRef<(HTMLAnchorElement | null)[]>([]);
-  // The bar is one tab stop: the tab stop is whichever tab was last focused,
-  // and the current page's tab until one is.
-  const [focused, setFocused] = useState<RepoTabKey | null>(null);
-  const stop = focused ?? current;
 
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
-    const from = tabs.findIndex((tab) => tab.key === stop);
-    const at = rovingIndex(from < 0 ? 0 : from, tabs.length, event.key);
-    if (at === null) return;
-    event.preventDefault();
-    links.current[at]?.focus();
-  };
+  const items = tabs.map((tab) => ({
+    key: tab.key,
+    label: tab.label,
+    href: repoTabHref(base, tab),
+    count: repoTabCount(tab.key, { openPullRequests, activeAgents }),
+    marker:
+      tab.key === 'automation' && warned ? (
+        <span
+          className="repo-tabs__warning"
+          data-testid="repo-tab-automation-warning"
+        >
+          <AlertTriangle size={14} aria-hidden="true" />
+          <span className="sr-only">needs a person</span>
+        </span>
+      ) : undefined,
+  }));
 
   return (
-    <nav
-      className="repo-tabs"
-      aria-label="Repository"
-      onKeyDown={onKeyDown}
-      data-testid="repo-tabs"
-    >
-      {tabs.map((tab, index) => {
-        const count = repoTabCount(tab.key, {
-          openPullRequests,
-          activeAgents,
-        });
-        const on = tab.key === current;
-        return (
-          <Link
-            key={tab.key}
-            ref={(node) => {
-              links.current[index] = node;
-            }}
-            to={repoTabHref(base, tab)}
-            className={`repo-tabs__tab${on ? ' is-active' : ''}`}
-            aria-current={on ? 'page' : undefined}
-            // One tab stop for the bar: arrow keys move inside it.
-            tabIndex={tab.key === stop ? 0 : -1}
-            onFocus={() => setFocused(tab.key)}
-            data-testid={`repo-tab-${tab.key}`}
-          >
-            {tab.label}
-            {count === null ? null : (
-              <span className="repo-tabs__count" data-testid={`repo-tab-count-${tab.key}`}>
-                {count > 99 ? '99+' : count}
-              </span>
-            )}
-            {tab.key === 'automation' && warned ? (
-              <span
-                className="repo-tabs__warning"
-                data-testid="repo-tab-automation-warning"
-              >
-                <AlertTriangle size={14} aria-hidden="true" />
-                <span className="sr-only">needs a person</span>
-              </span>
-            ) : null}
-          </Link>
-        );
-      })}
-    </nav>
+    <TabBar
+      label="Repository"
+      items={items}
+      current={current}
+      testId="repo-tabs"
+      idPrefix="repo-tab"
+    />
   );
 }

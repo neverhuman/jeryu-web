@@ -5,6 +5,7 @@
 //   * Repositories list (`/repos`)
 //   * Repository overview (`/repos/{provider}/{name}`)
 //   * Settings (`/repos/{provider}/{name}/settings/general`)
+//   * Every tab of a pull request, at a desktop and at a phone width
 //
 // Each result is persisted to `target/jankurai/ux-qa/<scope>.axe.json` so
 // the UX-QA dashboard can chart violation trends over time. The
@@ -29,7 +30,10 @@ import {
 import {
   mockBootstrap,
   mockFleetBootstrap,
+  mockPullRequestCommits,
   mockPullRequestDetail,
+  mockPullRequestDiff,
+  mockPullRequestThreads,
   mockRepoAgentRuns,
   mockReadme,
   mockRepoList,
@@ -267,28 +271,65 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
     await scanAndAssert(page, 'fleet');
   });
 
-  test('axe scan: PR review cockpit', async ({ page }) => {
-    // The PR cockpit's three-pane layout (files / diff / review sidebar +
-    // recovery banner roles) is the densest interactive surface; scan it in
-    // its hydrated, Passport-blocked state.
+  test('axe scan: every tab of a pull request, at 1440 and at 390', async ({ page }) => {
+    // The pull request is the densest interactive surface in the app. Each of
+    // its four tabs is scanned in its hydrated, Passport-held state, at a
+    // desktop width and at a phone width — where the Files tree becomes a
+    // one-line picker.
     const repo = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
     const repoId = `${repo.host}:${repo.owner}/${repo.name}`;
+    const headSha = '1111111111111111111111111111111111111111';
     await mockBootstrap(page);
     await mockRepoList(page, [{ id: repo, default_branch: 'main' }]);
     await mockPullRequestDetail(page, {
       repoId,
       number: '99',
-      title: 'A11y cockpit scan',
-      head_sha: '1111111111111111111111111111111111111111',
+      title: 'A11y pull request scan',
+      head_sha: headSha,
       passport: 'blocked',
       unresolved_threads: 2,
+      description: 'What this pull request is for, in one line.',
     });
+    await mockPullRequestDiff(page, {
+      headSha,
+      files: [{ path: 'src/login.rs', risk: 'high' }],
+    });
+    await mockPullRequestThreads(
+      page,
+      [
+        {
+          id: 'thread-1',
+          file_path: 'src/login.rs',
+          line: 42,
+          body: 'Say which field was refused.',
+        },
+      ],
+      repo
+    );
+    await mockPullRequestCommits(page, [
+      { sha: headSha, message: 'Say why a login was refused', date: '2026-05-26T00:00:00Z' },
+    ]);
 
-    await page.goto(`/repos/${repo.host}/${repo.owner}/${repo.name}/pulls/99`);
-    await expect(
-      page.getByRole('heading', { name: /Pull request #99: A11y cockpit scan/i })
-    ).toBeVisible({ timeout: 15_000 });
-    await scanAndAssert(page, 'pr-cockpit');
+    const base = `/repos/${repo.host}/${repo.owner}/${repo.name}/pulls/99`;
+    const tabs = [
+      { tail: '', key: 'conversation', testId: 'pr-conversation-tab' },
+      { tail: '/files', key: 'files', testId: 'pr-files-tab' },
+      { tail: '/checks', key: 'checks', testId: 'pr-checks-tab' },
+      { tail: '/commits', key: 'commits', testId: 'pr-commits' },
+    ] as const;
+    const widths = [
+      { label: 'wide', size: { width: 1440, height: 900 } },
+      { label: 'phone', size: { width: 390, height: 844 } },
+    ] as const;
+
+    for (const width of widths) {
+      await page.setViewportSize(width.size);
+      for (const tab of tabs) {
+        await page.goto(`${base}${tab.tail}`);
+        await expect(page.getByTestId(tab.testId)).toBeVisible({ timeout: 15_000 });
+        await scanAndAssert(page, `pr-${tab.key}-${width.label}`);
+      }
+    }
   });
 
   test('axe scan: Active agents + live terminal', async ({ page }) => {
