@@ -71,6 +71,11 @@
   overflow-wrap: anywhere;
 }
 
+/* Links sit inside a sentence: an underline, not colour alone, marks them. */
+.release-board__unshipped a {
+  text-decoration: underline;
+}
+
 .release-board__unshipped--bad {
   border-left-color: var(--color-accent-danger);
   background-color: var(--color-accent-danger-bg);

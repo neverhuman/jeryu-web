@@ -68,6 +68,11 @@
   overflow-wrap: anywhere;
 }
 
+/* The link sits inside a sentence: an underline, not colour alone, marks it. */
+.pull-room__unshipped a {
+  text-decoration: underline;
+}
+
 .pull-room__filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(140px, 1fr)) minmax(220px, 1.4fr);
