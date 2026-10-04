@@ -2,9 +2,11 @@
 // repositories by name, and a pull request typed as `owner/name#12` or
 // `name#12`. Pure functions; the palette renders what they return.
 
+import { repoUrl, type RepoRef } from '../pages/repoBrowserModel';
+
 /** All the palette needs of a repository row: how its pages are addressed. */
 export interface RepositoryRow {
-  id: { host: string; owner: string; name: string };
+  id: RepoRef;
 }
 
 export interface PaletteTarget {
@@ -16,8 +18,7 @@ export interface PaletteTarget {
 
 /** The front page of a repository. */
 export function repoFrontPage(row: RepositoryRow): string {
-  const { host, owner, name } = row.id;
-  return `/repos/${host}/${owner}/${name}`;
+  return repoUrl(row.id);
 }
 
 /** Every repository as a jump target, `owner/name`, sorted by name. */
@@ -65,7 +66,7 @@ export function pullTargets(query: string, rows: readonly RepositoryRow[]): Pale
     .map((row) => ({
       id: `pull:${row.id.host}:${row.id.owner}/${row.id.name}#${parsed.number}`,
       label: `Open pull request #${parsed.number} in ${row.id.owner}/${row.id.name}`,
-      path: `${repoFrontPage(row)}/pulls/${parsed.number}`,
+      path: repoUrl(row.id, 'pulls', String(parsed.number)),
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }

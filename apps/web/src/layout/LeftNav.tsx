@@ -43,6 +43,7 @@ import {
   type AttentionArea,
 } from '../pages/needsYou/needsYouModel';
 import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
+import { repoUrl } from '../pages/repoBrowserModel';
 import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
@@ -116,6 +117,15 @@ export function isSystemPath(pathname: string): boolean {
   return SYSTEM_NAV.some((item) => isActivePath(pathname, item.to));
 }
 
+/** A URL segment as the builder wants it: decoded, or as-is when it cannot be. */
+function safeDecode(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 /** Extract the repo base path from the current pathname, if any.
  *  Matches `/repos/:provider/:fullName` (where fullName may include slashes). */
 function extractRepoBase(
@@ -127,8 +137,13 @@ function extractRepoBase(
     /^\/repos\/([^/]+)\/([^/]+)\/([^/]+)(?:\/(code|pulls|agents|settings|blob|tree|work|issues)(?:\/.*)?)?$/
   );
   if (!match) return;
-  const [, provider, owner, name] = match;
-  const base = `/repos/${provider}/${owner}/${name}`;
+  const [, provider = '', owner = '', name = ''] = match;
+  // The segments are already URL-shaped, so the builder reads them decoded.
+  const base = repoUrl({
+    host: safeDecode(provider),
+    owner: safeDecode(owner),
+    name: safeDecode(name),
+  });
   const repoName = `${owner}/${name}`;
   return { base, repoName };
 }

@@ -14,6 +14,7 @@ import { Bot, GitBranch, GitMerge, Play, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { pullRoomHref } from '../../pages/pullRoomModel';
+import { repoUrl } from '../../pages/repoBrowserModel';
 
 import type { RepositorySummary } from '../../api/types';
 
@@ -30,7 +31,7 @@ export interface RepoCardProps {
 }
 
 export function repoHref(repo: RepositorySummary): string {
-  return `/repos/${encodeURIComponent(repo.id.host)}/${repo.id.owner}/${repo.id.name}`;
+  return repoUrl(repo.id);
 }
 
 export function RepoCard({ repo }: RepoCardProps): JSX.Element {
@@ -111,7 +112,7 @@ export function RepoCard({ repo }: RepoCardProps): JSX.Element {
           PRs
         </a>
         <a
-          href={`${repoHref(repo)}/agents`}
+          href={repoUrl(repo.id, 'agents')}
           className="repo-card__agents-link"
           data-testid={`repo-agents-link-${repo.id.owner}-${repo.id.name}`}
           onClick={(e) => e.stopPropagation()}

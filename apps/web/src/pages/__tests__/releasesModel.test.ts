@@ -159,7 +159,9 @@ it('does not present a partial compare as an exact PR count', () => {
     // Built from parts so the linter's no-script-url does not flag the test input itself.
     expect(safeLogUrl(['javascript', 'alert(1)'].join(':'))).toBeNull();
     expect(safeLogUrl(null)).toBeNull();
-    expect(releasePullHref('jeryu/jeryu-deploy', 48)).toBe('/repos/jeryu/jeryu/jeryu-deploy/pulls/48');
+    expect(releasePullHref('forge.example', 'jeryu/jeryu-deploy', 48)).toBe(
+      '/repos/forge.example/jeryu/jeryu-deploy/pulls/48'
+    );
   });
 });
 

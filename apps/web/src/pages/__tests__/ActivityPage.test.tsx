@@ -16,6 +16,32 @@ function renderPage(path = '/activity'): void {
 describe('ActivityPage', () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it('links a row to the forge the repository list says its repo is on', async () => {
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/repos'
+        ? json({
+            generated_at: '2026-10-04T00:00:00Z',
+            total: 1,
+            repositories: [
+              {
+                id: { id: 'r1', host: 'forge.example', owner: 'jeryu', name: 'jeryu-web' },
+                default_branch: 'main',
+              },
+            ],
+            facets: { hosts: ['forge.example'], owners: [], families: [], languages: [] },
+          })
+        : undefined
+    );
+    renderPage();
+    const gate = await screen.findByTestId('activity-event-10');
+    await waitFor(() =>
+      expect(within(gate).getByRole('link', { name: 'jeryu/jeryu-web#35' })).toHaveAttribute(
+        'href',
+        '/repos/forge.example/jeryu/jeryu-web/pulls/35'
+      )
+    );
+  });
+
   it('renders events newest first with join-key links and an expandable log tail', async () => {
     mockPipelineApi();
     renderPage();

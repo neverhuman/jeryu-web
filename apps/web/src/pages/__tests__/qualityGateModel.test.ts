@@ -107,8 +107,8 @@ describe('qualityGateModel', () => {
     expect(qualityGateHeadPath('jeryu/jeryu-web', 'abc123')).toBe(
       '/quality-gate/heads/jeryu/jeryu-web/abc123'
     );
-    expect(repoCodeHref('jeryu/jeryu-web', 'abc123', 'src/a.ts', 12)).toBe(
-      '/repos/jeryu/jeryu/jeryu-web/blob/abc123/src/a.ts#L12'
+    expect(repoCodeHref('forge.example', 'jeryu/jeryu-web', 'abc123', 'src/a.ts', 12)).toBe(
+      '/repos/forge.example/jeryu/jeryu-web/blob/abc123/src/a.ts#L12'
     );
     expect(shortSha('0863f25ab1c2d3e4')).toBe('0863f25a');
   });

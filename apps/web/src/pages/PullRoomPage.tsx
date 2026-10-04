@@ -7,6 +7,7 @@ import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
 import { useRepoPullLists } from '../hooks/useRepoPullLists';
 import { useAuth } from '../hooks/useAuth';
 import { useAttention } from '../hooks/usePipeline';
+import { useForgeHost } from '../hooks/useForgeHost';
 import { useRepositories } from '../hooks/useRepositories';
 import { useShiftTodos } from '../hooks/useShift';
 import { useRepoFamilies } from './needsYou/AttentionRow';
@@ -82,6 +83,7 @@ export function PullRoomPage(): JSX.Element {
   // repository list (already cached for /repos) says which family a repo is in.
   const family = searchParams.get('family') ?? '';
   const repositories = useRepositories({});
+  const forgeHost = useForgeHost();
   const members = useMemo(
     () => repositories.data?.repositories ?? [],
     [repositories.data]
@@ -127,8 +129,9 @@ export function PullRoomPage(): JSX.Element {
   );
 
   const everything = useMemo(
-    () => snapshot.data?.pullRequests.map(fromControlPullRequest) ?? [],
-    [snapshot.data]
+    () =>
+      snapshot.data?.pullRequests.map((pr) => fromControlPullRequest(pr, forgeHost(pr.repo))) ?? [],
+    [snapshot.data, forgeHost]
   );
   // Every family the repository list knows gets a toggle, with the server's
   // own open-pull-request count — including 0, so a quiet family is still a

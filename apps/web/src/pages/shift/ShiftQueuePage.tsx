@@ -20,6 +20,7 @@ import { ActionButton } from '../../components/action/ActionButton';
 import { FamilyPill, FamilyStrip } from '../../components/family/FamilyPills';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
+import { useForgeHost } from '../../hooks/useForgeHost';
 import {
   useOpenShiftPr,
   useShiftFamilies,
@@ -39,11 +40,11 @@ import {
   formatCost,
   todoCost,
   isLastNight,
-  repoOwners,
+  repoRefs,
   splitFinished,
   splitShifts,
   canOpenReviewPr,
-  type RepoOwners,
+  type RepoRefs,
   queueOptions,
   shortSha,
   sortShifts,
@@ -61,9 +62,9 @@ import { groupLive, liveFamilyCounts, todoFamily, todosOfFamily } from './workPa
 import '../page.css';
 import './Shift.css';
 
-type OwnersFor = (family: string) => RepoOwners;
+type RefsFor = (family: string) => RepoRefs;
 
-const NO_OWNER: RepoOwners = () => null;
+const NO_REFS: RepoRefs = () => null;
 
 export function ShiftQueuePage(): JSX.Element {
   const { user } = useAuth();
@@ -155,6 +156,7 @@ function FamilyQueue({
   isAdmin: boolean;
 }): JSX.Element {
   const [params, setParams] = useSearchParams();
+  const forgeHost = useForgeHost();
   const focusIds = useMemo(
     () => (params.get('todo') ?? '').split(',').filter(Boolean),
     [params]
@@ -176,10 +178,10 @@ function FamilyQueue({
     const shown = filterShiftTodos(scoped, filters);
     return focusIds.length > 0 ? shown.filter((t) => focusIds.includes(t.id)) : shown;
   }, [scoped, filters, focusIds]);
-  const ownersFor = useMemo<OwnersFor>(() => {
-    const byFamily = new Map(families.map((f) => [f.name, repoOwners(f)]));
-    return (name) => byFamily.get(name) ?? NO_OWNER;
-  }, [families]);
+  const refsFor = useMemo<RefsFor>(() => {
+    const byFamily = new Map(families.map((f) => [f.name, repoRefs(f, forgeHost(f.queue_repo))]));
+    return (name) => byFamily.get(name) ?? NO_REFS;
+  }, [families, forgeHost]);
   // What waits on a person is Needs you's answer, not a second one computed
   // here; the queue's own count stands in only until that answer arrives.
   const needsYou = useNeedsYou(family);
@@ -211,7 +213,7 @@ function FamilyQueue({
       { replace: true }
     );
   };
-  const tableProps = { ownersFor, isAdmin, focusIds, picked: family, onPick: onFamily };
+  const tableProps = { refsFor, isAdmin, focusIds, picked: family, onPick: onFamily };
 
   return (
     <>
@@ -297,7 +299,7 @@ function FamilyQueue({
 
       <ShiftsPanel
         families={inScope}
-        ownersFor={ownersFor}
+        refsFor={refsFor}
         isAdmin={isAdmin}
         showFinished={showFinished}
         picked={family}
@@ -308,14 +310,14 @@ function FamilyQueue({
 }
 
 interface RowFamilyProps {
-  ownersFor: OwnersFor;
+  refsFor: RefsFor;
   picked: string;
   onPick: (family: string) => void;
 }
 
 function TodoTable({
   todos,
-  ownersFor,
+  refsFor,
   isAdmin,
   focusIds,
   picked,
@@ -347,7 +349,7 @@ function TodoTable({
             <TodoRow
               key={`${todo.family}/${todo.id}`}
               todo={todo}
-              owners={ownersFor(todo.family)}
+              refs={refsFor(todo.family)}
               isAdmin={isAdmin}
               initiallyOpen={focusIds.includes(todo.id)}
               showCommits={showCommits}
@@ -389,7 +391,7 @@ function FilterSelect({
 
 function TodoRow({
   todo,
-  owners,
+  refs,
   isAdmin,
   initiallyOpen,
   showCommits,
@@ -397,7 +399,7 @@ function TodoRow({
   onPick,
 }: {
   todo: ShiftTodo;
-  owners: RepoOwners;
+  refs: RepoRefs;
   isAdmin: boolean;
   initiallyOpen: boolean;
   showCommits: boolean;
@@ -436,7 +438,7 @@ function TodoRow({
             · P{todo.priority} · {todo.mode}
             {todo.triaged ? '' : ' · untriaged'}
           </span>
-          <TodoTrace todo={todo} owners={owners} />
+          <TodoTrace todo={todo} refs={refs} />
         </td>
         <td>
           <span className={`page__pill page__pill--${statusTone(todo.status)}`}>
@@ -447,7 +449,7 @@ function TodoRow({
           {todo.repos.length > 0 ? (
             <span className="shift__commits">
               {todo.repos.map((repo) => (
-                <RepoName key={repo} owners={owners} repo={repo} />
+                <RepoName key={repo} refs={refs} repo={repo} />
               ))}
             </span>
           ) : (
@@ -472,7 +474,7 @@ function TodoRow({
             ) : (
               <span className="shift__commits">
                 {commits.map(([repo, sha]) => {
-                  const href = commitHref(todo, owners, repo);
+                  const href = commitHref(todo, refs, repo);
                   const label = `${repo}@${shortSha(sha)}`;
                   return href ? (
                     <Link key={repo} to={href} title={`${repo}@${sha}`}>
@@ -507,7 +509,7 @@ function TodoRow({
 
 function ShiftsPanel({
   families,
-  ownersFor,
+  refsFor,
   isAdmin,
   showFinished,
   picked,
@@ -547,7 +549,7 @@ function ShiftsPanel({
           key={`${family}:${shift.branch}`}
           shift={shift}
           family={family}
-          owners={ownersFor(family)}
+          refs={refsFor(family)}
           isAdmin={isAdmin}
           lastNight={isLastNight(shift, now, tzOf(family))}
           picked={picked}
@@ -603,7 +605,7 @@ interface FamilyShift {
 function ShiftCard({
   shift,
   family,
-  owners,
+  refs,
   isAdmin,
   lastNight,
   picked,
@@ -611,7 +613,7 @@ function ShiftCard({
 }: {
   shift: ShiftBranch;
   family: string;
-  owners: RepoOwners;
+  refs: RepoRefs;
   isAdmin: boolean;
   lastNight: boolean;
   picked: string;
@@ -638,7 +640,7 @@ function ShiftCard({
       </span>
       <ul className="shift-branch__repos">
         {shift.repos.map((repo) => (
-          <ShiftCardRepo key={repo.repo} owners={owners} repo={repo} />
+          <ShiftCardRepo key={repo.repo} refs={refs} repo={repo} />
         ))}
       </ul>
       {isAdmin && offerPr ? (
@@ -675,11 +677,11 @@ function ShiftCard({
 }
 
 /** One repository of a shift: its name, what is not on the base branch yet, its pull request. */
-function ShiftCardRepo({ owners, repo }: { owners: RepoOwners; repo: ShiftBranch['repos'][number] }): JSX.Element {
+function ShiftCardRepo({ refs, repo }: { refs: RepoRefs; repo: ShiftBranch['repos'][number] }): JSX.Element {
   const note = unmergedTodosNote(repo);
   return (
     <li>
-      <RepoName owners={owners} repo={repo.repo} />
+      <RepoName refs={refs} repo={repo.repo} />
       {note ? ` · ${note}` : ''}
       {repo.pr ? (
         <>

@@ -16,6 +16,7 @@ import { Breadcrumbs } from '../../components/browser/Breadcrumbs';
 import { FamilyPill } from '../../components/family/FamilyPills';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
+import { useForgeHost } from '../../hooks/useForgeHost';
 import { useShiftFamilies, useShiftTodos } from '../../hooks/useShift';
 import { ShiftError } from './shiftCommon';
 import {
@@ -23,11 +24,11 @@ import {
   commitHref,
   formatAgo,
   formatCost,
-  repoOwners,
+  repoRefs,
   shortSha,
   statusTone,
   todoCost,
-  type RepoOwners,
+  type RepoRefs,
 } from './shiftModel';
 import { RepoName, TodoActions, TodoDetail, TodoTrace, WhyStuck } from './todoParts';
 import { WORK_PATH, queueHref, todoHref } from './workPaths';
@@ -36,7 +37,7 @@ import { todoFamily } from './workPageModel';
 import '../page.css';
 import './Shift.css';
 
-const NO_OWNER: RepoOwners = () => null;
+const NO_REFS: RepoRefs = () => null;
 
 export function TodoPage(): JSX.Element {
   const { key = '' } = useParams();
@@ -47,6 +48,7 @@ export function TodoPage(): JSX.Element {
   // Every family's todos, the same request Work makes: going back is instant.
   const todos = useShiftTodos(undefined);
   const families = useShiftFamilies();
+  const forgeHost = useForgeHost();
   const matches = useMemo(
     () =>
       (todos.data?.todos ?? []).filter(
@@ -54,10 +56,10 @@ export function TodoPage(): JSX.Element {
       ),
     [todos.data, key, family]
   );
-  const owners = useMemo<RepoOwners>(() => {
+  const refs = useMemo<RepoRefs>(() => {
     const found = families.data?.families.find((f) => f.name === matches[0]?.family);
-    return found ? repoOwners(found) : NO_OWNER;
-  }, [families.data, matches]);
+    return found ? repoRefs(found, forgeHost(found.queue_repo)) : NO_REFS;
+  }, [families.data, matches, forgeHost]);
 
   let body: JSX.Element;
   if (todos.isPending) {
@@ -93,7 +95,7 @@ export function TodoPage(): JSX.Element {
       </div>
     );
   } else {
-    body = <TodoView todo={matches[0]} owners={owners} isAdmin={isAdmin} />;
+    body = <TodoView todo={matches[0]} refs={refs} isAdmin={isAdmin} />;
   }
 
   const shown = matches.length === 1 ? matches[0] : null;
@@ -113,11 +115,11 @@ export function TodoPage(): JSX.Element {
 
 function TodoView({
   todo,
-  owners,
+  refs,
   isAdmin,
 }: {
   todo: ShiftTodo;
-  owners: RepoOwners;
+  refs: RepoRefs;
   isAdmin: boolean;
 }): JSX.Element {
   const navigate = useNavigate();
@@ -149,7 +151,7 @@ function TodoView({
       </header>
 
       {stuck && todo.note ? <WhyStuck id={todo.id} note={todo.note} /> : null}
-      <TodoTrace todo={todo} owners={owners} />
+      <TodoTrace todo={todo} refs={refs} />
       {isAdmin ? (
         <p className="shift__actions">
           <TodoActions todo={todo} />
@@ -160,7 +162,7 @@ function TodoView({
         <dt>Repos</dt>
         <dd className="shift__commits">
           {todo.repos.length > 0
-            ? todo.repos.map((repo) => <RepoName key={repo} owners={owners} repo={repo} />)
+            ? todo.repos.map((repo) => <RepoName key={repo} refs={refs} repo={repo} />)
             : '—'}
         </dd>
         <dt>Attempts</dt>
@@ -175,7 +177,7 @@ function TodoView({
             <dt>Commits</dt>
             <dd className="shift__commits">
               {commits.map(([repo, sha]) => {
-                const href = commitHref(todo, owners, repo);
+                const href = commitHref(todo, refs, repo);
                 const label = `${repo}@${shortSha(sha)}`;
                 return href ? (
                   <Link key={repo} to={href} title={`${repo}@${sha}`}>

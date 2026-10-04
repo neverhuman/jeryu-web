@@ -32,6 +32,16 @@ describe('paletteModel', () => {
     expect(repoFrontPage(repos[1])).toBe('/repos/jeryu/jeryu/jeryu-web');
   });
 
+  it('names the forge each repository is on, not one of its own', () => {
+    const elsewhere: RepositoryRow[] = [
+      { id: { host: 'forge.example', owner: 'acme', name: 'widgets' } },
+    ];
+    expect(repoFrontPage(elsewhere[0])).toBe('/repos/forge.example/acme/widgets');
+    expect(pullTargets('acme/widgets#4', elsewhere).map((t) => t.path)).toEqual([
+      '/repos/forge.example/acme/widgets/pulls/4',
+    ]);
+  });
+
   it('reads owner/name#n and name#n, and nothing else', () => {
     expect(parsePullQuery('jeryu/jeryu-web#38')).toEqual({ repo: 'jeryu/jeryu-web', number: 38 });
     expect(parsePullQuery('  jeryu-web # 38 ')).toEqual({ repo: 'jeryu-web', number: 38 });

@@ -4,6 +4,7 @@
 // testable without rendering.
 
 import type { ToolFleetEntry } from '../api/types';
+import { repoRefOf, repoUrl } from './repoBrowserModel';
 
 export type AdoptionStatus = 'complete' | 'partial' | 'none';
 export type ToolFleetSortKey = 'tool' | 'category' | 'adoption' | 'adopted' | 'missing';
@@ -87,5 +88,5 @@ export function projectToolFleet(
 }
 
 export function repoHref(fullName: string): string {
-  return `/repos/${TOOL_DEFINITION_REPO.host}/${fullName}`;
+  return repoUrl(repoRefOf(TOOL_DEFINITION_REPO.host, fullName));
 }

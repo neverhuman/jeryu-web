@@ -91,19 +91,19 @@ describe('activityModel', () => {
     expect(eventTone({ needs_human: false, outcome: null })).toBe('info');
   });
 
-  it('links an event to its todo, its PR, or its repo', () => {
+  it('links an event to its todo, its PR, or its repo, on the forge it names', () => {
     const todo = EVENTS.find((e) => e.seq === 9)!;
-    expect(eventLinks(todo)).toEqual([
+    expect(eventLinks(todo, 'forge.example')).toEqual([
       { label: 'todo 20260919-121041-9d0b27', to: '/work/20260919-121041-9d0b27' },
     ]);
     const merged = EVENTS.find((e) => e.seq === 11)!;
-    expect(eventLinks(merged)).toEqual([
-      { label: 'jeryu/jeryu-web#35', to: '/repos/jeryu/jeryu/jeryu-web/pulls/35' },
+    expect(eventLinks(merged, 'forge.example')).toEqual([
+      { label: 'jeryu/jeryu-web#35', to: '/repos/forge.example/jeryu/jeryu-web/pulls/35' },
     ]);
     const staged = EVENTS.find((e) => e.seq === 12)!;
-    expect(eventLinks(staged)).toEqual([{ label: 'jeryu/jeryu-deploy', to: '/repos/jeryu/jeryu/jeryu-deploy' }]);
+    expect(eventLinks(staged, 'forge.example')).toEqual([{ label: 'jeryu/jeryu-deploy', to: '/repos/forge.example/jeryu/jeryu-deploy' }]);
     // A todo id without a family cannot be located in a queue.
-    expect(eventLinks(pipelineEvent({ seq: 1, kind: 'todo.claimed', todo_id: 'x' }))).toEqual([]);
+    expect(eventLinks(pipelineEvent({ seq: 1, kind: 'todo.claimed', todo_id: 'x' }), 'forge.example')).toEqual([]);
   });
 
   it('formats durations and clock times', () => {
@@ -202,17 +202,17 @@ describe('activityModel', () => {
       pr: 57,
       summary: 'jeryu/jeryu-deploy#57 jeryu-deploy/required success in 176s',
     });
-    expect(summaryParts(gate)).toEqual({
+    expect(summaryParts(gate, 'forge.example')).toEqual({
       before: '',
-      link: { label: 'jeryu/jeryu-deploy#57', to: '/repos/jeryu/jeryu/jeryu-deploy/pulls/57' },
+      link: { label: 'jeryu/jeryu-deploy#57', to: '/repos/forge.example/jeryu/jeryu-deploy/pulls/57' },
       after: ' jeryu-deploy/required success in 176s',
     });
     const deploy = pipelineEvent({ seq: 2, kind: 'deploy.status', repo: 'jeryu/jeryu-deploy', summary: 'production deploy: success' });
-    expect(summaryParts(deploy).before).toBe('production deploy: success ');
-    expect(summaryParts(deploy).link?.label).toBe('jeryu/jeryu-deploy');
+    expect(summaryParts(deploy, 'forge.example').before).toBe('production deploy: success ');
+    expect(summaryParts(deploy, 'forge.example').link?.label).toBe('jeryu/jeryu-deploy');
     const bare = pipelineEvent({ seq: 3, kind: 'worker.error', summary: 'forge 502' });
-    expect(summaryParts(bare)).toEqual({ before: 'forge 502', link: null, after: '' });
-    expect(primaryLink(pipelineEvent({ seq: 4, kind: 'todo.claimed', family: 'jeryu', todo_id: 't1' }))?.label).toBe('todo t1');
+    expect(summaryParts(bare, 'forge.example')).toEqual({ before: 'forge 502', link: null, after: '' });
+    expect(primaryLink(pipelineEvent({ seq: 4, kind: 'todo.claimed', family: 'jeryu', todo_id: 't1' }), 'forge.example')?.label).toBe('todo t1');
   });
 });
 

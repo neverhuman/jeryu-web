@@ -11,7 +11,7 @@ export const DEPLOY_COMMAND =
   'scripts/release/deploy-release.sh prod-20260919T130210Z-01dfe68-unsigned';
 
 /** Where the deploy command runs, as the server phrases it (`action.run_in`). */
-export const DEPLOY_RUN_IN = 'xbabe0, in a jeryu/jeryu-deploy checkout';
+export const DEPLOY_RUN_IN = 'runner-1.example, in a jeryu/jeryu-deploy checkout';
 
 function minutesAgo(minutes: number): string {
   return new Date(Date.now() - minutes * 60_000).toISOString();

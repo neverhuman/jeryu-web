@@ -14,6 +14,7 @@ import type {
   DeploymentWithStatus,
   EnvironmentSummary,
 } from '../api/types/deployments';
+import { repoRefOf, repoUrl } from './repoBrowserModel';
 import { queueHref, repoWorkHref, WORK_PATH } from './shift/workPaths';
 import { IN_FLIGHT_PATH } from './pullRoomModel';
 
@@ -74,9 +75,9 @@ export function safeLogUrl(url: string | null | undefined): string | null {
   return /^https?:\/\//i.test(url) ? url : null;
 }
 
-/** SPA path of a PR in `owner/name`. */
-export function releasePullHref(repoId: string, number: number): string {
-  return `/repos/jeryu/${repoId}/pulls/${number}`;
+/** SPA path of a PR in `owner/name`, on the forge that repository is on. */
+export function releasePullHref(host: string, repoId: string, number: number): string {
+  return repoUrl(repoRefOf(host, repoId), 'pulls', String(number));
 }
 
 /** Merged PRs whose head is among `compare.commits`, newest first. */

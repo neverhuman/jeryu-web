@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { PipelineEvent } from '../../api/types';
+import { useForgeHost } from '../../hooks/useForgeHost';
 import { formatCost, shortSha } from '../shift/shiftModel';
 import {
   eventLabel,
@@ -36,8 +37,10 @@ export function EventRow({
   const [open, setOpen] = useState(defaultOpen);
   const needsHuman = event.needs_human && !resolved;
   const tone = eventTone({ ...event, needs_human: needsHuman });
-  const summary = summaryParts(event);
-  const others = eventLinks(event).filter((link) => link.to !== summary.link?.to);
+  const forgeHost = useForgeHost();
+  const host = forgeHost(event.repo ?? undefined);
+  const summary = summaryParts(event, host);
+  const others = eventLinks(event, host).filter((link) => link.to !== summary.link?.to);
   const detailId = `activity-event-detail-${event.seq}`;
   const toggleLabel = open ? 'Hide' : event.log_tail ? 'Log' : event.reason ? 'Why' : 'More';
   const quiet = !open && !hasDetail(event);

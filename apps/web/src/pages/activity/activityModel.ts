@@ -2,6 +2,7 @@
 // live dock, and the per-PR events panel. Deterministic given `now`.
 
 import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
+import { repoRefOf, repoUrl } from '../repoBrowserModel';
 import { todoHref } from '../shift/workPaths';
 
 export const ACTIVITY_PATH = '/activity';
@@ -180,28 +181,28 @@ export interface EventLink {
   to: string;
 }
 
-/** SPA path of a forge repo given as `owner/name`. */
-export function repoHref(repo: string): string {
-  return `/repos/jeryu/${repo}`;
+/** SPA path of a forge repo given as `owner/name`, on the forge it is on. */
+export function repoHref(host: string, repo: string): string {
+  return repoUrl(repoRefOf(host, repo));
 }
 
-export function pullHref(repo: string, pr: number): string {
-  return `${repoHref(repo)}/pulls/${pr}`;
+export function pullHref(host: string, repo: string, pr: number): string {
+  return repoUrl(repoRefOf(host, repo), 'pulls', String(pr));
 }
 
 /**
  * Where an event's join keys lead: its todo, its PR, its repo. There is no
  * commit page in the app, so a sha is shown as text and the PR link carries it.
  */
-export function eventLinks(event: PipelineEvent): EventLink[] {
+export function eventLinks(event: PipelineEvent, host: string): EventLink[] {
   const links: EventLink[] = [];
   if (event.todo_id && event.family) {
     links.push({ label: `todo ${event.todo_id}`, to: todoHref(event.todo_id) });
   }
   if (event.repo && event.pr) {
-    links.push({ label: `${event.repo}#${event.pr}`, to: pullHref(event.repo, event.pr) });
+    links.push({ label: `${event.repo}#${event.pr}`, to: pullHref(host, event.repo, event.pr) });
   } else if (event.repo) {
-    links.push({ label: event.repo, to: repoHref(event.repo) });
+    links.push({ label: event.repo, to: repoHref(host, event.repo) });
   }
   return links;
 }
@@ -437,14 +438,14 @@ export function hasMoreFilters(filters: ActivityFilters): boolean {
 }
 
 /** The event's main subject as one link: its pull request, else its todo, else its repo. */
-export function primaryLink(event: PipelineEvent): EventLink | null {
+export function primaryLink(event: PipelineEvent, host: string): EventLink | null {
   if (event.repo && event.pr) {
-    return { label: `${event.repo}#${event.pr}`, to: pullHref(event.repo, event.pr) };
+    return { label: `${event.repo}#${event.pr}`, to: pullHref(host, event.repo, event.pr) };
   }
   if (event.todo_id && event.family) {
     return { label: `todo ${event.todo_id}`, to: todoHref(event.todo_id) };
   }
-  if (event.repo) return { label: event.repo, to: repoHref(event.repo) };
+  if (event.repo) return { label: event.repo, to: repoHref(host, event.repo) };
   return null;
 }
 
@@ -459,8 +460,8 @@ export interface SummaryParts {
   after: string;
 }
 
-export function summaryParts(event: PipelineEvent): SummaryParts {
-  const link = primaryLink(event);
+export function summaryParts(event: PipelineEvent, host: string): SummaryParts {
+  const link = primaryLink(event, host);
   if (!link) return { before: event.summary, link: null, after: '' };
   const at = event.summary.indexOf(link.label);
   if (at < 0) return { before: `${event.summary} `, link, after: '' };

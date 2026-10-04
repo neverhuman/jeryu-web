@@ -6,6 +6,7 @@
 
 import { Link } from 'react-router-dom';
 
+import { useForgeHost } from '../../hooks/useForgeHost';
 import { pullHref } from '../activity/activityModel';
 import { relativeTime } from '../../components/repo/relativeTime';
 import type { RunnerNetworkNode } from '../runnerNetworkModel';
@@ -67,6 +68,7 @@ function AutomationRow({
   nowMs: number;
   places: RunnerPlaces;
 }): JSX.Element {
+  const forgeHost = useForgeHost();
   const id = timer.runnerId.replace(/[^a-zA-Z0-9_-]/g, '_');
   const name = automationName(timer);
   const offline = automationOffline(timer, nowMs);
@@ -108,7 +110,7 @@ function AutomationRow({
               <span className={`fleet__tone--${did.tone}`}>
                 {did.before}
                 {did.pull && did.link ? (
-                  <Link to={pullHref(did.pull.repo, did.pull.pr)}>
+                  <Link to={pullHref(forgeHost(did.pull.repo), did.pull.repo, did.pull.pr)}>
                     {did.link}
                   </Link>
                 ) : null}

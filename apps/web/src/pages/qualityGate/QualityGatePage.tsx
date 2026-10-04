@@ -12,7 +12,9 @@ import { Link } from 'react-router-dom';
 
 import type { QualityGateDimensionSummary, QualityGateOverview } from '../../api/types';
 import { EmptyState, LoadingState } from '../../components/state';
+import { useForgeHost } from '../../hooks/useForgeHost';
 import { useQualityGateOverview, QUALITY_GATE_WINDOW_DAYS } from '../../hooks/useQualityGate';
+import { repoRefOf, repoUrl } from '../repoBrowserModel';
 import { QualityGateChart } from './QualityGateChart';
 import { QualityGateQueryState } from './QualityGateQueryState';
 import {
@@ -90,6 +92,7 @@ function QualityGateOverviewBody({
 }): JSX.Element {
   const rules = sortRules(data.rules);
   const repos = sortRepos(data.repos);
+  const forgeHost = useForgeHost();
   const top = topFailingRule(data.rules);
   const latest = countsLatestHeads(data.rules);
 
@@ -218,7 +221,7 @@ function QualityGateOverviewBody({
               {repos.map((repo) => (
                 <tr key={repo.repo} data-testid={`quality-gate-repo-${repo.repo}`}>
                   <td>
-                    <Link to={`/repos/jeryu/${repo.repo}`}>{repo.repo}</Link>
+                    <Link to={repoUrl(repoRefOf(forgeHost(repo.repo), repo.repo))}>{repo.repo}</Link>
                   </td>
                   <td className="quality-gate__num">{repo.heads_scored}</td>
                   <td className="quality-gate__num">{repo.heads_failed}</td>

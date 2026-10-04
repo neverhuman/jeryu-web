@@ -22,15 +22,15 @@ import {
   traceSummary,
   untilInputDefault,
   untilRfc3339,
-  type RepoOwners,
+  type RepoRefs,
   type TodoActionChoice,
   type TodoActionId,
 } from './shiftModel';
 import { todoHref } from './workPaths';
 
 /** A family repo by name: a link to its code when this forge hosts it. */
-export function RepoName({ owners, repo }: { owners: RepoOwners; repo: string }): JSX.Element {
-  const href = repoCodeHref(owners, repo);
+export function RepoName({ refs, repo }: { refs: RepoRefs; repo: string }): JSX.Element {
+  const href = repoCodeHref(refs, repo);
   return href ? <Link to={href}>{repo}</Link> : <span>{repo}</span>;
 }
 
@@ -67,9 +67,9 @@ export function WhyStuck({ id, note }: { id: string; note: string }): JSX.Elemen
 }
 
 /** Queued > Claimed > Done > PR > Merged > Released, with the PR step linked. */
-export function TodoTrace({ todo, owners }: { todo: ShiftTodo; owners: RepoOwners }): JSX.Element {
+export function TodoTrace({ todo, refs }: { todo: ShiftTodo; refs: RepoRefs }): JSX.Element {
   const steps = todoTrace(todo);
-  const prHref = todoPrHref(todo, owners);
+  const prHref = todoPrHref(todo, refs);
   return (
     <ol className="shift-trace" aria-label={`Lifecycle of ${todo.id}: ${traceSummary(steps)}`}>
       {steps.map((step) => (

@@ -11,6 +11,7 @@ import type {
   QualityGateRepoSummary,
   QualityGateRuleSummary,
 } from '../../api/types';
+import { blobPath } from '../repoBrowserModel';
 
 /** Where the Quality gate pages live. */
 export const QUALITY_GATE_PATH = '/quality-gate';
@@ -28,8 +29,14 @@ export function qualityGateHeadPath(repo: string, sha: string): string {
 }
 
 /** The repository's own code page, at the scored commit, on the flagged line. */
-export function repoCodeHref(repo: string, sha: string, path: string, line: number): string {
-  return `/repos/jeryu/${repo}/blob/${encodeURIComponent(sha)}/${path}#L${line}`;
+export function repoCodeHref(
+  host: string,
+  repo: string,
+  sha: string,
+  path: string,
+  line: number
+): string {
+  return `${blobPath(host, repo, sha, path)}#L${line}`;
 }
 
 export function shortSha(sha: string): string {

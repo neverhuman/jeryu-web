@@ -234,7 +234,9 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(localTask).not.toHaveAttribute('aria-label', /Open terminal/);
 
     await taskCard.click();
-    await page.waitForURL(/\/repos\/jeryu\/jeryu%2Fveox\/agents\/ar-000001/);
+    // The repo's owner and name stay separate segments, which is the only
+    // spelling the repo router reads.
+    await page.waitForURL(/\/repos\/jeryu\/jeryu\/veox\/agents\/ar-000001/);
   });
 
   test('task card without repo remains non-interactive @action:fleet.noninteractive_card', async ({ page }) => {
@@ -620,7 +622,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(task).toContainText('editbot');
     await expect(task).toHaveAttribute(
       'href',
-      '/repos/jeryu/jeryu%2Fveox/agents/ar-000001'
+      '/repos/jeryu/jeryu/veox/agents/ar-000001'
     );
   });
 

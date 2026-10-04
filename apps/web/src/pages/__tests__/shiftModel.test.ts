@@ -26,8 +26,7 @@ import {
   repoCodeHref,
   repoNeedsReviewPr,
   unmergedTodosNote,
-  repoOwners,
-  repoPath,
+  repoRefs,
   shiftIsLive,
   splitFinished,
   slotLabel,
@@ -137,8 +136,9 @@ describe('shiftModel', () => {
   });
 
   it('builds repo paths and relative times', () => {
-    expect(repoPath('jeryu', 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web');
-    expect(repoPath('jeryu', 'other/x')).toBe('/repos/jeryu/other/x');
+    const refs = repoRefs({ queue_repo: 'jeryu/jeryu-todo', repos: [] }, 'forge.example');
+    expect(repoCodeHref(refs, 'jeryu-web')).toBe('/repos/forge.example/jeryu/jeryu-web');
+    expect(repoCodeHref(refs, 'other/x')).toBe('/repos/forge.example/other/x');
     const now = new Date('2026-09-19T09:00:00Z');
     expect(formatAgo('2026-09-19T08:59:50Z', now)).toBe('10s ago');
     expect(formatAgo('2026-09-19T10:00:00Z', now)).toBe('in 1h');
@@ -248,7 +248,7 @@ describe('slotLabel', () => {
   });
 
   it('links a commit to the PR that carries it, else to the code', () => {
-    const owners = repoOwners({ queue_repo: 'jeryu/jeryu-todo', repos: [] });
+    const owners = repoRefs({ queue_repo: 'jeryu/jeryu-todo', repos: [] }, 'jeryu');
     const pr = { repo: 'jeryu-web', number: 35, state: 'open', url: '/repos/jeryu/jeryu/jeryu-web/pulls/35' };
     expect(commitHref({ pr }, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/pulls/35');
     expect(commitHref({ pr: { ...pr, repo: 'jeryu/jeryu-web' } }, owners, 'jeryu-web')).toBe(
@@ -265,19 +265,19 @@ describe('slotLabel', () => {
 
   it('links a family repo under the owner that hosts it, or not at all', () => {
     // The jain queue is jain-split/jain-todo; its code is veox/*.
-    const jain = repoOwners({
+    const jain = repoRefs({
       queue_repo: 'jain-split/jain-todo',
       repos: [
         { name: 'jain-deploy', order: 1, owner: 'veox' },
         { name: 'jain-elsewhere', order: 2, owner: null },
         { name: 'jain-report', order: 0 },
       ],
-    });
-    expect(repoCodeHref(jain, 'jain-deploy')).toBe('/repos/jeryu/veox/jain-deploy');
+    }, 'forge.example');
+    expect(repoCodeHref(jain, 'jain-deploy')).toBe('/repos/forge.example/veox/jain-deploy');
     expect(repoCodeHref(jain, 'jain-elsewhere')).toBeNull();
     // An older server names no owner: the queue's owner is the best guess.
-    expect(repoCodeHref(jain, 'jain-report')).toBe('/repos/jeryu/jain-split/jain-report');
-    expect(repoCodeHref(jain, 'veox/jain-web')).toBe('/repos/jeryu/veox/jain-web');
+    expect(repoCodeHref(jain, 'jain-report')).toBe('/repos/forge.example/jain-split/jain-report');
+    expect(repoCodeHref(jain, 'veox/jain-web')).toBe('/repos/forge.example/veox/jain-web');
     expect(commitHref({}, jain, 'jain-elsewhere')).toBeNull();
   });
 

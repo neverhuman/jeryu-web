@@ -14,6 +14,7 @@ import type {
   ShiftTodo,
   ShiftWorker,
 } from '../../api/types';
+import { repoRefOf, repoUrl, type RepoRef } from '../repoBrowserModel';
 
 export const SHIFT_STATUSES = ['open', 'claimed', 'done', 'blocked', 'handoff', 'closed'] as const;
 export const SHIFT_MODES = ['now', 'night'] as const;
@@ -205,39 +206,37 @@ export function ownerOf(queueRepo: string | undefined): string {
   return queueRepo?.split('/')[0] || 'jeryu';
 }
 
-/** Owner a family repo is hosted under, or null when it is not on this forge. */
-export type RepoOwners = (repo: string) => string | null;
+/** A family repo as a link needs it, or null when it is not on this forge. */
+export type RepoRefs = (repo: string) => RepoRef | null;
 
 /**
  * A family's code may live under another owner than its queue (the jain queue
  * is jain-split/jain-todo, its repos are veox/*). The server says which; an
- * older server says nothing and the queue's owner is the best guess.
+ * older server says nothing and the queue's owner is the best guess. `host` is
+ * the forge the family's repositories are on, so links name that one.
  */
-export function repoOwners(
-  family: Pick<ShiftFamily, 'queue_repo' | 'repos'> | undefined
-): RepoOwners {
+export function repoRefs(
+  family: Pick<ShiftFamily, 'queue_repo' | 'repos'> | undefined,
+  host: string
+): RepoRefs {
   const fallback = ownerOf(family?.queue_repo);
   const known = new Map<string, string | null>();
   for (const repo of family?.repos ?? []) {
     if (repo.owner !== undefined) known.set(repo.name, repo.owner);
   }
   return (repo) => {
-    if (repo.includes('/')) return repo.split('/')[0] ?? fallback;
-    return known.has(repo) ? (known.get(repo) ?? null) : fallback;
+    // Repos may come bare (`jeryu-web`) or already qualified (`veox/jeryu-web`).
+    if (repo.includes('/')) return repoRefOf(host, repo);
+    const owner = known.has(repo) ? (known.get(repo) ?? null) : fallback;
+    return owner === null ? null : repoRefOf(host, `${owner}/${repo}`);
   };
 }
 
 /** SPA path of a family repo's code, or null when the repo is not hosted here. */
-export function repoCodeHref(owners: RepoOwners, repo: string): string | null {
-  const owner = owners(repo);
+export function repoCodeHref(refs: RepoRefs, repo: string): string | null {
+  const ref = refs(repo);
   // The repository front page is where its code is read (README + Files panel).
-  return owner === null ? null : repoPath(owner, repo);
-}
-
-/** SPA path for a family repo; repos may come bare (`jeryu-web`) or qualified. */
-export function repoPath(owner: string, repo: string): string {
-  const full = repo.includes('/') ? repo : `${owner}/${repo}`;
-  return `/repos/jeryu/${full}`;
+  return ref === null ? null : repoUrl(ref);
 }
 
 export function shortSha(sha: string): string {
@@ -347,21 +346,21 @@ export function attemptSummary(todo: Pick<ShiftTodo, 'attempts' | 'worked_by'>):
 /** Where a commit chip leads: the PR that carries it, else the repo's code, else nowhere. */
 export function commitHref(
   todo: Pick<ShiftTodo, 'pr'>,
-  owners: RepoOwners,
+  refs: RepoRefs,
   repo: string
 ): string | null {
   const pr = todo.pr;
-  if (pr && bareRepo(pr.repo) === bareRepo(repo)) return todoPrHref(todo, owners);
-  return repoCodeHref(owners, repo);
+  if (pr && bareRepo(pr.repo) === bareRepo(repo)) return todoPrHref(todo, refs);
+  return repoCodeHref(refs, repo);
 }
 
 /** SPA path of the todo's shift PR (the server's `url` is already an app path). */
-export function todoPrHref(todo: Pick<ShiftTodo, 'pr'>, owners: RepoOwners): string | null {
+export function todoPrHref(todo: Pick<ShiftTodo, 'pr'>, refs: RepoRefs): string | null {
   const pr = todo.pr;
   if (!pr) return null;
   if (pr.url && pr.url.startsWith('/') && !pr.url.startsWith('//')) return pr.url;
-  const owner = owners(pr.repo);
-  return owner === null ? null : `${repoPath(owner, pr.repo)}/pulls/${pr.number}`;
+  const ref = refs(pr.repo);
+  return ref === null ? null : repoUrl(ref, 'pulls', String(pr.number));
 }
 
 /** A todo nobody has to think about any more: it is done, or it was closed. */

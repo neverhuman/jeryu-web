@@ -14,6 +14,33 @@ import { OVERVIEW } from './qualityGateTestData';
 afterEach(() => vi.restoreAllMocks());
 
 describe('QualityGatePage', () => {
+  it('links a repository to the forge the repository list says it is on', async () => {
+    mockQualityGateApi((req) =>
+      req.pathname === '/api/v1/repos'
+        ? json({
+            generated_at: '2026-10-04T00:00:00Z',
+            total: 1,
+            repositories: [
+              {
+                id: { id: 'r1', host: 'forge.example', owner: 'jeryu', name: 'jeryu-web' },
+                default_branch: 'main',
+              },
+            ],
+            facets: { hosts: ['forge.example'], owners: [], families: [], languages: [] },
+          })
+        : undefined
+    );
+    renderAt('/quality-gate', '/quality-gate', <QualityGatePage />);
+
+    const repoRow = await screen.findByTestId('quality-gate-repo-jeryu/jeryu-web');
+    await waitFor(() =>
+      expect(within(repoRow).getByRole('link', { name: 'jeryu/jeryu-web' })).toHaveAttribute(
+        'href',
+        '/repos/forge.example/jeryu/jeryu-web'
+      )
+    );
+  });
+
   it('shows the fail rate, what would have been blocked, and both tables', async () => {
     const calls = mockQualityGateApi();
     renderAt('/quality-gate', '/quality-gate', <QualityGatePage />);

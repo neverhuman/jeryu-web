@@ -15,7 +15,10 @@ import {
   parsePanelChoice,
   parseRefAndPath,
   refCountsLabel,
+  REPO_TABS,
   repoFrontPath,
+  repoRefOf,
+  repoUrl,
   revealFolderState,
 } from '../repoBrowserModel';
 
@@ -25,6 +28,42 @@ describe('repoBrowserModel', () => {
     expect(blobPath('jeryu', 'root/bullet-kernel', 'main', 'docs/testing.md')).toBe(
       '/repos/jeryu/root/bullet-kernel/blob/main/docs/testing.md'
     );
+  });
+
+  it('names the forge from the data, on every tab', () => {
+    const ref = { host: 'forge.example', owner: 'acme', name: 'widgets' };
+    expect(repoUrl(ref)).toBe('/repos/forge.example/acme/widgets');
+    expect(repoUrl(ref, 'pulls')).toBe('/repos/forge.example/acme/widgets/pulls');
+    expect(repoUrl(ref, 'pulls', '12')).toBe('/repos/forge.example/acme/widgets/pulls/12');
+    expect(repoUrl(ref, 'agents', 'run-42')).toBe(
+      '/repos/forge.example/acme/widgets/agents/run-42'
+    );
+    expect(repoUrl(ref, 'blob', 'main/src/lib.rs')).toBe(
+      '/repos/forge.example/acme/widgets/blob/main/src/lib.rs'
+    );
+    // Every tab the router dispatches is addressable, and each is one segment.
+    for (const tab of REPO_TABS) {
+      expect(repoUrl(ref, tab)).toBe(`/repos/forge.example/acme/widgets/${tab}`);
+    }
+  });
+
+  it('encodes each segment of a ref taken from `owner/name`', () => {
+    expect(repoRefOf('forge.example', 'odd owner/na me')).toEqual({
+      host: 'forge.example',
+      owner: 'odd owner',
+      name: 'na me',
+    });
+    expect(repoUrl(repoRefOf('forge.example', 'odd owner/na me'))).toBe(
+      '/repos/forge.example/odd%20owner/na%20me'
+    );
+    expect(repoRefOf('forge.example', 'bare')).toEqual({
+      host: 'forge.example',
+      owner: '',
+      name: 'bare',
+    });
+    // A read model that names a repository bare leaves out the owner segment
+    // rather than leaving an empty one in the path.
+    expect(repoUrl(repoRefOf('forge.example', 'bare'))).toBe('/repos/forge.example/bare');
   });
 
   it('splits a blob splat into ref and path', () => {

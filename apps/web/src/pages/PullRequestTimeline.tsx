@@ -20,6 +20,7 @@ import {
 } from './pullRepoGroupsModel';
 import { draftBadgeLabel } from './pullDraftModel';
 import { pullRequestPath } from './pullRoomModel';
+import { repoRefOf, repoUrl } from './repoBrowserModel';
 import { UNKNOWN_LADDER, type ReleaseLadder } from './releaseChannelsModel';
 import { releasesHref } from './releasesModel';
 import { repoWorkHref } from './shift/workPaths';
@@ -139,7 +140,7 @@ function RepoSection({
     <section className="pull-repo" data-testid={`pull-repo-${group.repo}`}>
       {showRepo ? (
         <h2 className="pull-repo__head">
-          <Link to={`/repos/${group.host}/${group.repo}/pulls`}>{group.repo}</Link>
+          <Link to={repoUrl(repoRefOf(group.host, group.repo), 'pulls')}>{group.repo}</Link>
           <RepoCounts group={group} onHistory={openHistory} />
         </h2>
       ) : null}

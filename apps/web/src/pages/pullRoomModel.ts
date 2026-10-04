@@ -5,6 +5,7 @@ import type {
   EvidenceState,
   PullRequestSummary,
 } from '../api/types';
+import { repoRefOf, repoUrl } from './repoBrowserModel';
 
 /** Where every change between claimed work and release is shown (once `/pull-room`). */
 export const IN_FLIGHT_PATH = '/in-flight';
@@ -94,10 +95,11 @@ const LANE_ORDER: PullLaneId[] = [
   'merged_closed',
 ];
 
-export function fromControlPullRequest(pr: ControlPullRequest): PullListItem {
+/** The control-plane snapshot names no forge; `host` says which one it is on. */
+export function fromControlPullRequest(pr: ControlPullRequest, host: string): PullListItem {
   return {
     repo: pr.repo,
-    repoHost: 'jeryu',
+    repoHost: host,
     repoId: null,
     number: pr.number,
     title: pr.title,
@@ -114,7 +116,7 @@ export function fromControlPullRequest(pr: ControlPullRequest): PullListItem {
     evidenceState: pr.stateEvidence,
     checkPosture: checkPosture(pr.checks),
     checks: pr.checks,
-    url: pullRequestPath('jeryu', pr.repo, pr.number),
+    url: pullRequestPath(host, pr.repo, pr.number),
     updatedAt: pr.updatedAt ?? null,
   };
 }
@@ -333,8 +335,7 @@ export function scopeToRepos(
  * the same page that the nav and breadcrumbs did not recognise.
  */
 export function pullRequestPath(host: string, fullName: string, number: number): string {
-  const name = fullName.split('/').map(encodeURIComponent).join('/');
-  return `/repos/${encodeURIComponent(host)}/${name}/pulls/${number}`;
+  return repoUrl(repoRefOf(host, fullName), 'pulls', String(number));
 }
 
 /** `?view=` values that mean the lane board (`queue` is its older name). */

@@ -16,7 +16,9 @@
 
 import { Link } from 'react-router-dom';
 
+import { useForgeHost } from '../../hooks/useForgeHost';
 import { pullHref } from '../activity/activityModel';
+import { repoRefOf, repoUrl } from '../repoBrowserModel';
 import { relativeTime } from '../../components/repo/relativeTime';
 import {
   codeLabel,
@@ -314,8 +316,9 @@ function NowSubject({
   subject: string;
   pull: PullRef | null;
 }): JSX.Element {
+  const forgeHost = useForgeHost();
   const task = node.tasks[0];
-  const terminal = task ? taskTerminalPath(task) : undefined;
+  const terminal = task ? taskTerminalPath(task, forgeHost(task.repo ?? undefined)) : undefined;
   const more = node.tasks.length - 1;
   const extra =
     more > 0 ? <span className="fleet__node-muted"> +{more}</span> : null;
@@ -361,12 +364,11 @@ function NowSubject({
 
 /** Build the drill-down URL for a task that has both a repo and an agent run id. */
 function taskTerminalPath(
-  task: RunnerNetworkNode['tasks'][number]
+  task: RunnerNetworkNode['tasks'][number],
+  host: string
 ): string | undefined {
   if (!task.repo || !task.agentRunId) return;
-  const provider = 'jeryu';
-  const fullName = encodeURIComponent(task.repo);
-  return `/repos/${encodeURIComponent(provider)}/${fullName}/agents/${encodeURIComponent(task.agentRunId)}`;
+  return repoUrl(repoRefOf(host, task.repo), 'agents', encodeURIComponent(task.agentRunId));
 }
 
 function testIdSegment(value: string): string {
@@ -380,8 +382,9 @@ function LastSubject({ last }: { last: RowLast }): JSX.Element {
 
 /** `owner/name#pr`, linked to the pull request it names. */
 function PullLink({ pull }: { pull: PullRef }): JSX.Element {
+  const forgeHost = useForgeHost();
   return (
-    <Link to={pullHref(pull.repo, pull.pr)}>
+    <Link to={pullHref(forgeHost(pull.repo), pull.repo, pull.pr)}>
       {pull.repo}#{pull.pr}
     </Link>
   );

@@ -14,14 +14,64 @@ export const FILES_PANEL_KEY = 'jeryu.repoFilesPanel.v1';
 /** Below this width the panel starts closed: it would crowd the content. */
 export const FILES_PANEL_MIN_WIDTH = 1100;
 
+/**
+ * The repository sub-pages a link can address. `RepoRouter` dispatches on
+ * exactly these segments, so a link that names one lands on that tab.
+ */
+export const REPO_TABS = [
+  'agents',
+  'blob',
+  'code',
+  'commit',
+  'pulls',
+  'settings',
+  'tree',
+] as const;
+
+export type RepoTab = (typeof REPO_TABS)[number];
+
+/** A repository as a link needs it: which forge, and which repository on it. */
+export interface RepoRef {
+  host: string;
+  owner: string;
+  name: string;
+}
+
+/** A ref from a host and `owner/name`, the shape most payloads carry. */
+export function repoRefOf(host: string, fullName: string): RepoRef {
+  const slash = fullName.indexOf('/');
+  if (slash === -1) return { host, owner: '', name: fullName };
+  return { host, owner: fullName.slice(0, slash), name: fullName.slice(slash + 1) };
+}
+
+/**
+ * The one builder of in-app repository URLs:
+ * `/repos/<host>/<owner>/<name>[/<tab>[/<tail>]]`.
+ *
+ * Nothing else spells that path: the forge a repository lives on comes from
+ * the data, so a link never names one host while the repository is on another.
+ * `tail` is appended as given — it may hold slashes (a ref and a file path)
+ * and a `#` fragment, so its caller encodes its own segments. A ref with no
+ * owner (a read model that names a repository bare) leaves out that segment
+ * rather than leaving an empty one.
+ */
+export function repoUrl(ref: RepoRef, tab?: RepoTab, tail?: string): string {
+  const segments = [ref.host, ref.owner, ref.name]
+    .filter((segment) => segment !== '')
+    .map(encodeURIComponent);
+  const base = `/repos/${segments.join('/')}`;
+  if (!tab) return base;
+  return tail ? `${base}/${tab}/${tail}` : `${base}/${tab}`;
+}
+
 /** `/repos/<provider>/<owner>/<name>`: the repository's front page. */
 export function repoFrontPath(provider: string, fullName: string): string {
-  return `/repos/${encodeURIComponent(provider)}/${fullName}`;
+  return repoUrl(repoRefOf(provider, fullName));
 }
 
 /** The page of one file at one ref. */
 export function blobPath(provider: string, fullName: string, ref: string, path: string): string {
-  return `${repoFrontPath(provider, fullName)}/blob/${encodeURIComponent(ref)}/${path}`;
+  return repoUrl(repoRefOf(provider, fullName), 'blob', `${encodeURIComponent(ref)}/${path}`);
 }
 
 /** Split a blob splat (`<ref>/<path…>`) into its ref and path. */

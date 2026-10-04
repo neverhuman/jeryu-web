@@ -34,6 +34,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useAttention, usePins } from '../hooks/usePipeline';
 
 import { useReleaseOverview } from '../hooks/useReleaseOverview';
+import { useForgeHost } from '../hooks/useForgeHost';
 import { useRepositories } from '../hooks/useRepositories';
 import { commandPlace, findAttention } from './needsYou/needsYouModel';
 import { behindPinLines } from './pinsModel';
@@ -328,6 +329,7 @@ function EnvironmentTable({
 }
 
 function EnvironmentRowView({ row, repoId }: { row: EnvironmentRow; repoId: string }): JSX.Element {
+  const forgeHost = useForgeHost();
   if (!row.current) {
     // Configured, nothing live: the environments never deployed to are named
     // in a line instead (see splitEnvironments), so they reach no table.
@@ -378,7 +380,7 @@ function EnvironmentRowView({ row, repoId }: { row: EnvironmentRow; repoId: stri
               <ul className="releases__prs">
                 {row.unshipped.map((pr) => (
                   <li key={pr.number}>
-                    <Link to={releasePullHref(repoId, pr.number)}>
+                    <Link to={releasePullHref(forgeHost(repoId), repoId, pr.number)}>
                       #{pr.number} {pr.title}
                     </Link>{' '}
                     <span className="releases__muted">· {pr.author}</span>

@@ -4,6 +4,7 @@ import { Boxes, FileText, GitMerge, Play, ShieldAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { repoHref } from '../components/repo/RepoCard';
+import { repoUrl } from './repoBrowserModel';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
@@ -225,7 +226,11 @@ function SplitFamilyBrowser({
                 <ErrorState title="Could not load file" error={blob.error} />
               ) : blob.data ? (
                 <CodeViewer
-                  linkBase={`${repoHref(selected)}/blob/${activeRef || selected.default_branch}/${selectedFile.path.replace(/[^/]*$/, '')}`}
+                  linkBase={repoUrl(
+                    selected.id,
+                    'blob',
+                    `${activeRef || selected.default_branch}/${selectedFile.path.replace(/[^/]*$/, '')}`
+                  )}
                   path={selectedFile.path}
                   text={blob.data.text}
                   renderedHtml={blob.data.rendered_markdown?.html ?? null}
@@ -237,7 +242,11 @@ function SplitFamilyBrowser({
               )
             ) : noCodeHere ? null : (
               <ReadmePanel
-                linkBase={`${repoHref(selected)}/blob/${activeRef || selected.default_branch}/`}
+                linkBase={repoUrl(
+                  selected.id,
+                  'blob',
+                  `${activeRef || selected.default_branch}/`
+                )}
                 repoId={selected.id.id}
                 ref={activeRef || selected.default_branch}
               />

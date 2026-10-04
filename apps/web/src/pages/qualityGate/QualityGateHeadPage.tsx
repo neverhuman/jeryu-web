@@ -17,6 +17,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { QualityGateAppliedCap, QualityGateFinding } from '../../api/types';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
+import { useForgeHost } from '../../hooks/useForgeHost';
 import { useDisputeFinding, useQualityGateHead } from '../../hooks/useQualityGate';
 import { QualityGateQueryState } from './QualityGateQueryState';
 import { QUALITY_GATE_PATH, repoCodeHref, shortSha } from './qualityGateModel';
@@ -28,6 +29,7 @@ export function QualityGateHeadPage(): JSX.Element {
   const repo = owner && name ? `${owner}/${name}` : '';
   const { data, isPending, isError, error } = useQualityGateHead(repo, sha);
   const { user } = useAuth();
+  const forgeHost = useForgeHost();
   const dispute = useDisputeFinding(repo, sha);
   const [openFor, setOpenFor] = useState<string | null>(null);
 
@@ -108,6 +110,7 @@ export function QualityGateHeadPage(): JSX.Element {
                     key={finding.id}
                     finding={finding}
                     repo={data.repo}
+                    host={forgeHost(data.repo)}
                     sha={data.sha}
                     canDispute={user?.role === 'admin'}
                     open={openFor === finding.id}
@@ -153,6 +156,7 @@ function CapRow({ cap }: { cap: QualityGateAppliedCap }): JSX.Element {
 function FindingRow({
   finding,
   repo,
+  host,
   sha,
   canDispute,
   open,
@@ -163,6 +167,7 @@ function FindingRow({
 }: {
   finding: QualityGateFinding;
   repo: string;
+  host: string;
   sha: string;
   canDispute: boolean;
   open: boolean;
@@ -188,7 +193,7 @@ function FindingRow({
       </div>
       <a
         className="quality-gate__finding-where"
-        href={repoCodeHref(repo, sha, finding.path, finding.line)}
+        href={repoCodeHref(host, repo, sha, finding.path, finding.line)}
       >
         {finding.path}:{finding.line}
       </a>

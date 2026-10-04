@@ -58,6 +58,7 @@ import {
 
 import { BranchProtectionSummary } from './BranchProtectionSummary';
 import { GithubMirrorSummary } from './GithubMirrorSummary';
+import { repoRefOf, repoUrl } from './repoBrowserModel';
 
 import './page.css';
 
@@ -225,7 +226,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
       <SettingsLayout
         activeSection={activeSection}
         hrefFor={(id) =>
-          `/repos/${encodeURIComponent(provider)}/${fullName}/settings/${id}`
+          repoUrl(repoRefOf(provider, fullName), 'settings', id)
         }
         renderLink={({ section, href, children }) => (
           <Link
@@ -334,7 +335,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
             applyMutation.reset();
             previewMutation.reset();
             navigate(
-              `/repos/${encodeURIComponent(provider)}/${fullName}/settings/${activeSection}`,
+              repoUrl(repoRefOf(provider, fullName), 'settings', activeSection),
               { replace: true }
             );
           }}

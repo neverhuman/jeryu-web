@@ -62,6 +62,7 @@ import {
   extractDrift,
   type HeadDriftInfo,
 } from './pullRequestDrift';
+import { repoFrontPath } from './repoBrowserModel';
 
 import './page.css';
 
@@ -339,7 +340,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           {badge.label}
         </span>
         <span className="pr-cockpit__meta">
-          <Link to={`/repos/${provider}/${fullName}`}>{fullName}</Link>
+          <Link to={repoFrontPath(provider, fullName)}>{fullName}</Link>
           <span aria-hidden="true">·</span>
           <span>by {summary.author}</span>
           <span aria-hidden="true">·</span>

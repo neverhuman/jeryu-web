@@ -9,6 +9,8 @@
 import { FolderGit2 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
+import { repoUrl } from '../pages/repoBrowserModel';
+
 const REPO_PATH = /^\/repos\/(?!family\/|new$)([^/]+)\/([^/]+)\/([^/]+)/;
 
 /** `owner/name` of the repository a path is inside, or null. */
@@ -25,7 +27,22 @@ export function repoNameFromPath(pathname: string): string | null {
 /** The front page of the repository a path is inside, or null. */
 export function repoHomeFromPath(pathname: string): string | null {
   const match = REPO_PATH.exec(pathname);
-  return match ? `/repos/${match[1]}/${match[2]}/${match[3]}` : null;
+  if (!match) return null;
+  // The segments come from a URL: decode them so the builder's own encoding
+  // does not double up.
+  return repoUrl({
+    host: decodeSegment(match[1]),
+    owner: decodeSegment(match[2]),
+    name: decodeSegment(match[3]),
+  });
+}
+
+function decodeSegment(segment: string | undefined): string {
+  try {
+    return decodeURIComponent(segment ?? '');
+  } catch {
+    return segment ?? '';
+  }
 }
 
 export function RepoSwitcher(): JSX.Element | null {
