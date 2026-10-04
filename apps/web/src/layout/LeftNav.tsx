@@ -3,7 +3,10 @@
 // Six destinations an operator uses daily (plus Wiki, when an administrator
 // has chosen a repository for it), then a "System" disclosure for the
 // five that explain the machinery (Runners, Intelligence, Dependencies,
-// Quality gate, Shared tools). The disclosure is closed by default, remembers what the operator chose, and is
+// Quality gate, Shared tools). The destinations themselves — label, path,
+// icon, badge and shortcut — come from NAV_DESTINATIONS, the one registry the
+// palette and the keyboard read too. The disclosure is closed by default,
+// remembers what the operator chose, and is
 // open whenever the current page is inside it. When the current URL is inside a
 // repository route (`/repos/:provider/:fullName/*`), a contextual
 // sub-navigation appears below the workspace links so the operator can
@@ -12,26 +15,7 @@
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  Activity,
-  BookOpen,
-  Bot,
-  ChevronDown,
-  ChevronRight,
-  Code2,
-  Cog,
-  ClipboardList,
-  Brain,
-  FolderGit2,
-  GitMerge,
-  Layers,
-  Share2,
-  Siren,
-  Rocket,
-  ServerCog,
-  ShieldCheck,
-  type LucideIcon,
-} from 'lucide-react';
+import { Bot, ChevronDown, ChevronRight, Code2, Cog, GitMerge } from 'lucide-react';
 
 import { useAttention } from '../hooks/usePipeline';
 import { useAuth } from '../hooks/useAuth';
@@ -40,51 +24,16 @@ import {
   AREA_LABEL,
   areaBadgeCount,
   attentionBadgeCount,
-  type AttentionArea,
 } from '../pages/needsYou/needsYouModel';
-import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { repoUrl } from '../pages/repoBrowserModel';
-import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
-import { NEEDS_YOU_PATH } from './HomeRedirect';
-import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
+import { NAV_DESTINATIONS, navGroup, type NavDestination } from './navDestinations';
 
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-  end?: boolean;
-  /**
-   * `attention`: every critical + action row from `/api/v1/attention`. An area:
-   * only the rows whose cause lives on that page, so each page says what on it
-   * is waiting on a person.
-   */
-  badge?: 'attention' | AttentionArea;
-}
-
-/** What an operator opens every day, in the order the work flows. */
-export const PRIMARY_NAV: NavItem[] = [
-  { to: NEEDS_YOU_PATH, label: 'Needs you', icon: Siren, badge: 'attention' },
-  { to: '/activity', label: 'Activity', icon: Activity },
-  { to: '/work', label: 'Work', icon: ClipboardList, badge: 'work' },
-  // Every change between claimed work and release: shift work not yet a pull
-  // request, open pull requests, and what waits for a release. A repository's
-  // own pull requests are its Pull requests tab.
-  { to: IN_FLIGHT_PATH, label: 'In flight', icon: GitMerge, badge: 'pulls' },
-  { to: '/releases', label: 'Releases', icon: Rocket, badge: 'releases' },
-  { to: '/repos', label: 'Repositories', icon: FolderGit2 },
-  // Settings is reached from the top-right account control (UserMenu).
-];
+/** The daily destinations, in the order the work flows. */
+export const PRIMARY_NAV = NAV_DESTINATIONS.filter((d) => d.group === 'primary');
 
 /** How the machinery is doing: looked at when something is off, not daily. */
-export const SYSTEM_NAV: NavItem[] = [
-  { to: '/runners', label: 'Runners', icon: ServerCog, badge: 'system' },
-  // `end`: Dependencies lives under /intelligence and is its own destination.
-  { to: '/intelligence', label: 'Intelligence', icon: Brain, end: true },
-  { to: DEPENDENCIES_PATH, label: 'Dependencies', icon: Share2 },
-  { to: '/quality-gate', label: 'Quality gate', icon: ShieldCheck },
-  { to: '/shared-tools', label: 'Shared tools', icon: Layers },
-];
+export const SYSTEM_NAV = NAV_DESTINATIONS.filter((d) => d.group === 'system');
 
 const SYSTEM_OPEN_KEY = 'jeryu.leftNav.systemOpen.v1';
 const SYSTEM_LIST_ID = 'left-nav-system';
@@ -95,7 +44,7 @@ function NavBadge({
   area,
 }: {
   count: number;
-  area: NavItem['badge'];
+  area: NavDestination['badge'];
 }): JSX.Element | null {
   if (!area || count <= 0) return null;
   const things = `${count} item${count === 1 ? '' : 's'}`;
@@ -114,7 +63,7 @@ function NavBadge({
 
 /** True when `pathname` is one of the System destinations or inside one. */
 export function isSystemPath(pathname: string): boolean {
-  return SYSTEM_NAV.some((item) => isActivePath(pathname, item.to));
+  return SYSTEM_NAV.some((item) => isActivePath(pathname, item.path, item.end));
 }
 
 /** A URL segment as the builder wants it: decoded, or as-is when it cannot be. */
@@ -154,7 +103,11 @@ export function LeftNav(): JSX.Element {
   // The badge is visible from every page. Attention is admin-only, so other
   // roles never ask; an older server answers once and the query stops polling.
   const { user } = useAuth();
-  const attention = useAttention(user?.role === 'admin');
+  const isAdmin = user?.role === 'admin';
+  const attention = useAttention(isAdmin);
+  const primary = navGroup('primary', isAdmin);
+  const system = navGroup('system', isAdmin);
+  const [wikiDestination] = navGroup('wiki', isAdmin);
   const needsYou = attentionBadgeCount(attention.data);
   // Shown only when a wiki is set and this viewer can read its repository.
   const wiki = useSiteSettings().data?.internal_wiki ?? null;
@@ -175,14 +128,19 @@ export function LeftNav(): JSX.Element {
   // A router link, never a plain anchor: a plain anchor reloads the whole app on
   // every click (it did), which re-authenticates, reconnects the live socket
   // ("Connecting…" on each navigation), refetches every query and shifts the page.
-  const renderItem = (item: NavItem): JSX.Element => (
+  // `title`/`aria-keyshortcuts`: the chord that goes here, said where the
+  // destination is, not only in the shortcuts overlay.
+  const renderItem = (item: NavDestination, title?: string): JSX.Element => (
     <Link
-      key={item.to}
-      to={item.to}
+      key={item.id}
+      to={item.path}
+      title={title ?? `${item.label} (${item.shortcut})`}
+      aria-keyshortcuts={item.shortcut}
       className={`left-nav__item${
-        isActivePath(pathname, item.to, item.end) ? ' is-active' : ''
+        isActivePath(pathname, item.path, item.end) ? ' is-active' : ''
       }`}
-      aria-current={isActivePath(pathname, item.to, item.end) ? 'page' : undefined}
+      aria-current={isActivePath(pathname, item.path, item.end) ? 'page' : undefined}
+      data-testid={`left-nav-${item.id.replace(/^nav\./, '')}`}
     >
       <item.icon aria-hidden="true" size={16} />
       {item.label}
@@ -201,19 +159,10 @@ export function LeftNav(): JSX.Element {
 
   return (
     <nav className="left-nav" aria-label="Primary">
-      {PRIMARY_NAV.map(renderItem)}
-      {wiki ? (
-        <Link
-          to={WIKI_PATH}
-          title={wiki.full_name}
-          className={`left-nav__item${isActivePath(pathname, WIKI_PATH) ? ' is-active' : ''}`}
-          aria-current={isActivePath(pathname, WIKI_PATH) ? 'page' : undefined}
-          data-testid="left-nav-wiki"
-        >
-          <BookOpen aria-hidden="true" size={16} />
-          Wiki
-        </Link>
-      ) : null}
+      {primary.map((item) => renderItem(item))}
+      {wiki && wikiDestination
+        ? renderItem(wikiDestination, `${wiki.full_name} (${wikiDestination.shortcut})`)
+        : null}
 
       <button
         type="button"
@@ -236,7 +185,7 @@ export function LeftNav(): JSX.Element {
         )}
       </button>
       <div id={SYSTEM_LIST_ID} className="left-nav__sublist" hidden={!systemOpen}>
-        {systemOpen ? SYSTEM_NAV.map(renderItem) : null}
+        {systemOpen ? system.map((item) => renderItem(item)) : null}
       </div>
 
       {repo ? (

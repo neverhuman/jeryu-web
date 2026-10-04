@@ -3,38 +3,41 @@
 // Lists all registered shortcuts grouped by `group` label. Triggered with `?`
 // and Esc to dismiss. Used by the global shell.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 
 import {
+  formatCombo,
   type KeyboardShortcutDescriptor,
   useKeyboardRegistry,
   useKeyboardShortcut,
 } from '../hooks/useKeyboard';
+import { useShortcutsStore } from '../stores/shortcutsStore';
 
 import './KeyboardShortcutsOverlay.css';
 
 export function KeyboardShortcutsOverlay(): JSX.Element {
-  const [open, setOpen] = useState(false);
+  const open = useShortcutsStore((s) => s.isOpen);
+  const close = useShortcutsStore((s) => s.close);
+  const toggle = useShortcutsStore((s) => s.toggle);
   const { shortcuts } = useKeyboardRegistry();
 
-  useKeyboardShortcut(
-    'shift+/',
-    () => setOpen((prev) => !prev),
-    { label: 'Show keyboard shortcuts', group: 'Help' }
-  );
+  useKeyboardShortcut('shift+/', toggle, {
+    label: 'Show keyboard shortcuts',
+    group: 'Help',
+  });
 
   useEffect(() => {
     if (!open) return () => {};
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        setOpen(false);
+        close();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+  }, [open, close]);
 
   const groups = useMemo(() => {
     const buckets = new Map<string, KeyboardShortcutDescriptor[]>();
@@ -54,7 +57,7 @@ export function KeyboardShortcutsOverlay(): JSX.Element {
       className="kbd-overlay__backdrop"
       role="presentation"
       onClick={(e) => {
-        if (e.target === e.currentTarget) setOpen(false);
+        if (e.target === e.currentTarget) close();
       }}
     >
       <div
@@ -65,11 +68,16 @@ export function KeyboardShortcutsOverlay(): JSX.Element {
       >
         <header className="kbd-overlay__header">
           <h2 id="kbd-overlay-title">Keyboard shortcuts</h2>
+          {/* The one place that says which key opens this list. */}
+          <p className="kbd-overlay__hint">
+            Press <kbd className="kbd-overlay__combo">{formatCombo('shift+/')}</kbd> anywhere to
+            open it.
+          </p>
           <button
             type="button"
             className="kbd-overlay__close"
             aria-label="Close shortcuts overlay"
-            onClick={() => setOpen(false)}
+            onClick={close}
           >
             <X size={16} aria-hidden="true" />
           </button>
@@ -92,7 +100,7 @@ export function KeyboardShortcutsOverlay(): JSX.Element {
                       <dt>{shortcut.label}</dt>
                       <dd>
                         <kbd className="kbd-overlay__combo">
-                          {shortcut.combo}
+                          {formatCombo(shortcut.combo)}
                         </kbd>
                       </dd>
                     </div>

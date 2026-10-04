@@ -100,7 +100,9 @@ test.describe('Internal wiki', () => {
     await page.goto('/settings');
     const wiki = nav.getByRole('link', { name: 'Wiki' });
     await expect(wiki).toBeVisible();
-    await expect(wiki).toHaveAttribute('title', 'acme/handbook');
+    // The repository the wiki reads, and the chord that opens it.
+    await expect(wiki).toHaveAttribute('title', 'acme/handbook (g k)');
+    await expect(wiki).toHaveAttribute('aria-keyshortcuts', 'g k');
     await wiki.click();
     await expect(page).toHaveURL(/\/wiki$/);
     await expect(wiki).toHaveAttribute('aria-current', 'page');

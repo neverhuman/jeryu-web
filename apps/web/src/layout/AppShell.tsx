@@ -15,14 +15,16 @@
 // as an off-canvas drawer.
 //
 // Shell-level shortcuts (`⌘K` palette, `?` help) are wired here so they
-// outlive any route change.
+// outlive any route change; the per-destination `g` chords come from
+// NAV_DESTINATIONS through <NavShortcuts />.
 
 import { useState, useCallback, useEffect } from 'react';
-import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { CommandPalette } from './CommandPalette';
 import { GlobalHeader } from './GlobalHeader';
 import { LeftNav } from './LeftNav';
+import { NavShortcuts } from './NavShortcuts';
 import { LiveActivityDock } from './LiveActivityDock';
 import { StatusBar } from './StatusBar';
 import { useCommandStore } from '../stores/commandStore';
@@ -33,12 +35,11 @@ import { LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { AuthPage } from '../pages/AuthPage';
 import { BootScreen } from '../pages/boot/BootScreen';
-import { NEEDS_YOU_PATH, homePathFor } from './HomeRedirect';
+import { homePathFor } from './HomeRedirect';
 import { PublicRepoShell } from './PublicRepoShell';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 
 import './AppShell.css';
-import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 
 const AUTH_PATHS = new Set(['/login', '/signup']);
 
@@ -71,7 +72,6 @@ export function isPublicRepoPath(pathname: string): boolean {
 }
 
 export function AppShell(): JSX.Element {
-  const navigate = useNavigate();
   const location = useLocation();
   const auth = useAuth();
   const openPalette = useCommandStore((s) => s.open);
@@ -86,7 +86,7 @@ export function AppShell(): JSX.Element {
   const returnTo = isAuthRoute ? returnPathFrom(location.search) : null;
 
   // Register navigation commands so the palette is non-empty on first render.
-  useShellCommands();
+  useShellCommands(auth.user?.role === 'admin');
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
@@ -139,56 +139,6 @@ export function AppShell(): JSX.Element {
     enabled: !!auth.user,
   });
 
-  useKeyboardShortcut('g d', () => navigate(NEEDS_YOU_PATH), {
-    label: 'Go to Needs you',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g r', () => navigate('/repos'), {
-    label: 'Go to Repositories',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g w', () => navigate('/work'), {
-    label: 'Go to Work',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g m', () => navigate(IN_FLIGHT_PATH), {
-    label: 'Go to In flight',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g f', () => navigate('/runners'), {
-    label: 'Go to Runners',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g a', () => navigate('/activity'), {
-    label: 'Go to Activity',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g l', () => navigate('/releases'), {
-    label: 'Go to Releases',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g i', () => navigate('/intelligence'), {
-    label: 'Go to Intelligence',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g t', () => navigate('/shared-tools'), {
-    label: 'Go to Shared tools',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
-  useKeyboardShortcut('g s', () => navigate('/settings'), {
-    label: 'Go to Settings',
-    group: 'Navigation',
-    enabled: !!auth.user,
-  });
 
   if (auth.isPending) {
     return (
@@ -290,6 +240,8 @@ export function AppShell(): JSX.Element {
           </div>
         </div>
       ) : null}
+      {/* One `g` chord per destination, bound only for a signed-in operator. */}
+      <NavShortcuts />
       <main className="app-shell__main" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>

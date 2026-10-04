@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { useCommandStore } from '../../stores/commandStore';
 import { usePreferencesStore } from '../../stores/preferencesStore';
+import { useShortcutsStore } from '../../stores/shortcutsStore';
 import { useShellCommands } from '../useShellCommands';
 
 describe('useShellCommands', () => {
@@ -15,18 +16,21 @@ describe('useShellCommands', () => {
     const ids = useCommandStore.getState().commands.map((c) => c.id);
     expect(ids).toEqual([
       'nav.needs-you',
-      'nav.repos',
-      'nav.work',
-      'nav.work-add',
       'nav.activity',
-      'nav.activity-wall',
+      'nav.work',
+      'nav.in-flight',
       'nav.releases',
-      'nav.pull-room',
-      'nav.fleet',
+      'nav.repos',
+      'nav.wiki',
+      'nav.runners',
       'nav.intelligence',
+      'nav.dependencies',
       'nav.quality-gate',
-      'nav.tools',
+      'nav.shared-tools',
       'nav.settings',
+      'nav.work-add',
+      'nav.activity-wall',
+      'help.shortcuts',
       'theme.light',
       'theme.dark',
       'theme.high-contrast',
@@ -43,8 +47,8 @@ describe('useShellCommands', () => {
       useCommandStore.getState().commands.find((c) => c.id === id)?.title;
     // The account control says "Settings", so the palette does not say something else.
     expect(title('nav.settings')).toBe('Go to Settings');
-    expect(title('nav.pull-room')).toBe('Go to In flight');
-    expect(title('nav.fleet')).toBe('Go to Runners');
+    expect(title('nav.in-flight')).toBe('Go to In flight');
+    expect(title('nav.runners')).toBe('Go to Runners');
   });
 
   it('keeps commands registered by other surfaces when it unmounts', () => {
@@ -65,17 +69,30 @@ describe('useShellCommands', () => {
         .map((c) => [c.shortcut, c.target.kind === 'route' ? c.target.path : c.id])
     );
     expect(shortcuts).toEqual({
-      'g d': '/needs-you',
-      'g r': '/repos',
-      'g w': '/work',
+      'g n': '/needs-you',
       'g a': '/activity',
+      'g w': '/work',
+      'g p': '/in-flight',
       'g l': '/releases',
-      'g m': '/in-flight',
-      'g f': '/runners',
+      'g r': '/repos',
+      'g k': '/wiki',
+      'g u': '/runners',
       'g i': '/intelligence',
+      'g e': '/intelligence/dependencies',
+      'g q': '/quality-gate',
       'g t': '/shared-tools',
       'g s': '/settings',
     });
+  });
+
+  it('offers the shortcuts overlay, saying which key opens it', () => {
+    renderHook(() => useShellCommands());
+    const entry = useCommandStore.getState().commands.find((c) => c.id === 'help.shortcuts');
+    expect(entry?.title).toBe('Keyboard shortcuts (?)');
+    expect(useShortcutsStore.getState().isOpen).toBe(false);
+    entry?.run?.();
+    expect(useShortcutsStore.getState().isOpen).toBe(true);
+    useShortcutsStore.getState().close();
   });
 
   it('theme commands set the theme preference', () => {

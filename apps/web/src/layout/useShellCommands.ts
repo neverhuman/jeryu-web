@@ -1,56 +1,48 @@
-// useShellCommands.ts — register the baseline navigation commands.
+// useShellCommands.ts — register the baseline palette commands.
+//
+// One "Go to" command per destination in NAV_DESTINATIONS (the same list the
+// left nav renders and the keyboard binds), then the few entries that are not
+// destinations: two deep links, the shortcuts overlay, and the themes.
+// `/search` reads the same commands, so a destination is findable there too.
 
 import { useEffect } from 'react';
 
 import { useCommandStore, type Command } from '../stores/commandStore';
 import { usePreferencesStore } from '../stores/preferencesStore';
-import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
+import { useShortcutsStore } from '../stores/shortcutsStore';
+import {
+  NAV_DESTINATIONS,
+  navCommandTitle,
+  visibleDestinations,
+} from './navDestinations';
+import { formatCombo } from '../hooks/useKeyboard';
 
-export function useShellCommands(): void {
+/** `isAdmin`: an `adminOnly` destination is offered to nobody else. */
+export function useShellCommands(isAdmin = false): void {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);
   const setTheme = usePreferencesStore((s) => s.setTheme);
+  const openShortcuts = useShortcutsStore((s) => s.open);
 
   useEffect(() => {
+    const destinations: Command[] = visibleDestinations(NAV_DESTINATIONS, isAdmin).map(
+      (destination) => ({
+        id: destination.id,
+        title: navCommandTitle(destination),
+        keywords: destination.keywords,
+        icon: destination.paletteIcon,
+        target: { kind: 'route', path: destination.path },
+        shortcut: destination.shortcut,
+      })
+    );
     const commands: Command[] = [
-      {
-        id: 'nav.needs-you',
-        title: 'Go to Needs you',
-        keywords: ['needs you', 'attention', 'inbox', 'blocked', 'waiting', 'home', 'dashboard'],
-        icon: 'home',
-        target: { kind: 'route', path: '/needs-you' },
-        shortcut: 'g d',
-      },
-      {
-        id: 'nav.repos',
-        title: 'Go to Repositories',
-        keywords: ['repos', 'repository', 'projects'],
-        icon: 'folder',
-        target: { kind: 'route', path: '/repos' },
-        shortcut: 'g r',
-      },
-      {
-        id: 'nav.work',
-        title: 'Go to Work',
-        keywords: ['work', 'shift', 'queue', 'todo', 'todoq', 'tasks', 'workers', 'slots', 'nightshift', 'dayshift', 'bulletshift'],
-        icon: 'clipboard-list',
-        target: { kind: 'route', path: '/work' },
-        shortcut: 'g w',
-      },
+      ...destinations,
       {
         id: 'nav.work-add',
         title: 'Add work',
         keywords: ['shift', 'todo', 'file', 'add', 'new', 'nightshift', 'dayshift', 'bulletshift', 'queue'],
         icon: 'clipboard-list',
         target: { kind: 'route', path: '/work#add' },
-      },
-      {
-        id: 'nav.activity',
-        title: 'Go to Activity',
-        keywords: ['activity', 'events', 'log', 'feed', 'live', 'pipeline', 'notifications', 'alerts'],
-        icon: 'activity',
-        target: { kind: 'route', path: '/activity' },
-        shortcut: 'g a',
       },
       {
         id: 'nav.activity-wall',
@@ -60,60 +52,13 @@ export function useShellCommands(): void {
         target: { kind: 'route', path: '/activity?wall=1' },
       },
       {
-        id: 'nav.releases',
-        title: 'Go to Releases',
-        keywords: ['release', 'deploy', 'production', 'environment', 'rollback', 'staged', 'unshipped', 'pin'],
-        icon: 'rocket',
-        target: { kind: 'route', path: '/releases' },
-        shortcut: 'g l',
-      },
-      {
-        id: 'nav.pull-room',
-        title: 'Go to In flight',
-        keywords: ['in flight', 'pr', 'pull', 'merge', 'review', 'pull room', 'pull requests'],
-        icon: 'git-merge',
-        target: { kind: 'route', path: IN_FLIGHT_PATH },
-        shortcut: 'g m',
-      },
-      {
-        id: 'nav.fleet',
-        title: 'Go to Runners',
-        keywords: ['fleet', 'runners', 'utilization', 'saturation', 'health'],
-        icon: 'server-cog',
-        target: { kind: 'route', path: '/runners' },
-        shortcut: 'g f',
-      },
-      {
-        id: 'nav.intelligence',
-        title: 'Go to Intelligence',
-        keywords: ['jmcp', 'control-plane', 'priority', 'graph'],
-        icon: 'activity',
-        target: { kind: 'route', path: '/intelligence' },
-        shortcut: 'g i',
-      },
-      {
-        id: 'nav.quality-gate',
-        title: 'Go to Quality gate',
-        keywords: ['quality', 'gate', 'jankurai', 'proof', 'score', 'findings', 'dispute'],
-        icon: 'shield-check',
-        target: { kind: 'route', path: '/quality-gate' },
-      },
-      {
-        id: 'nav.tools',
-        title: 'Go to Shared tools',
-        keywords: ['shared', 'code', 'tools', 'duplicate', 'finder', 'loc', 'proposals', 'approve', 'adoption', 'fleet'],
-        icon: 'layers',
-        target: { kind: 'route', path: '/shared-tools' },
-        shortcut: 'g t',
-      },
-      {
-        id: 'nav.settings',
-        // The nav calls this page Settings; the palette says the same name.
-        title: 'Go to Settings',
-        keywords: ['settings', 'admin', 'preferences', 'account'],
-        icon: 'cog',
-        target: { kind: 'route', path: '/settings' },
-        shortcut: 'g s',
+        // The palette is where an operator learns the key exists.
+        id: 'help.shortcuts',
+        title: `Keyboard shortcuts (${formatCombo('shift+/')})`,
+        keywords: ['keyboard', 'shortcuts', 'keys', 'chords', 'help'],
+        icon: 'keyboard',
+        target: { kind: 'action', actionId: 'help.shortcuts' },
+        run: () => openShortcuts(),
       },
       {
         id: 'theme.light',
@@ -150,5 +95,5 @@ export function useShellCommands(): void {
     ];
     register(commands);
     return () => unregister(commands.map((c) => c.id));
-  }, [register, unregister, setTheme]);
+  }, [register, unregister, setTheme, openShortcuts, isAdmin]);
 }

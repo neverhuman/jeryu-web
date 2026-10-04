@@ -38,6 +38,12 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.kbd-overlay__hint {
+  margin: 0 auto 0 var(--space-4);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .kbd-overlay__close {
   display: inline-flex;
   align-items: center;

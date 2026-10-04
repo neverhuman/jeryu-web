@@ -151,6 +151,49 @@ function matchesAtom(atom: ParsedAtom, event: KeyboardEvent): boolean {
   return eventKey === atom.key;
 }
 
+/** The character Shift makes of a printable key, when it has a name of its own. */
+const SHIFTED: Record<string, string> = { '/': '?', ',': '<', '.': '>', ';': ':', "'": '"' };
+
+/** A key as a reader knows it: `k` -> `K`, `escape` -> `Esc`, `arrowup` -> `Up`. */
+function keyLabel(key: string): string {
+  if (key === ' ') return 'Space';
+  if (key === 'escape') return 'Esc';
+  if (key.startsWith('arrow')) {
+    const direction = key.slice('arrow'.length);
+    return direction.charAt(0).toUpperCase() + direction.slice(1);
+  }
+  if (key.length === 1) return key.toUpperCase();
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+/**
+ * A combo the way it is printed on a key: `mod+k` -> `⌘K` on macOS and
+ * `Ctrl+K` elsewhere, `shift+/` -> `?`, and a chord `g n` -> `G N`. The
+ * overlay shows this, never the combo the code binds.
+ */
+export function formatCombo(combo: string): string {
+  const mac = isMacLike();
+  return combo
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => {
+      const atom = parseAtom(part);
+      // Shift is part of the character when the character has its own name:
+      // `?` is what the reader presses, not `Shift+/`.
+      const shifted = atom.shift ? SHIFTED[atom.key] : undefined;
+      const key = shifted ?? keyLabel(atom.key);
+      const modifiers: string[] = [];
+      if (atom.ctrl) modifiers.push(mac ? '⌃' : 'Ctrl');
+      if (atom.alt) modifiers.push(mac ? '⌥' : 'Alt');
+      if (atom.shift && !shifted) modifiers.push(mac ? '⇧' : 'Shift');
+      if (atom.meta) modifiers.push(mac ? '⌘' : 'Meta');
+      if (modifiers.length === 0) return key;
+      return mac ? `${modifiers.join('')}${key}` : `${modifiers.join('+')}+${key}`;
+    })
+    .join(' ');
+}
+
 /**
  * True when focus is in a text-entry surface (input/textarea/select/
  * contentEditable) — used to suppress single-key shortcuts while typing.

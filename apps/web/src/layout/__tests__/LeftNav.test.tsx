@@ -68,6 +68,16 @@ describe('LeftNav', () => {
     ]);
   });
 
+  it('says on each item which chord goes there', () => {
+    renderAt('/needs-you');
+    const needsYou = screen.getByRole('link', { name: /Needs you/ });
+    expect(needsYou).toHaveAttribute('title', 'Needs you (g n)');
+    expect(needsYou).toHaveAttribute('aria-keyshortcuts', 'g n');
+    const inFlight = screen.getByRole('link', { name: 'In flight' });
+    expect(inFlight).toHaveAttribute('title', 'In flight (g p)');
+    expect(inFlight).toHaveAttribute('aria-keyshortcuts', 'g p');
+  });
+
   it('hides the System group until it is opened, and remembers the choice', () => {
     renderAt('/needs-you');
     const system = screen.getByRole('button', { name: 'System' });
@@ -138,7 +148,9 @@ describe('LeftNav', () => {
     renderAt('/wiki/guides/setup.md');
     const wiki = screen.getByRole('link', { name: 'Wiki' });
     expect(wiki).toHaveAttribute('href', '/wiki');
-    expect(wiki).toHaveAttribute('title', 'acme/handbook');
+    // The repository the wiki reads, and the chord that opens it.
+    expect(wiki).toHaveAttribute('title', 'acme/handbook (g k)');
+    expect(wiki).toHaveAttribute('aria-keyshortcuts', 'g k');
     expect(wiki).toHaveAttribute('aria-current', 'page');
   });
 });

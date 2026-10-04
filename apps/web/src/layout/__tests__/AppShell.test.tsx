@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCommandStore } from '../../stores/commandStore';
 import { AppShell, isPublicRepoPath, returnPathFrom } from '../AppShell';
+import { NAV_DESTINATIONS } from '../navDestinations';
 
 interface AuthStub {
   isPending: boolean;
@@ -257,14 +258,27 @@ describe('AppShell', () => {
     expect(useCommandStore.getState().isOpen).toBe(true);
   });
 
-  it('g-chords navigate between destinations', () => {
+  it('g-chords navigate to every destination in the registry', () => {
     renderAt('/work');
-    press('g');
-    press('r');
-    expect(screen.getByTestId('where').textContent).toBe('/repos');
-    press('g');
-    press('s');
-    expect(screen.getByTestId('where').textContent).toBe('/settings');
+    for (const destination of NAV_DESTINATIONS) {
+      const [, letter] = destination.shortcut.split(' ');
+      press('g');
+      press(letter);
+      expect(screen.getByTestId('where').textContent, destination.shortcut).toBe(
+        destination.path
+      );
+    }
+  });
+
+  it('still answers the chord a destination used to have', () => {
+    renderAt('/work');
+    for (const destination of NAV_DESTINATIONS) {
+      for (const alias of destination.aliases ?? []) {
+        press('g');
+        press(alias.split(' ')[1]);
+        expect(screen.getByTestId('where').textContent, alias).toBe(destination.path);
+      }
+    }
   });
 
   it('binds no shortcuts while signed out', () => {
