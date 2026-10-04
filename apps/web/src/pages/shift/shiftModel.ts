@@ -89,14 +89,14 @@ const STATUS_RANK: Record<string, number> = {
 };
 
 /**
- * A person is the next step: the todo is blocked or handed off, or it is
- * still waiting for triage. Matches the attention kinds `todo_blocked`,
- * `todo_handoff` and `todo_untriaged`. The server's `/api/v1/attention` is the
+ * A person is the next step: the todo is blocked or handed off. Matches the
+ * attention kinds `todo_blocked` and `todo_handoff`. An untriaged todo is not
+ * one of them: a worker triages it on its next pass, and only the server knows
+ * whether one has had long enough. The server's `/api/v1/attention` is the
  * answer the operator is shown; this stands in only while that is unknown.
  */
-export function needsHuman(todo: Pick<ShiftTodo, 'status' | 'triaged'>): boolean {
-  if (todo.status === 'blocked' || todo.status === 'handoff') return true;
-  return !todo.triaged && !isFinishedTodo(todo);
+export function needsHuman(todo: Pick<ShiftTodo, 'status'>): boolean {
+  return todo.status === 'blocked' || todo.status === 'handoff';
 }
 
 export function countNeedsHuman(todos: ShiftTodo[]): number {

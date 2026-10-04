@@ -205,10 +205,11 @@ describe('slotLabel', () => {
       'claimed',
     ]);
     expect(needsHuman(blocked)).toBe(true);
-    expect(needsHuman(untriaged)).toBe(true);
+    // An open untriaged todo is the workers' own to triage on their next pass.
+    expect(needsHuman(untriaged)).toBe(false);
     expect(needsHuman(doneUntriaged)).toBe(false);
     expect(needsHuman(TODOS[0])).toBe(false);
-    expect(countNeedsHuman(all)).toBe(3);
+    expect(countNeedsHuman(all)).toBe(2);
   });
 
   it('traces a todo from queued to released, saying unknown on an older server', () => {
@@ -373,7 +374,7 @@ describe('todo actions', () => {
       expect(actions.more).toEqual([]);
     }
     expect(isFinishedTodo({ status: 'closed' })).toBe(true);
-    expect(needsHuman({ status: 'closed', triaged: false })).toBe(false);
+    expect(needsHuman({ status: 'closed' })).toBe(false);
   });
 
   it('sends an until as an RFC 3339 instant in UTC, and refuses a non-date', () => {
