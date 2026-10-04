@@ -156,15 +156,24 @@ export function TodoDetail({
  * What to do with this row. The first action is a button; the rest sit behind
  * a "More" menu, and each one but Release spells itself out and asks before it
  * goes: these edit a queue the workers are reading.
+ *
+ * Release is the exception only while nobody is running the todo. With a live
+ * claim lease a worker is working on it right now, so releasing it would let a
+ * second worker claim the same work; that release asks first and goes as
+ * `force`, which is what the server needs to allow it.
  */
 export function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element | null {
   const action = useShiftTodoAction();
   const { primary, more } = todoActions(todo);
   const [asking, setAsking] = useState<TodoActionId | null>(null);
   if (!primary) return null;
+  // Taking the todo back from a worker that is still running it: the one
+  // release that asks first, and the one that has to say `force`.
+  const forces = (choice: TodoActionChoice): boolean =>
+    choice.id === 'release' && todo.lease_live;
   const run = (choice: TodoActionChoice): void => {
     // Release is one keystroke back to the queue; everything else confirms.
-    if (choice.id === 'release') {
+    if (choice.id === 'release' && !forces(choice)) {
       setAsking(null);
       action.mutate({ family: todo.family, id: todo.id, action: 'release' });
       return;
@@ -178,7 +187,9 @@ export function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element | null {
         variant={primary.variant}
         disabled={action.isPending}
         onClick={() => run(primary)}
-        aria-expanded={primary.id === 'release' ? undefined : asking === primary.id}
+        aria-expanded={
+          primary.id === 'release' && !forces(primary) ? undefined : asking === primary.id
+        }
         aria-label={`${primary.label} ${todo.id}`}
       >
         {primary.label}
@@ -249,6 +260,8 @@ function TodoActionForm({
   const submit = (event: FormEvent): void => {
     event.preventDefault();
     switch (choice.id) {
+      case 'release':
+        return onSubmit({ action: 'release', force: true, note: note.trim() });
       case 'block':
         return onSubmit({ action: 'block', note: note.trim() });
       case 'close':
@@ -272,6 +285,21 @@ function TodoActionForm({
       onSubmit={submit}
       aria-label={`${choice.label} ${todo.id}?`}
     >
+      {choice.id === 'release' ? (
+        <>
+          <span>
+            {todo.claim_by || 'A worker'} is running {todo.id} and its lease is still live.
+            Releasing it now lets a second worker claim the same work.
+          </span>
+          <input
+            type="text"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Why? (replaces the note on the todo)"
+            aria-label={`Reason for releasing ${todo.id}`}
+          />
+        </>
+      ) : null}
       {choice.id === 'block' || choice.id === 'close' ? (
         <input
           type="text"

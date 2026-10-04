@@ -146,6 +146,12 @@ export interface ShiftTodoActionRequest {
   value?: string | number;
   note?: string;
   /**
+   * `release` only: take the todo back from a worker whose claim lease is
+   * still live. Without it such a release answers `409 claim_live`, because a
+   * second worker would otherwise claim work the first is still running.
+   */
+  force?: boolean;
+  /**
    * When the todo comes back: RFC 3339, UTC, to the second. `park` sets it on
    * the todo; `acknowledge` keeps the todo's Needs-you row quiet until then.
    */

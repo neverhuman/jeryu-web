@@ -5,7 +5,14 @@
 // and shift lists so the Queue tab reflects the new queue commit, and the
 // pipeline reads with them: parking, closing or acknowledging a todo settles
 // what "Needs you" says about it.
+//
+// Every write carries an `Idempotency-Key` (§35.1.3). Filing keeps one key per
+// composed request, so a retry of the same filing — a lost answer, a second
+// click — collapses to the todos the first attempt filed instead of filing
+// them twice; a different request gets a new key. Row actions take a key per
+// attempt, which is enough to collapse a double click.
 
+import { useRef } from 'react';
 import {
   useMutation,
   useQueries,
@@ -16,6 +23,7 @@ import {
 } from '@tanstack/react-query';
 
 import { apiGet, apiSend } from '../api/client';
+import { newIdempotencyKey } from './useApplySettingsPatch';
 import { PIPELINE_KEY } from './usePipeline';
 import { endpoints } from '../api/endpoints';
 import type {
@@ -144,15 +152,25 @@ export function useFileShiftTodos(): UseMutationResult<
   FileShiftTodosInput
 > {
   const queryClient = useQueryClient();
+  // One key per composed request, so a retry of the same filing replays the
+  // first attempt's todos. Editing the composer composes a different request
+  // and earns a new key; filing clears the key for the next piece of work.
+  const filing = useRef<{ request: string; key: string } | null>(null);
   return useMutation({
     mutationFn: async ({ kind, ...body }) => {
-      if (kind === 'single') {
-        return [await apiSend<ShiftTodo>(endpoints.shiftTodos(), body)];
+      const serialized = JSON.stringify(body);
+      if (filing.current?.request !== serialized) {
+        filing.current = { request: serialized, key: newIdempotencyKey() };
       }
-      const res = await apiSend<ShiftTodosBulkResponse>(endpoints.shiftTodos(), body);
+      const opts = { idempotencyKey: filing.current.key };
+      if (kind === 'single') {
+        return [await apiSend<ShiftTodo>(endpoints.shiftTodos(), body, opts)];
+      }
+      const res = await apiSend<ShiftTodosBulkResponse>(endpoints.shiftTodos(), body, opts);
       return res.todos;
     },
     onSuccess: () => {
+      filing.current = null;
       void queryClient.invalidateQueries({ queryKey: [...SHIFT_KEY, 'todos'] });
     },
   });
@@ -166,7 +184,9 @@ export function useShiftTodoAction(): UseMutationResult<
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ family, id, ...body }) =>
-      apiSend<ShiftTodo>(endpoints.shiftTodoAction(family, id), body),
+      apiSend<ShiftTodo>(endpoints.shiftTodoAction(family, id), body, {
+        idempotencyKey: newIdempotencyKey(),
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [...SHIFT_KEY, 'todos'] });
       void queryClient.invalidateQueries({ queryKey: PIPELINE_KEY });

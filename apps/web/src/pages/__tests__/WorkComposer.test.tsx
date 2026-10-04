@@ -131,6 +131,39 @@ describe('WorkComposer', () => {
     await waitFor(() => expect(within(composer).getByLabelText('Family')).toHaveValue('jeryu'));
   });
 
+  it('retries a failed filing under the same key, and a changed one under a new key', async () => {
+    let fail = true;
+    const calls = mockShiftApi((req) => {
+      if (req.method !== 'POST') return undefined;
+      if (fail) return errorResponse(503, 'queue is busy');
+      return json(todo({ id: 'new-1' }));
+    });
+    renderWork();
+    const composer = await screen.findByRole('region', { name: 'Add work' });
+    const line = within(composer).getByLabelText('What should be done?');
+    fireEvent.change(line, { target: { value: 'Fix the flaky test' } });
+    fireEvent.click(within(composer).getByRole('button', { name: 'File todo' }));
+    await waitFor(() => expect(within(composer).getByRole('alert')).toBeInTheDocument());
+
+    // The same filing again: the same key, so the server collapses the two
+    // into the one todo whichever attempt actually reached the queue.
+    fail = false;
+    fireEvent.click(within(composer).getByRole('button', { name: 'File todo' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(2));
+    const posts = calls.filter((c) => c.method === 'POST');
+    expect(posts[0].headers['idempotency-key']).toBeTruthy();
+    expect(posts[1].headers['idempotency-key']).toBe(posts[0].headers['idempotency-key']);
+
+    // Different work is a different filing, so it earns its own key.
+    fireEvent.change(within(composer).getByLabelText('What should be done?'), {
+      target: { value: 'Cut the tag' },
+    });
+    fireEvent.click(within(composer).getByRole('button', { name: 'File todo' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(3));
+    const third = calls.filter((c) => c.method === 'POST')[2];
+    expect(third.headers['idempotency-key']).not.toBe(posts[0].headers['idempotency-key']);
+  });
+
   it('shows the server error and keeps the text', async () => {
     mockShiftApi((req) => (req.method === 'POST' ? errorResponse(409, 'queue moved') : undefined));
     renderWork();

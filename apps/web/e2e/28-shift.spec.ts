@@ -112,12 +112,18 @@ test.describe('Work, one page', () => {
     await page.getByRole('button', { name: 'Fix cache key' }).click();
     await page.getByLabel('Priority for 20260919-0800-aaa').selectOption('1');
     await expect.poll(() => log.posts.length).toBe(2);
+    // A worker is still running this todo (its lease is live), so Release asks
+    // first and goes as a force: a plain release would be refused.
     await page.getByRole('button', { name: 'Release 20260919-0900-ccc' }).click();
+    await page
+      .getByLabel('Reason for releasing 20260919-0900-ccc')
+      .fill('the slot is gone');
+    await page.getByRole('button', { name: 'Confirm release' }).click();
     await expect.poll(() => log.posts.length).toBe(3);
     expect(log.posts.map((p) => p.body)).toEqual([
       { action: 'block', note: 'needs design' },
       { action: 'priority', value: 1 },
-      { action: 'release' },
+      { action: 'release', force: true, note: 'the slot is gone' },
     ]);
     expect(log.posts[0].path).toBe('/api/v1/shift/todos/jeryu/20260919-0800-aaa/action');
 

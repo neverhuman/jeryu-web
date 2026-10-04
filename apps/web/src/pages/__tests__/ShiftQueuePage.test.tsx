@@ -113,7 +113,13 @@ describe('ShiftQueuePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fix the cache key' }));
     fireEvent.change(screen.getByLabelText('Priority for 20260918-1832-k3f'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Move 20260918-1832-k3f to night' }));
+    // A worker is still running this one, so Release asks before it forces.
     fireEvent.click(screen.getByRole('button', { name: 'Release 20260919-0900-q1q' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(3));
+    fireEvent.change(screen.getByLabelText('Reason for releasing 20260919-0900-q1q'), {
+      target: { value: ' the slot is gone ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm release' }));
     await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(4));
     const posts = calls.filter((c) => c.method === 'POST');
     expect(posts[0].pathname).toBe('/api/v1/shift/todos/jeryu/20260918-1832-k3f/action');
@@ -121,8 +127,12 @@ describe('ShiftQueuePage', () => {
       { action: 'block', note: 'waiting on design' },
       { action: 'priority', value: 1 },
       { action: 'mode', value: 'night' },
-      { action: 'release' },
+      { action: 'release', force: true, note: 'the slot is gone' },
     ]);
+    // Every action carries its own key, so a retried click is one act.
+    const keys = posts.map((p) => p.headers['idempotency-key']);
+    expect(keys.every((key) => Boolean(key))).toBe(true);
+    expect(new Set(keys).size).toBe(4);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open review PR for nightshift/2026-09-18' }));
     expect(await screen.findByRole('link', { name: 'jeryu-deploy#7' })).toBeInTheDocument();
