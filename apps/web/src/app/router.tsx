@@ -9,15 +9,16 @@
 //
 // The repoRouteParser utility centralizes this parsing.
 
-import { Navigate, createBrowserRouter, useLocation, useParams } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 
+import { MOVED_ROUTES, movedRouteElement } from './movedRoutes';
 import { AppShell } from '../layout/AppShell';
 import { HomeRedirect } from '../layout/HomeRedirect';
 import { ActivityPage } from '../pages/activity';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { FleetPage } from '../pages/FleetPage';
 import { ForgeLinkRedirect } from '../pages/ForgeLinkRedirect';
-import { ReleasesPage, ReleasesRoute, UnreleasedRedirect } from '../pages/ReleasesPage';
+import { ReleasesPage, ReleasesRoute } from '../pages/ReleasesPage';
 import { DependenciesPage, DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
 import { PullRequestPage } from '../pages/PullRequestPage';
@@ -40,49 +41,10 @@ import {
   QualityGateRulePage,
 } from '../pages/qualityGate';
 import { RepoRouter } from '../pages/RepoRouter';
-import { ShiftQueuePage, TodoPage, WORK_PATH, todoHref } from '../pages/shift';
+import { ShiftQueuePage, TodoPage } from '../pages/shift';
 import { WikiPage } from '../pages/wiki/WikiPage';
 
-import {
-  ADOPTION_PATH,
-  FINDINGS_PATH,
-} from '../pages/sharedTools/SharedToolsTabs';
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
-
-const AUDIT_MOVED_TO = {
-  what: 'Recorded events (who changed what, and when) are on Activity.',
-  label: 'Open Activity',
-  to: '/activity',
-};
-
-/** `/tool-fleet/:tool` → `/shared-tools/adoption/:tool`. */
-function ToolFleetToolRedirect(): JSX.Element {
-  const { tool = '' } = useParams();
-  return <Navigate to={`${ADOPTION_PATH}/${encodeURIComponent(tool)}`} replace />;
-}
-
-/** `/pull-room` (the page's first name) -> In flight, keeping its query string. */
-function PullRoomRedirect(): JSX.Element {
-  const { search, hash } = useLocation();
-  return <Navigate to={{ pathname: IN_FLIGHT_PATH, search, hash }} replace />;
-}
-
-/**
- * An old Work URL -> `/work`, keeping its query string; `hash` names a place on
- * the page. A link to one todo (`?todo=<id>`, what Needs you sends) opens that
- * todo's own page instead.
- */
-function WorkRedirect({ hash }: { hash?: string }): JSX.Element {
-  const { search, hash: current } = useLocation();
-  const ids = (new URLSearchParams(search).get('todo') ?? '').split(',').filter(Boolean);
-  if (!hash && ids.length === 1) return <Navigate to={todoHref(ids[0])} replace />;
-  return (
-    <Navigate
-      to={{ pathname: WORK_PATH, search, hash: hash ? `#${hash}` : current }}
-      replace
-    />
-  );
-}
 
 export const router = createBrowserRouter([
   {
@@ -109,22 +71,13 @@ export const router = createBrowserRouter([
       },
       // Work is one page: add work, who is working, the queue of every family.
       { path: 'work', element: <ShiftQueuePage /> },
-      // The three tabs it replaced keep working: the queue is the page, Add and
-      // Workers are places on it. Query strings (`?family=`, `?todo=`) carry over.
-      { path: 'work/shift', element: <WorkRedirect /> },
-      { path: 'work/shift/new', element: <WorkRedirect hash="add" /> },
-      { path: 'work/shift/workers', element: <WorkRedirect hash="workers" /> },
       // One todo's own page; Needs you, Activity and the queue link here.
       { path: 'work/:key', element: <TodoPage /> },
       { path: IN_FLIGHT_PATH.slice(1), element: <PullRoomPage /> },
-      // The page's first name; links and bookmarks keep working, filters too.
-      { path: 'pull-room', element: <PullRoomRedirect /> },
       // `/releases?family=x` (the board) redirects to `/releases/family/x`.
       { path: 'releases', element: <ReleasesRoute /> },
       // One family's release board; each lane is `#lane-<id>` on it.
       { path: 'releases/family/:family', element: <ReleasesPage /> },
-      // Unreleased is the last section of Releases; old links keep working.
-      { path: 'unreleased', element: <UnreleasedRedirect /> },
       { path: 'intelligence', element: <IntelligencePage /> },
       // The same graph, laid out by dependency depth and coloured by pin staleness.
       { path: DEPENDENCIES_PATH.slice(1), element: <DependenciesPage /> },
@@ -133,34 +86,33 @@ export const router = createBrowserRouter([
       { path: 'quality-gate/rules/:rule', element: <QualityGateRulePage /> },
       { path: 'quality-gate/heads/:owner/:name/:sha', element: <QualityGateHeadPage /> },
       { path: 'runners', element: <FleetPage /> },
-      { path: 'fleet', element: <Navigate to="/runners" replace /> },
-      { path: 'shared-tools', element: <Navigate to={FINDINGS_PATH} replace /> },
       { path: 'shared-tools/findings', element: <ToolsPage /> },
       { path: 'shared-tools/proposals', element: <ProposalsPage /> },
       { path: 'shared-tools/adoption', element: <ToolFleetPage /> },
       { path: 'shared-tools/adoption/:tool', element: <ToolFleetToolPage /> },
-      // The earlier Shared Code and Tool Fleet paths redirect to their new homes.
-      { path: 'shared-code', element: <Navigate to={FINDINGS_PATH} replace /> },
-      { path: 'tools', element: <Navigate to={FINDINGS_PATH} replace /> },
-      { path: 'tool-fleet', element: <Navigate to={ADOPTION_PATH} replace /> },
-      { path: 'tool-fleet/:tool', element: <ToolFleetToolRedirect /> },
-      // The in-memory notifications inbox is gone: Needs you says what waits on
-      // a person and Activity is the event feed. Old links land on the feed.
-      { path: 'notifications', element: <Navigate to="/activity" replace /> },
-      // `/audit` had a placeholder page and runbooks still link it: say where
-      // the record of who-did-what lives instead of a bare NotFound.
-      { path: 'audit', element: <NotFoundPage movedTo={AUDIT_MOVED_TO} /> },
       { path: 'settings', element: <AdminSettingsPage /> },
       // The internal wiki: the repository chosen in Settings, read as pages.
       { path: 'wiki', element: <WikiPage /> },
       { path: 'wiki/*', element: <WikiPage /> },
-      // Forge-shaped links (`/<owner>/<repo>/pull/<n>`) are everywhere: pull
-      // request bodies, notifications, agent output, bookmarks. They land on
-      // the canonical `/repos/<provider>/<owner>/<repo>/pulls/<n>`. Declared
-      // after every reserved top-level name above so `:owner` cannot shadow
-      // one, and before the catch-all so an unknown path is still a 404.
+      // Every path a page used to have, in one table: see movedRoutes.tsx.
+      ...MOVED_ROUTES.map((moved) => ({
+        path: moved.path,
+        element: movedRouteElement(moved),
+      })),
+      // Forge-shaped links (`/<owner>/<repo>/pull/<n>` and the rest of the
+      // shapes GitHub uses) are everywhere: pull request bodies, notifications,
+      // agent output, bookmarks. They land on the canonical
+      // `/repos/<provider>/<owner>/<repo>/…`, whose tab names are the forge's
+      // own. Declared after every reserved top-level name above so `:owner`
+      // cannot shadow one, and before the catch-all so an unknown path is
+      // still a 404.
+      { path: ':owner/:repo', element: <ForgeLinkRedirect /> },
+      { path: ':owner/:repo/pulls', element: <ForgeLinkRedirect subPath="pulls" /> },
       { path: ':owner/:repo/pull/:number', element: <ForgeLinkRedirect subPath="pulls" /> },
       { path: ':owner/:repo/issues/:number', element: <ForgeLinkRedirect subPath="issues" /> },
+      { path: ':owner/:repo/blob/*', element: <ForgeLinkRedirect subPath="blob" /> },
+      { path: ':owner/:repo/tree/*', element: <ForgeLinkRedirect subPath="tree" /> },
+      { path: ':owner/:repo/commit/:sha', element: <ForgeLinkRedirect subPath="commit" /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

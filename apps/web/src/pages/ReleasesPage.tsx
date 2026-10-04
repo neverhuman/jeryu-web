@@ -23,9 +23,10 @@
 // Its scope comes from `?repo=owner/name` (default the jeryu deploy repo) or
 // `?view=repositories&family=<family>`. The board's address is
 // `/releases/family/<family>` (lanes are `#lane-<id>` on it); the older
-// `/releases?family=<family>` redirects there (see ReleasesRoute). `/unreleased` was a page, then a section here; it is
-// neither now, and the route redirects (see UnreleasedRedirect) because the
-// forge's own attention items still link to it.
+// `/releases?family=<family>` redirects there (see ReleasesRoute). `/unreleased`
+// was a page, then a section here; it is neither now, and its path lands here
+// through the moved-path table (`app/movedRoutes.tsx`) because the forge's own
+// attention items still link to it.
 
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
@@ -242,16 +243,6 @@ function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element 
       />
     </>
   );
-}
-
-/**
- * `/unreleased[?…]` was a page of its own, then a section here, and is now the
- * In flight. The forge's attention items still emit the old path,
- * so it keeps working and lands on this page's environments and pins.
- */
-export function UnreleasedRedirect(): JSX.Element {
-  const { search } = useLocation();
-  return <Navigate to={{ pathname: '/releases', search }} replace />;
 }
 
 function Environments({ repoId, branch }: { repoId: string; branch: string }): JSX.Element {

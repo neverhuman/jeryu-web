@@ -179,7 +179,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     badge: 'system',
     shortcut: 'g u',
     aliases: ['g f'],
-    keywords: ['fleet', 'runners', 'utilization', 'saturation', 'health'],
+    // `runners` is the page's name; the rest is what a reader might type for it.
+    keywords: ['runners', 'workers', 'utilization', 'saturation', 'health'],
     group: 'system',
   },
   {
@@ -231,7 +232,6 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
       'proposals',
       'approve',
       'adoption',
-      'fleet',
     ],
     group: 'system',
   },

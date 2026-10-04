@@ -94,7 +94,7 @@ describe('paletteScore', () => {
   it('puts the title before a keyword, and a whole word before a fragment', () => {
     expect(paletteScore('Add work', 'add work')).toBe(1);
     expect(paletteScore('Go to Work', 'work', WORK)).toBeGreaterThan(
-      paletteScore('Go to Shared tools', 'work', ['fleet', 'workbench'])
+      paletteScore('Go to Shared tools', 'work', ['adoption', 'workbench'])
     );
     expect(paletteScore('alice/jeryu-web', 'alice/je')).toBeGreaterThan(
       paletteScore('alice/jeryu-web', 'web')

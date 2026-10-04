@@ -127,9 +127,9 @@ export function AppShell(): JSX.Element {
   useKeyboardShortcut(
     '/',
     (event) => {
-      // Ignore Shift+/ ("?") so it opens the shortcuts overlay cleanly. There
-      // is no server-side search; "/" opens the palette, the one place that
-      // finds things, as the header box beside it does.
+      // Ignore Shift+/ ("?") so it opens the shortcuts overlay cleanly. "/"
+      // opens the palette: it jumps to pages and repositories from here, and
+      // always offers the typed text to /search, which asks the server.
       if (event.shiftKey) return;
       event.preventDefault();
       openPalette();
