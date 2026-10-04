@@ -129,17 +129,18 @@ export function RepositoriesPage({
             />
           </div>
 
-          <FilterChips
-            label="Host"
-            value={filter.host}
-            options={
-              facets?.hosts ?? ['jeryu', 'local']
-            }
-            onChange={(host) =>
-              setFilter((prev) => ({ ...prev, host }))
-            }
-            ariaLabel="Filter by host"
-          />
+          {/* The forges the server names, never a guess at which ones exist. */}
+          {facets && facets.hosts.length > 0 ? (
+            <FilterChips
+              label="Host"
+              value={filter.host}
+              options={facets.hosts}
+              onChange={(host) =>
+                setFilter((prev) => ({ ...prev, host }))
+              }
+              ariaLabel="Filter by host"
+            />
+          ) : null}
 
           <FilterChips
             label="Visibility"
@@ -216,6 +217,7 @@ export function RepositoriesPage({
       />
 
       <CreateRepoDialog
+        hosts={facets?.hosts ?? []}
         open={dialogOpen}
         onCancel={closeDialog}
         onCreated={() => {

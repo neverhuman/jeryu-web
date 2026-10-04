@@ -64,8 +64,6 @@ import './page.css';
 import './ReleasesPage.css';
 import { When } from '../format/When';
 
-export const DEFAULT_RELEASE_REPO = 'jeryu/jeryu-deploy';
-
 const STATE_PILL: Record<string, string> = {
   success: 'page__pill--success',
   inactive: '',
@@ -119,7 +117,7 @@ export function ReleasesPage(): JSX.Element {
           </Link>
           <Link
             className="releases__view"
-            to={releasesHref(DEFAULT_RELEASE_REPO)}
+            to={REPOSITORY_VIEW_PATH}
             aria-current={perRepository ? 'page' : undefined}
             data-testid="releases-view-repository"
           >
@@ -142,13 +140,19 @@ export function ReleasesPage(): JSX.Element {
 /** `?view=repositories` keeps the per-repository view when it is scoped to a family. */
 const REPOSITORY_VIEW = 'repositories';
 
+/**
+ * The per-repository view with no repository named: the view picks the first
+ * deploy repository the forge reports, so no install's own repo is a default.
+ */
+const REPOSITORY_VIEW_PATH = `/releases?view=${REPOSITORY_VIEW}`;
+
 interface RepositoryScope {
   repo: string | null;
   family: string | null;
   branch: string;
 }
 
-const DEFAULT_SCOPE: RepositoryScope = { repo: DEFAULT_RELEASE_REPO, family: null, branch: 'main' };
+const DEFAULT_SCOPE: RepositoryScope = { repo: null, family: null, branch: 'main' };
 
 /**
  * The per-repository view's scope. On the board `?family=` picks the board;
@@ -159,7 +163,7 @@ function scopeFrom(params: URLSearchParams): RepositoryScope {
   const family = params.get('view') === REPOSITORY_VIEW ? params.get('family') : null;
   return {
     family,
-    repo: family ? null : (params.get('repo') ?? DEFAULT_RELEASE_REPO),
+    repo: family ? null : params.get('repo'),
     branch: params.get('branch') ?? 'main',
   };
 }
@@ -171,7 +175,12 @@ function scopeFrom(params: URLSearchParams): RepositoryScope {
 function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element {
   const [, setParams] = useSearchParams();
   const { user } = useAuth();
-  const { family, repo: repoId, branch } = scope;
+  const { family, branch } = scope;
+  // The deploy repos and families the forge knows feed the scope select, and
+  // the first of them is the repository this view opens on when the URL names
+  // none: which repositories exist is the server's to say.
+  const pins = usePins(user?.role === 'admin');
+  const repoId = scope.repo ?? pins.data?.consumers[0]?.repo ?? null;
 
   const members = useRepositories(
     { family: family ?? undefined, sort: 'name' },
@@ -187,14 +196,8 @@ function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element 
     }));
   }
 
-  // The deploy repos and families the forge knows feed the scope select.
-  const pins = usePins(user?.role === 'admin');
-  const options = releaseScopeOptions(
-    { repo: repoId, family },
-    pins.data?.consumers ?? [],
-    DEFAULT_RELEASE_REPO
-  );
-  const scopeValue = family ? `family:${family}` : `repo:${repoId ?? DEFAULT_RELEASE_REPO}`;
+  const options = releaseScopeOptions({ repo: repoId, family }, pins.data?.consumers ?? []);
+  const scopeValue = family ? `family:${family}` : repoId ? `repo:${repoId}` : '';
 
   const setScope = (value: string): void => {
     const next = scopeParams(value);
@@ -221,6 +224,11 @@ function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element 
             onChange={(event) => setScope(event.currentTarget.value)}
             data-testid="releases-scope"
           >
+            {/* Nothing chosen and nothing reported: the select says so rather
+                than standing on a repository this install may not have. */}
+            {scopeValue === '' ? (
+              <option value="">No repository reported yet</option>
+            ) : null}
             {options.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}

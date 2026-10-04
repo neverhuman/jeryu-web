@@ -136,7 +136,7 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
     timeout: 10_000,
   });
   await page.getByRole('button', { name: 'Back to home' }).click();
-  await expect(page).toHaveURL(/\/repos\/family\/jeryu-split$/);
+  await expect(page).toHaveURL(/\/repos$/);
 
   // Settings is reached from the top-right account control, and Log out is
   // the last thing on that page; neither is in the left nav or the header.

@@ -173,8 +173,7 @@ describe('one Releases page', () => {
         { repo: 'jeryu/jeryu-deploy', family: 'jeryu' },
         { repo: 'veox/jain-deploy', family: null },
         { repo: 'not-a-repo', family: 'jain' },
-      ],
-      'jeryu/jeryu-deploy'
+      ]
     );
     expect(options.map((o) => o.value)).toEqual([
       'repo:jeryu/jeryu-deploy',

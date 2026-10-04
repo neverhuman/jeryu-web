@@ -4,17 +4,18 @@
 // that should adopt the tool come first — they are the only part of the page
 // anyone can act on — grouped by the family that owns them, each family with a
 // button that files one todo per repo into that family's queue. The repos
-// already adopting it follow, grouped the same way. The tool lanes are defined
-// in the jankurai repo, which is linked as the tool's definition.
+// already adopting it follow, grouped the same way. Every repository named links
+// to its page on the forge the repository list says it is on.
 
 import { useMemo, useState } from 'react';
-import { ArrowLeft, BookOpen, Wrench } from 'lucide-react';
+import { ArrowLeft, Wrench } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { ActionButton } from '../components/action/ActionButton';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { formatFamilyName } from '../components/repo/familyRollup';
 import { useAuth } from '../hooks/useAuth';
+import { useForgeHost } from '../hooks/useForgeHost';
 import { useFileShiftTodos, useShiftFamilies } from '../hooks/useShift';
 import { useToolFleet } from '../hooks/useToolFleet';
 import { adoptionPillClass } from './ToolFleetPage';
@@ -24,18 +25,21 @@ import {
   groupReposByFamily,
   type AdoptionFamilyGroup,
 } from './toolAdoptionFamilies';
-import { TOOL_DEFINITION_REPO, repoHref, toolRow } from './toolFleetModel';
+import { repoHref, toolRow } from './toolFleetModel';
 import { ADOPTION_PATH } from './sharedTools/SharedToolsTabs';
 import { usePageTitle } from '../hooks/usePageTitle';
 import './page.css';
 import './ToolFleetPage.css';
 
 function RepoList({ repos }: { repos: string[] }): JSX.Element {
+  // Which forge each repository is on comes from the repository list, not from
+  // a constant: the adoption payload names repos as `owner/name` only.
+  const forgeHost = useForgeHost();
   return (
     <ul className="tool-fleet__repos">
       {repos.map((repo) => (
         <li key={repo}>
-          <Link to={repoHref(repo)}>{repo}</Link>
+          <Link to={repoHref(forgeHost(repo), repo)}>{repo}</Link>
         </li>
       ))}
     </ul>
@@ -107,7 +111,6 @@ export function ToolFleetToolPage(): JSX.Element {
   const [filed, setFiled] = useState<Record<string, number>>({});
 
   const entry = data?.tools.find((candidate) => candidate.tool === tool);
-  const definition = `${TOOL_DEFINITION_REPO.owner}/${TOOL_DEFINITION_REPO.name}`;
   const familyList = useMemo(() => families.data?.families ?? [], [families.data]);
   const missingGroups = useMemo(
     () => groupReposByFamily(entry?.applicable_missing_repos ?? [], familyList),
@@ -187,9 +190,6 @@ export function ToolFleetToolPage(): JSX.Element {
               <span className={adoptionPillClass(toolRow(entry))}>
                 {toolRow(entry).adopted}/{toolRow(entry).total} adopted
               </span>
-              <Link to={repoHref(definition)} data-testid="tool-fleet-definition">
-                <BookOpen size={14} aria-hidden="true" /> Defined in {definition}
-              </Link>
             </p>
           </header>
           <section className="page__section">

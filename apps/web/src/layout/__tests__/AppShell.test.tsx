@@ -190,6 +190,14 @@ describe('AppShell', () => {
     expect(screen.getByTestId('where').textContent).toBe('/needs-you');
   });
 
+  // Needs you is admin-only server-side, so another role is sent to the
+  // repositories index — the one home that exists on every install.
+  it('signed in as another role, sends /login to the repositories index', () => {
+    auth = { isPending: false, user: { role: 'user' } };
+    renderAt('/login');
+    expect(screen.getByTestId('where').textContent).toBe('/repos');
+  });
+
   it('forces the password change before anything else', () => {
     auth = { isPending: false, user: { role: 'user', mustChangePassword: true } };
     renderAt('/repos');

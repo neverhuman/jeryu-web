@@ -18,6 +18,15 @@ export function formatFamilyName(family: string): string {
   return family.endsWith('-split') ? family.slice(0, -'-split'.length) : family;
 }
 
+/**
+ * Where a repository sorts inside its family: the portal the family publishes
+ * from leads, every other member follows. The forge says which one that is
+ * (`repo_role`), so no install's own family names appear here.
+ */
+export function portalRank(repo: Pick<RepositorySummary, 'repo_role'>): number {
+  return repo.repo_role === 'public_portal' ? 0 : 1;
+}
+
 export interface FamilyRollup {
   /** Family label as returned by the backend. */
   name: string;

@@ -20,6 +20,7 @@ import {
 import {
   aggregateFamily,
   formatFamilyName,
+  portalRank,
 } from '../components/repo';
 import { RepoHealthPill } from '../components/repo/RepoHealthPill';
 import {
@@ -46,7 +47,7 @@ export function RepositoryFamilyPage(): JSX.Element {
   const list = useRepositories({ family, sort: 'name' });
 
   const repos = useMemo(
-    () => sortSplitRepos(list.data?.repositories ?? []),
+    () => sortFamilyRepos(list.data?.repositories ?? []),
     [list.data?.repositories]
   );
   const rollup = aggregateFamily(family, repos);
@@ -260,10 +261,9 @@ function SplitFamilyBrowser({
   );
 }
 
-function sortSplitRepos(repos: RepositorySummary[]): RepositorySummary[] {
-  return [...repos].sort((a, b) => {
-    if (a.id.name === 'jeryu') return -1;
-    if (b.id.name === 'jeryu') return 1;
-    return a.id.name.localeCompare(b.id.name);
-  });
+/** The family's portal first, then the rest by name. */
+function sortFamilyRepos(repos: RepositorySummary[]): RepositorySummary[] {
+  return [...repos].sort(
+    (a, b) => portalRank(a) - portalRank(b) || a.id.name.localeCompare(b.id.name)
+  );
 }

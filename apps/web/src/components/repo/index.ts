@@ -10,6 +10,7 @@ export {
   aggregateFamily,
   formatFamilyName,
   partitionByFamily,
+  portalRank,
 } from './familyRollup';
 export type { FamilyRollup } from './familyRollup';
 export { RepoHealthPill } from './RepoHealthPill';

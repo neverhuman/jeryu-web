@@ -13,6 +13,8 @@ import { ActionButton } from '../action/ActionButton';
 import type { DraftRequest } from './useCreateRepoDialog';
 
 export interface CreateRepoFormProps {
+  /** The forges the instance has; the host select offers exactly these. */
+  hosts: readonly string[];
   draft: DraftRequest;
   setDraft: React.Dispatch<React.SetStateAction<DraftRequest>>;
   topicsText: string;
@@ -24,6 +26,7 @@ export interface CreateRepoFormProps {
 }
 
 export function CreateRepoForm({
+  hosts,
   draft,
   setDraft,
   topicsText,
@@ -61,7 +64,12 @@ export function CreateRepoForm({
               setDraft({ ...draft, host: e.target.value })
             }
           >
-            <option value="jeryu">jeryu</option>
+            {/* The forges the list named; a draft's own host stays selectable. */}
+            {hostOptions(hosts, draft.host).map((host) => (
+              <option key={host} value={host}>
+                {host}
+              </option>
+            ))}
             <option value="local" disabled>
               local (unavailable)
             </option>
@@ -221,4 +229,12 @@ export function CreateRepoForm({
       </div>
     </form>
   );
+}
+
+/** Every host the select offers: what the instance has, plus the draft's own. */
+function hostOptions(hosts: readonly string[], current: string): string[] {
+  const all = [...hosts];
+  if (current !== '' && !all.includes(current)) all.unshift(current);
+  // Nothing known yet: an empty choice beats inventing a forge name.
+  return all.length > 0 ? all : [''];
 }

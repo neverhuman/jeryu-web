@@ -32,19 +32,22 @@ const DOCK_QUERY: PipelineEventsQuery = { limit: DOCK_EVENTS * 2 };
 
 export function LiveActivityDock(): JSX.Element | null {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(
     () => readBrowserText('durable', EXPANDED_KEY) !== '1'
   );
   const feed = usePipelineEvents(DOCK_QUERY, {
-    enabled: user?.role === 'admin',
+    enabled: isAdmin,
     refetchInterval: 10_000,
   });
   usePipelineNudge(feed.isSuccess, [...PIPELINE_KEY, 'events', DOCK_QUERY]);
 
   // The Activity page (and its wall) is this feed at full size.
   if (pathname === ACTIVITY_PATH) return null;
-  if (!feed.isSuccess) return null;
+  // The feed is admin-only: another role is never shown a strip of it, whatever
+  // a cached answer in the query client might still hold.
+  if (!isAdmin || !feed.isSuccess) return null;
   const events = foldEchoes(feed.data.events).slice(0, DOCK_EVENTS);
   const waiting = events.filter((event) => event.needs_human).length;
 

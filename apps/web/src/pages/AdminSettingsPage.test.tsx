@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminSettingsPage } from './AdminSettingsPage';
 
@@ -20,8 +20,8 @@ vi.mock('../api/client', () => ({
       ? [
           {
             login: 'user-3',
-            owner: 'jeryu',
-            repo: 'jeryu',
+            owner: 'acme',
+            repo: 'acme-web',
             access: 'write',
             granted_by: 'user-0',
             granted_at: '2026-07-03T00:00:00Z',
@@ -69,6 +69,11 @@ describe('AdminSettingsPage user list', () => {
         <AdminSettingsPage />
       </QueryClientProvider>,
     );
+
+    // No repository is assumed, so the panel asks for one before it reads.
+    expect(screen.queryByTestId('repo-grants-table')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'acme' } });
+    fireEvent.change(screen.getByLabelText('Repo'), { target: { value: 'acme-web' } });
 
     const table = await screen.findByTestId('repo-grants-table');
     const row = within(table).getByRole('row', { name: /user-3/ });

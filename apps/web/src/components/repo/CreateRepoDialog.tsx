@@ -39,14 +39,21 @@ export interface CreateRepoDialogProps {
   defaultHost?: string;
   /** Optional default owner pre-filled in step 1. */
   defaultOwner?: string;
+  /**
+   * The forges this instance has, newest answer from the repository list's
+   * facets. The first is pre-filled; with none the host is simply blank, so no
+   * one install's forge name is baked into the dialog.
+   */
+  hosts?: readonly string[];
 }
 
 export function CreateRepoDialog({
   open,
   onCancel,
   onCreated,
-  defaultHost = 'jeryu',
   defaultOwner = '',
+  hosts = [],
+  defaultHost = hosts[0] ?? '',
 }: CreateRepoDialogProps): JSX.Element {
   const {
     step,
@@ -134,6 +141,7 @@ export function CreateRepoDialog({
 
         {step === 'form' ? (
           <CreateRepoForm
+            hosts={hosts}
             draft={draft}
             setDraft={setDraft}
             topicsText={topicsText}

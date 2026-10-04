@@ -12,7 +12,7 @@ describe('useShellCommands', () => {
   });
 
   it('registers every destination and theme command, and removes them on unmount', () => {
-    const { unmount } = renderHook(() => useShellCommands());
+    const { unmount } = renderHook(() => useShellCommands(true));
     const ids = useCommandStore.getState().commands.map((c) => c.id);
     expect(ids).toEqual([
       'nav.needs-you',
@@ -41,8 +41,32 @@ describe('useShellCommands', () => {
     expect(useCommandStore.getState().commands).toEqual([]);
   });
 
+  // Every admin-only destination and deep link is absent for another role: the
+  // palette never offers a page whose read the server refuses.
+  it('offers no admin-only destination to another role', () => {
+    renderHook(() => useShellCommands(false));
+    const ids = useCommandStore.getState().commands.map((c) => c.id);
+    expect(ids).toEqual([
+      'nav.in-flight',
+      'nav.releases',
+      'nav.repos',
+      'nav.wiki',
+      'nav.runners',
+      'nav.intelligence',
+      'nav.dependencies',
+      'nav.quality-gate',
+      'nav.shared-tools',
+      'nav.settings',
+      'help.shortcuts',
+      'theme.light',
+      'theme.dark',
+      'theme.high-contrast',
+      'theme.system',
+    ]);
+  });
+
   it('names each page the way the nav names it', () => {
-    renderHook(() => useShellCommands());
+    renderHook(() => useShellCommands(true));
     const title = (id: string): string | undefined =>
       useCommandStore.getState().commands.find((c) => c.id === id)?.title;
     // The account control says "Settings", so the palette does not say something else.
@@ -55,13 +79,13 @@ describe('useShellCommands', () => {
     useCommandStore.getState().register([
       { id: 'repo.open', title: 'Open repo', keywords: [], target: { kind: 'route', path: '/repos/x' } },
     ]);
-    const { unmount } = renderHook(() => useShellCommands());
+    const { unmount } = renderHook(() => useShellCommands(true));
     unmount();
     expect(useCommandStore.getState().commands.map((c) => c.id)).toEqual(['repo.open']);
   });
 
   it('advertises the same chords the shell binds', () => {
-    renderHook(() => useShellCommands());
+    renderHook(() => useShellCommands(true));
     const shortcuts = Object.fromEntries(
       useCommandStore
         .getState()
@@ -86,7 +110,7 @@ describe('useShellCommands', () => {
   });
 
   it('offers the shortcuts overlay, saying which key opens it', () => {
-    renderHook(() => useShellCommands());
+    renderHook(() => useShellCommands(true));
     const entry = useCommandStore.getState().commands.find((c) => c.id === 'help.shortcuts');
     expect(entry?.title).toBe('Keyboard shortcuts (?)');
     expect(useShortcutsStore.getState().isOpen).toBe(false);
@@ -96,7 +120,7 @@ describe('useShellCommands', () => {
   });
 
   it('theme commands set the theme preference', () => {
-    renderHook(() => useShellCommands());
+    renderHook(() => useShellCommands(true));
     const run = (id: string): void =>
       useCommandStore.getState().commands.find((c) => c.id === id)?.run?.();
     const previous = usePreferencesStore.getState().theme;

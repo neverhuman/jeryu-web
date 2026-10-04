@@ -1,18 +1,19 @@
 // HomeRedirect.tsx — where `/` (and a finished login) lands.
 //
 // Admins land on "Needs you", the list of everything waiting on a person.
-// That list is admin-only server-side, so other roles keep the split family
-// browser as their home.
+// That list is admin-only server-side, so every other role lands on the
+// repositories index: the one page every signed-in viewer may read, on any
+// install, without the shell knowing a thing about which families live there.
 
 import { Navigate } from 'react-router-dom';
 
 import { useAuth } from '../hooks/useAuth';
 
 export const NEEDS_YOU_PATH = '/needs-you';
-export const FAMILY_HOME_PATH = '/repos/family/jeryu-split';
+export const REPOS_HOME_PATH = '/repos';
 
 export function homePathFor(user: { role?: string | null } | null | undefined): string {
-  return user?.role === 'admin' ? NEEDS_YOU_PATH : FAMILY_HOME_PATH;
+  return user?.role === 'admin' ? NEEDS_YOU_PATH : REPOS_HOME_PATH;
 }
 
 export function HomeRedirect(): JSX.Element {

@@ -5,7 +5,9 @@
 // five that explain the machinery (Runners, Intelligence, Dependencies,
 // Quality gate, Shared tools). The destinations themselves — label, path,
 // icon, badge and shortcut — come from NAV_DESTINATIONS, the one registry the
-// palette and the keyboard read too. The disclosure is closed by default,
+// palette and the keyboard read too. A destination the registry marks
+// `adminOnly` reads an admin-only endpoint, so it is left out entirely for
+// another role rather than offered as a link into a refusal. The disclosure is closed by default,
 // remembers what the operator chose, and is
 // open whenever the current page is inside it. When the current URL is inside a
 // repository route (`/repos/:provider/:fullName/*`), a contextual

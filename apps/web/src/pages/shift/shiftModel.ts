@@ -199,19 +199,25 @@ export function sortShifts(shifts: ShiftBranch[]): ShiftBranch[] {
   );
 }
 
-/** Owner half of `owner/name`: the queue repo's owner, the fallback host of family repos. */
-export function ownerOf(queueRepo: string | undefined): string {
-  return queueRepo?.split('/')[0] || 'jeryu';
+/**
+ * Owner half of `owner/name`: the queue repo's owner, the owner a family's
+ * bare repo names are assumed to be under. `null` when the server named no
+ * queue repository — then nothing is assumed and such a repo gets no link.
+ */
+export function ownerOf(queueRepo: string | undefined): string | null {
+  return queueRepo?.split('/')[0] || null;
 }
 
 /** A family repo as a link needs it, or null when it is not on this forge. */
 export type RepoRefs = (repo: string) => RepoRef | null;
 
 /**
- * A family's code may live under another owner than its queue (the jain queue
- * is jain-split/jain-todo, its repos are veox/*). The server says which; an
- * older server says nothing and the queue's owner is the best guess. `host` is
- * the forge the family's repositories are on, so links name that one.
+ * A family's code may live under another owner than its queue (a queue under
+ * `acme-split/acme-todo` whose repositories are `globex/*`). The server says
+ * which; an older server says nothing and the queue's owner is the best guess.
+ * With no queue repository either, a bare repo name resolves to nothing and is
+ * shown without a link rather than linked at a guessed owner. `host` is the
+ * forge the family's repositories are on, so links name that one.
  */
 export function repoRefs(
   family: Pick<ShiftFamily, 'queue_repo' | 'repos'> | undefined,
@@ -223,7 +229,7 @@ export function repoRefs(
     if (repo.owner !== undefined) known.set(repo.name, repo.owner);
   }
   return (repo) => {
-    // Repos may come bare (`jeryu-web`) or already qualified (`veox/jeryu-web`).
+    // Repos may come bare (`acme-web`) or already qualified (`globex/acme-web`).
     if (repo.includes('/')) return repoRefOf(host, repo);
     const owner = known.has(repo) ? (known.get(repo) ?? null) : fallback;
     return owner === null ? null : repoRefOf(host, `${owner}/${repo}`);

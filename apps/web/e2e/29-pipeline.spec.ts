@@ -307,13 +307,17 @@ test.describe('Pipeline visibility', () => {
     }
   });
 
-  test('other roles keep the family browser as home; an older server degrades plainly @action:needs_you.unavailable', async ({
+  test('other roles land on the repositories index; an older server degrades plainly @action:needs_you.unavailable', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'user' } });
     await page.goto('/');
-    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split$/);
+    await expect(page).toHaveURL(/\/repos$/);
     await expect(page.getByTestId('needs-you-badge')).toHaveCount(0);
+    // The destinations whose reads are admin-only are not offered at all.
+    for (const label of ['Needs you', 'Activity', 'Work']) {
+      await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: label })).toHaveCount(0);
+    }
 
     // No pipeline mocks: the shared fallback answers 404, like an old server.
     await page.goto('/needs-you');

@@ -149,7 +149,9 @@ test.describe('Primary left navigation', () => {
   test('routes every left-nav destination without hitting NotFound @action:chrome.sidebar_nav @action:settings.render @action:shared_tools.nav', async ({
     page,
   }) => {
-    await mockBootstrap(page);
+    // Needs you, Activity and Work are admin-only destinations, so the walk
+    // through every one of them is an admin's.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockRepoList(page, [
       {
         id: { host: 'jeryu', owner: 'neverhuman', name: 'veox' },
@@ -167,7 +169,7 @@ test.describe('Primary left navigation', () => {
         active_slots: 4,
         online_runners: 4,
       },
-    ]);
+    ], { auth: { role: 'admin' } });
     await mockControlPlaneRunners(page, {
       schemaVersion: 'jeryu.runner_fabric/v1',
       local: {

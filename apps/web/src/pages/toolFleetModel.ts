@@ -67,9 +67,6 @@ export interface ToolFleetRow {
   status: AdoptionStatus;
 }
 
-// Owner/name of the repo that defines every jankurai tool lane.
-export const TOOL_DEFINITION_REPO = { host: 'jeryu', owner: 'jeryu', name: 'jankurai' };
-
 export function toolRow(entry: ToolFleetEntry): ToolFleetRow {
   const adopted = entry.adopting_repos.length;
   const missing = entry.applicable_missing_repos.length;
@@ -124,6 +121,7 @@ export function projectToolFleet(
     );
 }
 
-export function repoHref(fullName: string): string {
-  return repoUrl(repoRefOf(TOOL_DEFINITION_REPO.host, fullName));
+/** A `owner/name` repository's page on the forge the caller resolved. */
+export function repoHref(host: string, fullName: string): string {
+  return repoUrl(repoRefOf(host, fullName));
 }

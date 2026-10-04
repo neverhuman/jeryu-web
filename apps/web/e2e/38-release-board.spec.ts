@@ -86,9 +86,10 @@ test('the board opens on the first family, a pill switches family and the URL ke
     { timeout: 15_000 }
   );
 
-  // The per-repository view is one link away.
+  // The per-repository view is one link away, and names no repository itself:
+  // it opens on the first deploy repository the forge reports.
   await page.getByRole('link', { name: 'Per repository' }).click();
-  await expect(page).toHaveURL(/\/releases\?repo=jeryu%2Fjeryu-deploy$/);
+  await expect(page).toHaveURL(/\/releases\?view=repositories$/);
   await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
   await expect(page.getByTestId('release-board')).toHaveCount(0);
 });

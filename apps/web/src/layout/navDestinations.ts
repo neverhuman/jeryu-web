@@ -5,6 +5,10 @@
 // (`useShellCommands`), and the keyboard binds it (`NavShortcuts`), so a new
 // page or a renamed one is a single edit instead of three that drift.
 //
+// A destination whose read the server allows only an administrator carries
+// `adminOnly`, and then the nav, the palette and the keyboard all leave it out
+// for every other role: one flag, three surfaces, no link into a refusal.
+//
 // Shortcut letters follow the label: `g n` Needs you, `g w` Work, `g q`
 // Quality gate. `aliases` keeps a destination's earlier combo working for one
 // release after the letter moved; aliases stay out of the help overlay.
@@ -80,6 +84,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     shortcut: 'g n',
     aliases: ['g d'],
     keywords: ['needs you', 'attention', 'inbox', 'blocked', 'waiting', 'home', 'dashboard'],
+    // `/api/v1/attention` is admin-only: another role would land on a denial.
+    adminOnly: true,
     group: 'primary',
   },
   {
@@ -90,6 +96,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     paletteIcon: 'activity',
     shortcut: 'g a',
     keywords: ['activity', 'events', 'log', 'feed', 'live', 'pipeline', 'notifications', 'alerts'],
+    // The pipeline event feed is admin-only, as is the dock that shows it.
+    adminOnly: true,
     group: 'primary',
   },
   {
@@ -113,6 +121,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
       'dayshift',
       'bulletshift',
     ],
+    // The shift queue and its workers are admin-only reads.
+    adminOnly: true,
     group: 'primary',
   },
   {

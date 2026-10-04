@@ -1,7 +1,9 @@
-// AdminSettingsPage.tsx — admin preferences surface.
+// AdminSettingsPage.tsx — the Settings page, for every role.
 //
-// Implements theme preferences, the internal wiki choice, and account access
-// controls wired through typed HTTP endpoints.
+// Theme preferences and the session are everyone's; the internal wiki choice,
+// users and per-repository access are the administrator's and are the only
+// parts an administrator sees more of, so the page says whose settings these
+// are rather than promising admin controls to a reader who has none.
 
 import { LogOut, Moon, Monitor, Sun, ToggleRight } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -26,13 +28,16 @@ export function AdminSettingsPage(): JSX.Element {
   const theme = usePreferencesStore((s) => s.theme);
   const setTheme = usePreferencesStore((s) => s.setTheme);
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="page" data-testid="settings-page">
       <header className="page__header">
         <h1 className="page__title">Settings</h1>
         <p className="page__subtitle">
-          Admin preferences and account access controls.
+          {isAdmin
+            ? 'Your preferences, plus the instance settings and account access controls.'
+            : 'Your preferences and this session.'}
         </p>
         <div className="page__inline-actions">
           <span className="page__pill page__pill--warning">
@@ -77,7 +82,7 @@ export function AdminSettingsPage(): JSX.Element {
         </div>
       </section>
 
-      {user?.role === 'admin' ? (
+      {isAdmin ? (
         <>
           <InternalWikiPanel />
           <AdminAccessPanel />
@@ -207,8 +212,9 @@ interface RepoAccessGrant {
  */
 function RepoAccessPanel(): JSX.Element {
   const queryClient = useQueryClient();
-  const [owner, setOwner] = useState('jeryu');
-  const [repo, setRepo] = useState('jeryu');
+  // No repository is assumed: which one an administrator wants is theirs to say.
+  const [owner, setOwner] = useState('');
+  const [repo, setRepo] = useState('');
   const [login, setLogin] = useState('');
   const [access, setAccess] = useState<AccessLevel>('read');
   const hasRepo = owner.trim() !== '' && repo.trim() !== '';
@@ -249,7 +255,11 @@ function RepoAccessPanel(): JSX.Element {
           <input value={repo} onChange={(event) => setRepo(event.currentTarget.value)} />
         </label>
       </div>
-      {!hasRepo ? null : grants.isPending ? (
+      {!hasRepo ? (
+        <p className="page__roadmap-note">
+          Name an owner and a repository to see who can reach it.
+        </p>
+      ) : grants.isPending ? (
         <LoadingState title="Loading access..." variant="message" />
       ) : grants.error ? (
         <ErrorState title="Could not load access" error={grants.error} />

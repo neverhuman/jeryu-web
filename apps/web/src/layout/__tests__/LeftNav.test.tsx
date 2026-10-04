@@ -5,8 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LeftNav, PRIMARY_NAV, SYSTEM_NAV, isSystemPath } from '../LeftNav';
 
+const auth = vi.hoisted((): { role: 'admin' | 'user' } => ({ role: 'admin' }));
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role: 'user' } }),
+  useAuth: () => ({ user: { login: 'ada', role: auth.role } }),
 }));
 
 const siteSettings = vi.hoisted((): { wiki: null | { full_name: string } } => ({ wiki: null }));
@@ -46,6 +47,7 @@ function renderAt(path: string): { unmount: () => void } {
 
 describe('LeftNav', () => {
   beforeEach(() => {
+    auth.role = 'admin';
     siteSettings.wiki = null;
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
   });
@@ -139,6 +141,19 @@ describe('LeftNav', () => {
     expect(screen.getByRole('link', { name: 'Code' })).not.toHaveAttribute('aria-current');
     unmount();
   });
+  // Needs you, Activity and Work read admin-only endpoints: offered to another
+  // role they are three links into a permission-denied page.
+  it('leaves out the admin-only destinations for every other role', () => {
+    auth.role = 'user';
+    renderAt('/repos');
+    for (const label of ['Needs you', 'Activity', 'Work']) {
+      expect(screen.queryByRole('link', { name: new RegExp(label) })).toBeNull();
+    }
+    for (const label of ['In flight', 'Releases', 'Repositories']) {
+      expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
+    }
+  });
+
   it('links to the wiki only when one is set, and marks it on wiki pages', () => {
     const { unmount } = renderAt('/activity');
     expect(screen.queryByRole('link', { name: 'Wiki' })).toBeNull();

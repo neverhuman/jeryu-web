@@ -13,6 +13,7 @@
 // States are derived, not stored: a pull request's state is the furthest point
 // it has reached (see `pullStateOf`).
 
+import { DEFAULT_FORGE_HOST } from '../hooks/useForgeHost';
 import { compareInstants } from '../format/when';
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
@@ -151,7 +152,7 @@ export interface RepoGroupsOptions {
   /** Shift work with no pull request yet, to file under the repos it names. */
   ghosts?: readonly GhostGroup[];
   /**
-   * A todo names repos bare (`jeryu-web`); a section is keyed `owner/name`.
+   * A todo names repos bare (`acme-web`); a section is keyed `owner/name`.
    * Return null for a name this page cannot place, and its rows land in
    * `unassigned` rather than being dropped.
    */
@@ -210,7 +211,7 @@ export function buildRepoGroups(
     const { rows: shown, older } = foldSettled(all);
     groups.push({
       repo,
-      host: prs[0]?.row.pr.repo.host ?? 'jeryu',
+      host: prs[0]?.row.pr.repo.host ?? DEFAULT_FORGE_HOST,
       rows: shown,
       older,
       counts: countRows(branches, prs),

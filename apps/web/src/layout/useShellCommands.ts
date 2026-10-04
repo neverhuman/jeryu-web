@@ -2,7 +2,7 @@
 //
 // One "Go to" command per destination in NAV_DESTINATIONS (the same list the
 // left nav renders and the keyboard binds), then the few entries that are not
-// destinations: two deep links, the shortcuts overlay, and the themes.
+// destinations: two admin deep links, the shortcuts overlay, and the themes.
 // `/search` reads the same commands, so a destination is findable there too.
 
 import { useEffect } from 'react';
@@ -35,22 +35,39 @@ export function useShellCommands(isAdmin = false): void {
         shortcut: destination.shortcut,
       })
     );
+    // Both deep links land inside an admin-only page, so they follow the
+    // destination they belong to rather than being offered to every reader.
+    const adminDeepLinks: Command[] = isAdmin
+      ? [
+          {
+            id: 'nav.work-add',
+            title: 'Add work',
+            keywords: [
+              'shift',
+              'todo',
+              'file',
+              'add',
+              'new',
+              'nightshift',
+              'dayshift',
+              'bulletshift',
+              'queue',
+            ],
+            icon: 'clipboard-list',
+            target: { kind: 'route', path: '/work#add' },
+          },
+          {
+            id: 'nav.activity-wall',
+            title: 'Open the Activity wall',
+            keywords: ['wall', 'demo', 'activity', 'live', 'big screen'],
+            icon: 'activity',
+            target: { kind: 'route', path: '/activity?wall=1' },
+          },
+        ]
+      : [];
     const commands: Command[] = [
       ...destinations,
-      {
-        id: 'nav.work-add',
-        title: 'Add work',
-        keywords: ['shift', 'todo', 'file', 'add', 'new', 'nightshift', 'dayshift', 'bulletshift', 'queue'],
-        icon: 'clipboard-list',
-        target: { kind: 'route', path: '/work#add' },
-      },
-      {
-        id: 'nav.activity-wall',
-        title: 'Open the Activity wall',
-        keywords: ['wall', 'demo', 'activity', 'live', 'big screen'],
-        icon: 'activity',
-        target: { kind: 'route', path: '/activity?wall=1' },
-      },
+      ...adminDeepLinks,
       {
         // The palette is where an operator learns the key exists.
         id: 'help.shortcuts',

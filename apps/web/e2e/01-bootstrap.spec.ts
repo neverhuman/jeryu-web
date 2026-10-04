@@ -48,16 +48,16 @@ test.describe('Bootstrap + Dashboard (W-T-09)', () => {
     });
     await mockRepoList(page, [
       {
-        id: { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' },
+        id: { host: 'forge.example', owner: 'acme', name: 'acme' },
         description: 'Public portal.',
-        family: 'jeryu-split',
+        family: 'acme-split',
         open_pull_requests: 1,
         failing_checks: 0,
       },
       {
-        id: { host: 'jeryu', owner: 'neverhuman', name: 'jeryu-web' },
+        id: { host: 'forge.example', owner: 'acme', name: 'acme-web' },
         description: 'Web console.',
-        family: 'jeryu-split',
+        family: 'acme-split',
         open_pull_requests: 2,
         failing_checks: 1,
       },
@@ -96,17 +96,14 @@ test.describe('Bootstrap + Dashboard (W-T-09)', () => {
       { timeout: 10_000 }
     );
 
-    // 4. The shipped root route redirects to the split-family landing page.
-    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split$/, {
-      timeout: 10_000,
-    });
+    // 4. The shipped root route redirects a non-admin to the repositories
+    //    index: no install's own family is the shell's idea of home.
+    await expect(page).toHaveURL(/\/repos$/, { timeout: 10_000 });
     await expect(
-      page.getByRole('heading', { level: 1, name: 'jeryu', exact: true })
+      page.getByRole('heading', { level: 1, name: 'Repositories', exact: true })
     ).toBeVisible();
-    await expect(page.locator('section.split-browser')).toBeVisible();
-    await expect(page.locator('.markdown-body')).toContainText(
-      'Root route proof.'
-    );
+    const repositories = page.getByTestId('repositories-page');
+    await expect(repositories).toContainText('acme-web');
 
     // 5. Main outlet renders the root route content.
     await expect(page.locator('main#main-content')).toBeVisible();

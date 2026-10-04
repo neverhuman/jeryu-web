@@ -153,10 +153,12 @@ export interface MockPoolRollup {
  */
 export async function mockFleetBootstrap(
   page: Page,
-  pools: MockPoolRollup[]
+  pools: MockPoolRollup[],
+  /** The viewer this bootstrap is for; a spec driving an admin says so here. */
+  viewer: ViewerOverride = {}
 ): Promise<void> {
   await mockUnhandledApi(page);
-  await mockAuthMeForViewer(page);
+  if (viewer.auth !== null) await mockAuthMeForViewer(page, viewer);
   await page.route('**/api/v1/bootstrap', async (route: Route) => {
     const body = JSON.parse(JSON.stringify(bootstrapJson)) as Record<
       string,

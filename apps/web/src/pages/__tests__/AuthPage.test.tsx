@@ -97,7 +97,7 @@ describe('AuthPage', () => {
     expect(screen.queryByTestId('where')).toBeNull();
   });
 
-  it('signs up without remember-me and lands other roles on the family home', async () => {
+  it('signs up without remember-me and lands other roles on the repositories index', async () => {
     auth.signup.mutateAsync.mockResolvedValue({ role: 'user', mustChangePassword: false });
     renderPage({ initialMode: 'signup' });
     expect(screen.getByRole('tab', { name: 'Sign up' }).getAttribute('aria-selected')).toBe('true');
@@ -107,7 +107,7 @@ describe('AuthPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() =>
-      expect(screen.getByTestId('where').textContent).toBe('/repos/family/jeryu-split')
+      expect(screen.getByTestId('where').textContent).toBe('/repos')
     );
     expect(auth.signup.mutateAsync).toHaveBeenCalledWith({
       login: 'newcomer',

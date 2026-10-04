@@ -13,6 +13,7 @@ import { ActionButton } from '../components/action/ActionButton';
 import {
   RepoTable,
   formatFamilyName,
+  portalRank,
 } from '../components/repo';
 import {
   EmptyState,
@@ -38,16 +39,9 @@ export const DEFAULT_FILTER: FilterState = {
   sort: 'recent_activity',
 };
 
-function sortFamilyRepos(
-  family: string,
-  repos: RepositorySummary[]
-): RepositorySummary[] {
-  if (family !== 'jeryu-split') return repos;
-  return [...repos].sort((a, b) => {
-    const aRank = a.repo_role === 'public_portal' ? 0 : 1;
-    const bRank = b.repo_role === 'public_portal' ? 0 : 1;
-    return aRank - bRank;
-  });
+/** A family's portal first; the server's order decides the rest. */
+function sortFamilyRepos(repos: RepositorySummary[]): RepositorySummary[] {
+  return [...repos].sort((a, b) => portalRank(a) - portalRank(b));
 }
 
 export function groupByFamily(
@@ -70,7 +64,7 @@ export function groupByFamily(
   for (const [family, list] of buckets) {
     out.push({
       title: formatFamilyName(family),
-      repos: sortFamilyRepos(family, list),
+      repos: sortFamilyRepos(list),
     });
   }
   if (ungrouped.length > 0) {

@@ -3,7 +3,7 @@
 // The BFF e2e harness usually runs with local-dev trust enabled, so this spec
 // mocks the auth endpoints at the browser network boundary. That still drives
 // the real AuthProvider, AuthPage, fetch client, AppShell gate, settings panel,
-// and repository-family browser without depending on mutable backend accounts.
+// and repositories index without depending on mutable backend accounts.
 
 import { expect, test, type Page, type Route } from './fixtures/test';
 
@@ -20,13 +20,13 @@ interface AuthUserWire {
 
 const splitRepos = [
   {
-    id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-core' },
-    family: 'jeryu-split',
+    id: { host: 'forge.example', owner: 'acme', name: 'acme-core' },
+    family: 'acme-split',
     description: 'Granted core repository.',
   },
   {
-    id: { host: 'jeryu', owner: 'jeryu', name: 'jeryu-web' },
-    family: 'jeryu-split',
+    id: { host: 'forge.example', owner: 'acme', name: 'acme-web' },
+    family: 'acme-split',
     description: 'Granted web repository.',
   },
 ];
@@ -84,15 +84,14 @@ test.describe('Auth hardening browser proof', () => {
     await page.getByLabel('Remember me').check();
     await page.getByRole('button', { name: 'Login' }).click();
 
-    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split/, {
-      timeout: 10_000,
-    });
-    const browser = page.locator('section.split-browser');
-    await expect(browser).toBeVisible({ timeout: 10_000 });
-    await expect(browser.locator('.split-browser__repo')).toHaveCount(2);
-    await expect(browser).toContainText('jeryu-core');
-    await expect(browser).toContainText('jeryu-web');
-    await expect(browser).not.toContainText('jeryu-deploy');
+    // A non-admin lands on the repositories index: the one page every role may
+    // read, on any install, with no family baked into the shell.
+    await expect(page).toHaveURL(/\/repos$/, { timeout: 10_000 });
+    const repositories = page.getByTestId('repositories-page');
+    await expect(repositories).toBeVisible({ timeout: 10_000 });
+    await expect(repositories).toContainText('acme-core');
+    await expect(repositories).toContainText('acme-web');
+    await expect(repositories).not.toContainText('acme-deploy');
     expect(loginBodies).toEqual([
       { login: 'jordanh', password: loginFormCredential, rememberMe: true },
     ]);
@@ -122,13 +121,13 @@ test.describe('Auth hardening browser proof', () => {
       if (url.pathname.startsWith('/api/')) signedOutCalls.push(url.pathname);
     });
 
-    await page.goto('/repos/family/jeryu-split?view=list');
+    await page.goto('/repos/family/acme-split?view=list');
     await expect(page).toHaveURL(
-      /\/login\?next=%2Frepos%2Ffamily%2Fjeryu-split%3Fview%3Dlist$/,
+      /\/login\?next=%2Frepos%2Ffamily%2Facme-split%3Fview%3Dlist$/,
       { timeout: 10_000 }
     );
     await expect(page.getByRole('status')).toContainText(
-      'Log in to continue to /repos/family/jeryu-split?view=list'
+      'Log in to continue to /repos/family/acme-split?view=list'
     );
     // Signed out, the only API call is the one that learns it.
     expect(signedOutCalls.filter((path) => path !== '/api/v1/auth/me')).toEqual([]);
@@ -137,7 +136,7 @@ test.describe('Auth hardening browser proof', () => {
     await page.getByLabel('Password').fill(loginFormCredential);
     await page.getByRole('button', { name: 'Login' }).click();
 
-    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split\?view=list$/, {
+    await expect(page).toHaveURL(/\/repos\/family\/acme-split\?view=list$/, {
       timeout: 10_000,
     });
     await expect(page.locator('section.split-browser')).toBeVisible({ timeout: 10_000 });
@@ -181,12 +180,8 @@ test.describe('Auth hardening browser proof', () => {
     await page.getByLabel('Password').fill(signupFormCredential);
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split/, {
-      timeout: 10_000,
-    });
-    await expect(page.getByText('No repositories in this family')).toBeVisible();
-    await expect(page.locator('section.split-browser')).toHaveCount(0);
-    await expect(page.locator('.split-browser__repo')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/repos$/, { timeout: 10_000 });
+    await expect(page.getByText('No repositories match')).toBeVisible();
   });
 
   test('authenticated visitors are redirected away from auth routes', async ({
@@ -202,18 +197,14 @@ test.describe('Auth hardening browser proof', () => {
     await mockRepoList(page, splitRepos);
 
     await page.goto('/login');
-    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split/, {
-      timeout: 10_000,
-    });
-    await expect(page.locator('section.split-browser')).toBeVisible({
+    await expect(page).toHaveURL(/\/repos$/, { timeout: 10_000 });
+    await expect(page.getByTestId('repositories-page')).toBeVisible({
       timeout: 10_000,
     });
 
     await page.goto('/signup');
-    await expect(page).toHaveURL(/\/repos\/family\/jeryu-split/, {
-      timeout: 10_000,
-    });
-    await expect(page.locator('section.split-browser')).toBeVisible({
+    await expect(page).toHaveURL(/\/repos$/, { timeout: 10_000 });
+    await expect(page.getByTestId('repositories-page')).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -259,7 +250,7 @@ test.describe('Auth hardening browser proof', () => {
     await page.getByLabel('New password').fill(replacementPasswordValue);
     await page.getByRole('button', { name: 'Change password' }).click();
 
-    await expect(page.locator('section.split-browser')).toBeVisible({
+    await expect(page.getByTestId('repositories-page')).toBeVisible({
       timeout: 10_000,
     });
     expect(csrfHeader).toBe('csrf-temp');
@@ -318,9 +309,9 @@ test.describe('Auth hardening browser proof', () => {
     await expect(page.getByText(adminResetPasswordValue)).toBeVisible();
 
     const accessRegion = page.getByRole('region', { name: 'Repository access' });
-    await accessRegion.getByRole('textbox', { name: 'Owner' }).fill('jeryu');
-    await accessRegion.getByRole('textbox', { name: 'Repo' }).fill('jeryu-web');
-    await expect(accessRegion.getByText('No one has been granted access to jeryu/jeryu-web.')).toBeVisible();
+    await accessRegion.getByRole('textbox', { name: 'Owner' }).fill('acme');
+    await accessRegion.getByRole('textbox', { name: 'Repo' }).fill('acme-web');
+    await expect(accessRegion.getByText('No one has been granted access to acme/acme-web.')).toBeVisible();
     await accessRegion.getByRole('textbox', { name: 'User' }).fill('jordanh');
     await accessRegion.getByRole('radio', { name: 'read' }).click();
     const grantButton = accessRegion.getByRole('button', { name: 'Grant access' });
@@ -350,7 +341,7 @@ test.describe('Auth hardening browser proof', () => {
     await mockRepoGrants(page, () => grants);
     const revoked: string[] = [];
     await page.route(
-      /\/api\/v1\/admin\/repos\/jeryu\/jeryu\/grants\/[^/]+$/,
+      /\/api\/v1\/admin\/repos\/acme\/acme-web\/grants\/[^/]+$/,
       async (route, request) => {
         expect(request.method()).toBe('DELETE');
         expect(request.headers()['x-jeryu-csrf']).toBe('csrf-admin');
@@ -362,9 +353,11 @@ test.describe('Auth hardening browser proof', () => {
     );
 
     await page.goto('/settings');
-    const table = page
-      .getByRole('region', { name: 'Repository access' })
-      .getByTestId('repo-grants-table');
+    // The panel assumes no repository: the admin names the one they mean.
+    const accessRegion = page.getByRole('region', { name: 'Repository access' });
+    await accessRegion.getByRole('textbox', { name: 'Owner' }).fill('acme');
+    await accessRegion.getByRole('textbox', { name: 'Repo' }).fill('acme-web');
+    const table = accessRegion.getByTestId('repo-grants-table');
     await expect(table.getByRole('rowheader', { name: 'jordanh' })).toBeVisible({
       timeout: 10_000,
     });
@@ -406,8 +399,8 @@ async function mockAuthMe(
 function repoGrant(login: string, access: string): Record<string, string> {
   return {
     login,
-    owner: 'jeryu',
-    repo: 'jeryu',
+    owner: 'acme',
+    repo: 'acme-web',
     access,
     granted_by: 'jeryu-admin',
     granted_at: '2026-07-03T00:00:00Z',

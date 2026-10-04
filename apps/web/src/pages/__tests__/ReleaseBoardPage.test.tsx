@@ -113,7 +113,7 @@ describe('ReleasesPage — family release board', () => {
       // The per-repository view is one link away, not on the board.
       expect(screen.getByRole('link', { name: 'Per repository' })).toHaveAttribute(
         'href',
-        '/releases?repo=jeryu%2Fjeryu-deploy'
+        '/releases?view=repositories'
       );
       expect(screen.queryByTestId('releases-scope')).toBeNull();
     }
@@ -396,6 +396,9 @@ describe('ReleasesPage — family release board', () => {
     expect(screen.queryByTestId('release-board-stale')).toBeNull();
   });
 
+  // Both the board and the pins that name the deploy repositories are admin
+  // reads: denied them, the page keeps the per-repository view and says it has
+  // no repository to show rather than naming one of its own.
   it('says the board needs an admin session on a 403, and keeps the per-repository view', async () => {
     serveBoards(ALL_BOARDS, (req) =>
       req.pathname === '/api/v1/release-board' ? errorResponse(403, 'admin only') : undefined
@@ -404,7 +407,10 @@ describe('ReleasesPage — family release board', () => {
     expect(await screen.findByTestId('release-board-needs-admin')).toHaveTextContent(
       'The release board needs an admin session.'
     );
-    expect(screen.getByLabelText('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
+    expect(screen.getByLabelText('Repository or family')).toHaveValue('');
+    expect(screen.getByLabelText('Repository or family')).toHaveTextContent(
+      'No repository reported yet'
+    );
   });
 
   it('says no family has reported yet when the list is empty, and keeps the per-repository view', async () => {

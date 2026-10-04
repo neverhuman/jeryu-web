@@ -151,10 +151,9 @@ export interface ReleaseScopeOption {
  */
 export function releaseScopeOptions(
   current: { repo: string | null; family: string | null },
-  known: ReadonlyArray<{ repo: string; family?: string | null }>,
-  fallbackRepo: string
+  known: ReadonlyArray<{ repo: string; family?: string | null }>
 ): ReleaseScopeOption[] {
-  const repos = new Set<string>([fallbackRepo]);
+  const repos = new Set<string>();
   const families = new Set<string>();
   for (const entry of known) {
     if (entry.repo.includes('/')) repos.add(entry.repo);
