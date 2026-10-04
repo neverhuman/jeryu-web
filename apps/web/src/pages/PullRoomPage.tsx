@@ -43,6 +43,7 @@ import {
   type PullRoomFilters,
 } from './pullRoomModel';
 import { pullCountsSentence } from './pullTimelineModel';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
 import './PullRoomPage.css';
@@ -59,6 +60,7 @@ const EVIDENCE_STATES: EvidenceState[] = [
 ];
 
 export function PullRoomPage(): JSX.Element {
+  usePageTitle('In flight');
   // The open work is what this page is for, so it asks for the largest page
   // the snapshot hands out rather than the default 100 rows per collection.
   const snapshot = useControlPlane({

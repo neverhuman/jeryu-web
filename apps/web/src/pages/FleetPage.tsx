@@ -55,6 +55,7 @@ import {
   type RunnerPlaces
 } from './fleet/releaseIndex';
 import { RUNNERS_PARAM } from './releaseBoard/links';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
 import './FleetPage.css';
@@ -63,6 +64,7 @@ import './FleetPage.css';
 export const RUNNER_STALE_AFTER_MS = 3 * 60_000;
 
 export function FleetPage(): JSX.Element {
+  usePageTitle('Runners');
   const runnersQuery = useControlPlaneRunners();
   const runnerNetwork = useMemo(
     () =>

@@ -5,6 +5,7 @@ import { MapPinOff } from 'lucide-react';
 
 import { ActionButton } from '../components/action/ActionButton';
 import { EmptyState } from '../components/state';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
 
@@ -18,6 +19,7 @@ export interface MovedTo {
 export function NotFoundPage({ movedTo }: { movedTo?: MovedTo } = {}): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
+  usePageTitle('Page not found');
   if (movedTo) {
     return (
       <div className="page">

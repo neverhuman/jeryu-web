@@ -15,6 +15,7 @@ import { useDecideProposal, useToolRegistry } from '../hooks/useToolRegistry';
 import type { ToolRegistryEntry } from '../api/types';
 import { SharedToolsTabs } from './sharedTools/SharedToolsTabs';
 import { formatCount } from './tools';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './page.css';
 import './sharedTools/SharedTools.css';
 
@@ -93,6 +94,7 @@ function ProposedTool({
 }
 
 export function ProposalsPage(): JSX.Element {
+  usePageTitle('Tool proposals');
   const registry = useToolRegistry();
   const { user } = useAuth();
   const canDecide = user?.role === 'admin';

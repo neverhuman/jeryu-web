@@ -30,6 +30,7 @@ import {
   topFailingRule,
   windowSummary,
 } from './qualityGateModel';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import '../page.css';
 import './QualityGate.css';
 
@@ -54,6 +55,7 @@ function Tile({
 }
 
 export function QualityGatePage(): JSX.Element {
+  usePageTitle('Quality gate');
   const { data, isPending, isError, error } = useQualityGateOverview();
 
   return (

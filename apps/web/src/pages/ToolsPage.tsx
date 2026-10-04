@@ -24,8 +24,10 @@ import {
 import './page.css';
 import './ToolsPage.css';
 import { SharedToolsTabs } from './sharedTools/SharedToolsTabs';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export function ToolsPage(): JSX.Element {
+  usePageTitle('Shared tools');
   const dashboard = useToolFinderDashboard();
   const scan = useToolFinderScan();
   // A failed scan is an error with a reason, not an empty result: it gets one

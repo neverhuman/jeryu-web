@@ -8,6 +8,7 @@ import {
   type GraphFilters,
 } from './intelligenceGraphModel';
 import { edgePinFreshness, OperatorGraphConsole } from './intelligence';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
 import './IntelligencePage.css';
@@ -16,6 +17,7 @@ import './IntelligencePage.css';
 export const DEPENDENCIES_PATH = '/intelligence/dependencies';
 
 export function DependenciesPage(): JSX.Element {
+  usePageTitle('Dependencies');
   const query = useDependencyGraph();
   const [filters, setFilters] = useState<GraphFilters>({
     kinds: [],

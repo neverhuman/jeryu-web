@@ -34,11 +34,13 @@ import {
   systemPulse,
   type SubjectGroup,
 } from './needsYouModel';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
 import './NeedsYou.css';
 
 export function NeedsYouPage(): JSX.Element {
+  usePageTitle('Needs you');
   const attention = useAttention();
   usePipelineNudge(attention.isSuccess, ATTENTION_QUERY_KEY);
   // `?family=` keeps one family's rows: a pill on any row, or in the strip above,

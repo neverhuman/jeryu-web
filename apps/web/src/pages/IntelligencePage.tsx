@@ -27,8 +27,10 @@ import {
 import './page.css';
 import './IntelligencePage.css';
 import { IN_FLIGHT_PATH } from './pullRoomModel';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export function IntelligencePage(): JSX.Element {
+  usePageTitle('Intelligence');
   const query = useControlPlane();
 
   if (query.isLoading) {

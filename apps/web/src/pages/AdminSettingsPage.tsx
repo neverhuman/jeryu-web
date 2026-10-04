@@ -17,10 +17,12 @@ import {
   usePreferencesStore,
   type ThemePreference,
 } from '../stores/preferencesStore';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
 
 export function AdminSettingsPage(): JSX.Element {
+  usePageTitle('Settings');
   const theme = usePreferencesStore((s) => s.theme);
   const setTheme = usePreferencesStore((s) => s.setTheme);
   const { user } = useAuth();

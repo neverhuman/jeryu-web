@@ -24,6 +24,7 @@ import { RepositoryCommitsPage } from './RepositoryCommitsPage';
 import { RepositoryPullRequestsPage } from './RepositoryPullRequestsPage';
 import { RepositorySettingsPage } from './RepositorySettingsPage';
 import { PullRequestPage } from './PullRequestPage';
+import { usePageTitle } from '../hooks/usePageTitle';
 import {
   OPEN_FILES_STATE,
   parseRefAndPath,
@@ -61,6 +62,38 @@ export function parseRepoSplat(splat: string): {
   return { fullName, subPath, subTail };
 }
 
+/**
+ * What a repository page calls itself in the tab: the repository, and the one
+ * thing on it the URL names — `acme/widgets#31` for a pull request,
+ * `lib.rs · acme/widgets` for a file.
+ */
+export function repoPageTitle(
+  fullName: string,
+  subPath: string | null,
+  subTail: string
+): string {
+  switch (subPath) {
+    case 'pulls':
+      return subTail ? `${fullName}#${subTail}` : `${fullName} · Pull requests`;
+    case 'agents':
+      return `${fullName} · Agents`;
+    case 'settings':
+      return `${fullName} · Settings`;
+    case 'commits':
+      return `${fullName} · Commits`;
+    case 'commit':
+      return subTail ? `${fullName}@${subTail.slice(0, 7)}` : `${fullName} · Commits`;
+    case 'blob': {
+      // `subTail` is `<ref>/<path>`; the file's own name is what a tab has room for.
+      const { path } = parseRefAndPath(subTail);
+      const file = path.split('/').filter(Boolean).pop();
+      return file ? `${file} · ${fullName}` : fullName;
+    }
+    default:
+      return fullName;
+  }
+}
+
 export function RepoRouter(): JSX.Element {
   const params = useParams();
   const provider = params.provider ?? 'unknown';
@@ -68,6 +101,7 @@ export function RepoRouter(): JSX.Element {
   const { search } = useLocation();
   const { fullName, subPath, subTail } = parseRepoSplat(splat);
   const front = repoFrontPath(provider, fullName);
+  usePageTitle(repoPageTitle(fullName, subPath, subTail));
 
   // Dispatch to the correct sub-page based on the sub-path.
   switch (subPath) {

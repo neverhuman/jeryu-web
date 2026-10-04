@@ -55,6 +55,7 @@ import {
   statusTone,
   type WikiSource,
 } from './wikiSources';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
 import './WikiPage.css';
@@ -62,6 +63,7 @@ import './WikiPage.css';
 const NOTES_KEY = 'jeryu.wiki.notes.v1';
 
 export function WikiPage(): JSX.Element {
+  usePageTitle('Wiki');
   const settings = useSiteSettings();
   const { user } = useAuth();
   const wiki = settings.data?.internal_wiki ?? null;

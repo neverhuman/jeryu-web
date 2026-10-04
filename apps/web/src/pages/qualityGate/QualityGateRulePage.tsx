@@ -16,11 +16,13 @@ import {
   qualityGateHeadPath,
   shortSha,
 } from './qualityGateModel';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import '../page.css';
 import './QualityGate.css';
 
 export function QualityGateRulePage(): JSX.Element {
   const { rule = '' } = useParams();
+  usePageTitle(rule ? `${rule} · Quality gate` : 'Quality gate');
   const { data, isPending, isError, error } = useQualityGateRule(rule);
 
   return (

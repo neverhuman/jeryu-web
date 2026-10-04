@@ -26,6 +26,7 @@ import {
 } from './toolAdoptionFamilies';
 import { TOOL_DEFINITION_REPO, repoHref, toolRow } from './toolFleetModel';
 import { ADOPTION_PATH } from './sharedTools/SharedToolsTabs';
+import { usePageTitle } from '../hooks/usePageTitle';
 import './page.css';
 import './ToolFleetPage.css';
 
@@ -94,6 +95,7 @@ function GroupedRepos({
 
 export function ToolFleetToolPage(): JSX.Element {
   const { tool = '' } = useParams();
+  usePageTitle(tool ? `${tool} · Tool adoption` : 'Tool adoption');
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { data, isPending, isError, error } = useToolFleet();

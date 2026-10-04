@@ -33,6 +33,7 @@ import {
 import { RepoName, TodoActions, TodoDetail, TodoTrace, WhyStuck } from './todoParts';
 import { WORK_PATH, queueHref, todoHref } from './workPaths';
 import { todoFamily } from './workPageModel';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
 import './Shift.css';
@@ -41,6 +42,7 @@ const NO_REFS: RepoRefs = () => null;
 
 export function TodoPage(): JSX.Element {
   const { key = '' } = useParams();
+  usePageTitle(key || 'Work');
   const [params] = useSearchParams();
   const family = params.get('family') ?? '';
   const { user } = useAuth();

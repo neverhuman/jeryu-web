@@ -32,6 +32,7 @@ import {
   type ActivityFilters,
 } from './activityModel';
 import { EventRow } from './EventRow';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
 import './Activity.css';
@@ -50,6 +51,7 @@ const FILTER_HINT: Partial<Record<(typeof MORE_FILTER_KEYS)[number], string>> = 
 };
 
 export function ActivityPage(): JSX.Element {
+  usePageTitle('Activity');
   const [params, setParams] = useSearchParams();
   const wall = isWallMode(params);
   const filters = useMemo(() => parseActivityFilters(params), [params]);

@@ -21,12 +21,14 @@ import { useForgeHost } from '../../hooks/useForgeHost';
 import { useDisputeFinding, useQualityGateHead } from '../../hooks/useQualityGate';
 import { QualityGateQueryState } from './QualityGateQueryState';
 import { QUALITY_GATE_PATH, repoCodeHref, shortSha } from './qualityGateModel';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import '../page.css';
 import './QualityGate.css';
 
 export function QualityGateHeadPage(): JSX.Element {
   const { owner = '', name = '', sha = '' } = useParams();
   const repo = owner && name ? `${owner}/${name}` : '';
+  usePageTitle(repo ? `${repo}@${sha.slice(0, 7)} · Quality gate` : 'Quality gate');
   const { data, isPending, isError, error } = useQualityGateHead(repo, sha);
   const { user } = useAuth();
   const forgeHost = useForgeHost();

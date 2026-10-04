@@ -24,6 +24,7 @@ import {
 import './page.css';
 import './ToolFleetPage.css';
 import { ADOPTION_PATH, SharedToolsTabs } from './sharedTools/SharedToolsTabs';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const COLUMNS: { key: ToolFleetSortKey; label: string; numeric?: boolean }[] = [
   { key: 'tool', label: 'Tool' },
@@ -100,6 +101,7 @@ function ToolRow({ row }: { row: ToolFleetRow }): JSX.Element {
 }
 
 export function ToolFleetPage(): JSX.Element {
+  usePageTitle('Tool adoption');
   const { data, isPending, isError, error } = useToolFleet();
   const [filters, setFilters] = useState<ToolFleetFilters>({
     search: '',

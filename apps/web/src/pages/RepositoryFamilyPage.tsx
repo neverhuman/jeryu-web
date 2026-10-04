@@ -32,6 +32,7 @@ import { useBlob } from '../hooks/useBlob';
 import { useRepoTree } from '../hooks/useRepoTree';
 import { useRepositories } from '../hooks/useRepositories';
 import { pullRoomFamilyHref } from './pullRoomModel';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 import '../components/browser/browser.css';
 import '../components/repo/repo.css';
@@ -41,6 +42,7 @@ import './page.css';
 export function RepositoryFamilyPage(): JSX.Element {
   const params = useParams();
   const family = params.family ?? '';
+  usePageTitle(family || 'Repositories');
   const list = useRepositories({ family, sort: 'name' });
 
   const repos = useMemo(

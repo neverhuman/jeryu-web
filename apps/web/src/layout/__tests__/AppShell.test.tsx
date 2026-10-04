@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { RouterProvider, createMemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCommandStore } from '../../stores/commandStore';
@@ -83,16 +83,14 @@ function Where(): JSX.Element {
   return <p data-testid="where">{`${pathname}${search}${hash}`}</p>;
 }
 
+// The shell renders <ScrollRestoration />, which only a data router answers,
+// so the test drives the same createMemoryRouter the app's own router is.
 function renderAt(path: string): void {
-  render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="*" element={<Where />} />
-        </Route>
-      </Routes>
-    </MemoryRouter>
+  const router = createMemoryRouter(
+    [{ element: <AppShell />, children: [{ path: '*', element: <Where /> }] }],
+    { initialEntries: [path] }
   );
+  render(<RouterProvider router={router} />);
 }
 
 function press(key: string, init: KeyboardEventInit = {}): void {
@@ -106,6 +104,8 @@ describe('AppShell', () => {
     auth = { isPending: false, user: { role: 'admin' } };
     useCommandStore.setState({ isOpen: false, query: '', commands: [] });
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
+    // jsdom has no layout, so scroll restoration has nothing to call.
+    window.scrollTo = vi.fn();
   });
 
   it('shows a loading message while the account resolves', () => {

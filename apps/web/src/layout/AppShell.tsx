@@ -19,7 +19,7 @@
 // NAV_DESTINATIONS through <NavShortcuts />.
 
 import { useState, useCallback, useEffect } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
 
 import { CommandPalette } from './CommandPalette';
 import { GlobalHeader } from './GlobalHeader';
@@ -28,6 +28,7 @@ import { NavShortcuts } from './NavShortcuts';
 import { LiveActivityDock } from './LiveActivityDock';
 import { StatusBar } from './StatusBar';
 import { useCommandStore } from '../stores/commandStore';
+import { useFocusMainOnNavigate, MAIN_CONTENT_ID } from '../hooks/useFocusMainOnNavigate';
 import { useKeyboardShortcut } from '../hooks/useKeyboard';
 import { KeyboardShortcutsOverlay } from '../components/KeyboardShortcutsOverlay';
 import { useShellCommands } from './useShellCommands';
@@ -87,6 +88,9 @@ export function AppShell(): JSX.Element {
 
   // Register navigation commands so the palette is non-empty on first render.
   useShellCommands(auth.user?.role === 'admin');
+
+  // Arriving on a page puts the keyboard on it, not on the link behind it.
+  useFocusMainOnNavigate();
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
@@ -181,10 +185,10 @@ export function AppShell(): JSX.Element {
       {/* First tab stop: thirteen controls precede the content otherwise. */}
       <a
         className="skip-link"
-        href="#main-content"
+        href={`#${MAIN_CONTENT_ID}`}
         onClick={(event) => {
           event.preventDefault();
-          document.getElementById('main-content')?.focus();
+          document.getElementById(MAIN_CONTENT_ID)?.focus();
         }}
       >
         Skip to content
@@ -242,13 +246,16 @@ export function AppShell(): JSX.Element {
       ) : null}
       {/* One `g` chord per destination, bound only for a signed-in operator. */}
       <NavShortcuts />
-      <main className="app-shell__main" id="main-content" tabIndex={-1}>
+      <main className="app-shell__main" id={MAIN_CONTENT_ID} tabIndex={-1}>
         <Outlet />
       </main>
       <LiveActivityDock />
       <StatusBar />
       <CommandPalette />
       <KeyboardShortcutsOverlay />
+      {/* The document is what scrolls: a push starts at the top, Back and
+          Forward put the position the visitor left back. */}
+      <ScrollRestoration />
     </div>
   );
 }

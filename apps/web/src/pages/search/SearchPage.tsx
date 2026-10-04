@@ -12,12 +12,14 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useSearch } from '../../hooks/useSearch';
 import { useCommandStore } from '../../stores/commandStore';
 import { hiddenCount, hitGroups, pageHits, type HitGroup } from './searchModel';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
 
 const NO_HITS: never[] = [];
 
 export function SearchPage(): JSX.Element {
+  usePageTitle('Search');
   const [params, setParams] = useSearchParams();
   const query = (params.get('q') ?? '').trim();
   const [draft, setDraft] = useState(query);

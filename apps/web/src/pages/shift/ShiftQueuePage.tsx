@@ -58,6 +58,7 @@ import { todoHref } from './workPaths';
 import { WorkersStrip } from './WorkersStrip';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { groupLive, liveFamilyCounts, todoFamily, todosOfFamily } from './workPageModel';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
 import './Shift.css';
@@ -67,6 +68,7 @@ type RefsFor = (family: string) => RepoRefs;
 const NO_REFS: RepoRefs = () => null;
 
 export function ShiftQueuePage(): JSX.Element {
+  usePageTitle('Work');
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const families = useShiftFamilies();

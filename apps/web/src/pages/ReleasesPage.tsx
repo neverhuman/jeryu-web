@@ -56,6 +56,7 @@ import {
 } from './releasesModel';
 
 import { NeedsYouHere } from './needsYou/NeedsYouHere';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
 import './ReleasesPage.css';
@@ -90,6 +91,7 @@ export function ReleasesPage(): JSX.Element {
   // On the board the family comes from the path; `?family=` still works when
   // the page is mounted without the redirect in front of it.
   const boardFamily = pathFamily ?? (perRepository ? null : params.get('family'));
+  usePageTitle(boardFamily ? `Releases · ${boardFamily}` : 'Releases');
   const repositoryView = (
     <RepositoryReleases scope={perRepository ? scopeFrom(params) : DEFAULT_SCOPE} />
   );

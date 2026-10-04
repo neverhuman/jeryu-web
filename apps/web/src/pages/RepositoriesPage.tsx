@@ -32,6 +32,7 @@ import {
   RepositoriesBody,
   type FilterState,
 } from './repositoriesPageParts';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 import '../components/repo/repo.css';
 import './page.css';
@@ -44,6 +45,7 @@ export interface RepositoriesPageProps {
 export function RepositoriesPage({
   mode,
 }: RepositoriesPageProps): JSX.Element {
+  usePageTitle('Repositories');
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
