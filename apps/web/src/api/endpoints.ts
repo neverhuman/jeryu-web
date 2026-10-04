@@ -93,6 +93,9 @@ export const endpoints = {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/commits`;
     return suffix ? `${base}?${suffix}` : base;
   },
+  /** One commit: its message, who wrote it, its parents and its diff. */
+  commit: (id: string, sha: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/commit/${encodeURIComponent(sha)}`,
   compare: (id: string, base: string, head: string): string => {
     const qs = new URLSearchParams({ base, head });
     return `/api/v1/repos/${encodeURIComponent(id)}/compare?${qs.toString()}`;

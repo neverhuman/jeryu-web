@@ -274,7 +274,14 @@ export function RepositoryBrowserPage({
         {!onFile && summary.description ? (
           <p className="page__subtitle">{summary.description}</p>
         ) : null}
-        {onFile ? null : <RepoCommitSummary repoId={repoId} refName={activeRef} />}
+        {onFile ? null : (
+          <RepoCommitSummary
+            provider={provider}
+            fullName={fullName}
+            repoId={repoId}
+            refName={activeRef}
+          />
+        )}
         <div className="repo-browser__line">
           <BranchSelector repoId={repoId} value={activeRef} onSelect={selectRef} />
           <Link to={`${front}/pulls`} className="repo-browser__fact">

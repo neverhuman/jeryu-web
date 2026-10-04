@@ -123,6 +123,23 @@ describe('RepositoryBrowserPage (one repository page)', () => {
               ? [entry('src/lib.rs', 'file')]
               : [entry('src', 'directory'), entry('README.md', 'file')]
           );
+        case '/api/v1/repos/repo-1/blame':
+          return json({
+            ref: 'main',
+            sha: 'abc123',
+            path,
+            line_count: 1,
+            hunks: [{ start_line: 1, line_count: 1, commit: 'fee1900dcafe0000000000000000000000000000' }],
+            commits: [
+              {
+                sha: 'fee1900dcafe0000000000000000000000000000',
+                summary: 'Say what the repository page never said',
+                author: 'Ada Lovelace',
+                authored_at: '2026-05-25T09:00:00Z',
+                boundary: true,
+              },
+            ],
+          });
         case '/api/v1/repos/repo-1/blob':
           return json({
             repo: { id: 'repo-1', host: 'jeryu', owner: 'neverhuman', name: 'jeryu' },
@@ -315,6 +332,46 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(facts).toHaveTextContent('fee1900d');
     expect(facts).toHaveTextContent('Say what the repository page never said');
     expect(facts).toHaveTextContent('Ada Lovelace');
+  });
+
+  it('makes the commit count and the last sha the way into the history', async () => {
+    renderAt(FRONT);
+    const facts = await screen.findByTestId('repo-commit-summary');
+    expect(within(facts).getByRole('link', { name: '1,204 commits' })).toHaveAttribute(
+      'href',
+      `${FRONT}/commits/main`
+    );
+    expect(within(facts).getByRole('link', { name: 'fee1900d' })).toHaveAttribute(
+      'href',
+      `${FRONT}/commit/fee1900dcafe0000000000000000000000000000`
+    );
+  });
+
+  it('offers History and Blame on a file, and blames it in place', async () => {
+    renderAt(`${FRONT}/blob/main/src/lib.rs`);
+    expect(await screen.findByRole('link', { name: 'File history' })).toHaveAttribute(
+      'href',
+      `${FRONT}/commits/main?path=src%2Flib.rs`
+    );
+    const blame = screen.getByRole('button', { name: 'Show blame' });
+    expect(blame).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(blame);
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      `${FRONT}/blob/main/src/lib.rs?view=blame`
+    );
+    await screen.findByTestId('blame-view');
+    // The gutter arrives with the blame, a request later than the file itself.
+    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('blame-view')).getByRole('link', {
+        name: 'Say what the repository page never said',
+      })
+    ).toHaveAttribute('href', `${FRONT}/commit/fee1900dcafe0000000000000000000000000000`);
+
+    // Back to the file itself: the toggle is a view of the same page.
+    fireEvent.click(screen.getByRole('button', { name: 'Hide blame' }));
+    await waitFor(() => expect(screen.queryByTestId('blame-view')).toBeNull());
   });
 
   it('links the score to the quality gate and opens the check that set the chip', async () => {

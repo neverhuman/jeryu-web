@@ -10,6 +10,8 @@
 //   /repos/jeryu/jeryu/jankurai/agents/run-42 → agents page with run-42
 //   /repos/jeryu/jeryu/jankurai/blob/main/src/lib.rs → the same page, file open
 //   /repos/jeryu/jeryu/jankurai/tree/main/docs → front page, Files open on docs/
+//   /repos/jeryu/jeryu/jankurai/commits/main?path=src/main.rs → that file's history
+//   /repos/jeryu/jeryu/jankurai/commit/<sha> → one commit, message and diff
 //   /repos/jeryu/jeryu/jankurai/code     → redirects to the front page, Files open
 //   /repos/jeryu/jeryu/jankurai/work     → redirects to the front page (tracker retired)
 
@@ -17,6 +19,8 @@ import { Navigate, useLocation, useParams } from 'react-router-dom';
 
 import { RepositoryAgentsPage } from './RepositoryAgentsPage';
 import { RepositoryBrowserPage } from './RepositoryBrowserPage';
+import { RepositoryCommitPage } from './RepositoryCommitPage';
+import { RepositoryCommitsPage } from './RepositoryCommitsPage';
 import { RepositoryPullRequestsPage } from './RepositoryPullRequestsPage';
 import { RepositorySettingsPage } from './RepositorySettingsPage';
 import { PullRequestPage } from './PullRequestPage';
@@ -83,18 +87,19 @@ export function RepoRouter(): JSX.Element {
         />
       );
     }
-    case 'commit':
-      // A commit link (the PR page's Commits section builds these): the
-      // repository browsed at that commit, so the sha is a live destination.
+    case 'commits':
+      // The ref is optional: without one the list is the default branch's
+      // history, and `?path=` narrows it to one file or directory.
       return (
-        <Navigate
-          to={{
-            pathname: front,
-            search: subTail ? `?ref=${encodeURIComponent(subTail)}` : '',
-          }}
-          replace
-        />
+        <RepositoryCommitsPage provider={provider} fullName={fullName} refTail={subTail} />
       );
+    case 'commit':
+      // One commit: its message and what it changed. Without a sha there is
+      // nothing to show, so the list of commits is the destination.
+      if (!subTail) {
+        return <Navigate to={`${front}/commits`} replace />;
+      }
+      return <RepositoryCommitPage provider={provider} fullName={fullName} sha={subTail} />;
     case 'blob':
       // The same component as the front page, in the same position, so the
       // Files panel keeps its state while the reader moves between files.

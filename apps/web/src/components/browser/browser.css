@@ -635,3 +635,32 @@ a.markdown-image-chip:hover {
   font-size: var(--font-size-xs);
   color: var(--color-fg-secondary);
 }
+
+/* Blame: the source view with one column more, who last changed each run of
+   lines. The gutter is narrow and quiet so the code still reads first. */
+.blame-view__who {
+  width: 1%;
+  max-width: 22ch;
+  padding: 0 var(--space-3);
+  vertical-align: top;
+  user-select: none;
+  border-right: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-2);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+.blame-view__commit {
+  display: block;
+  overflow: hidden;
+  color: var(--color-fg-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blame-view__author {
+  display: block;
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+}

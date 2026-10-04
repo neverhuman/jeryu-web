@@ -418,3 +418,117 @@
   margin: 0;
   color: var(--color-fg-primary);
 }
+
+/* The commits list (`…/commits`) and one commit (`…/commit/<sha>`). One row
+   per commit, the subject first and the sha last, so a long history scans. */
+.repo-commits__range {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.repo-commits__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-1);
+}
+
+.repo-commits__item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.repo-commits__item:last-child {
+  border-bottom: none;
+}
+
+.repo-commits__subject {
+  color: var(--color-fg-primary);
+  font-weight: 500;
+}
+
+.repo-commits__meta {
+  margin-left: auto;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.repo-commits__sha code {
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.repo-commits__paging {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.repo-commit__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.repo-commit__message {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-1);
+  white-space: pre-wrap;
+}
+
+.repo-commit__trailers {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0 var(--space-3);
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.repo-commit__trailers > div {
+  display: contents;
+}
+
+.repo-commit__trailers dt {
+  color: var(--color-fg-muted);
+}
+
+.repo-commit__trailers dd {
+  margin: 0;
+}
+
+.repo-commit__note {
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.repo-commit__diff {
+  display: grid;
+  grid-template-columns: minmax(180px, 20%) 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.repo-commit__files {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .repo-commit__diff {
+    grid-template-columns: 1fr;
+  }
+}

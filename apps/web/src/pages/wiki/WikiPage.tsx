@@ -25,6 +25,7 @@ import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { useBlame, usePageHistory, useWikiPages } from '../../hooks/useWiki';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { blobPath, repoFrontPath } from '../repoBrowserModel';
+import { commitPath } from '../repoCommitsModel';
 import {
   buildPageTree,
   folderLabel,
@@ -272,7 +273,7 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
       blobPath(wiki.host, wiki.full_name, gitRef, repoPath)
     );
   const commitHref = (sha: string): string =>
-    `${repoFrontPath(wiki.host, wiki.full_name)}/commit/${sha}`;
+    commitPath(wiki.host, wiki.full_name, sha);
   // Title, summary, status, date and sources have their own places; anything
   // else in the frontmatter shows as a field chip.
   const fields = page.fields.filter(([key]) => !HEADER_FIELDS.includes(key.toLowerCase()));

@@ -13,6 +13,8 @@ export { FileTree, FlatFileList } from './FileTree';
 export type { FileTreeProps, FlatFileListProps } from './FileTree';
 export { FileFinder } from './FileFinder';
 export type { FileFinderProps } from './FileFinder';
+export { BlameView } from './BlameView';
+export type { BlameViewProps } from './BlameView';
 export { CodeViewer } from './CodeViewer';
 export type { CodeViewerProps } from './CodeViewer';
 export { MarkdownSource, resolveMarkdownHref } from './MarkdownSource';

@@ -2,8 +2,9 @@
 // repository itself, beside the README.
 //
 // `RepoCommitSummary` is the line under the header: how many commits the shown
-// ref has, how many branches and tags the repository has, and the last commit
-// (short sha, subject, author, when). It reads the same `/refs` the branch
+// ref has (linking to the list of them), how many branches and tags the
+// repository has, and the last commit (short sha, which opens the commit,
+// subject, author, when). It reads the same `/refs` the branch
 // selector does, so the counts cost no extra request, plus one commit from
 // `/commits`. A repository whose source is hosted elsewhere answers 404 for
 // both and the line is simply absent.
@@ -14,6 +15,7 @@
 // Repositories table shows under a row.
 
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import type { RepositorySummary } from '../api/types';
 import { relativeTime } from '../components/repo/relativeTime';
@@ -23,14 +25,19 @@ import { useRepoCommits } from '../hooks/useRepoCommits';
 
 import { shortSha } from './qualityGate/qualityGateModel';
 import { commitCountLabel, healthChipLabel, refCountsLabel } from './repoBrowserModel';
+import { commitPath, commitsPath } from './repoCommitsModel';
 
 /** DOM id of the panel the header's health chip opens. */
 export const HEALTH_CHECKS_ID = 'repo-failing-checks';
 
 export function RepoCommitSummary({
+  provider,
+  fullName,
   repoId,
   refName,
 }: {
+  provider: string;
+  fullName: string;
   repoId: string;
   refName: string;
 }): JSX.Element | null {
@@ -42,13 +49,20 @@ export function RepoCommitSummary({
   return (
     <p className="repo-browser__commits" data-testid="repo-commit-summary">
       <span className="repo-browser__fact">
-        {commitCountLabel(commits.data.page.total)}
+        {/* The count is the way into the history: the whole list of them. */}
+        <Link to={commitsPath(provider, fullName, refName)}>
+          {commitCountLabel(commits.data.page.total)}
+        </Link>
         {refCounts ? ` · ${refCounts}` : ''}
       </span>
       <span className="repo-browser__commit">
-        <code className="repo-browser__sha" title={head.sha}>
-          {shortSha(head.sha)}
-        </code>
+        <Link
+          to={commitPath(provider, fullName, head.sha)}
+          className="repo-browser__sha"
+          title={head.sha}
+        >
+          <code>{shortSha(head.sha)}</code>
+        </Link>
         <span className="repo-browser__commit-subject">{head.summary}</span>
         <span className="repo-browser__fact">
           {head.author} ·{' '}
