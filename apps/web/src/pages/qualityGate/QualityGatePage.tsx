@@ -150,38 +150,40 @@ function QualityGateOverviewBody({
             ? "Counted on each repository's latest scored head: a finding left in place across several pushes counts once."
             : 'Counted on every scored head: a finding left in place across several pushes counts once per push.'}
         </p>
-        <table className="quality-gate__table" data-testid="quality-gate-rules-table">
-          <thead>
-            <tr>
-              <th scope="col">Rule</th>
-              <th scope="col" className="quality-gate__num">
-                {latest ? 'Open findings' : 'Findings'}
-              </th>
-              <th scope="col" className="quality-gate__num">
-                Repositories
-              </th>
-              <th scope="col" className="quality-gate__num">
-                Disputed
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rules.map((rule) => (
-              <tr key={rule.rule} data-testid={`quality-gate-rule-${rule.rule}`}>
-                <td>
-                  <Link to={qualityGateRulePath(rule.rule)}>{rule.rule}</Link>
-                  <span className="quality-gate__rule-title">{rule.title}</span>
-                </td>
-                <td className="quality-gate__num">{ruleFindings(rule)}</td>
-                <td className="quality-gate__num">{ruleRepos(rule)}</td>
-                <td className="quality-gate__num">
-                  {percent(rule.dispute_rate, rule.failures)}
-                  <span className="quality-gate__sub">{rule.disputes}</span>
-                </td>
+        <div className="table-scroll">
+          <table className="quality-gate__table" data-testid="quality-gate-rules-table">
+            <thead>
+              <tr>
+                <th scope="col">Rule</th>
+                <th scope="col" className="quality-gate__num">
+                  {latest ? 'Open findings' : 'Findings'}
+                </th>
+                <th scope="col" className="quality-gate__num">
+                  Repositories
+                </th>
+                <th scope="col" className="quality-gate__num">
+                  Disputed
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rules.map((rule) => (
+                <tr key={rule.rule} data-testid={`quality-gate-rule-${rule.rule}`}>
+                  <td>
+                    <Link to={qualityGateRulePath(rule.rule)}>{rule.rule}</Link>
+                    <span className="quality-gate__rule-title">{rule.title}</span>
+                  </td>
+                  <td className="quality-gate__num">{ruleFindings(rule)}</td>
+                  <td className="quality-gate__num">{ruleRepos(rule)}</td>
+                  <td className="quality-gate__num">
+                    {percent(rule.dispute_rate, rule.failures)}
+                    <span className="quality-gate__sub">{rule.disputes}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {data.dimensions_below_floor ? (
@@ -195,44 +197,46 @@ function QualityGateOverviewBody({
         <h2 className="page__section-title" id="quality-gate-repos">
           Failures by repository
         </h2>
-        <table className="quality-gate__table" data-testid="quality-gate-repos-table">
-          <thead>
-            <tr>
-              <th scope="col">Repository</th>
-              <th scope="col" className="quality-gate__num">
-                Scored
-              </th>
-              <th scope="col" className="quality-gate__num">
-                Below the floor
-              </th>
-              <th scope="col" className="quality-gate__num">
-                Fail rate
-              </th>
-              <th scope="col">Rule failing most</th>
-            </tr>
-          </thead>
-          <tbody>
-            {repos.map((repo) => (
-              <tr key={repo.repo} data-testid={`quality-gate-repo-${repo.repo}`}>
-                <td>
-                  <Link to={`/repos/jeryu/${repo.repo}`}>{repo.repo}</Link>
-                </td>
-                <td className="quality-gate__num">{repo.heads_scored}</td>
-                <td className="quality-gate__num">{repo.heads_failed}</td>
-                <td className="quality-gate__num">
-                  {percent(repo.fail_rate, repo.heads_scored)}
-                </td>
-                <td>
-                  {repo.top_rule ? (
-                    <Link to={qualityGateRulePath(repo.top_rule)}>{repo.top_rule}</Link>
-                  ) : (
-                    '—'
-                  )}
-                </td>
+        <div className="table-scroll">
+          <table className="quality-gate__table" data-testid="quality-gate-repos-table">
+            <thead>
+              <tr>
+                <th scope="col">Repository</th>
+                <th scope="col" className="quality-gate__num">
+                  Scored
+                </th>
+                <th scope="col" className="quality-gate__num">
+                  Below the floor
+                </th>
+                <th scope="col" className="quality-gate__num">
+                  Fail rate
+                </th>
+                <th scope="col">Rule failing most</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {repos.map((repo) => (
+                <tr key={repo.repo} data-testid={`quality-gate-repo-${repo.repo}`}>
+                  <td>
+                    <Link to={`/repos/jeryu/${repo.repo}`}>{repo.repo}</Link>
+                  </td>
+                  <td className="quality-gate__num">{repo.heads_scored}</td>
+                  <td className="quality-gate__num">{repo.heads_failed}</td>
+                  <td className="quality-gate__num">
+                    {percent(repo.fail_rate, repo.heads_scored)}
+                  </td>
+                  <td>
+                    {repo.top_rule ? (
+                      <Link to={qualityGateRulePath(repo.top_rule)}>{repo.top_rule}</Link>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </>
   );
@@ -261,41 +265,43 @@ function DimensionsBelowFloor({
           No dimension is below the floor on any repository&apos;s latest scored head.
         </p>
       ) : (
-        <table className="quality-gate__table" data-testid="quality-gate-dimensions-table">
-          <thead>
-            <tr>
-              <th scope="col">Dimension</th>
-              <th scope="col" className="quality-gate__num">
-                Repositories below
-              </th>
-              <th scope="col" className="quality-gate__num">
-                Median score
-              </th>
-              <th scope="col">Filed under</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((dimension) => (
-              <tr
-                key={dimension.dimension}
-                data-testid={`quality-gate-dimension-${dimension.dimension}`}
-              >
-                <td>{dimension.dimension}</td>
-                <td className="quality-gate__num">
-                  {dimension.repos}
-                  {reposScored !== undefined ? (
-                    <span className="quality-gate__sub">of {reposScored}</span>
-                  ) : null}
-                </td>
-                <td className="quality-gate__num">
-                  {formatScore(dimension.median_score)}
-                  <span className="quality-gate__sub">floor {dimension.floor}</span>
-                </td>
-                <td>{dimension.attributed_rule ?? '—'}</td>
+        <div className="table-scroll">
+          <table className="quality-gate__table" data-testid="quality-gate-dimensions-table">
+            <thead>
+              <tr>
+                <th scope="col">Dimension</th>
+                <th scope="col" className="quality-gate__num">
+                  Repositories below
+                </th>
+                <th scope="col" className="quality-gate__num">
+                  Median score
+                </th>
+                <th scope="col">Filed under</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((dimension) => (
+                <tr
+                  key={dimension.dimension}
+                  data-testid={`quality-gate-dimension-${dimension.dimension}`}
+                >
+                  <td>{dimension.dimension}</td>
+                  <td className="quality-gate__num">
+                    {dimension.repos}
+                    {reposScored !== undefined ? (
+                      <span className="quality-gate__sub">of {reposScored}</span>
+                    ) : null}
+                  </td>
+                  <td className="quality-gate__num">
+                    {formatScore(dimension.median_score)}
+                    <span className="quality-gate__sub">floor {dimension.floor}</span>
+                  </td>
+                  <td>{dimension.attributed_rule ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

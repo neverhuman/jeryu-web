@@ -192,7 +192,7 @@ export function ToolFleetPage(): JSX.Element {
             </span>
           </div>
 
-          <div className="tool-fleet__scroll">
+          <div className="table-scroll">
             <table className="tool-fleet__table" data-testid="tool-fleet-table">
               <thead>
                 <tr>

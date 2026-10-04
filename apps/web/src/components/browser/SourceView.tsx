@@ -37,7 +37,7 @@ export function SourceView({ text, fontSize, label }: SourceViewProps): JSX.Elem
   }
 
   return (
-    <div className="source-view" style={{ fontSize: `${fontSize}px` }}>
+    <div className="source-view table-scroll" style={{ fontSize: `${fontSize}px` }}>
       <table className="source-view__table" aria-label={`Source of ${label}`}>
         <tbody>
           {source.lines.map((line, index) => {

@@ -258,10 +258,6 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.release-board__table-wrap {
-  overflow-x: auto;
-}
-
 .release-board__table {
   width: 100%;
   border-collapse: collapse;

@@ -4,7 +4,7 @@
 // repository only), one search-or-jump control, the live pill and the account.
 // Each child is its own file so the shell layout stays scannable.
 
-import { Search } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { JeryuLogo } from '../components/brand/JeryuLogo';
@@ -14,7 +14,13 @@ import { useCommandStore } from '../stores/commandStore';
 import { RepoSwitcher } from './RepoSwitcher';
 import { UserMenu } from './UserMenu';
 
-export function GlobalHeader(): JSX.Element {
+interface GlobalHeaderProps {
+  /** Opens the off-canvas navigation. The button that calls it is shown only
+   *  where the sidebar has no room (see `.app-shell__nav-button`). */
+  onOpenNav?: () => void;
+}
+
+export function GlobalHeader({ onOpenNav }: GlobalHeaderProps = {}): JSX.Element {
   const openPalette = useCommandStore((s) => s.open);
   const status = useRealtimeStore((s) => s.status);
   const bootstrap = useBootstrap();
@@ -24,6 +30,18 @@ export function GlobalHeader(): JSX.Element {
 
   return (
     <div className="global-header">
+      {onOpenNav ? (
+        <button
+          type="button"
+          className="app-shell__nav-button"
+          onClick={onOpenNav}
+          aria-label="Open navigation"
+          aria-haspopup="dialog"
+          data-testid="nav-drawer-button"
+        >
+          <Menu size={18} aria-hidden="true" />
+        </button>
+      ) : null}
       <Link to="/" className="global-header__brand" aria-label="JeRyu home">
         <JeryuLogo variant="header" />
       </Link>

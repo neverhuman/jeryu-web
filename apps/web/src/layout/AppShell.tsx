@@ -10,10 +10,14 @@
 //   │ <StatusBar />                                       │
 //   └────────────────────────────────────────────────────┘
 //
+// Below 720px there is no room beside the content: the LeftNav column leaves
+// the layout and the header's menu button slides the same nav in over the page
+// as an off-canvas drawer.
+//
 // Shell-level shortcuts (`⌘K` palette, `?` help) are wired here so they
 // outlive any route change.
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { CommandPalette } from './CommandPalette';
@@ -31,11 +35,15 @@ import { AuthPage } from '../pages/AuthPage';
 import { BootScreen } from '../pages/boot/BootScreen';
 import { NEEDS_YOU_PATH, homePathFor } from './HomeRedirect';
 import { PublicRepoShell } from './PublicRepoShell';
+import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 
 import './AppShell.css';
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 
 const AUTH_PATHS = new Set(['/login', '/signup']);
+
+/** Whether the operator collapsed the sidebar, so a reload keeps their choice. */
+const SIDEBAR_COLLAPSED_KEY = 'jeryu.appShell.sidebarCollapsed.v1';
 
 /**
  * The in-app path a `?next=` names, or null when it is missing or could leave
@@ -67,7 +75,12 @@ export function AppShell(): JSX.Element {
   const location = useLocation();
   const auth = useAuth();
   const openPalette = useCommandStore((s) => s.open);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
+    () => readBrowserText('durable', SIDEBAR_COLLAPSED_KEY) === '1'
+  );
+  // Narrow viewports have no room beside the content: the nav is off-canvas
+  // there, opened by the header's menu button.
+  const [navDrawerOpen, setNavDrawerOpen] = useState(false);
   const authRouteMode = location.pathname === '/signup' ? 'signup' : 'login';
   const isAuthRoute = AUTH_PATHS.has(location.pathname);
   const returnTo = isAuthRoute ? returnPathFrom(location.search) : null;
@@ -76,8 +89,28 @@ export function AppShell(): JSX.Element {
   useShellCommands();
 
   const toggleSidebar = useCallback(() => {
-    setSidebarCollapsed((prev) => !prev);
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      writeBrowserText('durable', SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+      return next;
+    });
   }, []);
+
+  const closeNavDrawer = useCallback(() => {
+    setNavDrawerOpen(false);
+  }, []);
+
+  // Following a link in the drawer has arrived: get out of the way.
+  useEffect(closeNavDrawer, [closeNavDrawer, location.pathname]);
+
+  useEffect(() => {
+    if (!navDrawerOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') closeNavDrawer();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navDrawerOpen, closeNavDrawer]);
 
   useKeyboardShortcut(
     'mod+k',
@@ -207,7 +240,7 @@ export function AppShell(): JSX.Element {
         Skip to content
       </a>
       <header className="app-shell__header">
-        <GlobalHeader />
+        <GlobalHeader onOpenNav={() => setNavDrawerOpen(true)} />
       </header>
       {/* The nav inside names the landmark; a second label announced it twice. */}
       <div className="app-shell__leftnav">
@@ -237,6 +270,26 @@ export function AppShell(): JSX.Element {
           </svg>
         </button>
       </div>
+      {navDrawerOpen ? (
+        <div className="app-shell__drawer-layer">
+          <button
+            type="button"
+            className="app-shell__drawer-backdrop"
+            aria-label="Close navigation"
+            onClick={closeNavDrawer}
+          />
+          {/* The nav at full width: every label and its badge read in full,
+              which they cannot in a rail narrow enough to fit beside a phone. */}
+          <div
+            className="app-shell__drawer"
+            role="dialog"
+            aria-label="Navigation"
+            data-testid="nav-drawer"
+          >
+            <LeftNav />
+          </div>
+        </div>
+      ) : null}
       <main className="app-shell__main" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>

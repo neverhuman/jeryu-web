@@ -31,10 +31,6 @@
   font-size: 12px;
 }
 
-.shift__table-wrap {
-  overflow-x: auto;
-}
-
 .shift__table {
   width: 100%;
   border-collapse: collapse;

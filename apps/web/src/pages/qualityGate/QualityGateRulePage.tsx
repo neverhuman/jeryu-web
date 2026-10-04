@@ -52,53 +52,55 @@ export function QualityGateRulePage(): JSX.Element {
           <h2 className="page__section-title" id="quality-gate-heads">
             Flagged heads
           </h2>
-          <table className="quality-gate__table" data-testid="quality-gate-heads-table">
-            <thead>
-              <tr>
-                <th scope="col">Head</th>
-                <th scope="col">Branch</th>
-                <th scope="col">Scored</th>
-                <th scope="col" className="quality-gate__num">
-                  Score
-                </th>
-                <th scope="col" className="quality-gate__num">
-                  Findings
-                </th>
-                <th scope="col" className="quality-gate__num">
-                  Disputed
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.heads.map((head) => (
-                <tr
-                  key={`${head.repo}@${head.sha}`}
-                  data-testid={`quality-gate-head-${head.repo}@${shortSha(head.sha)}`}
-                >
-                  <td>
-                    <Link to={qualityGateHeadPath(head.repo, head.sha)}>
-                      {head.repo}@{shortSha(head.sha)}
-                    </Link>
-                  </td>
-                  <td>{head.branch}</td>
-                  <td>{new Date(head.scored_at).toLocaleString()}</td>
-                  <td className="quality-gate__num">
-                    <span
-                      className={
-                        head.score < head.threshold
-                          ? 'page__pill page__pill--danger'
-                          : 'page__pill page__pill--success'
-                      }
-                    >
-                      {head.score} / {head.threshold}
-                    </span>
-                  </td>
-                  <td className="quality-gate__num">{head.findings}</td>
-                  <td className="quality-gate__num">{head.disputes}</td>
+          <div className="table-scroll">
+            <table className="quality-gate__table" data-testid="quality-gate-heads-table">
+              <thead>
+                <tr>
+                  <th scope="col">Head</th>
+                  <th scope="col">Branch</th>
+                  <th scope="col">Scored</th>
+                  <th scope="col" className="quality-gate__num">
+                    Score
+                  </th>
+                  <th scope="col" className="quality-gate__num">
+                    Findings
+                  </th>
+                  <th scope="col" className="quality-gate__num">
+                    Disputed
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.heads.map((head) => (
+                  <tr
+                    key={`${head.repo}@${head.sha}`}
+                    data-testid={`quality-gate-head-${head.repo}@${shortSha(head.sha)}`}
+                  >
+                    <td>
+                      <Link to={qualityGateHeadPath(head.repo, head.sha)}>
+                        {head.repo}@{shortSha(head.sha)}
+                      </Link>
+                    </td>
+                    <td>{head.branch}</td>
+                    <td>{new Date(head.scored_at).toLocaleString()}</td>
+                    <td className="quality-gate__num">
+                      <span
+                        className={
+                          head.score < head.threshold
+                            ? 'page__pill page__pill--danger'
+                            : 'page__pill page__pill--success'
+                        }
+                      >
+                        {head.score} / {head.threshold}
+                      </span>
+                    </td>
+                    <td className="quality-gate__num">{head.findings}</td>
+                    <td className="quality-gate__num">{head.disputes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
     </div>

@@ -328,7 +328,7 @@ function TodoTable({
   // Todos carry commits only once they land: a column of dashes says nothing.
   const showCommits = todos.some((todo) => Object.keys(todo.commits).length > 0);
   return (
-    <div className="shift__table-wrap">
+    <div className="table-scroll">
       <table className="shift__table">
         <thead>
           <tr>

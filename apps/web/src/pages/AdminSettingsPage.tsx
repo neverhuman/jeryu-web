@@ -146,35 +146,37 @@ function AdminAccessPanel(): JSX.Element {
         <ErrorState title="Could not load users" error={users.error} />
       ) : (
         <div className="page__card">
-          <table className="admin-users__table" data-testid="admin-users-table">
-            <thead>
-              <tr>
-                <th scope="col">User</th>
-                <th scope="col">Role</th>
-                <th scope="col">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {(users.data ?? []).map((account) => (
-                <tr key={account.login}>
-                  <th scope="row">{account.login}</th>
-                  <td>
-                    <span className="page__pill">{account.role}</span>
-                  </td>
-                  <td className="admin-users__actions">
-                    <ActionButton
-                      variant="default"
-                      onClick={() => reset.mutate(account.login)}
-                    >
-                      Reset password
-                    </ActionButton>
-                  </td>
+          <div className="table-scroll">
+            <table className="admin-users__table" data-testid="admin-users-table">
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(users.data ?? []).map((account) => (
+                  <tr key={account.login}>
+                    <th scope="row">{account.login}</th>
+                    <td>
+                      <span className="page__pill">{account.role}</span>
+                    </td>
+                    <td className="admin-users__actions">
+                      <ActionButton
+                        variant="default"
+                        onClick={() => reset.mutate(account.login)}
+                      >
+                        Reset password
+                      </ActionButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {receipt ? (
             <p className="page__roadmap-note">
               {receipt.login}: {receipt.password}
@@ -256,40 +258,42 @@ function RepoAccessPanel(): JSX.Element {
               No one has been granted access to {owner}/{repo}.
             </p>
           ) : (
-            <table className="admin-users__table" data-testid="repo-grants-table">
-              <thead>
-                <tr>
-                  <th scope="col">User</th>
-                  <th scope="col">Access</th>
-                  <th scope="col">Granted by</th>
-                  <th scope="col">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((entry) => (
-                  <tr key={entry.login}>
-                    <th scope="row">{entry.login}</th>
-                    <td>
-                      <span className="page__pill">{entry.access}</span>
-                    </td>
-                    <td>{entry.granted_by}</td>
-                    <td className="admin-users__actions">
-                      <ActionButton
-                        actionId="admin.revoke_repo"
-                        variant="danger"
-                        aria-label={`Revoke ${entry.login}`}
-                        disabled={revoke.isPending}
-                        onClick={() => revoke.mutate(entry.login)}
-                      >
-                        Revoke
-                      </ActionButton>
-                    </td>
+            <div className="table-scroll">
+              <table className="admin-users__table" data-testid="repo-grants-table">
+                <thead>
+                  <tr>
+                    <th scope="col">User</th>
+                    <th scope="col">Access</th>
+                    <th scope="col">Granted by</th>
+                    <th scope="col">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((entry) => (
+                    <tr key={entry.login}>
+                      <th scope="row">{entry.login}</th>
+                      <td>
+                        <span className="page__pill">{entry.access}</span>
+                      </td>
+                      <td>{entry.granted_by}</td>
+                      <td className="admin-users__actions">
+                        <ActionButton
+                          actionId="admin.revoke_repo"
+                          variant="danger"
+                          aria-label={`Revoke ${entry.login}`}
+                          disabled={revoke.isPending}
+                          onClick={() => revoke.mutate(entry.login)}
+                        >
+                          Revoke
+                        </ActionButton>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {revoke.error ? (
             <ErrorState title="Could not revoke access" error={revoke.error} />

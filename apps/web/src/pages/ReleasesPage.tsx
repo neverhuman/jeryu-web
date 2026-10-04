@@ -306,7 +306,7 @@ function EnvironmentTable({
   branch: string;
 }): JSX.Element {
   return (
-    <div className="releases__table-wrap">
+    <div className="table-scroll">
       <table className="releases__table" data-testid="releases-table">
         <thead>
           <tr>

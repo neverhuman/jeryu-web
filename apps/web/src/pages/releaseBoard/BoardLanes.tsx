@@ -301,7 +301,7 @@ function StageDetail({
         </p>
       ) : null}
       {stage.targets.length > 0 ? (
-        <div className="release-board__table-wrap">
+        <div className="table-scroll">
           <table className="release-board__table">
             <caption className="sr-only">Targets of {stage.name}</caption>
             <thead>

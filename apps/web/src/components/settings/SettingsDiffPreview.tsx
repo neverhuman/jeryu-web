@@ -119,30 +119,32 @@ export function SettingsDiffPreview({
           The patch produced no changes against the current snapshot.
         </p>
       ) : (
-        <table className="settings-diff__table" aria-label="Field changes">
-          <thead>
-            <tr>
-              <th scope="col">Field</th>
-              <th scope="col">Before</th>
-              <th scope="col">After</th>
-            </tr>
-          </thead>
-          <tbody>
-            {diffs.map((change: SettingsFieldChange) => (
-              <tr key={change.field}>
-                <th scope="row" className="settings-diff__field">
-                  {change.field}
-                </th>
-                <td className="settings-diff__before">
-                  {renderValue(change.before)}
-                </td>
-                <td className="settings-diff__after">
-                  {renderValue(change.after)}
-                </td>
+        <div className="table-scroll">
+          <table className="settings-diff__table" aria-label="Field changes">
+            <thead>
+              <tr>
+                <th scope="col">Field</th>
+                <th scope="col">Before</th>
+                <th scope="col">After</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {diffs.map((change: SettingsFieldChange) => (
+                <tr key={change.field}>
+                  <th scope="row" className="settings-diff__field">
+                    {change.field}
+                  </th>
+                  <td className="settings-diff__before">
+                    {renderValue(change.before)}
+                  </td>
+                  <td className="settings-diff__after">
+                    {renderValue(change.after)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {sideEffects.length > 0 ? (

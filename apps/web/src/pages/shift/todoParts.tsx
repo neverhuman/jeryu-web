@@ -117,34 +117,36 @@ export function TodoDetail({
       {todo.worked_by.length === 0 ? (
         <p className="shift__muted">No attempts yet.</p>
       ) : (
-        <table className="shift__table" aria-label={`Attempts for ${todo.id}`}>
-          <thead>
-            <tr>
-              <th scope="col">Worker</th>
-              <th scope="col">Model</th>
-              <th scope="col">Started</th>
-              <th scope="col">Ended</th>
-              <th scope="col">Outcome</th>
-              <th scope="col">Cost</th>
-              <th scope="col">Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {todo.worked_by.map((attempt, i) => (
-              <tr key={`${attempt.started}-${i}`}>
-                <td>
-                  {slotLabel(attempt.by, attempt.host, attempt.slot)}
-                </td>
-                <td>{attempt.model}</td>
-                <td>{attempt.started}</td>
-                <td>{attempt.ended ?? '—'}</td>
-                <td>{attempt.outcome}</td>
-                <td>{formatCost(attempt.cost_usd)}</td>
-                <td>{attempt.note}</td>
+        <div className="table-scroll">
+          <table className="shift__table" aria-label={`Attempts for ${todo.id}`}>
+            <thead>
+              <tr>
+                <th scope="col">Worker</th>
+                <th scope="col">Model</th>
+                <th scope="col">Started</th>
+                <th scope="col">Ended</th>
+                <th scope="col">Outcome</th>
+                <th scope="col">Cost</th>
+                <th scope="col">Note</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {todo.worked_by.map((attempt, i) => (
+                <tr key={`${attempt.started}-${i}`}>
+                  <td>
+                    {slotLabel(attempt.by, attempt.host, attempt.slot)}
+                  </td>
+                  <td>{attempt.model}</td>
+                  <td>{attempt.started}</td>
+                  <td>{attempt.ended ?? '—'}</td>
+                  <td>{attempt.outcome}</td>
+                  <td>{formatCost(attempt.cost_usd)}</td>
+                  <td>{attempt.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

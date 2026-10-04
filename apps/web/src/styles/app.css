@@ -191,6 +191,15 @@ body::before {
   border: 0;
 }
 
+/* Every table lives in one of these. A table is as wide as its columns need
+   to be, and on a narrow viewport that is wider than the window; without a
+   wrapper the table widens the whole document and the page scrolls sideways.
+   Here the table scrolls inside its own box and the page does not. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .font-mono {
   font-family: var(--font-mono);
 }
@@ -311,7 +320,7 @@ body::before {
   background-color: var(--color-bg-3);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
-  overflow-x: auto;
+  overflow-x: visible;
 }
 
 .markdown-body pre code {
@@ -324,7 +333,7 @@ body::before {
 .markdown-body table {
   display: block;
   width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
   border-collapse: collapse;
   border-spacing: 0;
 }

@@ -148,7 +148,7 @@ function WorkersTable({ workers }: { workers: ShiftWorker[] }): JSX.Element {
       a.slot.localeCompare(b.slot, undefined, { numeric: true })
   );
   return (
-    <div className="shift__table-wrap">
+    <div className="table-scroll">
       <table className="shift__table">
         <thead>
           <tr>

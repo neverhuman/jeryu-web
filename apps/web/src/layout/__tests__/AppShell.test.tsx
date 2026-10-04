@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -17,7 +17,15 @@ vi.mock('../../hooks/useAuth', () => ({
 }));
 
 // The shell's children own their own tests; here they only mark where they render.
-vi.mock('../GlobalHeader', () => ({ GlobalHeader: () => <div data-testid="global-header" /> }));
+vi.mock('../GlobalHeader', () => ({
+  GlobalHeader: ({ onOpenNav }: { onOpenNav?: () => void }) => (
+    <div data-testid="global-header">
+      {onOpenNav ? (
+        <button type="button" aria-label="Open navigation" onClick={onOpenNav} />
+      ) : null}
+    </div>
+  ),
+}));
 vi.mock('../LeftNav', () => ({ LeftNav: () => <nav aria-label="Primary" /> }));
 vi.mock('../LiveActivityDock', () => ({ LiveActivityDock: () => <div data-testid="dock" /> }));
 vi.mock('../StatusBar', () => ({ StatusBar: () => <div data-testid="status-bar" /> }));
@@ -49,6 +57,26 @@ vi.mock('../../pages/AuthPage', () => ({
   ),
 }));
 
+// Node 26 defines a global localStorage that is undefined without a backing
+// file and shadows jsdom's, so the test brings its own Storage.
+function makeStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => Array.from(values.keys())[index] ?? null,
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+  };
+}
+
 function Where(): JSX.Element {
   const { pathname, search, hash } = useLocation();
   return <p data-testid="where">{`${pathname}${search}${hash}`}</p>;
@@ -76,6 +104,7 @@ describe('AppShell', () => {
   beforeEach(() => {
     auth = { isPending: false, user: { role: 'admin' } };
     useCommandStore.setState({ isOpen: false, query: '', commands: [] });
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
   });
 
   it('shows a loading message while the account resolves', () => {
@@ -192,6 +221,32 @@ describe('AppShell', () => {
     const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
     press('b', mac ? { metaKey: true } : { ctrlKey: true });
     expect(shell?.classList.contains('app-shell--sidebar-collapsed')).toBe(false);
+  });
+
+  it('remembers the collapsed sidebar across a reload', () => {
+    renderAt('/work');
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    cleanup();
+    renderAt('/work');
+    expect(document.querySelector('.app-shell')?.classList.contains('app-shell--sidebar-collapsed')).toBe(
+      true
+    );
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeTruthy();
+  });
+
+  it('opens the nav drawer from the header, and closes it on Escape and on arrival', () => {
+    renderAt('/work');
+    expect(screen.queryByTestId('nav-drawer')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+    expect(screen.getByTestId('nav-drawer')).toBeTruthy();
+
+    press('Escape');
+    expect(screen.queryByTestId('nav-drawer')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close navigation' }));
+    expect(screen.queryByTestId('nav-drawer')).toBeNull();
   });
 
   it('opens the palette on / but not on ?', () => {

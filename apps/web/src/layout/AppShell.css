@@ -131,9 +131,68 @@
   }
 }
 
+/* ── Off-canvas navigation ────────────────────────────────────────────── */
+/* Below 720px nothing fits beside the content. The sidebar leaves the layout
+   entirely and the header's menu button slides the same nav in over the page,
+   at full width, so every label and badge reads in full. */
+
+.app-shell__nav-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-2);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-fg-secondary);
+  cursor: pointer;
+}
+
+.app-shell__nav-button:hover {
+  color: var(--color-fg-primary);
+  border-color: var(--color-border-strong);
+}
+
+.app-shell__drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+}
+
+.app-shell__drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.app-shell__drawer {
+  position: relative;
+  width: min(260px, 85vw);
+  max-width: 100%;
+  background-color: var(--color-bg-1);
+  border-right: 1px solid var(--color-border-strong);
+  box-shadow: var(--shadow-3);
+  overflow-y: auto;
+}
+
 @media (max-width: 720px) {
   :root {
-    --app-leftnav-width: 56px;
+    --app-leftnav-width: 0px;
+  }
+
+  /* Out of the a11y tree as well: the drawer's copy is the navigation here. */
+  .app-shell__leftnav {
+    display: none;
+  }
+
+  .app-shell__nav-button {
+    display: inline-flex;
   }
 }
 

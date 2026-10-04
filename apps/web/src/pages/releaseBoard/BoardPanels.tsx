@@ -80,7 +80,7 @@ export function PinsTable({ pins }: { pins: BoardPins }): JSX.Element {
   return (
     <div className="release-board__panel" data-testid="release-board-pins">
       <p className="release-board__muted">{pins.note}</p>
-      <div className="release-board__table-wrap">
+      <div className="table-scroll">
         <table className="release-board__table">
           <caption className="sr-only">Pinned against released, per repository</caption>
           <thead>

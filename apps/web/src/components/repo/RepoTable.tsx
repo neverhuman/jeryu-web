@@ -381,85 +381,87 @@ export function RepoTable({
 
   return (
     <OpenRows.Provider value={rows}>
-      <table className="repo-table" role="grid" aria-label="Repositories">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                const canSort = header.column.getCanSort();
-                const direction = header.column.getIsSorted();
-                const ariaSort: 'none' | 'ascending' | 'descending' =
-                  direction === 'asc'
-                    ? 'ascending'
-                    : direction === 'desc'
-                      ? 'descending'
-                      : 'none';
-                return (
-                  <th
-                    key={header.id}
-                    scope="col"
-                    aria-sort={ariaSort}
-                    className={canSort ? 'repo-table__th--sortable' : undefined}
-                    onClick={
-                      canSort
-                        ? header.column.getToggleSortingHandler()
-                        : undefined
-                    }
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => {
-            const repo = row.original;
-            const cells = row.getVisibleCells();
-            return (
-              <Fragment key={repo.id.id}>
-                <tr
-                  tabIndex={0}
-                  role="row"
-                  aria-label={`Open ${repo.id.owner}/${repo.id.name}`}
-                  onClick={() => navigate(repoHref(repo))}
-                  onKeyDown={(e) => {
-                    if (e.target !== e.currentTarget) return;
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      navigate(repoHref(repo));
-                    }
-                  }}
-                >
-                  {cells.map((cell) => (
-                    <td key={cell.id}>
+      <div className="table-scroll">
+        <table className="repo-table" role="grid" aria-label="Repositories">
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  const direction = header.column.getIsSorted();
+                  const ariaSort: 'none' | 'ascending' | 'descending' =
+                    direction === 'asc'
+                      ? 'ascending'
+                      : direction === 'desc'
+                        ? 'descending'
+                        : 'none';
+                  return (
+                    <th
+                      key={header.id}
+                      scope="col"
+                      aria-sort={ariaSort}
+                      className={canSort ? 'repo-table__th--sortable' : undefined}
+                      onClick={
+                        canSort
+                          ? header.column.getToggleSortingHandler()
+                          : undefined
+                      }
+                    >
                       {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
+                        header.column.columnDef.header,
+                        header.getContext()
                       )}
-                    </td>
-                  ))}
-                </tr>
-                {open.has(repo.id.id) ? (
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => {
+              const repo = row.original;
+              const cells = row.getVisibleCells();
+              return (
+                <Fragment key={repo.id.id}>
                   <tr
-                    className="repo-table__detail-row"
+                    tabIndex={0}
                     role="row"
-                    id={detailId(repo)}
+                    aria-label={`Open ${repo.id.owner}/${repo.id.name}`}
+                    onClick={() => navigate(repoHref(repo))}
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(repoHref(repo));
+                      }
+                    }}
                   >
-                    <td colSpan={cells.length} role="gridcell">
-                      <RepoFailingChecks repo={repo} />
-                    </td>
+                    {cells.map((cell) => (
+                      <td key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
                   </tr>
-                ) : null}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+                  {open.has(repo.id.id) ? (
+                    <tr
+                      className="repo-table__detail-row"
+                      role="row"
+                      id={detailId(repo)}
+                    >
+                      <td colSpan={cells.length} role="gridcell">
+                        <RepoFailingChecks repo={repo} />
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </OpenRows.Provider>
   );
 }
