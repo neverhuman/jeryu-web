@@ -71,6 +71,18 @@ export interface PullLane {
 /** State filter value that hides merged and closed PRs. */
 export const ACTIVE_STATE_FILTER = 'active';
 
+/**
+ * The query parameter each filter lives in. A filter on its default value is
+ * absent from the URL, so `/in-flight` is the page's own default view.
+ */
+export const PULL_ROOM_FILTER_PARAMS: Record<keyof PullRoomFilters, string> = {
+  repo: 'repo',
+  state: 'state',
+  evidence: 'evidence',
+  checkPosture: 'checks',
+  search: 'q',
+};
+
 export const DEFAULT_PULL_ROOM_FILTERS: PullRoomFilters = {
   repo: 'all',
   state: ACTIVE_STATE_FILTER,

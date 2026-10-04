@@ -7,14 +7,19 @@
 // recorded score — no extra computation.
 
 import { ArrowDown, ArrowUp, Boxes } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useToolFleet } from '../hooks/useToolFleet';
 import {
+  defaultDirection,
+  DEFAULT_TOOL_FLEET_FILTERS,
+  DEFAULT_TOOL_FLEET_SORT,
   projectToolFleet,
   toolCategories,
+  toolFleetFiltersFrom,
+  toolFleetSortFrom,
   type AdoptionStatus,
   type ToolFleetFilters,
   type ToolFleetRow,
@@ -25,6 +30,7 @@ import './page.css';
 import './ToolFleetPage.css';
 import { ADOPTION_PATH, SharedToolsTabs } from './sharedTools/SharedToolsTabs';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useViewState } from '../hooks/useViewState';
 
 const COLUMNS: { key: ToolFleetSortKey; label: string; numeric?: boolean }[] = [
   { key: 'tool', label: 'Tool' },
@@ -103,12 +109,20 @@ function ToolRow({ row }: { row: ToolFleetRow }): JSX.Element {
 export function ToolFleetPage(): JSX.Element {
   usePageTitle('Tool adoption');
   const { data, isPending, isError, error } = useToolFleet();
-  const [filters, setFilters] = useState<ToolFleetFilters>({
-    search: '',
-    category: 'all',
-    status: 'all',
-  });
-  const [sort, setSort] = useState<ToolFleetSort>({ key: 'tool', direction: 'asc' });
+  // The filters and the sort are in the URL, so a filtered, sorted table is a
+  // link. Both narrow one view, so both replace: Back leaves the page.
+  const view = useViewState();
+  const filters = useMemo(() => toolFleetFiltersFrom((param) => view.read(param)), [view]);
+  const sort = useMemo(() => toolFleetSortFrom((param) => view.read(param)), [view]);
+  const setFilters = (next: ToolFleetFilters): void =>
+    view.write(
+      {
+        q: next.search,
+        category: next.category === DEFAULT_TOOL_FLEET_FILTERS.category ? null : next.category,
+        status: next.status === DEFAULT_TOOL_FLEET_FILTERS.status ? null : next.status,
+      },
+      'replace'
+    );
 
   const tools = data?.tools;
   const categories = useMemo(() => toolCategories(tools ?? []), [tools]);
@@ -117,12 +131,17 @@ export function ToolFleetPage(): JSX.Element {
     [tools, filters, sort]
   );
 
-  const onSort = (key: ToolFleetSortKey): void =>
-    setSort((prev) =>
-      prev.key === key
-        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-        : { key, direction: key === 'tool' || key === 'category' ? 'asc' : 'desc' }
-    );
+  const onSort = (key: ToolFleetSortKey): void => {
+    const direction =
+      sort.key === key
+        ? sort.direction === 'asc'
+          ? 'desc'
+          : 'asc'
+        : defaultDirection(key);
+    const fallback =
+      key === DEFAULT_TOOL_FLEET_SORT.key && direction === DEFAULT_TOOL_FLEET_SORT.direction;
+    view.write({ sort: fallback ? null : key, dir: fallback ? null : direction }, 'replace');
+  };
 
   return (
     <div className="page page--wide" data-testid="tool-fleet-page">

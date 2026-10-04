@@ -105,6 +105,34 @@ export function stageCellClass(stage: BoardStage, open: boolean): string {
   return classes.join(' ');
 }
 
+// ── The open stage cell, in the URL ──────────────────────────────────────
+//
+// `?stage=` holds one `<lane>:<stage>` entry per lane with a cell open, so a
+// board under a detail panel is a link. Opening a cell is a view switch: it
+// pushes, and Back closes it again.
+
+/** Which cell of `lane` the `?stage=` entries have open, if any. */
+export function openStageId(entries: readonly string[], laneId: string): string | null {
+  for (const entry of entries) {
+    const split = entry.indexOf(':');
+    if (split > 0 && entry.slice(0, split) === laneId) return entry.slice(split + 1);
+  }
+  return null;
+}
+
+/**
+ * The `?stage=` entries with `lane`'s cell set to `stageId`, or closed when it
+ * is `null`. Every other lane keeps the cell it had open.
+ */
+export function withOpenStage(
+  entries: readonly string[],
+  laneId: string,
+  stageId: string | null
+): string[] {
+  const others = entries.filter((entry) => openStageId([entry], laneId) === null);
+  return stageId === null ? others : [...others, `${laneId}:${stageId}`];
+}
+
 /** What the detail panel says when no promote command is recorded. */
 export function noPromoteText(stage: BoardStage): string {
   if (neverDeployed(stage)) return 'Declared but never deployed to, so there is nothing to promote.';

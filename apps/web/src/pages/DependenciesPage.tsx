@@ -1,14 +1,15 @@
 // DependenciesPage.tsx - the operator graph laid out by dependency depth.
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { ErrorState, LoadingState } from '../components/state';
 import { useDependencyGraph } from '../hooks/useDependencyGraph';
+import { buildDependencyGraph } from './intelligenceGraphModel';
 import {
-  buildDependencyGraph,
-  type GraphFilters,
-} from './intelligenceGraphModel';
-import { edgePinFreshness, OperatorGraphConsole } from './intelligence';
+  edgePinFreshness,
+  OperatorGraphConsole,
+  useGraphViewState,
+} from './intelligence';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
@@ -20,12 +21,9 @@ export const DEPENDENCIES_PATH = '/intelligence/dependencies';
 export function DependenciesPage(): JSX.Element {
   usePageTitle('Dependencies');
   const query = useDependencyGraph();
-  const [filters, setFilters] = useState<GraphFilters>({
-    kinds: [],
-    states: [],
-    query: '',
-  });
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  // Filters, the search box and the picked node are in the URL: the graph a
+  // person is looking at is a link, and Back undoes the node before it.
+  const { filters, selectedNodeId, setFilters, selectNode } = useGraphViewState();
   const graph = useMemo(
     () => buildDependencyGraph(query.data ?? null, filters, selectedNodeId),
     [filters, query.data, selectedNodeId]
@@ -73,7 +71,7 @@ export function DependenciesPage(): JSX.Element {
             graph={graph}
             filters={filters}
             onFiltersChange={setFilters}
-            onSelectNode={setSelectedNodeId}
+            onSelectNode={selectNode}
             mode="dependencies"
           />
         )}

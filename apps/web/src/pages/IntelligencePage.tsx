@@ -1,6 +1,6 @@
 // IntelligencePage.tsx - intelligence snapshot dashboard.
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Activity,
   GitPullRequest,
@@ -16,13 +16,14 @@ import { DEPENDENCIES_PATH } from './DependenciesPage';
 import { useControlPlane } from '../hooks/useControlPlane';
 import { useEcosystem, useToolBuildClusters } from '../hooks/useToolingEvidence';
 import type { ControlPlaneSnapshot, EvidenceState } from '../api/types';
-import { buildOperatorGraph, type GraphFilters } from './intelligenceGraphModel';
+import { buildOperatorGraph } from './intelligenceGraphModel';
 import {
   EvidencePanel,
   MetricCard,
   OperatorGraphConsole,
   StatePill,
   ToolBuildDossiers,
+  useGraphViewState,
 } from './intelligence';
 
 import './page.css';
@@ -99,12 +100,14 @@ function IntelligenceSnapshot({
 }): JSX.Element {
   const ecosystem = useEcosystem();
   const toolClusters = useToolBuildClusters(10);
-  const [graphFilters, setGraphFilters] = useState<GraphFilters>({
-    kinds: [],
-    states: [],
-    query: '',
-  });
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  // Filters, the search box and the picked node are in the URL: the graph a
+  // person is looking at is a link, and Back undoes the node before it.
+  const {
+    filters: graphFilters,
+    selectedNodeId,
+    setFilters: setGraphFilters,
+    selectNode,
+  } = useGraphViewState();
   const runners = snapshot.runners.local;
   const runnerCapacityKnown = runners.state === 'fresh' && !outOfDate;
   const operatorGraph = useMemo(
@@ -212,7 +215,7 @@ function IntelligenceSnapshot({
           graph={operatorGraph}
           filters={graphFilters}
           onFiltersChange={setGraphFilters}
-          onSelectNode={setSelectedNodeId}
+          onSelectNode={selectNode}
         />
         <ToolBuildDossiers
           clusters={toolClusters.data?.clusters ?? []}

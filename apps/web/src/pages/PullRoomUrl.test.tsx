@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -105,11 +105,15 @@ describe('Pull Room URL navigation', () => {
     expectRepo('owner/a');
     await user.selectOptions(screen.getByLabelText('State'), 'open');
     await user.type(screen.getByLabelText('Search pull requests'), 'Change');
+    // Every filter is in the URL, so the address says what is on screen.
+    expect(new URLSearchParams(router.state.location.search).get('state')).toBe('open');
+    expect(new URLSearchParams(router.state.location.search).get('q')).toBe('Change');
 
+    // A link decides the whole view: one that names no filter shows none.
     await act(async () => { await router.navigate('/pull-room?repo=owner%2Fb'); });
     expectRepo('owner/b');
-    expect(screen.getByLabelText('State')).toHaveValue('open');
-    expect(screen.getByLabelText('Search pull requests')).toHaveValue('Change');
+    expect(screen.getByLabelText('State')).toHaveValue('active');
+    expect(screen.getByLabelText('Search pull requests')).toHaveValue('');
     await act(async () => { await router.navigate('/pull-room'); });
     expectRepo('all');
     await act(async () => { await router.navigate(-1); });
@@ -180,6 +184,43 @@ describe('Pull Room URL navigation', () => {
     expect(screen.queryByTestId('pull-timeline-owner/a-1')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^All/ }));
     expect(router.state.location.search).toBe('');
+  });
+
+  // The URL contract (README §6): every filter is in the query string, so the
+  // view a person built round-trips through a shared link.
+  it('round-trips every filter through the URL', async () => {
+    const user = userEvent.setup();
+    const router = setup(['/pull-room']);
+    await user.selectOptions(screen.getByLabelText('Repo'), 'owner/a');
+    await user.selectOptions(screen.getByLabelText('State'), 'merged');
+    await user.selectOptions(screen.getByLabelText('Evidence'), 'failed');
+    await user.selectOptions(screen.getByLabelText('Checks'), 'passing');
+    await user.type(screen.getByLabelText('Search pull requests'), 'Change');
+
+    const search = router.state.location.search;
+    expect(Object.fromEntries(new URLSearchParams(search))).toEqual({
+      repo: 'owner/a',
+      state: 'merged',
+      evidence: 'failed',
+      checks: 'passing',
+      q: 'Change',
+    });
+    // Filters replace, so the whole run of them is one history entry: Back
+    // leaves the page instead of retracing the search box.
+    await act(async () => { await router.navigate(-1); });
+    expect(router.state.location.pathname).toBe('/pull-room');
+    expect(router.state.location.search).toBe(search);
+
+    cleanup();
+    const reopened = setup([`/pull-room${search}`]);
+    expect(reopened.state.location.search).toBe(search);
+    expect(screen.getByLabelText('Repo')).toHaveValue('owner/a');
+    expect(screen.getByLabelText('State')).toHaveValue('merged');
+    expect(screen.getByLabelText('Evidence')).toHaveValue('failed');
+    expect(screen.getByLabelText('Checks')).toHaveValue('passing');
+    expect(screen.getByLabelText('Search pull requests')).toHaveValue('Change');
+    // Filters on: the fold is open from the URL alone.
+    expect(screen.getByText('Filters (on)')).toBeInTheDocument();
   });
 
   it('says so when a family has nothing open, with the way back', async () => {

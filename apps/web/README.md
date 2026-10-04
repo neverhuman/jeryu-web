@@ -80,6 +80,7 @@ apps/web/
     │   ├── useBlob.ts
     │   ├── useMarkdown.ts
     │   ├── useResolveRepo.ts
+    │   ├── useViewState.ts     query-string view state (§6)
     │   └── useKeyboard.ts
     ├── stores/
     │   ├── realtimeStore.ts    Zustand binding for the WS transport
@@ -225,7 +226,41 @@ the `useStore(s => …)` pattern to avoid re-render storms.
 
 ---
 
-## 6. Keyboard shortcuts
+## 6. URL view state
+
+A page's view state lives in the query string, not in component memory: what
+is on screen can be linked, and the back button undoes what it looks like it
+undoes. `src/hooks/useViewState.ts` is the one way in — `read`, `readList` and
+`write(values, history)` — and a value equal to the page's default is written
+as `null`, so it leaves the URL and the bare address is the default view.
+
+**The push/replace rule.**
+
+| What changed | History | Why |
+|---|---|---|
+| Tab and view switches | `push` | A different thing to look at, so Back returns to the one before it. |
+| Typing, filters and sort | `replace` | The same view narrowed. Back leaves the page instead of walking a search box letter by letter. |
+
+A family pill, a graph node and an open detail panel are view switches: they
+push. A search box, a filter select, a toggle and a sort column replace.
+
+| Page | Parameters | Pushes |
+|---|---|---|
+| In flight (`/in-flight`) | `repo`, `state`, `evidence`, `checks`, `q`, `family`, `view` | `family`, `view` |
+| Intelligence (`/intelligence`) | `kind`, `state`, `q`, `node` | `node` |
+| Dependencies (`/intelligence/dependencies`) | `kind`, `state`, `q`, `node` | `node` |
+| Shared tools → Adoption (`/shared-tools/adoption`) | `q`, `category`, `status`, `sort`, `dir` | — |
+| Release board (`/releases/family/<family>`) | `stage` (`<lane>:<stage>`, one per lane), `tab` | both |
+
+Each of these pages has a round-trip test: it sets the state, reads
+`location.search`, re-mounts from that URL and asserts the same view
+(`PullRoomUrl.test.tsx`, `DependenciesPage.test.tsx`,
+`IntelligencePage.test.tsx`, `ToolFleetPage.test.tsx`,
+`ReleaseBoardPage.test.tsx`). A new piece of view state gets one too.
+
+---
+
+## 7. Keyboard shortcuts
 
 The `useKeyboard.ts` foundation provides:
 
@@ -259,7 +294,7 @@ overlay updates automatically.
 
 ---
 
-## 7. Testing
+## 8. Testing
 
 Three pyramids run in CI:
 
@@ -300,7 +335,7 @@ which is registered via `vitest.config.ts` (`setupFiles`).
 
 ---
 
-## 8. Accessibility
+## 9. Accessibility
 
 - **axe-core** runs in every Playwright spec via `@axe-core/playwright`;
   any `serious` or `critical` finding fails the run.
@@ -316,7 +351,7 @@ which is registered via `vitest.config.ts` (`setupFiles`).
 
 ---
 
-## 9. Bundle budget
+## 10. Bundle budget
 
 | Limit | Value |
 |---|---:|
@@ -339,7 +374,7 @@ so the site's Content-Security-Policy cannot break it.
 
 ---
 
-## 10. Storybook
+## 11. Storybook
 
 ```bash
 npm run storybook              # http://127.0.0.1:6006
@@ -359,7 +394,7 @@ expected marker exists across Stories.
 
 ---
 
-## 11. UX-QA proof receipts
+## 12. UX-QA proof receipts
 
 `apps/web` produces:
 
@@ -375,7 +410,7 @@ Both files are consumed by the jankurai dashboard and the
 
 ---
 
-## 12. Reference
+## 13. Reference
 
 | Topic | Where |
 |---|---|

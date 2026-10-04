@@ -110,8 +110,13 @@ test('Pull Room follows repository URLs and browser history @action:pull_room.fi
   await expect(repo).toHaveValue('alice/jeryu');
   await expect(page.getByText('Fix BFF PR list')).toBeVisible();
   await expect(page.getByText('Repair check posture')).toHaveCount(0);
-  await page.getByRole('combobox', { name: 'State', exact: true }).selectOption('open');
+  const state = page.getByRole('combobox', { name: 'State', exact: true });
+  // A filter is in the URL, and it replaces: the address says 'open' and the
+  // history entry it is on carries it.
+  await state.selectOption('open');
+  await expect(page).toHaveURL(/state=open/);
 
+  // A link decides the whole view, so one that names no state shows none.
   await page.evaluate(() => {
     window.history.pushState(null, '', '/in-flight?repo=bob%2Fjeryu&view=queue');
     window.dispatchEvent(new PopStateEvent('popstate'));
@@ -119,11 +124,13 @@ test('Pull Room follows repository URLs and browser history @action:pull_room.fi
   await expect(repo).toHaveValue('bob/jeryu');
   await expect(page.getByText('Repair check posture')).toBeVisible();
   await expect(page.getByText('Fix BFF PR list')).toHaveCount(0);
-  await expect(page.getByRole('combobox', { name: 'State', exact: true })).toHaveValue('open');
+  await expect(state).toHaveValue('active');
   await page.goBack();
   await expect(repo).toHaveValue('alice/jeryu');
+  await expect(state).toHaveValue('open');
   await page.goForward();
   await expect(repo).toHaveValue('bob/jeryu');
+  await expect(state).toHaveValue('active');
   await repo.selectOption('all');
   await expect(page).toHaveURL(/\/in-flight\?view=queue$/);
   await expect(page.getByText('Fix BFF PR list')).toBeVisible();

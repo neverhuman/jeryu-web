@@ -5,8 +5,9 @@
 // counts may be shown at all, and how the snapshot badge is derived.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import { IntelligencePage, snapshotState } from '../IntelligencePage';
@@ -43,6 +44,25 @@ function renderIntelligence(
       </MemoryRouter>
     </QueryClientProvider>
   );
+}
+
+/** The page on a router that can be read back and re-entered from a URL. */
+function openIntelligence(path: string): ReturnType<typeof createMemoryRouter> {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, refetchOnMount: false } },
+  });
+  client.setQueryData(CONTROL_PLANE_QUERY_KEY, sampleSnapshot());
+  client.setQueryData(['ecosystem'], sampleEcosystem());
+  client.setQueryData(['tool-build-clusters', 10], sampleToolBuildClusters());
+  const router = createMemoryRouter([{ path: '/intelligence', element: <IntelligencePage /> }], {
+    initialEntries: [path],
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  );
+  return router;
 }
 
 describe('snapshotState', () => {
@@ -141,6 +161,28 @@ describe('IntelligencePage runner capacity', () => {
     expect(within(card).getByText('0')).toBeInTheDocument();
     expect(card).toHaveTextContent('0 offline');
     expect(within(card).queryByText('—')).not.toBeInTheDocument();
+  });
+});
+
+// The URL contract (README §6): the graph filters and the picked node are in
+// the query string, so the graph on screen round-trips through a link.
+describe('IntelligencePage URL view state', () => {
+  it('round-trips the graph search and the picked node through the URL', async () => {
+    const user = userEvent.setup();
+    const router = openIntelligence('/intelligence');
+
+    await user.type(screen.getByLabelText('Search graph'), 'demo');
+    await user.click(screen.getByTestId('graph-node-repo:jeryu/demo'));
+    const search = router.state.location.search;
+    expect(Object.fromEntries(new URLSearchParams(search))).toEqual({
+      q: 'demo',
+      node: 'repo:jeryu/demo',
+    });
+
+    cleanup();
+    openIntelligence(`/intelligence${search}`);
+    expect(screen.getByLabelText('Search graph')).toHaveValue('demo');
+    expect(screen.getByTestId('node-inspector')).toHaveTextContent('jeryu/demo');
   });
 });
 

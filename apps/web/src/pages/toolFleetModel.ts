@@ -21,6 +21,43 @@ export interface ToolFleetSort {
   direction: SortDirection;
 }
 
+export const DEFAULT_TOOL_FLEET_FILTERS: ToolFleetFilters = {
+  search: '',
+  category: 'all',
+  status: 'all',
+};
+
+export const DEFAULT_TOOL_FLEET_SORT: ToolFleetSort = { key: 'tool', direction: 'asc' };
+
+const SORT_KEYS: ToolFleetSortKey[] = ['tool', 'category', 'adoption', 'adopted', 'missing'];
+const ADOPTION_STATUSES: (AdoptionStatus | 'all')[] = ['all', 'complete', 'partial', 'none'];
+
+/** The filters a URL asks for, with anything it does not name left on default. */
+export function toolFleetFiltersFrom(read: (param: string) => string): ToolFleetFilters {
+  const status = read('status') as AdoptionStatus | 'all';
+  return {
+    search: read('q'),
+    category: read('category') || DEFAULT_TOOL_FLEET_FILTERS.category,
+    status: ADOPTION_STATUSES.includes(status) ? status : DEFAULT_TOOL_FLEET_FILTERS.status,
+  };
+}
+
+/** The sort a URL asks for; an unknown column or direction falls back to the default. */
+export function toolFleetSortFrom(read: (param: string) => string): ToolFleetSort {
+  const asked = read('sort') as ToolFleetSortKey;
+  const key = SORT_KEYS.includes(asked) ? asked : DEFAULT_TOOL_FLEET_SORT.key;
+  const direction = read('dir') as SortDirection;
+  return {
+    key,
+    direction: direction === 'asc' || direction === 'desc' ? direction : defaultDirection(key),
+  };
+}
+
+/** Names sort ascending; counts and ratios start at the biggest number. */
+export function defaultDirection(key: ToolFleetSortKey): SortDirection {
+  return key === 'tool' || key === 'category' ? 'asc' : 'desc';
+}
+
 export interface ToolFleetRow {
   entry: ToolFleetEntry;
   adopted: number;

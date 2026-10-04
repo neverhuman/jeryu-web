@@ -7,7 +7,7 @@
 // `#lane-<id>` anchors, and a target that names runners links to /runners.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -163,6 +163,54 @@ describe('ReleasesPage — family release board', () => {
     expect(within(detail).getByRole('heading', { name: 'Cloud app · stage' })).toBeInTheDocument();
     fireEvent.click(stage);
     expect(detail).toBeEmptyDOMElement();
+  });
+
+  // The URL contract (README §6): the open stage cell and the picked tab are
+  // in the query string, so a board under an open detail panel is a link.
+  // Both are view switches, so both push and Back undoes them.
+  it('round-trips the open stage cell and the picked tab through the URL', async () => {
+    serveBoards();
+    open('/releases/family/acme');
+    fireEvent.click(await screen.findByTestId('release-board-stage-cloud-app-prod'));
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/releases/family/acme?stage=cloud-app%3Aprod'
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Release notes' }));
+    const search = '?stage=cloud-app%3Aprod&tab=notes';
+    expect(screen.getByTestId('location')).toHaveTextContent(`/releases/family/acme${search}`);
+
+    cleanup();
+    serveBoards();
+    open(`/releases/family/acme${search}`);
+    expect(await screen.findByRole('tab', { name: 'Release notes' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+    // The deliverables view carries the same open cell back.
+    fireEvent.click(screen.getByRole('tab', { name: 'Deliverables' }));
+    const detail = screen.getByTestId('release-board-detail-cloud-app');
+    expect(within(detail).getByRole('heading', { name: 'Cloud app · prod' })).toBeInTheDocument();
+    expect(screen.getByTestId('release-board-stage-cloud-app-prod')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+  });
+
+  it('keeps one open cell per lane in the URL', async () => {
+    serveBoards();
+    open('/releases/family/globex');
+    fireEvent.click(await screen.findByTestId('release-board-stage-forge-server-dev'));
+    fireEvent.click(screen.getByTestId('release-board-stage-web-ui-pinned'));
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      'stage=forge-server%3Adev%2Cweb-ui%3Apinned'
+    );
+    expect(screen.getByTestId('release-board-detail-forge-server')).not.toBeEmptyDOMElement();
+    expect(screen.getByTestId('release-board-detail-web-ui')).not.toBeEmptyDOMElement();
+
+    // Closing one lane's cell leaves the other lane's alone.
+    fireEvent.click(screen.getByTestId('release-board-stage-forge-server-dev'));
+    expect(screen.getByTestId('location')).toHaveTextContent('stage=web-ui%3Apinned');
+    expect(screen.getByTestId('release-board-detail-forge-server')).toBeEmptyDOMElement();
   });
 
   it('draws a never-deployed stage the way the design does', async () => {

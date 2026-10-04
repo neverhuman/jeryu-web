@@ -10,7 +10,7 @@
 // Each lane is the anchor `#lane-<id>`, and a target that names its runners
 // links to them on /runners ("2 runners").
 
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { EnvironmentSummary } from '../../api/types/deployments';
@@ -21,6 +21,7 @@ import type {
   ReleaseBoard,
 } from '../../api/types/releaseBoard';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
+import { useViewState } from '../../hooks/useViewState';
 import { laneAnchorId, runnerCountLabel, runnersHref } from './links';
 import {
   boardColumns,
@@ -30,12 +31,14 @@ import {
   laneLayout,
   noPromoteText,
   NOT_USED_TEXT,
+  openStageId,
   pillClass,
   promoteWho,
   stageCellClass,
   stageConnector,
   stageOverlay,
   targetStateText,
+  withOpenStage,
   type StageOverlay,
 } from './model';
 import { When } from '../../format/When';
@@ -113,7 +116,11 @@ function LaneView({
   columns: readonly BoardColumn[];
   environments: ReadonlyMap<string, EnvironmentSummary[]>;
 }): JSX.Element {
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Which cell is open is in the URL (`?stage=<lane>:<stage>`), so the board
+  // under an open detail panel can be linked; opening one pushes history.
+  const view = useViewState();
+  const entries = view.readList('stage');
+  const openId = openStageId(entries, lane.id);
   const headingId = useId();
   const detailId = useId();
   const overlays = new Map<string, StageOverlay>();
@@ -131,7 +138,12 @@ function LaneView({
       overlay={overlays.get(stage.id) ?? null}
       open={openId === stage.id}
       controls={detailId}
-      onToggle={() => setOpenId(openId === stage.id ? null : stage.id)}
+      onToggle={() =>
+        view.write(
+          { stage: withOpenStage(entries, lane.id, openId === stage.id ? null : stage.id) },
+          'push'
+        )
+      }
     />
   );
 

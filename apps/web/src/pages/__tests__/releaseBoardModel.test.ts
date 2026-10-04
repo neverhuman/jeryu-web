@@ -23,6 +23,7 @@ import {
   laneLayout,
   noPromoteText,
   observedLine,
+  openStageId,
   OVERLAY_NOTE,
   pickFamily,
   pillClass,
@@ -37,6 +38,7 @@ import {
   unshippedHeadline,
   unshippedPinsText,
   versionNamesSha,
+  withOpenStage,
   workShares,
   workSummary,
 } from '../releaseBoard/model';
@@ -339,5 +341,23 @@ describe('unshipped', () => {
     const pins = { note: '', columns: ['Repo', 'Behind'], rows: [{ repo: 'tracker', cells: [], behind: 4 }] };
     expect(unshipped({ ...level, pins, work: undefined })?.state).toBe('warn');
     expect(unshipped({ ...level, pins: undefined, work: undefined })).toBeNull();
+  });
+
+  it('reads and writes the open stage cell of each lane', () => {
+    const entries = ['cloud-app:prod', 'web-ui:pinned'];
+    expect(openStageId(entries, 'cloud-app')).toBe('prod');
+    expect(openStageId(entries, 'reviewer')).toBeNull();
+    // A lane's own cell moves; every other lane keeps the one it had open.
+    expect(withOpenStage(entries, 'cloud-app', 'stage')).toEqual([
+      'web-ui:pinned',
+      'cloud-app:stage',
+    ]);
+    expect(withOpenStage(entries, 'cloud-app', null)).toEqual(['web-ui:pinned']);
+    expect(withOpenStage([], 'cloud-app', 'prod')).toEqual(['cloud-app:prod']);
+  });
+
+  it('ignores an entry that names no lane', () => {
+    expect(openStageId(['prod', ':prod', 'cloud-app:'], 'cloud-app')).toBe('');
+    expect(openStageId(['prod'], 'prod')).toBeNull();
   });
 });

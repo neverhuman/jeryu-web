@@ -7,6 +7,7 @@ export { NodeInspector } from './NodeInspector';
 export { EdgeList, ClusterChips } from './GraphLists';
 export { ToolBuildDossiers } from './ToolBuildDossiers';
 export { EvidencePanel } from './EvidencePanel';
+export { useGraphViewState, type GraphViewState } from './useGraphViewState';
 export { StatePill, SeverityPill, SeverityIcon } from './StateIndicators';
 export {
   edgePinFreshness,

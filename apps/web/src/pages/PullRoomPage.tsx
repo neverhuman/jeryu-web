@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
 import { ErrorState, LoadingState } from '../components/state';
@@ -27,6 +27,7 @@ import { releaseLadder } from './releaseChannelsModel';
 import {
   ACTIVE_STATE_FILTER,
   DEFAULT_PULL_ROOM_FILTERS,
+  PULL_ROOM_FILTER_PARAMS,
   familyLabel,
   familyPills,
   filterPullRequests,
@@ -45,6 +46,7 @@ import {
 } from './pullRoomModel';
 import { pullCountsSentence } from './pullTimelineModel';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useViewState } from '../hooks/useViewState';
 
 import './page.css';
 import './PullRoomPage.css';
@@ -68,11 +70,37 @@ export function PullRoomPage(): JSX.Element {
     refetchInterval: REFRESH_MS,
     limit: CONTROL_PLANE_MAX_LIMIT,
   });
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [localFilters, setFilters] = useState<PullRoomFilters>(DEFAULT_PULL_ROOM_FILTERS);
-  // Keep the repository in the URL so shared links and history update the results.
-  const repo = searchParams.get('repo') || DEFAULT_PULL_ROOM_FILTERS.repo;
-  const filters = useMemo(() => ({ ...localFilters, repo }), [localFilters, repo]);
+  // Every filter is in the URL, so the list a person is looking at is a link
+  // and a shared one re-opens the same view.
+  const view = useViewState();
+  const filters = useMemo<PullRoomFilters>(
+    () => ({
+      repo: view.read(PULL_ROOM_FILTER_PARAMS.repo, DEFAULT_PULL_ROOM_FILTERS.repo),
+      state: view.read(PULL_ROOM_FILTER_PARAMS.state, DEFAULT_PULL_ROOM_FILTERS.state),
+      evidence: view.read(
+        PULL_ROOM_FILTER_PARAMS.evidence,
+        DEFAULT_PULL_ROOM_FILTERS.evidence
+      ),
+      checkPosture: view.read(
+        PULL_ROOM_FILTER_PARAMS.checkPosture,
+        DEFAULT_PULL_ROOM_FILTERS.checkPosture
+      ),
+      search: view.read(PULL_ROOM_FILTER_PARAMS.search, DEFAULT_PULL_ROOM_FILTERS.search),
+    }),
+    [view]
+  );
+  const repo = filters.repo;
+  // Typing and the filter selects narrow one list: they replace, so Back
+  // leaves the page rather than retracing a search box letter by letter.
+  const setFilters = (patch: Partial<PullRoomFilters>): void => {
+    const written: Record<string, string | null> = {};
+    for (const key of Object.keys(patch) as (keyof PullRoomFilters)[]) {
+      const value = patch[key] ?? DEFAULT_PULL_ROOM_FILTERS[key];
+      written[PULL_ROOM_FILTER_PARAMS[key]] =
+        value === DEFAULT_PULL_ROOM_FILTERS[key] ? null : value;
+    }
+    view.write(written, 'replace');
+  };
   // Five controls for a handful of pull requests is more to read than the list
   // itself: they fold away unless one of them is doing something.
   const filtersActive =
@@ -84,7 +112,7 @@ export function PullRoomPage(): JSX.Element {
   const [filtersOpen, setFiltersOpen] = useState(filtersActive);
   // `?family=` scopes everything on the page to that family's repos. The
   // repository list (already cached for /repos) says which family a repo is in.
-  const family = searchParams.get('family') ?? '';
+  const family = view.read('family');
   const repositories = useRepositories({});
   const forgeHost = useForgeHost();
   const members = useMemo(
@@ -101,26 +129,14 @@ export function PullRoomPage(): JSX.Element {
       ),
     [members]
   );
-  const setFamily = (value: string): void => {
-    const params = new URLSearchParams(searchParams);
-    if (value) params.set('family', value);
-    else params.delete('family');
-    setSearchParams(params);
-  };
-  const setRepo = (value: string): void => {
-    const params = new URLSearchParams(searchParams);
-    if (value === 'all') params.delete('repo');
-    else params.set('repo', value);
-    setSearchParams(params, { replace: true });
-  };
+  // A family pill and the board toggle are view switches: they push, so Back
+  // returns to the family or the view before them.
+  const setFamily = (value: string): void => view.write({ family: value }, 'push');
+  const setRepo = (value: string): void => setFilters({ repo: value });
   // The timeline is the page; the lane board stays one click away.
-  const board = isBoardView(searchParams.get('view'));
-  const setBoard = (next: boolean): void => {
-    const params = new URLSearchParams(searchParams);
-    if (next) params.set('view', 'board');
-    else params.delete('view');
-    setSearchParams(params, { replace: true });
-  };
+  const board = isBoardView(view.read('view'));
+  const setBoard = (next: boolean): void =>
+    view.write({ view: next ? 'board' : null }, 'push');
 
   // The board shows work in flight. The timeline is a history — its bands run
   // from work that has not merged yet down to what production runs — so its
@@ -398,7 +414,7 @@ export function PullRoomPage(): JSX.Element {
           <select
             value={filters.state}
             onChange={(event) =>
-              setFilters((current) => ({ ...current, state: event.target.value }))
+              setFilters({ state: event.target.value })
             }
           >
             <option value="active">Default (timeline adds release history)</option>
@@ -415,10 +431,7 @@ export function PullRoomPage(): JSX.Element {
           <select
             value={filters.evidence}
             onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                evidence: event.target.value,
-              }))
+              setFilters({ evidence: event.target.value })
             }
           >
             <option value="all">All evidence</option>
@@ -434,10 +447,7 @@ export function PullRoomPage(): JSX.Element {
           <select
             value={filters.checkPosture}
             onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                checkPosture: event.target.value,
-              }))
+              setFilters({ checkPosture: event.target.value })
             }
           >
             <option value="all">All checks</option>
@@ -453,7 +463,7 @@ export function PullRoomPage(): JSX.Element {
           <input
             value={filters.search}
             onChange={(event) =>
-              setFilters((current) => ({ ...current, search: event.target.value }))
+              setFilters({ search: event.target.value })
             }
             type="search"
             aria-label="Search pull requests"

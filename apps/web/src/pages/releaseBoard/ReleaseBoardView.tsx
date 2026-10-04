@@ -31,6 +31,7 @@ import {
   useReleaseBoardList,
 } from '../../hooks/useReleaseBoard';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+import { useViewState } from '../../hooks/useViewState';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { BoardLanes } from './BoardLanes';
 import { laneAnchorId, laneFromHash, releaseFamilyPath } from './links';
@@ -280,8 +281,13 @@ function BoardTabs({
   environments: Parameters<typeof BoardLanes>[0]['environments'];
 }): JSX.Element {
   const tabs: TabKey[] = board.pins ? ['deliverables', 'pins', 'notes'] : ['deliverables', 'notes'];
-  const [picked, setPicked] = useState<TabKey>('deliverables');
+  // `?tab=` says which view the board is on. A tab switch pushes, so Back
+  // returns to the tab before it.
+  const view = useViewState();
+  const picked = view.read('tab') as TabKey;
   const active = tabs.includes(picked) ? picked : 'deliverables';
+  const setPicked = (key: TabKey): void =>
+    view.write({ tab: key === 'deliverables' ? null : key }, 'push');
   const tabId = (key: TabKey): string => `release-board-tab-${key}`;
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
