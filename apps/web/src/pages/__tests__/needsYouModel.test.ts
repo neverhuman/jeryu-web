@@ -15,6 +15,7 @@ import {
   areaBadgeCount,
   attentionArea,
   attentionBadgeCount,
+  attentionAbout,
   attentionContext,
   apiMethod,
   commandPlace,
@@ -409,5 +410,34 @@ describe('acknowledgeTarget', () => {
     expect(acknowledgeTarget({ family: 'jeryu', todo_id: null })).toBeNull();
     expect(acknowledgeTarget({ family: null, todo_id: '20260919-1' })).toBeNull();
     expect(acknowledgeTarget({ family: ' ', todo_id: ' ' })).toBeNull();
+  });
+});
+
+describe('attentionAbout', () => {
+  const rows = {
+    schema_version: 1,
+    generated_at: '2026-09-19T09:00:00Z',
+    counts: { critical: 0, action: 3, watch: 1 },
+    items: [
+      attentionItem({ id: 'blocked', kind: 'todo_blocked', todo_id: '20260919-1' }),
+      attentionItem({ id: 'queue', kind: 'queue_failed', repo: 'acme/web', pr: 7 }),
+      attentionItem({ id: 'other-pr', kind: 'pr_checks_failing', repo: 'globex/api', pr: 7 }),
+      attentionItem({ id: 'calm', kind: 'todo_stuck_claim', severity: 'watch', todo_id: '20260919-1' }),
+    ],
+  };
+
+  it('finds the rows about one todo, and leaves the calm ones out', () => {
+    expect(attentionAbout(rows, { todoId: '20260919-1' }).map((i) => i.id)).toEqual(['blocked']);
+  });
+
+  it('finds the rows about one pull request, not another repo at the same number', () => {
+    expect(attentionAbout(rows, { repo: 'acme/web', pr: 7 }).map((i) => i.id)).toEqual(['queue']);
+    expect(attentionAbout(rows, { repo: 'web', pr: '7' }).map((i) => i.id)).toEqual(['queue']);
+    expect(attentionAbout(rows, { repo: 'acme/web', pr: 8 })).toEqual([]);
+  });
+
+  it('matches nothing when the subject names neither a todo nor a pull request', () => {
+    expect(attentionAbout(rows, { repo: 'acme/web' })).toEqual([]);
+    expect(attentionAbout(undefined, { todoId: '20260919-1' })).toEqual([]);
   });
 });

@@ -49,7 +49,15 @@ describe('TodoPage', () => {
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy'
     );
-    expect(screen.getByRole('list', { name: /^Lifecycle of 20260918-2201-a9z/ })).toBeInTheDocument();
+    // The work trace is a rail of twelve stages with exactly one of them current.
+    const rail = screen.getByRole('list', { name: /^Work trace of 20260918-2201-a9z/ });
+    expect(rail).toHaveAccessibleName(/stage 6 of 12: Committed/);
+    expect(within(rail).getAllByRole('listitem')).toHaveLength(12);
+    expect(
+      within(rail)
+        .getAllByRole('listitem')
+        .filter((item) => item.getAttribute('data-state') === 'current')
+    ).toHaveLength(1);
     // The trail leads back to Work and to this family's queue.
     expect(screen.getByRole('link', { name: 'Work' })).toHaveAttribute('href', '/work');
     expect(screen.getByRole('link', { name: 'jeryu' })).toHaveAttribute('href', '/work?family=jeryu');

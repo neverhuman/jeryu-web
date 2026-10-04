@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  carriedTodoIds,
   commitAuthorName,
   groupCommitsByDay,
   hasCommitDetail,
@@ -118,5 +119,23 @@ describe('groupCommitsByDay', () => {
 
   it('has no groups for no commits', () => {
     expect(groupCommitsByDay([])).toEqual([]);
+  });
+});
+
+describe('carriedTodoIds', () => {
+  it('names each todo once, in the order the commits first name it', () => {
+    expect(
+      carriedTodoIds([
+        commit('a', 'One\n\nTodo: 20260925-1\nWorked-by: w1\n', '2026-09-27T09:00:00Z'),
+        commit('b', 'Two, with no trailer', '2026-09-27T10:00:00Z'),
+        commit('c', 'Three\n\ntodo: 20260925-1\n', '2026-09-27T11:00:00Z'),
+        commit('d', 'Four\n\nTodo: 20260925-2\n', '2026-09-27T12:00:00Z'),
+      ])
+    ).toEqual(['20260925-1', '20260925-2']);
+  });
+
+  it('carries no todo for no commits, or for commits with no trailer', () => {
+    expect(carriedTodoIds(undefined)).toEqual([]);
+    expect(carriedTodoIds([commit('a', 'One', '2026-09-27T09:00:00Z')])).toEqual([]);
   });
 });

@@ -18,6 +18,10 @@
 // queue stops and a person starts: the page then offers "Queue again"
 // (`components/merge/QueueAgain`).
 //
+// Below the cockpit the Work section says where the change stands on the
+// twelve-stage work trace, which todos the pull request carries, and the
+// Needs-you row about this pull request (`PullRequestWork`).
+//
 // On approve mutation 409 with `merge_sha_stale`, the page shows a recovery
 // banner with the previous/current SHA and a Refresh button that re-runs the
 // detail query. The banner also appears for `merge_passport_stale` /
@@ -62,6 +66,7 @@ import {
 import { relativeTime } from '../components/repo/relativeTime';
 import { PullRequestCockpit } from './PullRequestCockpit';
 import { PullRequestCommits } from './PullRequestCommits';
+import { PullRequestWork } from './PullRequestWork';
 import {
   extractDrift,
   type HeadDriftInfo,
@@ -458,6 +463,14 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         onApprove={handleApprove}
         onMerge={handleMerge}
         onSetState={handleSetState}
+      />
+
+      <PullRequestWork
+        summary={summary}
+        commits={commits.data}
+        repoId={repoId}
+        repoFullName={fullName}
+        prNumber={prNumber}
       />
 
       <PullRequestCommits

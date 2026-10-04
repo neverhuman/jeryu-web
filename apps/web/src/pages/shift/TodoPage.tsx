@@ -2,7 +2,8 @@
 //
 // Needs you, Activity, the workers line and a queue row's id all land here, so a
 // todo has one address to share. It is the queue row opened up: title, family,
-// status, why it is stuck, the lifecycle trace, repos, commits, then the body,
+// status, why it is stuck, the work trace, what waits on you here, repos,
+// commits, then the body,
 // note and every attempt, with the admin actions beside them. Ids are unique
 // across families; `?family=` only settles the rare id two families share.
 
@@ -18,6 +19,7 @@ import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { useShiftFamilies, useShiftTodos } from '../../hooks/useShift';
+import { NeedsYouAbout } from '../needsYou';
 import { ShiftError } from './shiftCommon';
 import {
   attemptSummary,
@@ -28,9 +30,12 @@ import {
   shortSha,
   statusTone,
   todoCost,
+  todoPrHref,
   type RepoRefs,
 } from './shiftModel';
-import { RepoName, TodoActions, TodoDetail, TodoTrace, WhyStuck } from './todoParts';
+import { RepoName, TodoActions, TodoDetail, WhyStuck } from './todoParts';
+import { WorkTrace } from './WorkTrace';
+import { todoFacts, workTrace } from './workTraceModel';
 import { WORK_PATH, queueHref, todoHref } from './workPaths';
 import { todoFamily } from './workPageModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -128,6 +133,7 @@ function TodoView({
   const now = new Date();
   const stuck = todo.status === 'blocked' || todo.status === 'handoff';
   const attempts = attemptSummary(todo);
+  const prHref = todoPrHref(todo, refs);
   const commits = Object.entries(todo.commits);
   return (
     <>
@@ -153,7 +159,12 @@ function TodoView({
       </header>
 
       {stuck && todo.note ? <WhyStuck id={todo.id} note={todo.note} /> : null}
-      <TodoTrace todo={todo} refs={refs} />
+      <WorkTrace
+        stages={workTrace(todoFacts(todo))}
+        subject={todo.id}
+        hrefs={prHref ? { pr: prHref } : {}}
+      />
+      <NeedsYouAbout subject={{ todoId: todo.id }} />
       {isAdmin ? (
         <p className="shift__actions">
           <TodoActions todo={todo} />

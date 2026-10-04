@@ -502,6 +502,42 @@ export function areaBadgeCount(data: AttentionResponse | undefined, area: Attent
   return urgentInArea(data, area).length;
 }
 
+/** What a Needs-you row may be about: one todo, or one repository's pull request. */
+export interface AttentionSubject {
+  todoId?: string | null;
+  repo?: string | null;
+  pr?: number | string | null;
+}
+
+/**
+ * The rows waiting on a person about one subject, so a todo page or a pull
+ * request page can show its own row in place rather than sending the reader to
+ * Needs you to find out that something waits on them here. A subject with
+ * nothing to match on matches nothing: a page never shows the whole list.
+ */
+export function attentionAbout(
+  data: AttentionResponse | undefined,
+  subject: AttentionSubject
+): AttentionItem[] {
+  const todoId = (subject.todoId ?? '').trim();
+  const pr = subject.pr === null || subject.pr === undefined ? '' : String(subject.pr).trim();
+  const repo = (subject.repo ?? '').trim();
+  if (!todoId && !pr) return [];
+  const items = urgentAttention(data).filter((item) => {
+    if (todoId && item.todo_id === todoId) return true;
+    if (!pr || String(item.pr ?? '') !== pr) return false;
+    return !repo || !item.repo || sameAttentionRepo(item.repo, repo);
+  });
+  return groupAttention(items).flatMap((group) => group.items);
+}
+
+/** A row may name `owner/name` where the page knows only `name`, or the reverse. */
+function sameAttentionRepo(named: string, wanted: string): boolean {
+  if (named === wanted) return true;
+  const bare = (repo: string): string => repo.split('/').pop() ?? repo;
+  return bare(named) === bare(wanted);
+}
+
 /** A link to Needs you, kept on one family when the caller is on one. */
 export function needsYouHref(family?: string | null): string {
   const name = familyName(family);

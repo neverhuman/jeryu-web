@@ -145,3 +145,21 @@ export function groupCommitsByDay(commits: PullCommit[]): CommitDay[] {
   }
   return groups;
 }
+
+/**
+ * The todos a pull request carries, in the order its commits first name them.
+ *
+ * A shift PR carries one commit per todo, each with a `Todo:` trailer, so this
+ * is the link from a pull request back to the queue. A commit with no trailer
+ * (a merge, a hand-made fix) simply carries no todo.
+ */
+export function carriedTodoIds(commits: readonly PullCommit[] | undefined): string[] {
+  const ids: string[] = [];
+  for (const commit of commits ?? []) {
+    for (const trailer of parseCommitMessage(commit.commit.message).trailers) {
+      const id = trailer.key.toLowerCase() === 'todo' ? trailer.value.trim() : '';
+      if (id && !ids.includes(id)) ids.push(id);
+    }
+  }
+  return ids;
+}
