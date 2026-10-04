@@ -14,6 +14,11 @@
 //      line and given no row.
 //   2. Ready to pin: merged in a dependency, not yet in the deploy repo's pin.
 //
+// A staged release waiting for its deploy command is a row of the "Waiting on
+// you here" strip at the top, not a banner of its own: the strip is the one
+// place this page shows what needs a person, so the same release is never both
+// a row and a banner.
+//
 // This page is about ENVIRONMENTS: what each one runs and what is holding the
 // next release. How far an individual change has got — opened, checked,
 // reviewed, merged, and out to dev, canary, stable and production — is the Pull
@@ -33,15 +38,13 @@ import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-r
 import { sameFamily } from '../components/family/familyScope';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { pillClass, type Tone } from '../components/tone/tone';
-import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
-import { useAttention, usePins } from '../hooks/usePipeline';
+import { usePins } from '../hooks/usePipeline';
 
 import { useReleaseOverview } from '../hooks/useReleaseOverview';
 import { useForgeHost } from '../hooks/useForgeHost';
 import { useRepositories } from '../hooks/useRepositories';
-import { commandPlace, findAttention } from './needsYou/needsYouModel';
 import { behindPinLines } from './pinsModel';
 import { ReadyToPin } from './ReadyToPin';
 import { canonicalBoardRedirect } from './releaseBoard/links';
@@ -99,11 +102,12 @@ export function ReleasesPage(): JSX.Element {
   const boardFamily =
     pathFamily ?? (perRepository ? null : params.get('family') ?? (scope.family || null));
   usePageTitle(boardFamily ? `Releases · ${boardFamily}` : 'Releases');
-  const repositoryView = (
-    <RepositoryReleases
-      scope={perRepository ? scopeFrom(params, scope.family) : DEFAULT_SCOPE}
-    />
-  );
+  const repoScope = perRepository ? scopeFrom(params, scope.family) : DEFAULT_SCOPE;
+  const repositoryView = <RepositoryReleases scope={repoScope} />;
+  // A view of one repository is about that repository: a release staged in
+  // another one is not what this page is waiting on. A family scope is already
+  // a family filter, and the board is about a whole family.
+  const scopeRepos = perRepository && repoScope.repo ? [repoScope.repo] : null;
 
   return (
     <div className="page page--wide" data-testid="releases-page">
@@ -134,7 +138,11 @@ export function ReleasesPage(): JSX.Element {
         </nav>
       </header>
 
-      <NeedsYouHere area="releases" family={pathFamily ?? params.get('family') ?? scope.family} />
+      <NeedsYouHere
+        area="releases"
+        family={pathFamily ?? params.get('family') ?? scope.family}
+        repos={scopeRepos}
+      />
 
       {perRepository ? (
         repositoryView
@@ -255,8 +263,6 @@ function RepositoryReleases({ scope }: { scope: RepositoryScope }): JSX.Element 
           </select>
         </p>
       </section>
-
-      <StagedRelease />
 
       {repoId ? <Environments repoId={repoId} branch={branch} /> : null}
 
@@ -448,31 +454,15 @@ function Attempt({ attempt }: { attempt: DeployedRef }): JSX.Element {
   );
 }
 
-/**
- * "A release is staged and waiting for the deploy command": the same
- * `release_staged` item Needs you shows, here where the deploy is decided.
- * Attention is admin-only, so other roles never ask.
- */
-function StagedRelease(): JSX.Element | null {
-  const { user } = useAuth();
-  const attention = useAttention(user?.role === 'admin');
-  const staged = findAttention(attention.data, 'release_staged');
-  if (!staged) return null;
-  return (
-    <section className="releases__staged" role="status" aria-label="Staged release" data-testid="releases-staged">
-      <p className="releases__staged-title">
-        <span className={pillClass('human')}>Staged, awaiting deploy</span> {staged.title}
-      </p>
-      {staged.reason ? <p className="releases__muted">{staged.reason}</p> : null}
-      {staged.action?.command ? (
-        <CopyCommand
-          command={staged.action.command}
-          where={commandPlace(staged)}
-          label="deploy command"
-        />
-      ) : null}
-    </section>
-  );
+function relative(iso: string): string {
+  const seconds = Math.round((Date.now() - Date.parse(iso)) / 1000);
+  if (!Number.isFinite(seconds)) return iso;
+  if (seconds < 90) return 'just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 90) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 36) return `${hours} h ago`;
+  return `${Math.round(hours / 24)} days ago`;
 }
 
 /**

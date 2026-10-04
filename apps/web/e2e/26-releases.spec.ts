@@ -128,8 +128,8 @@ test('environments show the live release, rollback target and unshipped PRs @act
     '/in-flight?repo=jeryu%2Fjeryu-deploy'
   );
   await expect(page.getByLabel('Repository or family')).toHaveValue('repo:jeryu/jeryu-deploy');
-  // No attention feed for this viewer: no staged banner.
-  await expect(page.getByTestId('releases-staged')).toHaveCount(0);
+  // No attention feed for this viewer: nothing waiting on them here.
+  await expect(page.getByTestId('needs-you-here-releases')).toHaveCount(0);
 
   // Nothing was ever deployed to stable, canary or dev: one line names them,
   // and no row pretends there is something to read.
@@ -200,12 +200,22 @@ test('a staged release waits with its deploy command and a failed attempt links 
   await mockPipelineApi(page);
 
   await page.goto('/releases?repo=jeryu%2Fjeryu-deploy');
-  const staged = page.getByTestId('releases-staged');
-  await expect(staged).toContainText('Staged, awaiting deploy', { timeout: 15_000 });
+  // One row, in the strip of what needs a person: the page has no banner of
+  // its own, so the same release is never shown twice.
+  const staged = page.getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
+  await expect(staged).toHaveCount(1, { timeout: 15_000 });
   await expect(staged).toContainText(DEPLOY_COMMAND);
-  await expect(staged.getByRole('button', { name: 'Copy deploy command' })).toBeVisible();
+  await expect(staged.getByRole('button', { name: /^Copy Deploy command for/ })).toBeVisible();
   await expect(staged.getByTestId('copy-command-where')).toHaveText(`Run on ${DEPLOY_RUN_IN}`);
+  await expect(page.getByTestId('releases-staged')).toHaveCount(0);
   await expect(
     page.getByTestId('releases-env-production').getByRole('link', { name: 'deploy log' })
   ).toHaveAttribute('href', 'https://git.neverhuman.org/logs/rel-e.txt');
+
+  // Scoped to another repository, that staged release is not what the page is
+  // waiting on, so the strip has nothing to say here.
+  await page.goto('/releases?repo=globex%2Fglobex-web');
+  await expect(page.getByTestId('releases-page')).toBeVisible({ timeout: 15_000 });
+  await expect(staged).toHaveCount(0);
+  await expect(page.getByTestId('needs-you-here-releases')).toHaveCount(0);
 });

@@ -20,6 +20,7 @@ import {
   NEEDS_YOU_PATH,
   familyOf,
   filterByFamily,
+  filterByRepos,
   needsYouHref,
   severityTone,
   urgentInArea,
@@ -34,11 +35,17 @@ const SHOWN = 5;
 export function NeedsYouHere({
   area,
   family = '',
+  repos,
   onFamily
 }: {
   area: AttentionArea;
   /** The page's own family filter, when it has one; the strip follows it. */
   family?: string;
+  /**
+   * The repositories the page is scoped to, when it is scoped to any: a row
+   * about another repository is not what that page is waiting on.
+   */
+  repos?: readonly string[] | null;
   /** How the page narrows to a family; without it a pill opens /needs-you for that family. */
   onFamily?: (family: string) => void;
 }): JSX.Element | null {
@@ -52,7 +59,10 @@ export function NeedsYouHere({
   // One row per subject here too, so this strip and /needs-you count the same
   // things: three items about one pull request are one row on both.
   const subjects = attentionSubjects(
-    filterByFamily(urgentInArea(attention.data, area), family, repoFamilies)
+    filterByRepos(
+      filterByFamily(urgentInArea(attention.data, area), family, repoFamilies),
+      repos
+    )
   );
   if (subjects.length === 0) return null;
 

@@ -13,6 +13,7 @@ import {
   groupSubjects,
   kindRank,
   subjectKey,
+  filterByRepos,
   areaBadgeCount,
   attentionArea,
   attentionBadgeCount,
@@ -419,6 +420,21 @@ describe('needsYouModel', () => {
     expect(filterByFamily(items, 'jeryu', repoFamilies)).toHaveLength(2);
     expect(filterByFamily(items, FORGE_FAMILY, repoFamilies)).toHaveLength(3);
     expect(filterByFamily(items, '', repoFamilies)).toHaveLength(6);
+  });
+
+  it('keeps a scope to its own repositories, and the forge-wide rows with it', () => {
+    const items = [
+      attentionItem({ id: 'web', kind: 'release_staged', repo: 'acme/acme-web' }),
+      attentionItem({ id: 'api', kind: 'release_staged', repo: 'acme/acme-api' }),
+      attentionItem({ id: 'forge', kind: 'release_staged' }),
+    ];
+    // Two repositories with a release staged are two rows: neither hides the
+    // other, and a scope of one of them shows one of them.
+    expect(filterByRepos(items, ['acme/acme-web']).map((item) => item.id)).toEqual(['web', 'forge']);
+    expect(filterByRepos(items, ['acme/acme-web', 'acme/acme-api'])).toHaveLength(3);
+    expect(filterByRepos(items, ['globex/globex-web']).map((item) => item.id)).toEqual(['forge']);
+    expect(filterByRepos(items, [])).toHaveLength(3);
+    expect(filterByRepos(items, null)).toHaveLength(3);
   });
 
   it('files each kind under the page where its cause lives', () => {

@@ -1,5 +1,6 @@
-// ReleasesPage.test.tsx — the staged-release banner, the deploy log link,
-// linked unshipped PRs, the folded environments and the link to the timeline.
+// ReleasesPage.test.tsx — the staged release in the "Waiting on you here"
+// strip (once, and only for this page's scope), the deploy log link, linked
+// unshipped PRs, the folded environments and the link to the timeline.
 
 import { screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +16,9 @@ vi.mock('../../hooks/useAuth', () => ({
 }));
 
 const sha = (c: string): string => c.repeat(40);
+
+/** The staged release's row in the "Waiting on you here" strip. */
+const STAGED_ROW = 'needs-you-item-release_staged:jeryu/jeryu-deploy';
 
 function deployment(id: number, commit: string, state: string, logUrl: string | null = null): unknown {
   return {
@@ -84,17 +88,19 @@ describe('ReleasesPage', () => {
     role = 'admin';
   });
 
-  it('shows the staged release with its deploy command, the deploy log, and linked unshipped PRs', async () => {
+  it('shows the staged release once, with its deploy command, the deploy log, and linked unshipped PRs', async () => {
     mockReleases();
     renderAt('/releases?repo=jeryu%2Fjeryu-deploy', '/releases', <ReleasesPage />);
 
-    const staged = await screen.findByTestId('releases-staged');
-    expect(within(staged).getByText('Staged, awaiting deploy')).toBeInTheDocument();
+    const staged = await screen.findByTestId(STAGED_ROW);
+    // The strip is the one place the page shows what needs a person, so the
+    // staged release is a row there and nowhere else.
+    expect(screen.getAllByTestId(STAGED_ROW)).toHaveLength(1);
     expect(within(staged).getByText(DEPLOY_COMMAND)).toBeInTheDocument();
-    // The same where-line Needs you shows, and it describes the copy button.
-    expect(within(staged).getByRole('button', { name: 'Copy deploy command' })).toHaveAccessibleDescription(
-      `Run on ${DEPLOY_RUN_IN}`
-    );
+    // The where-line Needs you shows, and it describes the copy button.
+    expect(
+      within(staged).getByRole('button', { name: /^Copy Deploy command for/ })
+    ).toHaveAccessibleDescription(`Run on ${DEPLOY_RUN_IN}`);
 
     const prod = await screen.findByTestId('releases-env-production');
     expect(within(prod).getByRole('link', { name: 'deploy log' })).toHaveAttribute(
@@ -130,15 +136,30 @@ describe('ReleasesPage', () => {
     expect(screen.queryByTestId('releases-env-canary')).toBeNull();
   });
 
-  it('shows no staged banner to non-admins and never asks for attention', async () => {
+  it('shows no staged release to non-admins and never asks for attention', async () => {
     role = 'user';
     mockReleases();
     const fetchSpy = vi.mocked(globalThis.fetch);
     renderAt('/releases?repo=jeryu%2Fjeryu-deploy', '/releases', <ReleasesPage />);
     await screen.findByTestId('releases-env-production');
-    expect(screen.queryByTestId('releases-staged')).toBeNull();
+    expect(screen.queryByTestId(STAGED_ROW)).toBeNull();
     expect(fetchSpy.mock.calls.some(([input]) => String(input).includes('/api/v1/attention'))).toBe(false);
     expect(screen.queryByTestId('releases-unpinned')).toBeNull();
     expect(fetchSpy.mock.calls.some(([input]) => String(input).includes('/api/v1/pins'))).toBe(false);
+  });
+
+  it('leaves another repository\'s staged release out of a view scoped elsewhere', async () => {
+    mockPipelineApi((req) => {
+      if (req.pathname === '/api/v3/repos/globex/globex-web/environments') {
+        return json({ total_count: 0, environments: [] });
+      }
+      return undefined;
+    });
+    renderAt('/releases?repo=globex%2Fglobex-web', '/releases', <ReleasesPage />);
+
+    await screen.findByTestId('releases-empty');
+    // The staged release of jeryu/jeryu-deploy is not what this view waits on.
+    expect(screen.queryByTestId(STAGED_ROW)).toBeNull();
+    expect(screen.queryByTestId('needs-you-here-releases')).toBeNull();
   });
 });

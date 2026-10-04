@@ -491,6 +491,19 @@ export function filterByFamily<T extends Pick<AttentionItem, 'family' | 'repo'>>
 }
 
 /**
+ * Keep the items a scope is about: those naming one of `repos`, and those
+ * naming no repository at all, which are the forge's own and belong to every
+ * scope. An absent or empty list keeps everything.
+ */
+export function filterByRepos<T extends Pick<AttentionItem, 'repo'>>(
+  items: T[],
+  repos?: readonly string[] | null
+): T[] {
+  if (!repos || repos.length === 0) return items;
+  return items.filter((item) => !item.repo || repos.includes(item.repo));
+}
+
+/**
  * The page where a row's cause lives, so each page can show its own share of
  * "Needs you": todos and shifts on Work, pull requests and their queue on In
  * flight, staging, deploys and pins on Releases, gate runners and workers
