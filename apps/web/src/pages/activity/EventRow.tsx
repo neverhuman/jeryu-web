@@ -36,7 +36,9 @@ export function EventRow({
 }): JSX.Element {
   const [open, setOpen] = useState(defaultOpen);
   const needsHuman = event.needs_human && !resolved;
-  const tone = eventTone({ ...event, needs_human: needsHuman });
+  // A cleared row keeps its words ("Gate failed") but not its red: what it
+  // reports is history, and the colour is for what still wants an answer.
+  const tone = resolved ? 'info' : eventTone(event);
   const forgeHost = useForgeHost();
   const host = forgeHost(event.repo ?? undefined);
   const summary = summaryParts(event, host);
@@ -71,7 +73,7 @@ export function EventRow({
           {summary.after}
         </span>
         {needsHuman ? <span className="page__pill page__pill--danger">needs you</span> : null}
-        {event.needs_human && resolved ? (
+        {resolved ? (
           <span className="page__pill" title="A later event cleared this">
             resolved
           </span>

@@ -45,6 +45,33 @@ describe('activityModel', () => {
     expect(resolvedSeqs([failed, earlier]).size).toBe(0);
   });
 
+  it('resolves a gate failure once its pull request is merged or gated green', () => {
+    const pull = { repo: 'acme/widgets', pr: 99 };
+    const failed = pipelineEvent({
+      seq: 20,
+      kind: 'gate.log',
+      ...pull,
+      outcome: 'failure',
+      needs_human: true,
+      summary: 'Gate failed on acme/widgets#99',
+    });
+    expect(resolvedSeqs([failed]).size).toBe(0);
+    const merged = pipelineEvent({ seq: 21, kind: 'pr.merged', ...pull, outcome: 'success' });
+    expect([...resolvedSeqs([merged, failed])]).toEqual([20]);
+    const green = pipelineEvent({ seq: 21, kind: 'gate.finished', ...pull, outcome: 'success' });
+    expect([...resolvedSeqs([green, failed])]).toEqual([20]);
+    // Another pull request's merge says nothing about this gate.
+    const elsewhere = pipelineEvent({ seq: 22, kind: 'pr.merged', repo: 'acme/widgets', pr: 7, outcome: 'success' });
+    expect(resolvedSeqs([elsewhere, failed]).size).toBe(0);
+  });
+
+  it('resolves a gate failure that never needed a human, so history is not red', () => {
+    const pull = { repo: 'globex/parts', pr: 12 };
+    const failed = pipelineEvent({ seq: 30, kind: 'gate.log', ...pull, outcome: 'failure' });
+    const merged = pipelineEvent({ seq: 31, kind: 'pr.merged', ...pull, outcome: 'success' });
+    expect([...resolvedSeqs([merged, failed])]).toEqual([30]);
+  });
+
   it('reads filters from the URL and turns them into the events query', () => {
     const params = new URLSearchParams('family=jeryu&kind=todo.&pr=35&needs_human=1&wall=1&repo=%20');
     const filters = parseActivityFilters(params);

@@ -471,22 +471,50 @@ function sameSubject(a: PipelineEvent, b: PipelineEvent): boolean {
   return true;
 }
 
+/** The two reports of one finished gate (heartbeat, then the runner's log). */
+const GATE_KINDS = new Set(['gate.log', 'gate.finished']);
+
+/** Kinds that say the PR's work is over: nothing on it waits on a person. */
+const LANDED_KINDS = new Set(['pr.merged', 'queue.landed', 'todo.merged']);
+
+function outcomeOf(event: Pick<PipelineEvent, 'outcome'>): string {
+  return (event.outcome ?? '').toLowerCase();
+}
+
+function isGateFailure(event: PipelineEvent): boolean {
+  return GATE_KINDS.has(event.kind) && BAD.has(outcomeOf(event));
+}
+
 /**
- * Seqs of rows that once needed a person but whose cause has since cleared: a
- * later event about the same subject (same kind family, repo, PR, todo)
- * finished clean. Needs you already drops these; history must not keep
- * calling for attention, or the pill stops meaning anything.
+ * Whether `later` clears a gate failure: the pull request it failed on was
+ * merged, or a gate on it has since passed. A gate failure is about the PR,
+ * not about the gate as a subject of its own, so a merge counts even though
+ * its kind family (`pr.`, `queue.`) differs from `gate.`.
+ */
+function clearsGateFailure(failure: PipelineEvent, later: PipelineEvent): boolean {
+  if (!isGateFailure(failure) || failure.repo === null || failure.pr === null) return false;
+  if (later.repo !== failure.repo || later.pr !== failure.pr) return false;
+  if (LANDED_KINDS.has(later.kind)) return !BAD.has(outcomeOf(later));
+  return GATE_KINDS.has(later.kind) && outcomeOf(later) === 'success';
+}
+
+/**
+ * Seqs of rows whose cause has since cleared: a row that once needed a person,
+ * or a gate that failed, followed by a later event that says the cause is
+ * gone. For most subjects that is a clean finish on the same subject (same
+ * kind family, repo, PR, todo); for a gate failure it is also a merge or a
+ * green gate on the same pull request. Needs you already drops these; history
+ * must not keep calling for attention, or the pill stops meaning anything.
  */
 export function resolvedSeqs(events: PipelineEvent[]): Set<number> {
   const resolved = new Set<number>();
   for (const event of events) {
-    if (!event.needs_human) continue;
+    if (!event.needs_human && !isGateFailure(event)) continue;
     const cleared = events.some(
       (later) =>
         later.seq > event.seq &&
         !later.needs_human &&
-        GOOD.has((later.outcome ?? '').toLowerCase()) &&
-        sameSubject(event, later)
+        ((GOOD.has(outcomeOf(later)) && sameSubject(event, later)) || clearsGateFailure(event, later))
     );
     if (cleared) resolved.add(event.seq);
   }

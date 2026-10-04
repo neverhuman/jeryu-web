@@ -128,6 +128,35 @@ describe('ActivityPage', () => {
     expect(within(failed).getByText('resolved')).toBeInTheDocument();
   });
 
+  it('stops a merged pull request\u2019s gate failure from reading red', async () => {
+    const pull = { repo: 'acme/widgets', pr: 99 };
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events'
+        ? json({
+            events: [
+              pipelineEvent({ seq: 41, kind: 'pr.merged', ...pull, outcome: 'success', summary: 'Merged acme/widgets#99' }),
+              pipelineEvent({
+                seq: 40,
+                kind: 'gate.log',
+                ...pull,
+                outcome: 'failure',
+                needs_human: true,
+                summary: 'Gate failed on acme/widgets#99',
+              }),
+            ],
+            latest_seq: 41,
+          })
+        : undefined
+    );
+    renderPage();
+    const failed = await screen.findByTestId('activity-event-40');
+    expect(failed).toHaveClass('activity-row--info');
+    expect(failed).not.toHaveClass('activity-row--danger');
+    expect(within(failed).queryByText('needs you')).toBeNull();
+    expect(within(failed).getByText('resolved')).toBeInTheDocument();
+    expect(within(failed).getByText('Gate failed')).toBeInTheDocument();
+  });
+
   it('sends URL filters to the server and commits a typed filter on Enter', async () => {
     const calls = mockPipelineApi();
     renderPage('/activity?family=jeryu&needs_human=1');
