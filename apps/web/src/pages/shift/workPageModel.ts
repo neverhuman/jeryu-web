@@ -1,7 +1,13 @@
 // workPageModel.ts — pure helpers for the one-page Work view: family counts and
 // filtering across every queue, the one-line workers summary and its sparkline.
 
-import type { ShiftCapacityPoint, ShiftTodo, ShiftWorker } from '../../api/types';
+import type {
+  AttentionItem,
+  AttentionResponse,
+  ShiftCapacityPoint,
+  ShiftTodo,
+  ShiftWorker,
+} from '../../api/types';
 import { familyName } from '../needsYou/needsYouModel';
 import { isFinishedTodo, isLongStale } from './shiftModel';
 import { isSupervisor } from './workersModel';
@@ -92,6 +98,50 @@ export function workersLine(workers: ShiftWorker[], todos: ShiftTodo[], now: Dat
     unhealthy: slots.length - healthy,
     text: parts.join(' · '),
   };
+}
+
+/** The spend a `shift_budget_spent` row carries, in one line each. */
+export interface BudgetSpentLine {
+  family: string;
+  /** `spent $42.00 of $40.00 this shift · 3 todos waiting on budget`. */
+  text: string;
+}
+
+function money(amount: number): string {
+  return `$${amount.toFixed(2)}`;
+}
+
+function spendText(budget: AttentionItem['budget']): string {
+  const spent = typeof budget?.spent_usd === 'number' ? budget.spent_usd : null;
+  const cap = typeof budget?.budget_usd === 'number' ? budget.budget_usd : null;
+  if (spent !== null && cap !== null) return `spent ${money(spent)} of ${money(cap)} this shift`;
+  if (spent !== null) return `spent ${money(spent)} this shift`;
+  return 'shift budget spent';
+}
+
+/**
+ * What the workers strip says about a spent shift budget: the operator's cap is
+ * gone and claimable todos are waiting on it, which no worker heartbeat shows.
+ * Taken from the `shift_budget_spent` rows of "Needs you", so the strip and
+ * that page never disagree; `family` is '' for every family.
+ */
+export function budgetSpentLines(
+  data: AttentionResponse | undefined,
+  family: string
+): BudgetSpentLine[] {
+  return (data?.items ?? [])
+    .filter((item) => item.kind === 'shift_budget_spent')
+    .map((item) => ({ item, name: familyName(item.family) ?? 'unknown' }))
+    .filter((row) => !family || row.name === family)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(({ item, name }) => {
+      const waiting = typeof item.budget?.waiting === 'number' ? item.budget.waiting : null;
+      const parts = [spendText(item.budget)];
+      if (waiting !== null && waiting > 0) {
+        parts.push(`${waiting} todo${waiting === 1 ? '' : 's'} waiting on budget`);
+      }
+      return { family: name, text: parts.join(' · ') };
+    });
 }
 
 /** `points` attribute of a polyline tracing busy slots; '' when there is nothing to draw. */

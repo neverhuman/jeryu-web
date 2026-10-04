@@ -124,7 +124,7 @@ export function ShiftQueuePage(): JSX.Element {
       ) : (
         <>
           <WorkComposer families={list} family={family} isAdmin={isAdmin} onFiled={onFiled} />
-          <WorkersStrip todos={all} />
+          <WorkersStrip todos={all} family={family} />
           <FamilyQueue
             families={list}
             family={family}

@@ -2,6 +2,8 @@
 //
 // Collapsed (the default, remembered) it reads "7 of 7 slots healthy · 2 working
 // (jeryu w1 on <todo>, …) · 0 paused · night window closed (22:00–07:00 <tz>)" beside a 24 h sparkline of busy slots.
+// A family whose shift budget ran out with todos still waiting says so here as
+// well: idle slots and a spent cap look the same on the heartbeats alone.
 // Opened, it shows the whole workers panel in place: table, timeline, capacity.
 
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -9,18 +11,27 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 import type { ShiftTodo } from '../../api/types';
+import { useAttention } from '../../hooks/usePipeline';
 import { useShiftWorkers, useShiftWorkersHistory } from '../../hooks/useShift';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { WorkersPanel } from './WorkersPanel';
-import { busySparkline, nightWindow, workersLine } from './workPageModel';
+import { budgetSpentLines, busySparkline, nightWindow, workersLine } from './workPageModel';
 import { WORK_WORKERS_ID, todoHref } from './workPaths';
 
 const OPEN_KEY = 'jeryu.work.workersOpen.v1';
 const SPARK_W = 120;
 const SPARK_H = 18;
 
-export function WorkersStrip({ todos }: { todos: ShiftTodo[] }): JSX.Element {
+export function WorkersStrip({
+  todos,
+  family = '',
+}: {
+  todos: ShiftTodo[];
+  /** The page's family filter; '' is every family. */
+  family?: string;
+}): JSX.Element {
   const workers = useShiftWorkers();
+  const attention = useAttention();
   const history = useShiftWorkersHistory(24);
   const { hash } = useLocation();
   const [open, setOpen] = useState<boolean>(
@@ -39,6 +50,7 @@ export function WorkersStrip({ todos }: { todos: ShiftTodo[] }): JSX.Element {
   const line = workersLine(workers.data?.workers ?? [], todos, new Date());
   const night = nightWindow(workers.data?.workers ?? [], todos, new Date());
   const spark = busySparkline(history.data?.capacity ?? [], SPARK_W, SPARK_H);
+  const budgets = budgetSpentLines(attention.data, family);
   const panelId = 'work-workers-panel';
   const Chevron = open ? ChevronDown : ChevronRight;
 
@@ -80,7 +92,13 @@ export function WorkersStrip({ todos }: { todos: ShiftTodo[] }): JSX.Element {
                 {')'}
               </>
             ) : null}
-            {/* Next to the count: an idle strip says whether the night window is why. */}
+            {/* Why the slots are idle: a spent shift budget, then the night window. */}
+            {budgets.map((budget) => (
+              <span key={budget.family} data-testid={`work-budget-spent-${budget.family}`}>
+                {' · '}
+                {family ? budget.text : `${budget.family}: ${budget.text}`}
+              </span>
+            ))}
             {night ? (
               <span data-testid="work-night-window" className={night.open ? undefined : 'shift__muted'}>
                 {' · '}

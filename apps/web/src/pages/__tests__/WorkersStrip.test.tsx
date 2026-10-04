@@ -1,11 +1,12 @@
 // WorkersStrip.test.tsx — the one-line workers summary on the Work page: what it
-// says collapsed, that it opens to the whole panel in place, and that the choice
-// is remembered.
+// says collapsed (a spent shift budget included), that it opens to the whole
+// panel in place, and that the choice is remembered.
 
 import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkersStrip } from '../shift/WorkersStrip';
+import { ATTENTION, BUDGET_SPENT } from './pipelineTestData';
 import { json, mockShiftApi, renderAt } from './shiftPageHelpers';
 import { TODOS, WORKERS } from './shiftTestData';
 
@@ -29,8 +30,15 @@ function makeStorage(): Storage {
   };
 }
 
-function renderStrip(path = '/work'): void {
-  renderAt(path, '/work', <WorkersStrip todos={TODOS} />);
+function renderStrip(path = '/work', family = ''): void {
+  renderAt(path, '/work', <WorkersStrip todos={TODOS} family={family} />);
+}
+
+/** Needs you, with one family's shift budget spent. */
+function withBudgetSpent(req: { pathname: string }): Response | undefined {
+  return req.pathname === '/api/v1/attention'
+    ? json({ ...ATTENTION, items: [...ATTENTION.items, BUDGET_SPENT] })
+    : undefined;
 }
 
 describe('WorkersStrip', () => {
@@ -96,5 +104,28 @@ describe('WorkersStrip', () => {
     expect(await screen.findByTestId('work-night-window')).toHaveTextContent(
       'night window open (22:00–07:00 America/Los_Angeles)'
     );
+  });
+
+  it('says when a shift budget is spent with todos waiting on it', async () => {
+    mockShiftApi(withBudgetSpent);
+    renderStrip();
+    expect(await screen.findByTestId('work-budget-spent-acme')).toHaveTextContent(
+      'acme: spent $42.00 of $40.00 this shift · 3 todos waiting on budget'
+    );
+  });
+
+  it('drops the family name when the page is filtered to one family', async () => {
+    mockShiftApi(withBudgetSpent);
+    renderStrip('/work?family=acme', 'acme');
+    expect(await screen.findByTestId('work-budget-spent-acme')).toHaveTextContent(
+      '· spent $42.00 of $40.00 this shift · 3 todos waiting on budget'
+    );
+  });
+
+  it('says nothing about budgets when none is spent', async () => {
+    mockShiftApi();
+    renderStrip();
+    await screen.findByTestId('work-workers-summary');
+    expect(screen.queryByTestId('work-budget-spent-acme')).toBeNull();
   });
 });

@@ -38,6 +38,17 @@ export interface AttentionAction {
   api?: AttentionApiAction | null;
 }
 
+/**
+ * The money behind a `shift_budget_spent` row (`jeryu.attention/v1.2`): what
+ * the shift spent, the operator's cap and how many claimable todos were left
+ * waiting. A number the event did not carry is absent.
+ */
+export interface AttentionBudget {
+  spent_usd?: number | null;
+  budget_usd?: number | null;
+  waiting?: number | null;
+}
+
 export interface AttentionItem {
   id: string;
   kind: string;
@@ -51,6 +62,8 @@ export interface AttentionItem {
   todo_id: string | null;
   sha: string | null;
   shift: string | null;
+  /** Set on `shift_budget_spent` only; absent on every other kind. */
+  budget?: AttentionBudget | null;
   /** In-app path to the place to act. */
   href: string | null;
   action: AttentionAction | null;

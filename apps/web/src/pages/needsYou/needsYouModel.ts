@@ -68,6 +68,7 @@ const KIND_LABEL: Record<string, string> = {
   todo_untriaged: 'Todo to triage',
   todo_waiting_on_blocker: 'Waiting on another todo',
   shift_without_pr: 'Shift has no review PR',
+  shift_budget_spent: 'Shift budget spent',
   pr_changes_requested: 'Changes requested',
   pr_checks_failing: 'Checks failing',
   pr_awaiting_approval: 'Awaiting approval',

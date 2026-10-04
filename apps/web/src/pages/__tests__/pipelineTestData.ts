@@ -74,6 +74,25 @@ export const ATTENTION: AttentionResponse = {
   ],
 };
 
+/**
+ * A spent shift budget (`shift_budget_spent`), with the numbers the server
+ * sends in `budget`. Kept out of [`ATTENTION`] so the pages that count its
+ * rows stay as they were; the tests that want it add it themselves.
+ */
+export const BUDGET_SPENT: AttentionItem = attentionItem({
+  id: 'shift-budget-spent:acme:nightshift/2026-10-03',
+  kind: 'shift_budget_spent',
+  severity: 'action',
+  title: "acme's shift budget is spent and 3 todo(s) wait",
+  reason: '$42.00 of the $40.00 shift budget is spent, so no acme worker claims another todo.',
+  since: '2026-10-03T06:00:00Z',
+  family: 'acme',
+  shift: 'nightshift/2026-10-03',
+  budget: { spent_usd: 42, budget_usd: 40, waiting: 3 },
+  href: '/work?family=acme',
+  action: { label: 'Raise the shift budget or let the next shift pick the work up', command: null },
+});
+
 export function pipelineEvent(partial: Partial<PipelineEvent> & Pick<PipelineEvent, 'seq' | 'kind'>): PipelineEvent {
   return {
     ts: '2026-09-19T13:00:00Z',

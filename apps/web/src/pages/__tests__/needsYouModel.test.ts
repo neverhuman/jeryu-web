@@ -176,6 +176,7 @@ describe('needsYouModel', () => {
     expect(kindLabel('release_staged')).toBe('Release ready to deploy');
     expect(kindLabel('pin_behind')).toBe('Merged, not pinned for release');
     expect(kindLabel('pr_draft_waiting')).toBe('Draft waiting to be marked ready');
+    expect(kindLabel('shift_budget_spent')).toBe('Shift budget spent');
     expect(kindLabel('some_new.kind')).toBe('Some new kind');
     expect(kindLabel('')).toBe('Needs attention');
     expect(
@@ -260,6 +261,7 @@ describe('needsYouModel', () => {
   it('files each kind under the page where its cause lives', () => {
     expect(attentionArea('todo_blocked')).toBe('work');
     expect(attentionArea('shift_without_pr')).toBe('work');
+    expect(attentionArea('shift_budget_spent')).toBe('work');
     expect(attentionArea('pr_checks_failing')).toBe('pulls');
     expect(attentionArea('queue_failed')).toBe('pulls');
     expect(attentionArea('reviewer_stuck')).toBe('pulls');

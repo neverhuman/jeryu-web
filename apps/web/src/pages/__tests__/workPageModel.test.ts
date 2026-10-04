@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  budgetSpentLines,
   busySparkline,
   groupLive,
   liveFamilyCounts,
@@ -9,6 +10,7 @@ import {
   todosOfFamily,
   workersLine,
 } from '../shift/workPageModel';
+import { ATTENTION, BUDGET_SPENT, attentionItem } from './pipelineTestData';
 import { WORKERS, todo } from './shiftTestData';
 
 describe('workPageModel', () => {
@@ -118,5 +120,35 @@ describe('workPageModel', () => {
     expect(
       nightWindow(workers.map((w) => ({ ...w, schedule: { ...schedule, night: { hours: 'nights', slots: 4 } } })), todos, new Date())
     ).toBeNull();
+  });
+
+  it('says what a spent shift budget left waiting, per family and filtered', () => {
+    const data = {
+      ...ATTENTION,
+      items: [
+        ...ATTENTION.items,
+        BUDGET_SPENT,
+        attentionItem({
+          id: 'shift-budget-spent:globex:nightshift/2026-10-03',
+          kind: 'shift_budget_spent',
+          family: 'globex',
+          budget: { spent_usd: 8.5, budget_usd: null, waiting: 1 },
+        }),
+      ],
+    };
+    expect(budgetSpentLines(data, '')).toEqual([
+      { family: 'acme', text: 'spent $42.00 of $40.00 this shift · 3 todos waiting on budget' },
+      { family: 'globex', text: 'spent $8.50 this shift · 1 todo waiting on budget' },
+    ]);
+    expect(budgetSpentLines(data, 'acme')).toHaveLength(1);
+    // Nothing of the kind, no line at all; neither number read, no money.
+    expect(budgetSpentLines(ATTENTION, '')).toEqual([]);
+    expect(budgetSpentLines(undefined, '')).toEqual([]);
+    expect(
+      budgetSpentLines(
+        { ...ATTENTION, items: [attentionItem({ id: 'x', kind: 'shift_budget_spent', family: 'initech' })] },
+        ''
+      )
+    ).toEqual([{ family: 'initech', text: 'shift budget spent' }]);
   });
 });
