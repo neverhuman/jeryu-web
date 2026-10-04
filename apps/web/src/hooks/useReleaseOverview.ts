@@ -15,6 +15,8 @@ export interface ReleaseOverview {
   isLoading: boolean;
   /** Set when the environments themselves could not be read. */
   error: Error | null;
+  /** Asks for the environments and pull requests again, for a Retry. */
+  refetch: () => void;
 }
 
 export function useReleaseOverview(repoId: string, defaultBranch: string): ReleaseOverview {
@@ -70,5 +72,9 @@ export function useReleaseOverview(repoId: string, defaultBranch: string): Relea
     rows,
     isLoading: environments.isLoading,
     error: environments.error ?? null,
+    refetch: () => {
+      void environments.refetch();
+      void pulls.refetch();
+    },
   };
 }

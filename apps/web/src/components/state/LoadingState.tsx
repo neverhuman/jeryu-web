@@ -18,6 +18,8 @@ export interface LoadingStateProps {
   /** How many skeleton rows to render (default 4). */
   rows?: number;
   className?: string;
+  /** `data-testid` for the surface, so a page keeps its own test handle. */
+  testId?: string;
   children?: ReactNode;
 }
 
@@ -27,6 +29,7 @@ export function LoadingState({
   variant = 'skeleton',
   rows = 4,
   className,
+  testId,
   children,
 }: LoadingStateProps): JSX.Element {
   if (variant === 'message') {
@@ -35,6 +38,7 @@ export function LoadingState({
         className={`state-block ${className ?? ''}`.trim()}
         role="status"
         aria-live="polite"
+        data-testid={testId}
       >
         <span className="state-block__icon state-block__icon--info">
           <Loader2 aria-hidden="true" size={20} />
@@ -54,6 +58,7 @@ export function LoadingState({
       role="status"
       aria-live="polite"
       aria-label={title}
+      data-testid={testId}
     >
       <span className="sr-only">{title}</span>
       <div className="state-skeleton__row state-skeleton__row--narrow skeleton" />

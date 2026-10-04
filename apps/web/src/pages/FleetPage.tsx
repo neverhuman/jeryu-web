@@ -35,6 +35,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { pageWebCommit } from '../build/webCommit';
+import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useControlPlaneRunners } from '../hooks/useControlPlaneRunners';
 import { useRunnerReleaseBoards } from '../hooks/useRunnerReleaseBoards';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
@@ -112,11 +113,21 @@ export function FleetPage(): JSX.Element {
     runnersQuery.dataUpdatedAt - new Date(runnerNetwork.lastUpdated).getTime() >
       RUNNER_STALE_AFTER_MS;
 
-  const runnerNetworkNote = runnersQuery.isError
-    ? (runnersQuery.error?.message ?? 'Runner network snapshot unavailable.')
-    : runnersQuery.isLoading
-      ? 'Loading runner network snapshot.'
-      : null;
+  // One surface for the whole page: while it is set, every runner section is
+  // held back behind it rather than drawing an empty board.
+  const runnerNetworkState = runnersQuery.isError ? (
+    <ErrorState
+      title="Could not load the runner network snapshot."
+      error={runnersQuery.error}
+      description={
+        runnersQuery.error ? undefined : 'Runner network snapshot unavailable.'
+      }
+      onRetry={() => void runnersQuery.refetch()}
+      testId="fleet-runners-error"
+    />
+  ) : runnersQuery.isLoading ? (
+    <LoadingState variant="message" title="Loading runner network snapshot." />
+  ) : null;
 
   return (
     <div className="page page--wide" data-testid="fleet-page">
@@ -164,7 +175,7 @@ export function FleetPage(): JSX.Element {
             )}
           </p>
         ) : null}
-        {scorers && !runnerNetworkNote ? (
+        {scorers && !runnerNetworkState ? (
           <p
             className={`fleet__build${scorers.mixed ? ' fleet__tone--warning' : ''}`}
             data-testid="fleet-scorer-summary"
@@ -172,7 +183,7 @@ export function FleetPage(): JSX.Element {
             {scorers.text}
           </p>
         ) : null}
-        {runnerNetworkNote ? null : (
+        {runnerNetworkState ? null : (
           <p
             className={`fleet__sentence fleet__tone--${sentence.tone}`}
             data-testid="fleet-metrics"
@@ -181,7 +192,7 @@ export function FleetPage(): JSX.Element {
             {sentence.text}
           </p>
         )}
-        {pickedIds.length > 0 && !runnerNetworkNote ? (
+        {pickedIds.length > 0 && !runnerNetworkState ? (
           <p className="fleet__picked" role="status" data-testid="fleet-picked">
             {shown.length === 1
               ? '1 runner linked from a release board is highlighted.'
@@ -198,13 +209,13 @@ export function FleetPage(): JSX.Element {
         <h2 className="page__section-title" id="fleet-runners">
           Gate runners
         </h2>
-        {runnerNetworkNote ? (
-          <p className="page__roadmap-note">{runnerNetworkNote}</p>
+        {runnerNetworkState ? (
+          runnerNetworkState
         ) : runnerNetwork.nodes.length === 0 ? (
-          <p className="page__roadmap-note">
-            No runners are reporting. Runners appear here as soon as they send a
-            heartbeat.
-          </p>
+          <EmptyState
+            title="No runners are reporting."
+            description="Runners appear here as soon as they send a heartbeat."
+          />
         ) : (
           <div className="fleet__network-layout" data-testid="fleet-network">
             <RunnerNodeList
@@ -224,13 +235,14 @@ export function FleetPage(): JSX.Element {
         <h2 className="page__section-title" id="fleet-reviewers">
           PR reviewers
         </h2>
-        {runnerNetworkNote ? null : runnerNetwork.reviewers.length === 0 ? (
+        {runnerNetworkState ? null : runnerNetwork.reviewers.length === 0 ? (
           // Said, not hidden: an operator looking for the agents that approve
           // and merge should learn that none is reporting, not wonder where
           // the section went.
-          <p className="page__roadmap-note" data-testid="fleet-no-reviewer">
-            No review agent has reported in the last 3 minutes.
-          </p>
+          <EmptyState
+            title="No review agent has reported in the last 3 minutes."
+            testId="fleet-no-reviewer"
+          />
         ) : (
           <>
             {reviewers.listed.length > 0 ? (
@@ -252,7 +264,7 @@ export function FleetPage(): JSX.Element {
         )}
       </section>
 
-      {runnerNetworkNote || runnerNetwork.audits.length === 0 ? null : (
+      {runnerNetworkState || runnerNetwork.audits.length === 0 ? null : (
         <section
           className="page__section"
           aria-labelledby="fleet-audits"
@@ -269,7 +281,7 @@ export function FleetPage(): JSX.Element {
         </section>
       )}
 
-      {runnerNetworkNote || runnerNetwork.automation.length === 0 ? null : (
+      {runnerNetworkState || runnerNetwork.automation.length === 0 ? null : (
         <section
           className="page__section"
           aria-labelledby="fleet-automation"

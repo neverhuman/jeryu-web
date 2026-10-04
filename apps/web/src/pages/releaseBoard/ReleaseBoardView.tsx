@@ -12,15 +12,18 @@
 // released (when the family sends pins) and the release notes.
 //
 // When there is no board to show — a non-admin session, a server without the
-// route, or no family has reported yet — the page says why in one line and
-// shows the per-repository view (`fallback`) below it.
+// route, or no family has reported yet — the page says why on a shared state
+// surface (and offers a Retry when the read itself failed) and shows the
+// per-repository view (`fallback`) below it.
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { Lock } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 import { ApiError } from '../../api/client';
 import type { ReleaseBoard, ReleaseBoardListEntry } from '../../api/types/releaseBoard';
 import { FamilyPicker } from '../../components/family/FamilyPills';
+import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import {
   useBoardEnvironments,
@@ -70,62 +73,62 @@ export function ReleaseBoardView({
   const list = useReleaseBoardList(admin);
 
   if (isPending || (admin && list.isLoading)) {
-    return <p className="page__roadmap-note">Loading release boards…</p>;
+    return <LoadingState variant="message" title="Loading release boards…" />;
   }
   if (!admin) {
-    return (
-      <BoardUnavailable fallback={fallback} testId="release-board-needs-admin">
-        {BOARD_NEEDS_ADMIN} Below is what each environment of one repository runs.
-      </BoardUnavailable>
-    );
+    return <BoardUnavailable fallback={fallback}>{needsAdmin()}</BoardUnavailable>;
   }
   if (list.error) {
     const status = statusOf(list.error);
     if (status === 401 || status === 403) {
-      return (
-        <BoardUnavailable fallback={fallback} testId="release-board-needs-admin">
-          {BOARD_NEEDS_ADMIN} Below is what each environment of one repository runs.
-        </BoardUnavailable>
-      );
+      return <BoardUnavailable fallback={fallback}>{needsAdmin()}</BoardUnavailable>;
     }
     if (status === 404) {
-      return (
-        <BoardUnavailable fallback={fallback} testId="release-board-none">
-          {BOARD_NONE_REPORTED}
-        </BoardUnavailable>
-      );
+      return <BoardUnavailable fallback={fallback}>{noneReported()}</BoardUnavailable>;
     }
     return (
-      <BoardUnavailable fallback={fallback} testId="release-board-error">
-        The release board could not be read: {list.error.message}
+      <BoardUnavailable fallback={fallback}>
+        <ErrorState
+          title="The release board could not be read."
+          error={list.error}
+          onRetry={() => void list.refetch()}
+          testId="release-board-error"
+        />
       </BoardUnavailable>
     );
   }
   const boards = list.data?.boards ?? [];
   if (boards.length === 0) {
-    return (
-      <BoardUnavailable fallback={fallback} testId="release-board-none">
-        {BOARD_NONE_REPORTED}
-      </BoardUnavailable>
-    );
+    return <BoardUnavailable fallback={fallback}>{noneReported()}</BoardUnavailable>;
   }
   return <BoardForFamily boards={boards} requested={family} />;
 }
 
+function needsAdmin(): JSX.Element {
+  return (
+    <EmptyState
+      icon={Lock}
+      title={BOARD_NEEDS_ADMIN}
+      description="Below is what each environment of one repository runs."
+      testId="release-board-needs-admin"
+    />
+  );
+}
+
+function noneReported(): JSX.Element {
+  return <EmptyState title={BOARD_NONE_REPORTED} testId="release-board-none" />;
+}
+
 function BoardUnavailable({
   fallback,
-  testId,
   children,
 }: {
   fallback: ReactNode;
-  testId: string;
   children: ReactNode;
 }): JSX.Element {
   return (
     <>
-      <p className="page__roadmap-note" role="status" data-testid={testId}>
-        {children}
-      </p>
+      {children}
       {fallback}
     </>
   );
@@ -168,18 +171,27 @@ function FamilyBoard({ family }: { family: string }): JSX.Element {
   useLaneFromHash(board ?? null);
 
   if (query.isLoading) {
-    return <p className="page__roadmap-note">Loading the {family} board…</p>;
+    return <LoadingState variant="message" title={`Loading the ${family} board…`} />;
   }
   if (query.error) {
-    return (
-      <p className="page__roadmap-note" role="status" data-testid="release-board-family-error">
-        {statusOf(query.error) === 404
-          ? `No board has been reported for ${family} yet. The collector posts one every 5 minutes and after every release.`
-          : `The ${family} board could not be read: ${query.error.message}`}
-      </p>
+    return statusOf(query.error) === 404 ? (
+      <EmptyState
+        title={`No board has been reported for ${family} yet.`}
+        description="The collector posts one every 5 minutes and after every release."
+        testId="release-board-family-error"
+      />
+    ) : (
+      <ErrorState
+        title={`The ${family} board could not be read.`}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        testId="release-board-family-error"
+      />
     );
   }
-  if (!board) return <p className="page__roadmap-note">Loading the {family} board…</p>;
+  if (!board) {
+    return <LoadingState variant="message" title={`Loading the ${family} board…`} />;
+  }
 
   return (
     <>

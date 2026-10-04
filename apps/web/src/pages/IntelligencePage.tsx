@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { ErrorState, LoadingState } from '../components/state';
 import { DEPENDENCIES_PATH } from './DependenciesPage';
 import { useControlPlane } from '../hooks/useControlPlane';
 import { useEcosystem, useToolBuildClusters } from '../hooks/useToolingEvidence';
@@ -39,7 +40,7 @@ export function IntelligencePage(): JSX.Element {
         <header className="page__header">
           <h1 className="page__title">Intelligence</h1>
         </header>
-        <p className="page__roadmap-note">Loading intelligence snapshot.</p>
+        <LoadingState variant="message" title="Loading intelligence snapshot." />
       </div>
     );
   }
@@ -50,9 +51,13 @@ export function IntelligencePage(): JSX.Element {
         <header className="page__header">
           <h1 className="page__title">Intelligence</h1>
         </header>
-        <p className="page__roadmap-note">
-          {query.error?.message ?? 'Intelligence snapshot unavailable.'}
-        </p>
+        <ErrorState
+          title="Could not load the intelligence snapshot."
+          error={query.error}
+          description={query.error ? undefined : 'Intelligence snapshot unavailable.'}
+          onRetry={() => void query.refetch()}
+          testId="intelligence-error"
+        />
       </div>
     );
   }

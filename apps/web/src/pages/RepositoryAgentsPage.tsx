@@ -6,6 +6,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { RepoAgentRunsResponse, RepoAgentSummary } from '../api/types';
+import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { AgentTerminal } from '../components/terminal/AgentTerminal';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { useRealtime } from '../hooks/useRealtime';
@@ -148,7 +149,7 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
   if (resolved.isPending) {
     return (
       <div className="page" data-testid="repo-agents-page">
-        <p className="page__roadmap-note">Resolving repository.</p>
+        <LoadingState variant="message" title="Resolving repository." />
       </div>
     );
   }
@@ -159,9 +160,13 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
         <header className="page__header">
           <h1 className="page__title">Active agents</h1>
         </header>
-        <p className="page__roadmap-note">
-          {resolved.error?.message ?? `No repository ${fullName}.`}
-        </p>
+        <ErrorState
+          title="Could not resolve the repository."
+          error={resolved.error}
+          description={resolved.error ? undefined : `No repository ${fullName}.`}
+          onRetry={resolved.refetch}
+          testId="repo-agents-error"
+        />
       </div>
     );
   }
@@ -218,13 +223,12 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
       </header>
 
       {createSession.isError ? (
-        <p
-          className="page__roadmap-note agents__new-session-error"
-          role="alert"
-          data-testid="new-session-error"
-        >
-          Could not start a session: {createSession.error.message}
-        </p>
+        <ErrorState
+          className="agents__new-session-error"
+          title="Could not start a session."
+          error={createSession.error}
+          testId="new-session-error"
+        />
       ) : null}
 
       <div className="agents__layout">
@@ -236,14 +240,20 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
             Runs
           </h2>
           {runs.isPending ? (
-            <p className="page__roadmap-note">Loading agent runs.</p>
+            <LoadingState variant="message" title="Loading agent runs." />
           ) : runs.isError ? (
-            <p className="page__roadmap-note">{runs.error.message}</p>
+            <ErrorState
+              title="Could not load agent runs."
+              error={runs.error}
+              onRetry={() => void runs.refetch()}
+              testId="agents-runs-error"
+            />
           ) : items.length === 0 ? (
-            <p className="page__roadmap-note" data-testid="agents-empty">
-              No agent session on this repository yet — start one with New
-              Session.
-            </p>
+            <EmptyState
+              title="No agent session on this repository yet."
+              description="Start one with New Session."
+              testId="agents-empty"
+            />
           ) : (
             <ul className="agents__list" data-testid="agents-list">
               {items.map((run: RepoAgentSummary) => (
@@ -304,16 +314,15 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
                     label="Shell · free-form"
                   />
                 ) : (
-                  <p className="page__roadmap-note">
-                    No companion shell available.
-                  </p>
+                  <EmptyState title="No companion shell available." />
                 )}
               </div>
             </div>
           ) : (
-            <p className="page__roadmap-note" data-testid="agents-no-selection">
-              Choose a run to open its live terminal.
-            </p>
+            <EmptyState
+              title="Choose a run to open its live terminal."
+              testId="agents-no-selection"
+            />
           )}
         </section>
         ) : null}

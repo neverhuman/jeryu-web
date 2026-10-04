@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import { fetchPullList } from '../api/pullLists';
+import { ErrorState, LoadingState } from '../components/state';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import {
   PULL_DRAFT_FILTERS,
@@ -66,7 +67,7 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   if (resolved.isPending) {
     return (
       <div className="page" data-testid="repo-pulls-page">
-        <p className="page__roadmap-note">Resolving repository.</p>
+        <LoadingState variant="message" title="Resolving repository." />
       </div>
     );
   }
@@ -77,9 +78,13 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
         <header className="page__header">
           <h1 className="page__title">Pull requests</h1>
         </header>
-        <p className="page__roadmap-note">
-          {resolved.error?.message ?? `No repository ${fullName}.`}
-        </p>
+        <ErrorState
+          title="Could not resolve the repository."
+          error={resolved.error}
+          description={resolved.error ? undefined : `No repository ${fullName}.`}
+          onRetry={resolved.refetch}
+          testId="repo-pulls-resolve-error"
+        />
       </div>
     );
   }
@@ -117,9 +122,14 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
         </div>
       </header>
       {pulls.isPending ? (
-        <p className="page__roadmap-note">Loading pull requests.</p>
+        <LoadingState variant="message" title="Loading pull requests." />
       ) : pulls.isError ? (
-        <p className="page__roadmap-note">{pulls.error.message}</p>
+        <ErrorState
+          title="Could not load pull requests."
+          error={pulls.error}
+          onRetry={() => void pulls.refetch()}
+          testId="repo-pulls-error"
+        />
       ) : view === 'timeline' ? (
         <PullRequestTimeline pulls={shown} emptyMessage={emptyMessage(drafts)} />
       ) : (

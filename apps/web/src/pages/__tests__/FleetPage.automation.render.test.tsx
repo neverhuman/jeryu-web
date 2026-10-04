@@ -114,8 +114,11 @@ describe('FleetPage automation', () => {
       })
     ]);
 
+    // Section titles only: an empty-state surface inside a section carries a
+    // heading of its own, which is not one of the sections being ordered.
     const headings = screen
       .getAllByRole('heading', { level: 2 })
+      .filter((heading) => heading.classList.contains('page__section-title'))
       .map((heading) => heading.textContent);
     expect(headings).toEqual(['Gate runners', 'PR reviewers', 'Automation']);
 

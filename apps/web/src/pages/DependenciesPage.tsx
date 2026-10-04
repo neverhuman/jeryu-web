@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { ErrorState, LoadingState } from '../components/state';
 import { useDependencyGraph } from '../hooks/useDependencyGraph';
 import {
   buildDependencyGraph,
@@ -59,11 +60,14 @@ export function DependenciesPage(): JSX.Element {
           </span>
         </div>
         {query.isLoading ? (
-          <p className="page__roadmap-note">Loading the dependency graph.</p>
+          <LoadingState variant="message" title="Loading the dependency graph." />
         ) : query.isError ? (
-          <p className="page__roadmap-note" data-testid="dependencies-unavailable">
-            {query.error.message}
-          </p>
+          <ErrorState
+            title="Could not load the dependency graph."
+            error={query.error}
+            onRetry={() => void query.refetch()}
+            testId="dependencies-unavailable"
+          />
         ) : (
           <OperatorGraphConsole
             graph={graph}

@@ -54,6 +54,24 @@
 
 .state-block__action {
   margin-top: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.state-block__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-primary);
+  color: var(--color-bg-0);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
 }
 
 .state-block__details {

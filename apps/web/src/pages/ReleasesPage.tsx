@@ -30,6 +30,7 @@
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
+import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { useAttention, usePins } from '../hooks/usePipeline';
 
@@ -253,7 +254,7 @@ export function UnreleasedRedirect(): JSX.Element {
 }
 
 function Environments({ repoId, branch }: { repoId: string; branch: string }): JSX.Element {
-  const { rows, isLoading, error } = useReleaseOverview(repoId, branch);
+  const { rows, isLoading, error, refetch } = useReleaseOverview(repoId, branch);
   const anyDeployed = rows.some((row) => row.configured);
   const { live, quiet, undeployed } = splitEnvironments(rows);
   return (
@@ -263,18 +264,22 @@ function Environments({ repoId, branch }: { repoId: string; branch: string }): J
       </h2>
       <UnpinnedLine repoId={repoId} />
       {error ? (
-        <p className="page__roadmap-note" role="alert" data-testid="releases-error">
-          Deployment history is unavailable for {repoId}: {error.message}
-        </p>
+        <ErrorState
+          title={`Deployment history is unavailable for ${repoId}.`}
+          error={error}
+          onRetry={refetch}
+          testId="releases-error"
+        />
       ) : isLoading ? (
-        <p className="page__roadmap-note">Loading environments…</p>
+        <LoadingState variant="message" title="Loading environments…" />
       ) : (
         <>
           {!anyDeployed ? (
-            <p className="page__roadmap-note" data-testid="releases-empty">
-              No deployment of {repoId} has been recorded yet. Deploys record themselves
-              here from the next release onward.
-            </p>
+            <EmptyState
+              title={`No deployment of ${repoId} has been recorded yet.`}
+              description="Deploys record themselves here from the next release onward."
+              testId="releases-empty"
+            />
           ) : null}
           {live.length > 0 ? <EnvironmentTable rows={live} repoId={repoId} branch={branch} /> : null}
           {quiet.length > 0 ? (

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
+import { ErrorState, LoadingState } from '../components/state';
 import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPlane';
 import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
 import { useRepoPullLists } from '../hooks/useRepoPullLists';
@@ -254,7 +255,7 @@ export function PullRoomPage(): JSX.Element {
         <header className="page__header">
           <h1 className="page__title">In flight</h1>
         </header>
-        <p className="page__roadmap-note">Loading pull requests.</p>
+        <LoadingState variant="message" title="Loading pull requests." />
       </div>
     );
   }
@@ -265,9 +266,15 @@ export function PullRoomPage(): JSX.Element {
         <header className="page__header">
           <h1 className="page__title">In flight</h1>
         </header>
-        <p className="page__roadmap-note">
-          {snapshot.error?.message ?? 'Pull requests are unavailable right now.'}
-        </p>
+        <ErrorState
+          title="Could not load pull requests."
+          error={snapshot.error}
+          description={
+            snapshot.error ? undefined : 'Pull requests are unavailable right now.'
+          }
+          onRetry={() => void snapshot.refetch()}
+          testId="pull-room-error"
+        />
       </div>
     );
   }
@@ -475,7 +482,7 @@ export function PullRoomPage(): JSX.Element {
               </p>
             ) : null}
             {rows.length === 0 && ghosts.length === 0 && lists.loading.length > 0 ? (
-              <p className="page__roadmap-note">Loading pull requests.</p>
+              <LoadingState variant="message" title="Loading pull requests." />
             ) : rows.length === 0 && ghosts.length === 0 ? (
               <p className="pull-list__empty" data-testid="pull-room-empty">
                 {filtersActive ? 'No pull requests match the current filters.' : 'No open pull requests.'}{' '}

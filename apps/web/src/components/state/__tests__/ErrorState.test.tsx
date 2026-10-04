@@ -1,7 +1,9 @@
-// ErrorState.test.tsx — the failure surface says words, not whole UUIDs.
+// ErrorState.test.tsx — the failure surface says words, not whole UUIDs, and
+// offers a Retry when the read can be asked for again.
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '../../../api/client';
 import { ErrorState } from '../ErrorState';
@@ -26,5 +28,17 @@ describe('ErrorState', () => {
     expect(description.getAttribute('title')).toBe(`No repository ${ID}.`);
     const detail = screen.getByText('not_found · request 428377c2');
     expect(detail.getAttribute('title')).toBe(`not_found · request ${ID}`);
+  });
+
+  it('offers no Retry unless the read can be asked for again', () => {
+    render(<ErrorState title="Could not load settings" />);
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
+  it('asks for the read again when Retry is pressed', async () => {
+    const onRetry = vi.fn();
+    render(<ErrorState title="Could not load settings" onRetry={onRetry} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });

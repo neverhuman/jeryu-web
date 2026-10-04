@@ -87,9 +87,8 @@
 }
 
 .agents__new-session-error {
-  color: var(--color-accent-danger);
   padding: 0.5rem 1rem;
-  margin: 0;
+  min-height: 0;
 }
 
 /* ── Session count badge next to "New Session" ──────────────────────────── */
@@ -242,11 +241,8 @@
 }
 
 /* No-selection placeholder */
-.agents__terminal-pane .page__roadmap-note {
+.agents__terminal-pane .state-block {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* ── Split terminal: agent panes on top, shell on bottom ────────────────── */

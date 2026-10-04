@@ -26,6 +26,8 @@ export interface UseResolveRepoResult {
   isError: boolean;
   error: Error | null;
   data: ResolvedRepo | undefined;
+  /** Asks for the repository list again, for a Retry on a failed resolve. */
+  refetch: () => void;
 }
 
 function matches(
@@ -80,5 +82,9 @@ export function useResolveRepo(
     isError: list.isError || (lookingInArchived && archivedList.isError),
     error: list.error ?? (lookingInArchived ? archivedList.error : null) ?? null,
     data,
+    refetch: () => {
+      void list.refetch();
+      if (lookingInArchived) void archivedList.refetch();
+    },
   };
 }

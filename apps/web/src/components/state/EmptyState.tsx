@@ -11,6 +11,8 @@ export interface EmptyStateProps {
   icon?: LucideIcon;
   action?: ReactNode;
   className?: string;
+  /** `data-testid` for the surface, so a page keeps its own test handle. */
+  testId?: string;
 }
 
 export function EmptyState({
@@ -19,11 +21,13 @@ export function EmptyState({
   icon: Icon = Inbox,
   action,
   className,
+  testId,
 }: EmptyStateProps): JSX.Element {
   return (
     <div
       className={`state-block ${className ?? ''}`.trim()}
       role="status"
+      data-testid={testId}
     >
       <span className="state-block__icon">
         <Icon aria-hidden="true" size={20} />
