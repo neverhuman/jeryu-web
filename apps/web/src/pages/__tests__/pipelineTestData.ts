@@ -93,6 +93,60 @@ export const BUDGET_SPENT: AttentionItem = attentionItem({
   action: { label: 'Raise the shift budget or let the next shift pick the work up', command: null },
 });
 
+/**
+ * One review hold on acme/widgets#7, as the server reports it: three items
+ * from one cause, each with its own act. A reader has one problem, so the page
+ * owes them one row.
+ */
+export const REVIEW_HOLD: AttentionItem[] = [
+  attentionItem({
+    id: 'pr_changes_requested:acme/widgets:7',
+    kind: 'pr_changes_requested',
+    severity: 'action',
+    title: 'acme/widgets#7 has changes requested',
+    reason: 'pr-redteam asked for changes and nothing was pushed since.',
+    next_step: 'Push a fix, or dismiss the review: open /repos/jeryu/acme/widgets/pulls/7',
+    since: '2026-10-03T08:10:00Z',
+    family: 'acme',
+    repo: 'acme/widgets',
+    pr: 7,
+    href: '/repos/jeryu/acme/widgets/pulls/7',
+    action: { label: 'Open the review', command: null },
+  }),
+  attentionItem({
+    id: 'reviewer_stuck:acme/widgets:7',
+    kind: 'reviewer_stuck',
+    severity: 'critical',
+    title: 'pr-redteam could not finish its review of acme/widgets#7',
+    reason: 'The review worker gave up after three attempts on the same head.',
+    next_step: 'Review by hand: open /repos/jeryu/acme/widgets/pulls/7',
+    since: '2026-10-03T08:00:00Z',
+    family: 'acme',
+    repo: 'acme/widgets',
+    pr: 7,
+    href: '/repos/jeryu/acme/widgets/pulls/7',
+    action: { label: 'Review by hand', command: null },
+  }),
+  attentionItem({
+    id: 'queue_failed:acme/widgets:7',
+    kind: 'queue_failed',
+    severity: 'action',
+    title: 'acme/widgets#7 failed in the merge queue',
+    reason: 'The queue gate failed on the held head.',
+    next_step: 'Queue again: open /repos/jeryu/acme/widgets/pulls/7',
+    since: '2026-10-03T08:20:00Z',
+    family: 'acme',
+    repo: 'acme/widgets',
+    pr: 7,
+    href: '/repos/jeryu/acme/widgets/pulls/7',
+    action: {
+      label: 'Queue again',
+      command: null,
+      api: { path: '/api/v1/repos/jeryu:acme%2Fwidgets/pulls/7/queue' },
+    },
+  }),
+];
+
 export function pipelineEvent(partial: Partial<PipelineEvent> & Pick<PipelineEvent, 'seq' | 'kind'>): PipelineEvent {
   return {
     ts: '2026-09-19T13:00:00Z',

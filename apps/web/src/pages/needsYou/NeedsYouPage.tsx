@@ -26,13 +26,13 @@ import { useShiftWorkers } from '../../hooks/useShift';
 import { formatAgo } from '../shift/shiftModel';
 import { AttentionRow, useRepoFamilies, type FamilyProps } from './AttentionRow';
 import {
-  groupAttention,
+  groupSubjects,
   familyCounts,
   familyOf,
   filterByFamily,
   severityTone,
   systemPulse,
-  type AttentionGroup,
+  type SubjectGroup,
 } from './needsYouModel';
 
 import '../page.css';
@@ -57,7 +57,7 @@ export function NeedsYouPage(): JSX.Element {
     allItems.filter((item) => item.severity !== 'watch'),
     repoFamilies
   );
-  const groups = groupAttention(filterByFamily(allItems, family, repoFamilies));
+  const groups = groupSubjects(filterByFamily(allItems, family, repoFamilies));
   const urgent = groups.filter((group) => group.severity !== 'watch');
   const watch = groups.find((group) => group.severity === 'watch');
   const now = new Date();
@@ -105,7 +105,7 @@ export function NeedsYouPage(): JSX.Element {
           {watch ? (
             <details className="needs-you__watch" data-testid="needs-you-watch">
               <summary>
-                {watch.items.length} thing{watch.items.length === 1 ? '' : 's'} worth a look, none
+                {watch.subjects.length} thing{watch.subjects.length === 1 ? '' : 's'} worth a look, none
                 waiting on you
               </summary>
               <AttentionList
@@ -127,7 +127,7 @@ function AttentionSection({
   group,
   now,
   ...familyProps
-}: { group: AttentionGroup; now: Date } & FamilyProps): JSX.Element {
+}: { group: SubjectGroup; now: Date } & FamilyProps): JSX.Element {
   return (
     <section
       className="needs-you__group"
@@ -135,7 +135,8 @@ function AttentionSection({
       data-testid={`needs-you-${group.severity}`}
     >
       <h2 className="page__section-title">
-        <span className="page__pill page__pill--danger">{group.items.length}</span> {group.label}
+        <span className="page__pill page__pill--danger">{group.subjects.length}</span>{' '}
+        {group.label}
       </h2>
       <AttentionList group={group} now={now} {...familyProps} />
     </section>
@@ -146,12 +147,12 @@ function AttentionList({
   group,
   now,
   ...familyProps
-}: { group: AttentionGroup; now: Date } & FamilyProps): JSX.Element {
+}: { group: SubjectGroup; now: Date } & FamilyProps): JSX.Element {
   const tone = severityTone(group.severity);
   return (
     <ul className="needs-you__list">
-      {group.items.map((item) => (
-        <AttentionRow key={item.id} item={item} tone={tone} now={now} {...familyProps} />
+      {group.subjects.map((subject) => (
+        <AttentionRow key={subject.key} subject={subject} tone={tone} now={now} {...familyProps} />
       ))}
     </ul>
   );

@@ -1,5 +1,11 @@
 // AttentionRow.tsx — one "Needs you" row: a title that links to its subject,
 // the one next step on the line under it, and exactly one thing to do.
+//
+// A row is one subject — one pull request, todo or shift — not one item. When
+// one cause raised several items (a review hold leaves changes requested, a
+// reviewer that could not finish and a failed queue entry on the same pull
+// request), the row offers the act of the first by `KIND_PRECEDENCE` and lists
+// the rest under "Also", so there is one row and one button per subject.
 // Shared by the Needs you page and the "Needs you here" strip at the top of
 // Releases, so a row reads the same wherever it appears.
 //
@@ -23,11 +29,13 @@ import { useShiftTodoAction } from '../../hooks/useShift';
 import { formatAgo, untilInputDefault, untilRfc3339 } from '../shift/shiftModel';
 import {
   acknowledgeTarget,
+  alsoLine,
   attentionContext,
   primaryAction,
   repoFamilyMap,
   rowDetail,
   safeHref,
+  type AttentionSubject,
   type PrimaryAction,
 } from './needsYouModel';
 
@@ -44,17 +52,18 @@ export interface FamilyProps {
 }
 
 export function AttentionRow({
-  item,
+  subject,
   tone,
   now,
   familyFor,
   onPick,
   picked,
 }: {
-  item: AttentionItem;
+  subject: AttentionSubject;
   tone: 'danger' | 'neutral';
   now: Date;
 } & FamilyProps): JSX.Element {
+  const item = subject.primary;
   const action = primaryAction(item);
   const family = familyFor(item);
   const detail = rowDetail(item);
@@ -75,11 +84,11 @@ export function AttentionRow({
           )}
           <span className="needs-you__context">
             {attentionContext(item)}
-            {item.since ? (
+            {subject.since ? (
               <>
                 {' · '}
-                <time dateTime={item.since} title={item.since}>
-                  {formatAgo(item.since, now)}
+                <time dateTime={subject.since} title={subject.since}>
+                  {formatAgo(subject.since, now)}
                 </time>
               </>
             ) : null}
@@ -89,6 +98,13 @@ export function AttentionRow({
           <p className="needs-you__reason" title={detail.title}>
             {detail.text}
           </p>
+        ) : null}
+        {subject.also.length > 0 ? (
+          <ul className="needs-you__also" aria-label={`Also waiting on ${item.title}`}>
+            {subject.also.map((other) => (
+              <Also key={other.id} item={other} />
+            ))}
+          </ul>
         ) : null}
       </div>
       {action?.type === 'api' ? (
@@ -110,6 +126,22 @@ export function AttentionRow({
         </Link>
       ) : null}
       {target ? <Acknowledge item={item} target={target} /> : null}
+    </li>
+  );
+}
+
+/**
+ * One of the subject's other items: named, with what it asks for, and a link
+ * to it. Never a button — the row's one act is the primary item's.
+ */
+function Also({ item }: { item: AttentionItem }): JSX.Element {
+  const line = alsoLine(item);
+  return (
+    <li className="needs-you__also-item" data-testid={`needs-you-also-${item.id}`}>
+      <span className="needs-you__also-kind">
+        {line.to ? <Link to={line.to}>{line.label}</Link> : line.label}
+      </span>{' '}
+      {line.detail}
     </li>
   );
 }

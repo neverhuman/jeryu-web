@@ -12,9 +12,9 @@ import { useAttention } from '../../hooks/usePipeline';
 import { AttentionRow, useRepoFamilies } from './AttentionRow';
 import {
   AREA_LABEL,
+  attentionSubjects,
   familyOf,
   filterByFamily,
-  severityOf,
   severityTone,
   urgentInArea,
   type AttentionArea
@@ -41,22 +41,22 @@ export function NeedsYouHere({
   const repoFamilies = useRepoFamilies();
   const navigate = useNavigate();
 
-  const items = filterByFamily(
-    urgentInArea(attention.data, area),
-    family,
-    repoFamilies
+  // One row per subject here too, so this strip and /needs-you count the same
+  // things: three items about one pull request are one row on both.
+  const subjects = attentionSubjects(
+    filterByFamily(urgentInArea(attention.data, area), family, repoFamilies)
   );
-  if (items.length === 0) return null;
+  if (subjects.length === 0) return null;
 
-  const shown = items.slice(0, SHOWN);
-  const more = items.length - shown.length;
+  const shown = subjects.slice(0, SHOWN);
+  const more = subjects.length - shown.length;
   const pick =
     onFamily ??
     ((next: string): void => {
       void navigate(`/needs-you?family=${encodeURIComponent(next)}`);
     });
   const now = new Date();
-  const title = `${items.length} waiting on you in ${AREA_LABEL[area]}`;
+  const title = `${subjects.length} waiting on you in ${AREA_LABEL[area]}`;
 
   return (
     <section
@@ -65,18 +65,18 @@ export function NeedsYouHere({
       data-testid={`needs-you-here-${area}`}
     >
       <h2 className="page__section-title">
-        <span className="page__pill page__pill--danger">{items.length}</span>{' '}
+        <span className="page__pill page__pill--danger">{subjects.length}</span>{' '}
         Waiting on you here
         <Link className="needs-you__here-all" to="/needs-you">
           {more > 0 ? `${more} more in Needs you →` : 'All of Needs you →'}
         </Link>
       </h2>
       <ul className="needs-you__list">
-        {shown.map((item) => (
+        {shown.map((subject) => (
           <AttentionRow
-            key={item.id}
-            item={item}
-            tone={severityTone(severityOf(item))}
+            key={subject.key}
+            subject={subject}
+            tone={severityTone(subject.severity)}
             now={now}
             familyFor={(row) => familyOf(row, repoFamilies)}
             onPick={pick}

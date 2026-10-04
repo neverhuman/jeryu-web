@@ -12,6 +12,7 @@ import {
   mockPipelineApi,
   pinsBody,
   queueFailedBody,
+  reviewHoldBody,
 } from './fixtures/pipelineMocks';
 import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
 import { mockShiftApi } from './fixtures/shiftMocks';
@@ -227,6 +228,48 @@ test.describe('Pipeline visibility', () => {
     await expect.poll(() => posts.length).toBe(2);
     expect(posts[0].key).not.toBe(posts[1].key);
     await expect(row.getByRole('alert')).toHaveCount(0);
+  });
+
+  test('three items about one pull request are one row with one act @action:needs_you.group_subject', async ({
+    page,
+  }) => {
+    // A review hold on acme/widgets#7 raises changes requested, a reviewer
+    // that could not finish and a failed queue entry. Three red rows with
+    // three different acts would read as three problems, so they are one row:
+    // the act of the first by precedence, the rest named under it.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page, { attention: reviewHoldBody() });
+
+    await page.goto('/needs-you');
+    const rows = page.getByTestId('needs-you-page').locator('.needs-you__row');
+    await expect(rows).toHaveCount(1, { timeout: 15_000 });
+    const row = page.getByTestId('needs-you-item-reviewer_stuck:acme/widgets:7');
+    await expect(row).toBeVisible();
+    // The worst of the three names the row, and its act is the row's.
+    await expect(page.getByTestId('needs-you-critical')).toContainText(
+      'pr-redteam could not finish its review of acme/widgets#7'
+    );
+    await expect(page.getByTestId('needs-you-action')).toHaveCount(0);
+    await expect(row.getByRole('link', { name: /^Review by hand: / })).toBeVisible();
+    // The row's one act is that link, so its only button is the family pill,
+    // which filters: nothing here queues the pull request again.
+    await expect(row.getByRole('button')).toHaveCount(1);
+    await expect(row.getByRole('button', { name: /Queue again/ })).toHaveCount(0);
+
+    // The other two are context on the same row, each with where to go.
+    const changes = row.getByTestId('needs-you-also-pr_changes_requested:acme/widgets:7');
+    await expect(changes).toContainText('Push a fix, or dismiss the review');
+    await expect(changes.getByRole('link', { name: 'Changes requested' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/acme/widgets/pulls/7'
+    );
+    await expect(row.getByTestId('needs-you-also-queue_failed:acme/widgets:7')).toContainText(
+      'Merge queue failed'
+    );
+    // The row waits as long as the oldest of the three.
+    await expect(row.locator('time')).toHaveAttribute('datetime', /.+/);
+    // The badge still counts the items the server counted.
+    await expect(page.getByTestId('needs-you-badge')).toHaveText('3');
   });
 
   test('narrow screens: the header never overflows and a Needs-you title keeps its width @action:chrome.narrow_header', async ({

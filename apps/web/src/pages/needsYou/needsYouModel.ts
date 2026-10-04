@@ -19,6 +19,166 @@ export interface AttentionGroup {
   items: AttentionItem[];
 }
 
+/**
+ * One subject with everything the pipeline says about it: the pull request,
+ * the todo or the shift a reader thinks of as "the thing that is stuck". The
+ * same cause often raises several items at once — a review hold leaves changes
+ * requested, a reviewer that could not finish and a queue entry that failed —
+ * and three red rows with three different acts for one pull request read as
+ * three problems. They are one row here.
+ */
+export interface AttentionSubject {
+  key: string;
+  /** The item whose act is offered; see `KIND_PRECEDENCE`. */
+  primary: AttentionItem;
+  /** The rest of the subject's items, in the same precedence, as context. */
+  also: AttentionItem[];
+  /** The worst severity among the subject's items. */
+  severity: AttentionSeverity;
+  /** The oldest `since` among them: how long the subject has been waiting. */
+  since: string | null;
+}
+
+export interface SubjectGroup {
+  severity: AttentionSeverity;
+  label: string;
+  subjects: AttentionSubject[];
+}
+
+/**
+ * What a row is about, so that every item raised by one cause lands on one
+ * row: a pull request, else the todo, else the shift. An item that names none
+ * of those is its own subject — its id never collides with another item's.
+ */
+export function subjectKey(
+  item: Pick<AttentionItem, 'id' | 'repo' | 'pr' | 'family' | 'todo_id' | 'shift'>
+): string {
+  const repo = item.repo?.trim();
+  if (repo && item.pr) return `pr:${repo}#${item.pr}`;
+  const todo = item.todo_id?.trim();
+  if (todo) return `todo:${familyName(item.family) ?? ''}:${todo}`;
+  const shift = item.shift?.trim();
+  if (shift) return `shift:${familyName(item.family) ?? ''}:${shift}`;
+  return `item:${item.id}`;
+}
+
+/**
+ * Which of a subject's items names the act to offer, most first. The order is
+ * fixed rather than derived from severity, so one cause always resolves to the
+ * same act whatever else it happened to raise.
+ *
+ * It reads from the act that unsticks the subject to the act that only follows
+ * from it: a review that could not be finished comes before the changes it
+ * left requested (nobody can push a fix for a judgement not yet made), and a
+ * failed gate or queue entry comes before waiting on an approval that gate
+ * would have to pass anyway. A kind this list does not name sorts last, in
+ * severity order, so a new kind is context next to a known act rather than
+ * silently taking it over.
+ */
+export const KIND_PRECEDENCE: readonly string[] = [
+  'reviewer_stuck',
+  'pr_changes_requested',
+  'queue_refused',
+  'queue_failed',
+  'queue_stuck',
+  'pr_checks_failing',
+  'pr_draft_waiting',
+  'pr_awaiting_approval',
+  'pr_ready_to_merge',
+  'todo_blocked',
+  'todo_handoff',
+  'todo_stuck_claim',
+  'todo_waiting_on_blocker',
+  'todo_untriaged',
+  'todo_parked',
+  'shift_stranded_work',
+  'shift_without_pr',
+  'shift_budget_spent',
+  'release_stage_failed',
+  'deploy_failed',
+  'release_staged',
+  'pin_behind',
+  'mirror_failing',
+  'mirror_diverged',
+  'gate_runner_down',
+  'workers_down',
+];
+
+/** A kind's place in `KIND_PRECEDENCE`; an unnamed kind sorts after them all. */
+export function kindRank(kind: string): number {
+  const at = KIND_PRECEDENCE.indexOf(kind);
+  return at === -1 ? KIND_PRECEDENCE.length : at;
+}
+
+function severityRank(item: Pick<AttentionItem, 'severity'>): number {
+  return SEVERITIES.indexOf(severityOf(item));
+}
+
+/** The precedence a subject's items are ordered by: its first item acts. */
+function byPrecedence(a: AttentionItem, b: AttentionItem): number {
+  return (
+    kindRank(a.kind) - kindRank(b.kind) ||
+    severityRank(a) - severityRank(b) ||
+    (a.since ?? '\uffff').localeCompare(b.since ?? '\uffff') ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+/**
+ * One row per subject, worst severity first and longest-waiting first within a
+ * severity. Order among equals is the subject key, so a reload never shuffles
+ * the list.
+ */
+export function attentionSubjects(items: AttentionItem[]): AttentionSubject[] {
+  const bySubject = new Map<string, AttentionItem[]>();
+  for (const item of items) {
+    const key = subjectKey(item);
+    const group = bySubject.get(key);
+    if (group) group.push(item);
+    else bySubject.set(key, [item]);
+  }
+  return [...bySubject]
+    .map(([key, group]) => {
+      const [primary, ...also] = [...group].sort(byPrecedence);
+      const dated = group.map((item) => item.since).filter((since): since is string => !!since);
+      return {
+        key,
+        primary,
+        also,
+        severity: SEVERITIES[Math.min(...group.map(severityRank))],
+        since: dated.length > 0 ? dated.sort()[0] : null,
+      };
+    })
+    .sort(
+      (a, b) =>
+        SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity) ||
+        (a.since ?? '\uffff').localeCompare(b.since ?? '\uffff') ||
+        a.key.localeCompare(b.key)
+    );
+}
+
+/** `groupAttention`, by subject: critical, then action, then watch. */
+export function groupSubjects(items: AttentionItem[]): SubjectGroup[] {
+  const subjects = attentionSubjects(items);
+  return SEVERITIES.map((severity) => ({
+    severity,
+    label: SEVERITY_LABEL[severity],
+    subjects: subjects.filter((subject) => subject.severity === severity),
+  })).filter((group) => group.subjects.length > 0);
+}
+
+/**
+ * One of a subject's other items, as the one line a row shows under its act:
+ * what it is, what it would have asked for, and where to go for it.
+ */
+export function alsoLine(item: AttentionItem): { label: string; detail: string; to: string | null } {
+  return {
+    label: kindLabel(item.kind),
+    detail: rowDetail(item)?.text ?? item.title,
+    to: safeHref(item.href),
+  };
+}
+
 /** An unknown severity is shown, not dropped: it lands under `watch`. */
 export function severityOf(item: Pick<AttentionItem, 'severity'>): AttentionSeverity {
   return (SEVERITIES as readonly string[]).includes(item.severity)

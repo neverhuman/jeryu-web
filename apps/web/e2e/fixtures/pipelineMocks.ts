@@ -115,6 +115,62 @@ export function queueFailedBody(): Record<string, unknown> {
   };
 }
 
+/**
+ * One review hold on acme/widgets#7 as three items of one cause: changes
+ * requested, a reviewer that could not finish, and a queue entry that failed
+ * on the held head. The page owes a reader one row with one act for them.
+ */
+export function reviewHoldBody(): Record<string, unknown> {
+  const pull = {
+    family: 'acme',
+    repo: 'acme/widgets',
+    pr: 7,
+    href: '/repos/jeryu/acme/widgets/pulls/7',
+  };
+  return {
+    schema_version: 1,
+    generated_at: minutesAgo(0),
+    counts: { critical: 1, action: 2, watch: 0 },
+    items: [
+      item({
+        ...pull,
+        id: 'pr_changes_requested:acme/widgets:7',
+        kind: 'pr_changes_requested',
+        title: 'acme/widgets#7 has changes requested',
+        reason: 'pr-redteam asked for changes and nothing was pushed since.',
+        next_step: 'Push a fix, or dismiss the review: open /repos/jeryu/acme/widgets/pulls/7',
+        since: minutesAgo(50),
+        action: { label: 'Open the review', command: null },
+      }),
+      item({
+        ...pull,
+        id: 'reviewer_stuck:acme/widgets:7',
+        kind: 'reviewer_stuck',
+        severity: 'critical',
+        title: 'pr-redteam could not finish its review of acme/widgets#7',
+        reason: 'The review worker gave up after three attempts on the same head.',
+        next_step: 'Review by hand: open /repos/jeryu/acme/widgets/pulls/7',
+        since: minutesAgo(60),
+        action: { label: 'Review by hand', command: null },
+      }),
+      item({
+        ...pull,
+        id: 'queue_failed:acme/widgets:7',
+        kind: 'queue_failed',
+        title: 'acme/widgets#7 failed in the merge queue',
+        reason: 'The queue gate failed on the held head.',
+        next_step: 'Queue again: open /repos/jeryu/acme/widgets/pulls/7',
+        since: minutesAgo(40),
+        action: {
+          label: 'Queue again',
+          command: null,
+          api: { path: '/api/v1/repos/jeryu:acme%2Fwidgets/pulls/7/queue' },
+        },
+      }),
+    ],
+  };
+}
+
 function event(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
     source: 'forge',

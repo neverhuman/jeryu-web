@@ -7,6 +7,11 @@ import {
   familyName,
   familyOf,
   filterByFamily,
+  alsoLine,
+  attentionSubjects,
+  groupSubjects,
+  kindRank,
+  subjectKey,
   areaBadgeCount,
   attentionArea,
   attentionBadgeCount,
@@ -28,7 +33,7 @@ import {
   severityTone,
   urgentInArea,
 } from '../needsYou/needsYouModel';
-import { ATTENTION, attentionItem } from './pipelineTestData';
+import { ATTENTION, REVIEW_HOLD, attentionItem } from './pipelineTestData';
 
 describe('needsYouModel', () => {
   it('groups critical, action, watch in that order, oldest first, dropping empty groups', () => {
@@ -39,6 +44,79 @@ describe('needsYouModel', () => {
       'watch',
     ]);
     expect(groupAttention([])).toEqual([]);
+  });
+
+  it('is one row with one act for the three items of one review hold', () => {
+    const subjects = attentionSubjects(REVIEW_HOLD);
+    expect(subjects).toHaveLength(1);
+    const [subject] = subjects;
+    expect(subject.key).toBe('pr:acme/widgets#7');
+    // The reviewer that could not finish acts; the rest are the row's context.
+    expect(subject.primary.kind).toBe('reviewer_stuck');
+    expect(subject.also.map((item) => item.kind)).toEqual([
+      'pr_changes_requested',
+      'queue_failed',
+    ]);
+    // The worst severity among them, and the oldest of their dates.
+    expect(subject.severity).toBe('critical');
+    expect(subject.since).toBe('2026-10-03T08:00:00Z');
+    // One section, one row.
+    const groups = groupSubjects(REVIEW_HOLD);
+    expect(groups.map((group) => [group.severity, group.subjects.length])).toEqual([
+      ['critical', 1],
+    ]);
+  });
+
+  it('names a row by its pull request, else its todo, else its shift, else the item', () => {
+    expect(subjectKey(attentionItem({ id: 'a', kind: 'x', repo: 'acme/widgets', pr: 7 }))).toBe(
+      'pr:acme/widgets#7'
+    );
+    // A pull request row of the same family is not the family's todo row.
+    expect(
+      subjectKey(attentionItem({ id: 'b', kind: 'x', family: 'acme-split', todo_id: '20261003-1' }))
+    ).toBe('todo:acme:20261003-1');
+    expect(
+      subjectKey(attentionItem({ id: 'c', kind: 'x', family: 'acme', shift: 'nightshift/2026-10-03' }))
+    ).toBe('shift:acme:nightshift/2026-10-03');
+    expect(subjectKey(attentionItem({ id: 'd', kind: 'x' }))).toBe('item:d');
+    // A repository with no pull request number is not a subject of its own:
+    // two release rows on one repository stay two rows.
+    expect(subjectKey(attentionItem({ id: 'e', kind: 'x', repo: 'acme/widgets' }))).toBe('item:e');
+  });
+
+  it('leaves the rows of unrelated subjects alone, worst and oldest first', () => {
+    const subjects = attentionSubjects(ATTENTION.items);
+    expect(subjects.map((subject) => subject.primary.id)).toEqual([
+      'workers_down:jain',
+      'release_staged:jeryu/jeryu-deploy',
+      'todo-blocked:jeryu:20260919-130515-f8cc66',
+      'todo-stuck:jeryu:20260919-1',
+    ]);
+    expect(subjects.every((subject) => subject.also.length === 0)).toBe(true);
+  });
+
+  it('ranks a kind it does not know last, so it is context beside a known act', () => {
+    expect(kindRank('reviewer_stuck')).toBeLessThan(kindRank('pr_ready_to_merge'));
+    expect(kindRank('pr_ready_to_merge')).toBeLessThan(kindRank('pr_invented_kind'));
+    const [subject] = attentionSubjects([
+      attentionItem({ id: 'new', kind: 'pr_invented_kind', severity: 'critical', repo: 'acme/widgets', pr: 7 }),
+      ...REVIEW_HOLD,
+    ]);
+    expect(subject.primary.kind).toBe('reviewer_stuck');
+    expect(subject.also.map((item) => item.kind)).toContain('pr_invented_kind');
+  });
+
+  it('words an "also" line as what it is, what it wants, and where to go', () => {
+    expect(alsoLine(REVIEW_HOLD[0])).toEqual({
+      label: 'Changes requested',
+      detail: 'Push a fix, or dismiss the review: open /repos/jeryu/acme/widgets/pulls/7',
+      to: '/repos/jeryu/acme/widgets/pulls/7',
+    });
+    expect(alsoLine(attentionItem({ id: 'z', kind: 'pin_behind', href: 'https://evil.example' }))).toEqual({
+      label: 'Merged, not pinned for release',
+      detail: 'z',
+      to: null,
+    });
   });
 
   it('keeps an unknown severity visible under watch and sorts undated rows last', () => {
