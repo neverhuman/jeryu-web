@@ -502,8 +502,12 @@ export function areaBadgeCount(data: AttentionResponse | undefined, area: Attent
   return urgentInArea(data, area).length;
 }
 
-/** What a Needs-you row may be about: one todo, or one repository's pull request. */
-export interface AttentionSubject {
+/**
+ * What a page's own Needs-you strip is about: one todo, or one repository's
+ * pull request. This is the question a page asks; `AttentionSubject` is the
+ * answer — one row with every item that one cause raised.
+ */
+export interface AboutSubject {
   todoId?: string | null;
   repo?: string | null;
   pr?: number | string | null;
@@ -514,21 +518,25 @@ export interface AttentionSubject {
  * request page can show its own row in place rather than sending the reader to
  * Needs you to find out that something waits on them here. A subject with
  * nothing to match on matches nothing: a page never shows the whole list.
+ *
+ * Grouped per subject like every other surface, so a pull request whose
+ * review hold also failed its queue entry reads as one row here too.
  */
 export function attentionAbout(
   data: AttentionResponse | undefined,
-  subject: AttentionSubject
-): AttentionItem[] {
-  const todoId = (subject.todoId ?? '').trim();
-  const pr = subject.pr === null || subject.pr === undefined ? '' : String(subject.pr).trim();
-  const repo = (subject.repo ?? '').trim();
+  about: AboutSubject
+): AttentionSubject[] {
+  const todoId = (about.todoId ?? '').trim();
+  const pr = about.pr === null || about.pr === undefined ? '' : String(about.pr).trim();
+  const repo = (about.repo ?? '').trim();
   if (!todoId && !pr) return [];
-  const items = urgentAttention(data).filter((item) => {
-    if (todoId && item.todo_id === todoId) return true;
-    if (!pr || String(item.pr ?? '') !== pr) return false;
-    return !repo || !item.repo || sameAttentionRepo(item.repo, repo);
-  });
-  return groupAttention(items).flatMap((group) => group.items);
+  return attentionSubjects(
+    urgentAttention(data).filter((item) => {
+      if (todoId && item.todo_id === todoId) return true;
+      if (!pr || String(item.pr ?? '') !== pr) return false;
+      return !repo || !item.repo || sameAttentionRepo(item.repo, repo);
+    })
+  );
 }
 
 /** A row may name `owner/name` where the page knows only `name`, or the reverse. */

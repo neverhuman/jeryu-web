@@ -427,13 +427,33 @@ describe('attentionAbout', () => {
   };
 
   it('finds the rows about one todo, and leaves the calm ones out', () => {
-    expect(attentionAbout(rows, { todoId: '20260919-1' }).map((i) => i.id)).toEqual(['blocked']);
+    expect(attentionAbout(rows, { todoId: '20260919-1' }).map((s) => s.primary.id)).toEqual([
+      'blocked',
+    ]);
   });
 
   it('finds the rows about one pull request, not another repo at the same number', () => {
-    expect(attentionAbout(rows, { repo: 'acme/web', pr: 7 }).map((i) => i.id)).toEqual(['queue']);
-    expect(attentionAbout(rows, { repo: 'web', pr: '7' }).map((i) => i.id)).toEqual(['queue']);
+    expect(attentionAbout(rows, { repo: 'acme/web', pr: 7 }).map((s) => s.primary.id)).toEqual([
+      'queue',
+    ]);
+    expect(attentionAbout(rows, { repo: 'web', pr: '7' }).map((s) => s.primary.id)).toEqual([
+      'queue',
+    ]);
     expect(attentionAbout(rows, { repo: 'acme/web', pr: 8 })).toEqual([]);
+  });
+
+  it('is one row for a pull request that raised several items at once', () => {
+    const both = {
+      ...rows,
+      items: [
+        attentionItem({ id: 'queue', kind: 'queue_failed', repo: 'acme/web', pr: 7 }),
+        attentionItem({ id: 'hold', kind: 'reviewer_stuck', repo: 'acme/web', pr: 7 }),
+      ],
+    };
+    const [subject, ...rest] = attentionAbout(both, { repo: 'acme/web', pr: 7 });
+    expect(rest).toEqual([]);
+    expect(subject.primary.id).toBe('hold');
+    expect(subject.also.map((i) => i.id)).toEqual(['queue']);
   });
 
   it('matches nothing when the subject names neither a todo nor a pull request', () => {

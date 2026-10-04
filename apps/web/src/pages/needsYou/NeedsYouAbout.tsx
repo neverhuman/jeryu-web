@@ -15,9 +15,8 @@ import { AttentionRow, useRepoFamilies } from './AttentionRow';
 import {
   attentionAbout,
   familyOf,
-  severityOf,
   severityTone,
-  type AttentionSubject,
+  type AboutSubject,
 } from './needsYouModel';
 
 import './NeedsYou.css';
@@ -26,7 +25,7 @@ export function NeedsYouAbout({
   subject,
   testId = 'needs-you-about',
 }: {
-  subject: AttentionSubject;
+  subject: AboutSubject;
   testId?: string;
 }): JSX.Element | null {
   const { user } = useAuth();
@@ -34,27 +33,27 @@ export function NeedsYouAbout({
   const repoFamilies = useRepoFamilies();
   const navigate = useNavigate();
 
-  const items = attentionAbout(attention.data, subject);
-  if (items.length === 0) return null;
+  const subjects = attentionAbout(attention.data, subject);
+  if (subjects.length === 0) return null;
 
   const now = new Date();
   return (
     <section
       className="needs-you__here"
-      aria-label={`${items.length} waiting on you here`}
+      aria-label={`${subjects.length} waiting on you here`}
       data-testid={testId}
     >
       <h2 className="page__section-title">
-        <span className="page__pill page__pill--danger">{items.length}</span> Waiting on you
+        <span className="page__pill page__pill--danger">{subjects.length}</span> Waiting on you
       </h2>
       <ul className="needs-you__list">
-        {items.map((item) => (
+        {subjects.map((row) => (
           <AttentionRow
-            key={item.id}
-            item={item}
-            tone={severityTone(severityOf(item))}
+            key={row.key}
+            subject={row}
+            tone={severityTone(row.severity)}
             now={now}
-            familyFor={(row) => familyOf(row, repoFamilies)}
+            familyFor={(item) => familyOf(item, repoFamilies)}
             onPick={(family) => void navigate(`/needs-you?family=${encodeURIComponent(family)}`)}
             picked=""
           />
