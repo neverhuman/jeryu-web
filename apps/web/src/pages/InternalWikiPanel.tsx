@@ -15,6 +15,7 @@ import { ErrorState, LoadingState } from '../components/state';
 import { useRepositories } from '../hooks/useRepositories';
 import { SITE_SETTINGS_KEY } from '../hooks/useSiteSettings';
 import { WIKI_PATH } from './wiki/wikiModel';
+import { dateText } from '../format/when';
 
 const ADMIN_SITE_SETTINGS_KEY: readonly string[] = ['admin', 'site-settings'];
 
@@ -106,8 +107,7 @@ export function InternalWikiPanel(): JSX.Element {
             ) : null}
             {current.data.updated_by && current.data.updated_at ? (
               <span className="page__pill">
-                Set by {current.data.updated_by} on{' '}
-                {new Date(current.data.updated_at).toLocaleDateString()}
+                Set by {current.data.updated_by} on {dateText(current.data.updated_at)}
               </span>
             ) : null}
             {save.isSuccess && choice === null ? (

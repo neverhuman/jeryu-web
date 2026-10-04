@@ -5,6 +5,8 @@
 // here: the subject line, the message body, the trailers (a shift commit
 // carries `Todo:` / `Worked-by:` / `Shift:`), and the day groups.
 
+import { dateText } from '../format/when';
+
 /** A commit's author or committer, as the server reports it. */
 export interface PullCommitPerson {
   name?: string | null;
@@ -115,16 +117,7 @@ function dayKey(iso: string | null): string {
 
 function dayLabel(day: string, iso: string | null): string {
   if (day === '' || !iso) return 'Date unknown';
-  const at = new Date(iso);
-  try {
-    return at.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return day;
-  }
+  return dateText(iso) || day;
 }
 
 /**

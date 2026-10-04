@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { pullHref } from '../activity/activityModel';
-import { relativeTime } from '../../components/repo/relativeTime';
+import { When } from '../../format/When';
 import type { RunnerNetworkNode } from '../runnerNetworkModel';
 import { NO_PLACES, runnerAnchorId, type RunnerPlaces } from './releaseIndex';
 import { RunnerReleaseLink } from './RunnerReleaseLink';
@@ -118,7 +118,7 @@ function AutomationRow({
               </span>{' '}
               ·{' '}
               <time dateTime={did.finishedAt} title={did.finishedAt}>
-                {relativeTime(did.finishedAt)}
+                <When at={did.finishedAt} />
               </time>
             </>
           ) : (
@@ -136,7 +136,7 @@ function AutomationRow({
             >
               {offline ? 'offline, last seen ' : ''}
               <time dateTime={timer.lastUpdated} title={timer.lastUpdated}>
-                {relativeTime(timer.lastUpdated)}
+                <When at={timer.lastUpdated} />
               </time>
             </span>
           ) : (

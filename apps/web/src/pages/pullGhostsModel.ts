@@ -7,10 +7,10 @@
 // words the rows.
 
 import type { ShiftTodo } from '../api/types';
+import { relativeText, shiftDayKey } from '../format/when';
 import {
   compareTodos,
   dateInTz,
-  formatAgo,
   latestWorker,
   needsHuman,
   normalizeShiftKind,
@@ -199,7 +199,7 @@ export function whenOf(todo: ShiftTodo, now: Date, queuePosition = 0): string {
     const until = todo.lease_until ? Date.parse(todo.lease_until) : NaN;
     const live = todo.lease_live && !Number.isNaN(until) && until > now.getTime();
     return live
-      ? `hands off ${formatAgo(todo.lease_until, now)}`
+      ? `hands off ${relativeText(todo.lease_until, now)}`
       : 'lease expired — stalled';
   }
   if (todo.status === 'blocked') return 'blocked — needs a human';
@@ -292,7 +292,5 @@ function isTonightish(date: string, now: Date, tz: string): boolean {
 }
 
 function nextDay(date: string): string {
-  const d = new Date(`${date}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+  return shiftDayKey(date, 1);
 }

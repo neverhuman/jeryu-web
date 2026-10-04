@@ -10,13 +10,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { PipelineEvent } from '../../api/types';
+import { absoluteText, clockText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { formatCost, shortSha } from '../shift/shiftModel';
 import {
   eventLabel,
   eventLinks,
   eventTone,
-  formatClock,
   formatSeconds,
   hasDetail,
   summaryParts,
@@ -52,8 +52,8 @@ export function EventRow({
       data-testid={`activity-event-${event.seq}`}
     >
       <div className="activity-row__line">
-        <time className="activity-row__time" dateTime={event.ts} title={event.ts}>
-          {formatClock(event.ts)}
+        <time className="activity-row__time" dateTime={event.ts} title={absoluteText(event.ts)}>
+          {clockText(event.ts)}
         </time>
         <span
           className={tone === 'info' ? 'page__pill' : `page__pill page__pill--${tone}`}

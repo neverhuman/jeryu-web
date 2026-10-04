@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { RepositorySummary } from '../../../api/types';
 import { RepoTable } from '../RepoTable';
+import { absoluteText, zoneLabel } from '../../../format/when';
 
 const REPO: RepositorySummary = {
   id: {
@@ -84,9 +85,17 @@ describe('RepoTable', () => {
       document.querySelectorAll('tbody time')
     );
     expect(first).toHaveAttribute('datetime', '2026-09-18T09:00:00Z');
-    expect(first).toHaveAttribute('title', 'Last push: 2026-09-18T09:00:00Z');
+    expect(first).toHaveAttribute(
+      'title',
+      `Last push: ${absoluteText('2026-09-18T09:00:00Z')}`
+    );
     expect(second).toHaveAttribute('datetime', '2026-05-26T12:00:00Z');
-    expect(second).toHaveAttribute('title', 'Last updated: 2026-05-26T12:00:00Z');
+    expect(second).toHaveAttribute(
+      'title',
+      `Last updated: ${absoluteText('2026-05-26T12:00:00Z')}`
+    );
+    // The zone is named in the title, never left to the reader to guess.
+    expect(first?.getAttribute('title')).toContain(zoneLabel());
   });
 
   it('sorts Updated on the push time when there is one', async () => {

@@ -3,7 +3,7 @@
 // page already holds (`summary.mirror`); there is nothing to fetch.
 
 import type { RepositoryMirrorStatus } from '../api/types';
-import { relativeTime } from '../components/repo/relativeTime';
+import { When } from '../format/When';
 
 import { MIRROR_OPERATOR_SENTENCE, mirrorFacts } from './repoStatusModel';
 
@@ -37,12 +37,7 @@ export function GithubMirrorSummary({
               Last attempt:{' '}
               {facts.lastAttemptAt ? (
                 <>
-                  <time
-                    dateTime={facts.lastAttemptAt}
-                    title={facts.lastAttemptAt}
-                  >
-                    {relativeTime(facts.lastAttemptAt)}
-                  </time>
+                  <When at={facts.lastAttemptAt} />
                   , {facts.lastAttempt}
                 </>
               ) : (
@@ -59,12 +54,7 @@ export function GithubMirrorSummary({
             <span>
               Last success:{' '}
               {facts.lastSuccessAt ? (
-                <time
-                  dateTime={facts.lastSuccessAt}
-                  title={facts.lastSuccessAt}
-                >
-                  {relativeTime(facts.lastSuccessAt)}
-                </time>
+                <When at={facts.lastSuccessAt} />
               ) : (
                 'never'
               )}

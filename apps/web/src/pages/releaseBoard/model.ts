@@ -7,6 +7,7 @@
 // page.
 
 import type { EnvironmentSummary } from '../../api/types/deployments';
+import { relativeText } from '../../format/when';
 import type {
   BoardColumn,
   BoardLane,
@@ -176,7 +177,7 @@ export interface Freshness {
   /** Milliseconds between the snapshot and `nowMs`; null when unparseable. */
   ageMs: number | null;
   stale: boolean;
-  /** "12 min ago", "just now", "3 h ago". */
+  /** "12 min ago", "just now", "3 h ago" — `relativeText` of the snapshot. */
   ago: string;
 }
 
@@ -184,18 +185,7 @@ export function boardFreshness(observedAt: string, nowMs: number): Freshness {
   const observed = Date.parse(observedAt);
   if (!Number.isFinite(observed)) return { ageMs: null, stale: false, ago: observedAt };
   const ageMs = Math.max(0, nowMs - observed);
-  return { ageMs, stale: ageMs > BOARD_STALE_AFTER_MS, ago: agoText(ageMs) };
-}
-
-export function agoText(ageMs: number): string {
-  const seconds = Math.round(ageMs / 1000);
-  if (seconds < 90) return 'just now';
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 90) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 36) return `${hours} h ago`;
-  const days = Math.round(hours / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
+  return { ageMs, stale: ageMs > BOARD_STALE_AFTER_MS, ago: relativeText(observed, nowMs) };
 }
 
 const TRIGGER_TEXT: Record<ReleaseBoard['collector']['trigger'], string> = {

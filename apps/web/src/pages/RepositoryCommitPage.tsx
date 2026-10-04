@@ -15,7 +15,7 @@ import { Breadcrumbs } from '../components/browser';
 import type { BreadcrumbSegment } from '../components/browser';
 import { DiffFileTree, DiffViewer } from '../components/merge';
 import type { DiffViewerMode } from '../components/merge';
-import { relativeTime } from '../components/repo/relativeTime';
+import { When } from '../format/When';
 import {
   ErrorState,
   LoadingState,
@@ -120,9 +120,7 @@ export function RepositoryCommitPage({
               <span>
                 {commit.data.author}
                 <span aria-hidden="true"> · </span>
-                <time dateTime={commit.data.authored_at} title={commit.data.authored_at}>
-                  {relativeTime(commit.data.authored_at)}
-                </time>
+                <When at={commit.data.authored_at} />
               </span>
               {commit.data.parents.map((parent) => (
                 <Link

@@ -19,7 +19,7 @@ import { Link } from 'react-router-dom';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { pullHref } from '../activity/activityModel';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
-import { relativeTime } from '../../components/repo/relativeTime';
+import { When } from '../../format/When';
 import {
   codeLabel,
   codeOutliers,
@@ -273,7 +273,7 @@ function RunnerRow({
               )}{' '}
               in {last.duration} ·{' '}
               <time dateTime={last.finishedAt} title={last.finishedAt}>
-                {relativeTime(last.finishedAt)}
+                <When at={last.finishedAt} />
               </time>
             </>
           ) : (
@@ -287,7 +287,7 @@ function RunnerRow({
               dateTime={node.lastUpdated}
               title={node.lastUpdated}
             >
-              {relativeTime(node.lastUpdated)}
+              <When at={node.lastUpdated} />
             </time>
           ) : (
             <span className="fleet__tone--warning">never</span>

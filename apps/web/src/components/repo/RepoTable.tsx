@@ -46,7 +46,7 @@ import { distinctDescriptions } from './repoDescription';
 import { RepoFailingChecks } from './RepoFailingChecks';
 import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoRoleBadge } from './RepoRoleBadge';
-import { relativeTime } from './relativeTime';
+import { When } from '../../format/When';
 import { pullRoomHref } from '../../pages/pullRoomModel';
 
 import { repoHref } from './RepoCard';
@@ -356,14 +356,7 @@ export function RepoTable({
         // Sort on the raw timestamp; show it abbreviated, full on hover.
         cell: ({ row }: RepoCell) => {
           const { iso, pushed } = activityTime(row.original);
-          return (
-            <time
-              dateTime={iso}
-              title={`${pushed ? 'Last push' : 'Last updated'}: ${iso}`}
-            >
-              {relativeTime(iso)}
-            </time>
-          );
+          return <When at={iso} label={pushed ? 'Last push' : 'Last updated'} />;
         }
       }
     ],

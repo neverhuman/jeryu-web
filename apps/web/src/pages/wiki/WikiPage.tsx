@@ -16,7 +16,8 @@ import { BookOpen, ExternalLink, FilePlus2, FileText, Folder, GitCommitHorizonta
 import { endpoints } from '../../api/endpoints';
 import type { BlameResponse, WikiRepository } from '../../api/types/wiki';
 import { MarkdownSource } from '../../components/browser/MarkdownSource';
-import { relativeTime } from '../../components/repo/relativeTime';
+import { When } from '../../format/When';
+import { dateText } from '../../format/when';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useBlob } from '../../hooks/useBlob';
@@ -36,7 +37,6 @@ import {
   resolveDocLink,
   resolvePagePath,
   sectionNote,
-  shortDate,
   splitFrontmatter,
   splitSections,
   wikiHref,
@@ -310,7 +310,7 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
             <div className="wiki-doc__badges" data-testid="wiki-page-badges">
               {updated ? (
                 <time className="wiki-doc__date" dateTime={updated}>
-                  {shortDate(updated)}
+                  {dateText(updated)}
                 </time>
               ) : null}
               {status ? (
@@ -325,14 +325,14 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
         <p className="wiki-doc__meta" data-testid="wiki-page-meta">
           {newest ? (
             <>
-              Updated <time dateTime={newest.committed_at}>{relativeTime(newest.committed_at)}</time>{' '}
+              Updated <When at={newest.committed_at} />{' '}
               by {newest.author}
               {history.data && history.data.revisions > 1
                 ? ` · ${history.data.revisions} revisions`
                 : null}
               {oldest && oldest.sha !== newest.sha ? (
                 <>
-                  {' · '}created <time dateTime={oldest.committed_at}>{shortDate(oldest.committed_at)}</time> by{' '}
+                  {' · '}created <time dateTime={oldest.committed_at}>{dateText(oldest.committed_at)}</time> by{' '}
                   {oldest.author}
                 </>
               ) : null}
@@ -464,14 +464,14 @@ function SectionMargin({ blame, startLine, endLine, commitHref }: SectionMarginP
       <span className="wiki-note__who">
         {latest.author},{' '}
         <time dateTime={latest.authored_at} title={latest.authored_at}>
-          {relativeTime(latest.authored_at)}
+          <When at={latest.authored_at} />
         </time>
       </span>
       {commitCount > 1 ? (
         <span className="wiki-note__since">
           since{' '}
           <Link to={commitHref(earliest.sha)} title={earliest.summary}>
-            {shortDate(earliest.authored_at)}
+            {dateText(earliest.authored_at)}
           </Link>{' '}
           · {commitCount} commits
         </span>

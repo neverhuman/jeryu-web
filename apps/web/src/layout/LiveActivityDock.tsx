@@ -10,6 +10,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+import { absoluteText, clockText, zoneLabel } from '../format/when';
 import { useAuth } from '../hooks/useAuth';
 import { PIPELINE_KEY, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
 import {
@@ -17,7 +18,6 @@ import {
   eventLabel,
   eventTone,
   foldEchoes,
-  formatClock,
 } from '../pages/activity/activityModel';
 import type { PipelineEventsQuery } from '../api/types/pipeline';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
@@ -68,9 +68,12 @@ export function LiveActivityDock(): JSX.Element | null {
           {collapsed ? <ChevronUp aria-hidden="true" size={14} /> : <ChevronDown aria-hidden="true" size={14} />}
           Live activity
         </button>
+        <span className="activity-dock__zone" title="Times below are in your zone">
+          {zoneLabel()}
+        </span>
         {collapsed && events[0] ? (
           <span className="activity-dock__latest">
-            {formatClock(events[0].ts)} · {eventLabel(events[0])} · {events[0].summary}
+            {clockText(events[0].ts)} · {eventLabel(events[0])} · {events[0].summary}
           </span>
         ) : null}
         {waiting > 0 ? (
@@ -91,8 +94,8 @@ export function LiveActivityDock(): JSX.Element | null {
                   key={event.seq}
                   className={`activity-dock__item activity-dock__item--${eventTone(event)}`}
                 >
-                  <time className="activity-dock__meta" dateTime={event.ts}>
-                    {formatClock(event.ts)}
+                  <time className="activity-dock__meta" dateTime={event.ts} title={absoluteText(event.ts)}>
+                    {clockText(event.ts)}
                   </time>
                   <span className="activity-dock__scope" title={event.kind}>
                     {eventLabel(event)}

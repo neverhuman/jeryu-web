@@ -24,6 +24,7 @@ import { QUALITY_GATE_PATH, repoCodeHref, shortSha } from './qualityGateModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import '../page.css';
 import './QualityGate.css';
+import { When } from '../../format/When';
 
 export function QualityGateHeadPage(): JSX.Element {
   const { owner = '', name = '', sha = '' } = useParams();
@@ -74,7 +75,7 @@ export function QualityGateHeadPage(): JSX.Element {
               {data.passed
                 ? 'at or above the floor.'
                 : 'below the floor: the gate would have blocked this push.'}{' '}
-              Scored {new Date(data.scored_at).toLocaleString()} on {data.branch}.
+              Scored <When at={data.scored_at} /> on {data.branch}.
             </p>
           </section>
 

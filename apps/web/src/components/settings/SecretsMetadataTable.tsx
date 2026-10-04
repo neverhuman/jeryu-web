@@ -5,12 +5,14 @@
 
 import { Eye, KeyRound } from 'lucide-react';
 
+import { When } from '../../format/When';
+
 import './settings.css';
 
 export interface SecretMetadata {
   name: string;
   scope: string;
-  /** RFC3339 timestamp; rendered as "x ago" by the locale-sensitive formatter. */
+  /** RFC3339 timestamp; rendered relative, with the absolute time on hover. */
   rotated_at: string | null;
   fingerprint: string | null;
 }
@@ -18,22 +20,6 @@ export interface SecretMetadata {
 export interface SecretsMetadataTableProps {
   secrets: SecretMetadata[];
   className?: string;
-}
-
-function ageLabel(rotatedAt: string | null): string {
-  if (!rotatedAt) return 'never rotated';
-  const then = new Date(rotatedAt).getTime();
-  const now = Date.now();
-  const ageMs = now - then;
-  if (!Number.isFinite(ageMs) || ageMs < 0) return 'recently';
-  const days = Math.floor(ageMs / (1000 * 60 * 60 * 24));
-  if (days === 0) return 'today';
-  if (days === 1) return '1 day ago';
-  if (days < 30) return `${days} days ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months} months ago`;
-  const years = Math.floor(months / 12);
-  return `${years} year${years === 1 ? '' : 's'} ago`;
 }
 
 export function SecretsMetadataTable({
@@ -79,7 +65,9 @@ export function SecretsMetadataTable({
                 <td>
                   <code>{secret.scope}</code>
                 </td>
-                <td>{ageLabel(secret.rotated_at)}</td>
+                <td>
+                  <When at={secret.rotated_at} fallback="never rotated" />
+                </td>
                 <td>
                   {secret.fingerprint ? (
                     <code className="secrets-table__fingerprint">

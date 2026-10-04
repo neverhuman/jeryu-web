@@ -12,7 +12,6 @@ import {
   countNeedsHuman,
   dateInTz,
   filterShiftTodos,
-  formatAgo,
   isLastNight,
   isLongStale,
   lastNightDate,
@@ -135,14 +134,10 @@ describe('shiftModel', () => {
     ]);
   });
 
-  it('builds repo paths and relative times', () => {
+  it('builds repo paths', () => {
     const refs = repoRefs({ queue_repo: 'jeryu/jeryu-todo', repos: [] }, 'forge.example');
     expect(repoCodeHref(refs, 'jeryu-web')).toBe('/repos/forge.example/jeryu/jeryu-web');
     expect(repoCodeHref(refs, 'other/x')).toBe('/repos/forge.example/other/x');
-    const now = new Date('2026-09-19T09:00:00Z');
-    expect(formatAgo('2026-09-19T08:59:50Z', now)).toBe('10s ago');
-    expect(formatAgo('2026-09-19T10:00:00Z', now)).toBe('in 1h');
-    expect(formatAgo(null, now)).toBe('—');
   });
 
   it('lays out timeline segments clipped to the window', () => {

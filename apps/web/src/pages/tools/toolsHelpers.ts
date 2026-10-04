@@ -1,15 +1,13 @@
 // tools/toolsHelpers.ts — shared formatters and category display maps for the
 // /tools control surface (registry rail, pattern-family dashboard, live scan).
 
-export function formatCount(value: number): string {
-  return value.toLocaleString('en-US');
-}
+import { absoluteText } from '../../format/when';
+
+export { formatCount } from '../../format/number';
 
 export function formatScannedAt(millis: string | null): string {
   if (!millis || !/^[0-9]+$/.test(millis)) return 'never';
-  const date = new Date(Number(millis));
-  if (Number.isNaN(date.getTime())) return 'never';
-  return date.toLocaleString();
+  return absoluteText(Number(millis)) || 'never';
 }
 
 export const CATEGORY_LABELS: Record<string, string> = {

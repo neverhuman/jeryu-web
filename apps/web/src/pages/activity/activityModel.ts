@@ -2,6 +2,7 @@
 // live dock, and the per-PR events panel. Deterministic given `now`.
 
 import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
+import { localDayKey, zoneLabel } from '../../format/when';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
 import { todoHref } from '../shift/workPaths';
 
@@ -214,33 +215,22 @@ export function formatSeconds(seconds: number | null | undefined): string {
   return `${Math.floor(seconds / 3600)}h ${Math.round((seconds % 3600) / 60)}m`;
 }
 
-export function formatClock(iso: string): string {
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return iso;
-  return at.toISOString().slice(11, 19);
-}
-
-/** The UTC day an event belongs to, as `YYYY-MM-DD`; `''` when the stamp is unreadable. */
-export function dayKey(iso: string): string {
-  const at = new Date(iso);
-  return Number.isNaN(at.getTime()) ? '' : at.toISOString().slice(0, 10);
-}
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * A day as an operator reads it: `Today · 19 Sep 2026`, `Yesterday · …`, else
- * the date alone. Clock times carry no date, so the day is said once, above
- * the rows it covers.
+ * A day as an operator reads it: `Today · 19 Sep 2026 · CEST`, `Yesterday · …`,
+ * else the date alone. Clock times carry no date and no zone, so both are said
+ * once, above the rows they cover.
  */
 export function formatDay(iso: string, now: Date): string {
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) return iso;
-  const date = `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}`;
-  const days = Math.round((Date.parse(`${dayKey(now.toISOString())}T00:00:00Z`) - Date.parse(`${dayKey(iso)}T00:00:00Z`)) / DAY_MS);
-  if (days === 0) return `Today · ${date}`;
-  if (days === 1) return `Yesterday · ${date}`;
-  return date;
+  const date = `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()}`;
+  const days = Math.round(
+    (Date.parse(`${localDayKey(now)}T00:00:00Z`) - Date.parse(`${localDayKey(iso)}T00:00:00Z`)) / DAY_MS
+  );
+  const named = days === 0 ? `Today · ${date}` : days === 1 ? `Yesterday · ${date}` : date;
+  return `${named} · ${zoneLabel()}`;
 }
 
 export interface DayGroup {
@@ -252,7 +242,7 @@ export interface DayGroup {
 export function groupByDay(events: PipelineEvent[]): DayGroup[] {
   const groups: DayGroup[] = [];
   for (const event of events) {
-    const day = dayKey(event.ts);
+    const day = localDayKey(event.ts);
     const last = groups[groups.length - 1];
     if (last && last.day === day) last.events.push(event);
     else groups.push({ day, events: [event] });

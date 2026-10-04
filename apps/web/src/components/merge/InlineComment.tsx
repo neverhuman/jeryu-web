@@ -15,6 +15,7 @@ import type { ReviewComment } from '../../api/types';
 import { ActionButton } from '../action/ActionButton';
 
 import './merge.css';
+import { When } from '../../format/When';
 
 export interface InlineCommentDisplayProps {
   mode: 'display';
@@ -50,12 +51,7 @@ export function InlineComment(props: InlineCommentProps): JSX.Element {
       >
         <header className="inline-comment__header">
           <span className="inline-comment__author">{comment.author}</span>
-          <time
-            className="inline-comment__timestamp"
-            dateTime={comment.created_at}
-          >
-            {new Date(comment.created_at).toLocaleString()}
-          </time>
+          <When className="inline-comment__timestamp" at={comment.created_at} />
           {comment.edited_at ? (
             <span className="inline-comment__edited">edited</span>
           ) : null}

@@ -19,6 +19,7 @@ import {
 import { usePageTitle } from '../../hooks/usePageTitle';
 import '../page.css';
 import './QualityGate.css';
+import { When } from '../../format/When';
 
 export function QualityGateRulePage(): JSX.Element {
   const { rule = '' } = useParams();
@@ -84,7 +85,9 @@ export function QualityGateRulePage(): JSX.Element {
                       </Link>
                     </td>
                     <td>{head.branch}</td>
-                    <td>{new Date(head.scored_at).toLocaleString()}</td>
+                    <td>
+                      <When at={head.scored_at} />
+                    </td>
                     <td className="quality-gate__num">
                       <span
                         className={

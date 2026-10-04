@@ -6,11 +6,12 @@
 
 import { Link } from 'react-router-dom';
 
-import { relativeTime } from '../repo/relativeTime';
+import { When } from '../../format/When';
 import type { BlameResponse } from '../../api/types/wiki';
 
 import { blameRows } from './blameViewModel';
 import { hashForLine, lineElementId } from './sourceViewModel';
+import { formatCount } from '../../format/number';
 
 export interface BlameViewProps {
   text: string;
@@ -61,7 +62,7 @@ export function BlameView({
                       dateTime={row.gutter.commit.authored_at}
                       title={row.gutter.commit.authored_at}
                     >
-                      {relativeTime(row.gutter.commit.authored_at)}
+                      <When at={row.gutter.commit.authored_at} />
                     </time>
                   </span>
                 </td>
@@ -78,8 +79,8 @@ export function BlameView({
       </table>
       {lines.truncated ? (
         <p className="source-view__note">
-          Showing the first {lines.rows.length.toLocaleString()} of{' '}
-          {lines.total.toLocaleString()} lines. Use Raw for the whole file.
+          Showing the first {formatCount(lines.rows.length)} of{' '}
+          {formatCount(lines.total)} lines. Use Raw for the whole file.
         </p>
       ) : null}
     </div>

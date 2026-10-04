@@ -13,7 +13,7 @@ import { CloudAlert, CloudUpload } from 'lucide-react';
 
 import type { RepositoryMirrorStatus } from '../../api/types';
 
-import { relativeTime } from './relativeTime';
+import { relativeText } from '../../format/when';
 import './repo.css';
 
 export interface MirrorStatusBadgeProps {
@@ -26,7 +26,7 @@ export function MirrorStatusBadge({
   if (!mirror || !mirror.configured) return null;
 
   const lastSuccess = mirror.last_success_at
-    ? relativeTime(mirror.last_success_at)
+    ? relativeText(mirror.last_success_at)
     : null;
   const failed = mirror.last_attempt_ok === false;
 

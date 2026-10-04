@@ -13,6 +13,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import type { ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
+import { relativeText } from '../../format/when';
 import { Breadcrumbs } from '../../components/browser/Breadcrumbs';
 import { FamilyPill } from '../../components/family/FamilyPills';
 import { EmptyState, LoadingState } from '../../components/state';
@@ -24,7 +25,6 @@ import { ShiftError } from './shiftCommon';
 import {
   attemptSummary,
   commitHref,
-  formatAgo,
   formatCost,
   repoRefs,
   shortSha,
@@ -180,7 +180,7 @@ function TodoView({
         </dd>
         <dt>Attempts</dt>
         <dd>
-          {todo.lease_live && todo.lease_until ? `lease ${formatAgo(todo.lease_until, now)} · ` : ''}
+          {todo.lease_live && todo.lease_until ? `lease ${relativeText(todo.lease_until, now)} · ` : ''}
           {attempts ? attempts.text : '0 attempts'}
         </dd>
         <dt>Cost</dt>

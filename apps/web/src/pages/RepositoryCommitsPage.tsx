@@ -14,7 +14,7 @@ import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
 import { Breadcrumbs } from '../components/browser';
 import type { BreadcrumbSegment } from '../components/browser';
-import { relativeTime } from '../components/repo/relativeTime';
+import { When } from '../format/When';
 import {
   EmptyState,
   ErrorState,
@@ -152,9 +152,7 @@ export function RepositoryCommitsPage({
               <span className="repo-commits__meta">
                 {commit.author}
                 <span aria-hidden="true"> · </span>
-                <time dateTime={commit.committed_at} title={commit.committed_at}>
-                  {relativeTime(commit.committed_at)}
-                </time>
+                <When at={commit.committed_at} />
               </span>
               <Link
                 className="repo-commits__sha"

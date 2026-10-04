@@ -63,7 +63,7 @@ import {
   isSettled,
   pullStateBadge,
 } from '../components/merge/pullReviewModel';
-import { relativeTime } from '../components/repo/relativeTime';
+import { When } from '../format/When';
 import { PullRequestCockpit } from './PullRequestCockpit';
 import { PullRequestCommits } from './PullRequestCommits';
 import { PullRequestWork } from './PullRequestWork';
@@ -355,7 +355,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           <span aria-hidden="true">·</span>
           <span title={summary.updated_at}>
             {settled ? `${badge.label.toLowerCase()} ` : 'updated '}
-            {relativeTime(summary.updated_at)}
+            <When at={summary.updated_at} />
           </span>
         </span>
         <span className="pr-cockpit__meta">

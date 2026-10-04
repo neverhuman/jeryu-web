@@ -5,6 +5,7 @@
 // role="img" with a text summary, and <title> tooltips on each mark.
 
 import type { ShiftCapacityPoint, ShiftSlotHistory } from '../../api/types';
+import { stampText, tickText } from '../../format/when';
 import { capacityGeometry, layoutSegments, timeTicks } from './shiftModel';
 import { laneLabel, spansManyHosts } from './workersModel';
 
@@ -12,12 +13,6 @@ const WIDTH = 960;
 const LABEL = 170;
 const LANE = 24;
 const AXIS = 20;
-
-function tickLabel(at: Date, spanHours: number): string {
-  return spanHours > 48
-    ? at.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    : at.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-}
 
 export function ShiftTimeline({
   from,
@@ -55,7 +50,7 @@ export function ShiftTimeline({
               y={height - 6}
               textAnchor={tick.frac === 0 ? 'start' : tick.frac === 1 ? 'end' : 'middle'}
             >
-              {tickLabel(tick.at, spanHours)}
+              {tickText(tick.at, spanHours)}
             </text>
           </g>
         ))}
@@ -155,12 +150,12 @@ export function ShiftCapacityChart({
         </g>
         {first ? (
           <text className="shift-chart__axis" x={40} y={height + AXIS - 4}>
-            {new Date(first).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })}
+            {stampText(first)}
           </text>
         ) : null}
         {last ? (
           <text className="shift-chart__axis" x={WIDTH} y={height + AXIS - 4} textAnchor="end">
-            {new Date(last).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })}
+            {stampText(last)}
           </text>
         ) : null}
       </svg>

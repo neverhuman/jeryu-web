@@ -129,6 +129,44 @@ describe('needsYouModel', () => {
     expect(groups[0].items.map((i) => i.id)).toEqual(['a', 'b']);
   });
 
+  it('orders rows by instant, whichever way the API spells the zone', () => {
+    // The same four instants, half with `Z` and half with `+00:00`: compared as
+    // text, 09:30Z would lead and the 09:00 row would sit third.
+    const items = [
+      attentionItem({ id: 'noon', kind: 'x', severity: 'watch', since: '2026-09-19T12:00:00Z' }),
+      attentionItem({ id: 'nine-thirty', kind: 'x', severity: 'watch', since: '2026-09-19T09:30:00Z' }),
+      attentionItem({ id: 'one', kind: 'x', severity: 'watch', since: '2026-09-19T13:00:00+00:00' }),
+      attentionItem({ id: 'nine', kind: 'x', severity: 'watch', since: '2026-09-19T11:00:00+02:00' }),
+    ];
+    const [group] = groupAttention(items);
+    expect(group.items.map((item) => item.id)).toEqual(['nine', 'nine-thirty', 'noon', 'one']);
+    expect(groupSubjects(items).map((g) => g.subjects.map((s) => s.key))).toEqual([
+      ['item:nine', 'item:nine-thirty', 'item:noon', 'item:one'],
+    ]);
+  });
+
+  it('takes the oldest instant of a subject, whichever form it arrived in', () => {
+    const [subject] = attentionSubjects([
+      attentionItem({
+        id: 'later',
+        kind: 'reviewer_stuck',
+        severity: 'critical',
+        repo: 'acme/widgets',
+        pr: 7,
+        since: '2026-09-19T09:30:00Z',
+      }),
+      attentionItem({
+        id: 'oldest',
+        kind: 'pr_changes_requested',
+        severity: 'action',
+        repo: 'acme/widgets',
+        pr: 7,
+        since: '2026-09-19T11:00:00+02:00',
+      }),
+    ]);
+    expect(subject.since).toBe('2026-09-19T11:00:00+02:00');
+  });
+
   it('reserves red for critical and action; watch stays neutral', () => {
     expect(severityTone('critical')).toBe('danger');
     expect(severityTone('action')).toBe('danger');

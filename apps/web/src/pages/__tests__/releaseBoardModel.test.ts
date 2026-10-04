@@ -14,7 +14,6 @@ import {
   listResponse,
 } from '../../test/fixtures/releaseBoard';
 import {
-  agoText,
   BOARD_STALE_AFTER_MS,
   boardColumns,
   boardFreshness,
@@ -177,11 +176,11 @@ describe('freshness', () => {
     expect(BOARD_STALE_AFTER_MS).toBe(15 * 60_000);
   });
 
-  it('says how long ago in plain words', () => {
-    expect(agoText(30_000)).toBe('just now');
-    expect(agoText(12 * 60_000)).toBe('12 min ago');
-    expect(agoText(3 * 3_600_000)).toBe('3 h ago');
-    expect(agoText(48 * 3_600_000)).toBe('2 days ago');
+  it('says how long ago in the one relative wording', () => {
+    expect(boardFreshness(OBSERVED, observed + 30_000).ago).toBe('just now');
+    expect(boardFreshness(OBSERVED, observed + 12 * 60_000).ago).toBe('12 min ago');
+    expect(boardFreshness(OBSERVED, observed + 3 * 3_600_000).ago).toBe('3 h ago');
+    expect(boardFreshness(OBSERVED, observed + 48 * 3_600_000).ago).toBe('2 days ago');
     expect(boardFreshness('not a time', observed)).toEqual({ ageMs: null, stale: false, ago: 'not a time' });
   });
 

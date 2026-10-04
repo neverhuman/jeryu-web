@@ -13,6 +13,7 @@ import {
   lineFromHash,
   splitSourceLines,
 } from './sourceViewModel';
+import { formatCount } from '../../format/number';
 
 export interface SourceViewProps {
   text: string;
@@ -61,8 +62,8 @@ export function SourceView({ text, fontSize, label }: SourceViewProps): JSX.Elem
       </table>
       {source.truncated ? (
         <p className="source-view__note">
-          Showing the first {source.lines.length.toLocaleString()} of{' '}
-          {source.total.toLocaleString()} lines. Use Raw for the whole file.
+          Showing the first {formatCount(source.lines.length)} of{' '}
+          {formatCount(source.total)} lines. Use Raw for the whole file.
         </p>
       ) : null}
     </div>

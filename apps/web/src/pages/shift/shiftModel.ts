@@ -14,6 +14,7 @@ import type {
   ShiftTodo,
   ShiftWorker,
 } from '../../api/types';
+import { compareInstants, rfc3339Seconds, shiftDayKey, utcDayKey } from '../../format/when';
 import { repoRefOf, repoUrl, type RepoRef } from '../repoBrowserModel';
 
 export const SHIFT_STATUSES = ['open', 'claimed', 'done', 'blocked', 'handoff', 'closed'] as const;
@@ -112,7 +113,7 @@ export function compareTodos(a: ShiftTodo, b: ShiftTodo): number {
   return (
     (STATUS_RANK[a.status] ?? 5) - (STATUS_RANK[b.status] ?? 5) ||
     a.priority - b.priority ||
-    a.filed_at.localeCompare(b.filed_at) ||
+    compareInstants(a.filed_at, b.filed_at) ||
     a.id.localeCompare(b.id)
   );
 }
@@ -163,7 +164,7 @@ export function dateInTz(at: Date, tz: string): string {
       day: '2-digit',
     }).format(at);
   } catch {
-    return at.toISOString().slice(0, 10);
+    return utcDayKey(at);
   }
 }
 
@@ -173,10 +174,7 @@ export function dateInTz(at: Date, tz: string): string {
  * night began yesterday.
  */
 export function lastNightDate(now: Date, tz: string): string {
-  const today = dateInTz(now, tz);
-  const d = new Date(`${today}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
+  return shiftDayKey(dateInTz(now, tz), -1);
 }
 
 /**
@@ -241,24 +239,6 @@ export function repoCodeHref(refs: RepoRefs, repo: string): string | null {
 
 export function shortSha(sha: string): string {
   return sha.slice(0, 8);
-}
-
-export function formatAgo(iso: string | null | undefined, now: Date): string {
-  if (!iso) return '—';
-  const at = Date.parse(iso);
-  if (Number.isNaN(at)) return iso;
-  const secs = Math.round((now.getTime() - at) / 1000);
-  const future = secs < 0;
-  const abs = Math.abs(secs);
-  const text =
-    abs < 60
-      ? `${abs}s`
-      : abs < 3600
-        ? `${Math.round(abs / 60)}m`
-        : abs < 86_400
-          ? `${Math.round(abs / 3600)}h`
-          : `${Math.round(abs / 86_400)}d`;
-  return future ? `in ${text}` : `${text} ago`;
 }
 
 /**
@@ -426,8 +406,7 @@ export function todoActions(todo: Pick<ShiftTodo, 'status' | 'block_kind'>): {
  * takes: UTC, to the second. An empty or unparsable value is no instant.
  */
 export function untilRfc3339(local: string): string | null {
-  const at = new Date(local.trim());
-  return Number.isNaN(at.getTime()) ? null : `${at.toISOString().slice(0, 19)}Z`;
+  return rfc3339Seconds(local.trim());
 }
 
 /** What the "until" input starts at: `days` from `now`, in the reader's zone. */

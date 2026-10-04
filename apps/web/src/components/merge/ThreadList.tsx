@@ -6,6 +6,7 @@
 
 import { MessageSquare, MessageSquareOff } from 'lucide-react';
 
+import { compareInstants } from '../../format/when';
 import type { ReviewThread } from '../../api/types';
 
 import './merge.css';
@@ -33,7 +34,7 @@ export function ThreadList({
   // Sort: unresolved first, then by most-recent update.
   const sorted = [...threads].sort((a, b) => {
     if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
-    return (b.updated_at ?? '').localeCompare(a.updated_at ?? '');
+    return compareInstants(b.updated_at, a.updated_at);
   });
 
   return (

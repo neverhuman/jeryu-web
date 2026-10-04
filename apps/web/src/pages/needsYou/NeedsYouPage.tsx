@@ -23,7 +23,7 @@ import {
   usePipelineNudge,
 } from '../../hooks/usePipeline';
 import { useShiftWorkers } from '../../hooks/useShift';
-import { formatAgo } from '../shift/shiftModel';
+import { relativeText } from '../../format/when';
 import { AttentionRow, useRepoFamilies, type FamilyProps } from './AttentionRow';
 import {
   groupSubjects,
@@ -88,7 +88,7 @@ export function NeedsYouPage(): JSX.Element {
               <EmptyState
                 icon={CircleCheck}
                 title="Nothing needs you."
-                description={`Checked ${formatAgo(attention.data.generated_at, now)}.`}
+                description={`Checked ${relativeText(attention.data.generated_at, now)}.`}
               />
               <SystemPulse now={now} />
             </>
@@ -172,7 +172,7 @@ function SystemPulse({ now }: { now: Date }): JSX.Element | null {
       runners: runners.data?.local,
       lastEvent: event ? { ts: event.ts, summary: event.summary } : undefined,
     },
-    (iso) => formatAgo(iso, now)
+    (iso) => relativeText(iso, now)
   );
   if (!line) return null;
   return (

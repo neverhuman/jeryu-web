@@ -2,6 +2,7 @@
 
 import type { GraphEdge, InsightSeverity } from '../../api/types';
 import type { OperatorGraphNode } from '../intelligenceGraphModel';
+import { formatCount } from '../../format/number';
 
 /**
  * How far a `depends_on` edge is from the version its consumer could pin.
@@ -60,7 +61,7 @@ export function edgeKindLabel(kind: string): string {
 
 /** A score with thousands separators, so 22017846 is legible at a glance. */
 export function formatScore(score: number): string {
-  return Math.round(score).toLocaleString('en-US');
+  return formatCount(Math.round(score));
 }
 
 /**

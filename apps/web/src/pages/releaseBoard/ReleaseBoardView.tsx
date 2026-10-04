@@ -45,6 +45,7 @@ import {
 
 import '../../components/family/FamilyPills.css';
 import './ReleaseBoard.css';
+import { absoluteText, rfc3339Seconds } from '../../format/when';
 
 export const BOARD_NEEDS_ADMIN = 'The release board needs an admin session.';
 export const BOARD_NONE_REPORTED =
@@ -255,7 +256,7 @@ function BoardHeader({ board, fetchedAt }: { board: ReleaseBoard; fetchedAt: num
         {board.summary}
       </p>
       <p className="release-board__muted" data-testid="release-board-observed">
-        <time dateTime={board.observed_at} title={board.observed_at}>
+        <time dateTime={rfc3339Seconds(board.observed_at) ?? undefined} title={absoluteText(board.observed_at)}>
           {observedLine(board, fetchedAt)}
         </time>
       </p>

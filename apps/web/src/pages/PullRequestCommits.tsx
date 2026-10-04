@@ -10,7 +10,7 @@ import { ChevronDown, ChevronRight, GitCommitHorizontal } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 
 import { ErrorState, LoadingState } from '../components/state';
-import { relativeTime } from '../components/repo/relativeTime';
+import { When } from '../format/When';
 import {
   commitAuthorName,
   commitDate,
@@ -138,9 +138,7 @@ function CommitRow({
           {at ? (
             <>
               <span aria-hidden="true"> · </span>
-              <time dateTime={at} title={at}>
-                {relativeTime(at)}
-              </time>
+              <When at={at} />
             </>
           ) : null}
         </span>

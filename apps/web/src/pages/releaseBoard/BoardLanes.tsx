@@ -38,6 +38,7 @@ import {
   targetStateText,
   type StageOverlay,
 } from './model';
+import { When } from '../../format/When';
 
 export function BoardLanes({
   board,
@@ -295,7 +296,7 @@ function StageDetail({
       {overlay ? (
         <p className="release-board__muted">
           The forge reported <code>{overlay.version}</code> at{' '}
-          <time dateTime={overlay.reportedAt}>{overlay.reportedAt}</time>, after this snapshot
+          <When at={overlay.reportedAt} />, after this snapshot
           was observed. The snapshot showed <code>{stage.version ?? 'nothing'}</code>; targets
           below are from the snapshot.
         </p>

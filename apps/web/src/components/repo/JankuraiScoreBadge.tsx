@@ -18,7 +18,7 @@
 
 import { Gauge } from 'lucide-react';
 
-import { relativeTime } from './relativeTime';
+import { relativeText } from '../../format/when';
 import './repo.css';
 
 /** Stand-in for the number on unscored rows, so the pill stays the same shape. */
@@ -36,7 +36,7 @@ export interface JankuraiScoreBadgeProps {
 type Variant = 'good' | 'warn' | 'danger';
 
 function scoredSuffix(scoredAt: string | null | undefined): string {
-  return scoredAt ? ` · scored ${relativeTime(scoredAt)}` : '';
+  return scoredAt ? ` · scored ${relativeText(scoredAt)}` : '';
 }
 
 function resolve(

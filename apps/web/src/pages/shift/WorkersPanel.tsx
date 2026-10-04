@@ -14,7 +14,8 @@ import { EmptyState, LoadingState } from '../../components/state';
 import { useShiftWorkers, useShiftWorkersHistory } from '../../hooks/useShift';
 import { ShiftError } from './shiftCommon';
 import { ShiftCapacityChart, ShiftTimeline } from './ShiftCharts';
-import { formatAgo, splitWorkers } from './shiftModel';
+import { splitWorkers } from './shiftModel';
+import { When } from '../../format/When';
 import { splitSupervisors } from './workersModel';
 import { todoHref } from './workPaths';
 
@@ -184,8 +185,8 @@ function WorkersTable({ workers }: { workers: ShiftWorker[] }): JSX.Element {
               <td>
                 {w.todo_id ? <Link to={todoHref(w.todo_id)}>{w.todo_id}</Link> : '—'}
               </td>
-              <td>{w.lease_until ? formatAgo(w.lease_until, now) : '—'}</td>
-              <td>{formatAgo(w.last_seen, now)}</td>
+              <td>{w.lease_until ? <When at={w.lease_until} now={now} /> : '—'}</td>
+              <td><When at={w.last_seen} now={now} /></td>
             </tr>
           ))}
         </tbody>

@@ -14,7 +14,7 @@ import type { FamilyRollup } from './familyRollup';
 import { formatFamilyName } from './familyRollup';
 
 import { RepoHealthPill } from './RepoHealthPill';
-import { relativeTime } from './relativeTime';
+import { When } from '../../format/When';
 import './repo.css';
 
 export interface RepoFamilyCardProps {
@@ -76,7 +76,7 @@ export function RepoFamilyCard({ family }: RepoFamilyCardProps): JSX.Element {
           </span>
         ) : null}
         <span className="repo-card__meta-item" title={family.updatedAt}>
-          {relativeTime(family.updatedAt)}
+          <When at={family.updatedAt} />
         </span>
       </div>
     </Link>

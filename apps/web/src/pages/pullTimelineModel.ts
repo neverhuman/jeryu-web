@@ -1,3 +1,4 @@
+import { compareInstants } from '../format/when';
 import type { PullRequestSummary } from '../api/types';
 import {
   ladderDetail,
@@ -158,7 +159,7 @@ function reviewDetail(pr: PullRequestSummary): string {
 /** Open PRs first, then most recently updated. */
 export function timelineOrder(a: PullRequestSummary, b: PullRequestSummary): number {
   const rank = (pr: PullRequestSummary) => (pr.state === 'open' ? 0 : 1);
-  return rank(a) - rank(b) || b.updated_at.localeCompare(a.updated_at) || b.number - a.number;
+  return rank(a) - rank(b) || compareInstants(b.updated_at, a.updated_at) || b.number - a.number;
 }
 
 export interface PullCounts {

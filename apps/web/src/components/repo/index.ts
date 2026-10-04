@@ -12,7 +12,6 @@ export {
   partitionByFamily,
 } from './familyRollup';
 export type { FamilyRollup } from './familyRollup';
-export { relativeTime } from './relativeTime';
 export { RepoHealthPill } from './RepoHealthPill';
 export type { RepoHealthPillProps } from './RepoHealthPill';
 export {

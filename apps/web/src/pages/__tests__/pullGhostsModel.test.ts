@@ -128,7 +128,7 @@ describe('pullGhostGroups when', () => {
     const [group] = groups([
       todo('a', { status: 'claimed', lease_live: true, lease_until: '2026-09-20T04:14:00Z', claim_by: 'alton/w2' }),
     ]);
-    expect(group.rows[0]?.when).toBe('hands off in 14m');
+    expect(group.rows[0]?.when).toBe('hands off in 14 min');
     expect(group.rows[0]?.worker).toBe('alton/w2');
   });
 

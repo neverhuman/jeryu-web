@@ -5,6 +5,7 @@
 // the right that stays put while you move between them.
 
 import { failingLabel } from './repoStatusModel';
+import { formatCount } from '../format/number';
 
 export { ancestorsOf } from '../components/browser/fileTreePaths';
 
@@ -126,7 +127,7 @@ export function openPullsLabel(count: number): string {
 /** "1 commit" / "1,204 commits" on the ref the page is showing. */
 export function commitCountLabel(total: number): string {
   const safe = Math.max(0, Math.trunc(total));
-  return `${safe.toLocaleString('en-US')} commit${safe === 1 ? '' : 's'}`;
+  return `${formatCount(safe)} commit${safe === 1 ? '' : 's'}`;
 }
 
 /** "12 branches · 3 tags"; a kind with none of them is left out. */

@@ -1,6 +1,7 @@
 // needsYouModel.ts — pure helpers for the "Needs you" page and its nav badge.
 
 import type { AttentionItem, AttentionResponse, AttentionSeverity } from '../../api/types';
+import { compareInstants } from '../../format/when';
 
 /** Where "what needs a human" lives; every other surface links here. */
 export const NEEDS_YOU_PATH = '/needs-you';
@@ -119,7 +120,7 @@ function byPrecedence(a: AttentionItem, b: AttentionItem): number {
   return (
     kindRank(a.kind) - kindRank(b.kind) ||
     severityRank(a) - severityRank(b) ||
-    (a.since ?? '\uffff').localeCompare(b.since ?? '\uffff') ||
+    compareInstants(a.since, b.since) ||
     a.id.localeCompare(b.id)
   );
 }
@@ -146,13 +147,13 @@ export function attentionSubjects(items: AttentionItem[]): AttentionSubject[] {
         primary,
         also,
         severity: SEVERITIES[Math.min(...group.map(severityRank))],
-        since: dated.length > 0 ? dated.sort()[0] : null,
+        since: dated.length > 0 ? [...dated].sort(compareInstants)[0] : null,
       };
     })
     .sort(
       (a, b) =>
         SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity) ||
-        (a.since ?? '\uffff').localeCompare(b.since ?? '\uffff') ||
+        compareInstants(a.since, b.since) ||
         a.key.localeCompare(b.key)
     );
 }
@@ -195,7 +196,7 @@ export function groupAttention(items: AttentionItem[]): AttentionGroup[] {
       .filter((item) => severityOf(item) === severity)
       .sort(
         (a, b) =>
-          (a.since ?? '￿').localeCompare(b.since ?? '￿') || a.id.localeCompare(b.id)
+          compareInstants(a.since, b.since) || a.id.localeCompare(b.id)
       ),
   })).filter((group) => group.items.length > 0);
 }

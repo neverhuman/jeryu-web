@@ -17,6 +17,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import type { ShiftBranch, ShiftFamily, ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
+import { relativeText } from '../../format/when';
 import { FamilyPill, FamilyStrip } from '../../components/family/FamilyPills';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
@@ -36,7 +37,6 @@ import {
   commitHref,
   countNeedsHuman,
   filterShiftTodos,
-  formatAgo,
   formatCost,
   todoCost,
   isLastNight,
@@ -459,7 +459,7 @@ function TodoRow({
           )}
         </td>
         <td>
-          {todo.lease_live && todo.lease_until ? `lease ${formatAgo(todo.lease_until, now)}` : null}
+          {todo.lease_live && todo.lease_until ? `lease ${relativeText(todo.lease_until, now)}` : null}
           {attempts ? (
             <span className={attempts.failing ? 'shift__attempts is-failing' : 'shift__attempts'}>
               {attempts.text}

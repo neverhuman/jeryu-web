@@ -18,7 +18,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type { RepositorySummary } from '../api/types';
-import { relativeTime } from '../components/repo/relativeTime';
+import { When } from '../format/When';
 import { RepoFailingChecks } from '../components/repo/RepoFailingChecks';
 import { useRefs } from '../hooks/useRefs';
 import { useRepoCommits } from '../hooks/useRepoCommits';
@@ -66,9 +66,7 @@ export function RepoCommitSummary({
         <span className="repo-browser__commit-subject">{head.summary}</span>
         <span className="repo-browser__fact">
           {head.author} ·{' '}
-          <time dateTime={head.committed_at} title={head.committed_at}>
-            {relativeTime(head.committed_at)}
-          </time>
+          <When at={head.committed_at} />
         </span>
       </span>
     </p>

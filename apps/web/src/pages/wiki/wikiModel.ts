@@ -10,6 +10,7 @@
 // Line numbers are 1-based and always count lines of the whole file, so a
 // section can be matched against `git blame` of that file directly.
 
+import { compareInstants } from '../../format/when';
 import type { BlameCommit, BlameResponse } from '../../api/types/wiki';
 
 export const WIKI_PATH = '/wiki';
@@ -347,7 +348,7 @@ export function sectionNote(
   const commits = [...touching]
     .map((sha) => bySha.get(sha))
     .filter((commit): commit is BlameCommit => commit !== undefined)
-    .sort((a, b) => b.authored_at.localeCompare(a.authored_at));
+    .sort((a, b) => compareInstants(b.authored_at, a.authored_at));
   if (commits.length === 0) return null;
   return {
     latest: commits[0],
@@ -356,9 +357,3 @@ export function sectionNote(
   };
 }
 
-/** `Sep 12, 2026`: a fixed, readable date for "added" notes. */
-export function shortDate(iso: string): string {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return iso;
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}

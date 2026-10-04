@@ -644,6 +644,13 @@ a.global-header__live:hover {
   white-space: nowrap;
 }
 
+.activity-dock__zone {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+}
+
 .activity-dock__meta {
   font-family: var(--font-mono);
   color: var(--color-fg-muted);

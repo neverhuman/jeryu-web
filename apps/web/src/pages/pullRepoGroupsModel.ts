@@ -13,6 +13,7 @@
 // States are derived, not stored: a pull request's state is the furthest point
 // it has reached (see `pullStateOf`).
 
+import { compareInstants } from '../format/when';
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
 import { queueHref } from './shift/workPaths';
@@ -561,7 +562,7 @@ function declaredSuccessor(pr: PullRequestSummary): number | null {
 
 /** Newest activity first; a tie falls back to the higher number. */
 function newestFirst(a: TimelineRow, b: TimelineRow): number {
-  return b.pr.updated_at.localeCompare(a.pr.updated_at) || b.pr.number - a.pr.number;
+  return compareInstants(b.pr.updated_at, a.pr.updated_at) || b.pr.number - a.pr.number;
 }
 
 /** Repositories with work in flight lead, then the one something happened in most recently. */

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { clockText } from '../../format/when';
+
 import {
   ACTIVITY_CHIPS,
   activeChip,
@@ -10,7 +12,6 @@ import {
   eventTone,
   filtersToQuery,
   foldEchoes,
-  formatClock,
   formatDay,
   groupByDay,
   hasDetail,
@@ -111,15 +112,17 @@ describe('activityModel', () => {
     expect(formatSeconds(42)).toBe('42s');
     expect(formatSeconds(114)).toBe('1m 54s');
     expect(formatSeconds(3720)).toBe('1h 2m');
-    expect(formatClock('2026-09-19T13:03:26Z')).toBe('13:03:26');
-    expect(formatClock('nonsense')).toBe('nonsense');
+    // The suite's zone is America/New_York: 13:03 UTC is 09:03 for the reader.
+    expect(clockText('2026-09-19T13:03:26Z')).toBe('09:03:26');
+    expect(clockText('nonsense')).toBe('nonsense');
   });
 
   it('names a day in words and groups the feed into days', () => {
     const now = new Date('2026-09-19T14:00:00Z');
-    expect(formatDay('2026-09-19T13:03:26Z', now)).toBe('Today · 19 Sep 2026');
-    expect(formatDay('2026-09-18T23:59:00Z', now)).toBe('Yesterday · 18 Sep 2026');
-    expect(formatDay('2026-09-16T08:00:00Z', now)).toBe('16 Sep 2026');
+    expect(formatDay('2026-09-19T13:03:26Z', now)).toBe('Today · 19 Sep 2026 · EDT');
+    // 23:59 UTC is still the 18th at 19:59 for the reader.
+    expect(formatDay('2026-09-18T23:59:00Z', now)).toBe('Yesterday · 18 Sep 2026 · EDT');
+    expect(formatDay('2026-09-16T08:00:00Z', now)).toBe('16 Sep 2026 · EDT');
     expect(formatDay('nonsense', now)).toBe('nonsense');
 
     const older = pipelineEvent({ seq: 2, ts: '2026-09-18T23:00:00Z', kind: 'todo.claimed' });

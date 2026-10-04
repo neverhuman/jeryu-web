@@ -18,6 +18,7 @@ import { ActionButton } from '../action/ActionButton';
 import type { MergePassport, MergePassportBlocker } from '../../api/types';
 
 import './merge.css';
+import { When } from '../../format/When';
 
 /** Per-code human translation. Keys mirror §35.2.4 canonical gate list. */
 const GATE_EXPLANATIONS: Record<
@@ -168,7 +169,7 @@ export function MergeGatePanel({
           <p className="merge-gate__subtitle">
             <span className="merge-gate__sha">{passport.head_sha.slice(0, 7)}</span>
             <span className="merge-gate__meta">
-              {' '}· evaluated {new Date(passport.evaluated_at).toLocaleString()}
+              {' '}· evaluated <When at={passport.evaluated_at} />
             </span>
           </p>
         </div>

@@ -61,6 +61,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
 import './ReleasesPage.css';
+import { When } from '../format/When';
 
 export const DEFAULT_RELEASE_REPO = 'jeryu/jeryu-deploy';
 
@@ -372,9 +373,7 @@ function EnvironmentRowView({ row, repoId }: { row: EnvironmentRow; repoId: stri
         ) : null}
       </td>
       <td>
-        <time dateTime={row.current.deployedAt} title={row.current.deployedAt}>
-          {relative(row.current.deployedAt)}
-        </time>{' '}
+        <When at={row.current.deployedAt} />{' '}
         by {row.current.deployedBy}
       </td>
       <td data-testid={`releases-behind-${row.name}`}>
@@ -457,17 +456,6 @@ function StagedRelease(): JSX.Element | null {
       ) : null}
     </section>
   );
-}
-
-function relative(iso: string): string {
-  const seconds = Math.round((Date.now() - Date.parse(iso)) / 1000);
-  if (!Number.isFinite(seconds)) return iso;
-  if (seconds < 90) return 'just now';
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 90) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 36) return `${hours} h ago`;
-  return `${Math.round(hours / 24)} days ago`;
 }
 
 /**

@@ -5,6 +5,9 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    // A fixed, non-UTC zone: the UI shows instants in the reader's zone, so the
+    // suite only proves that if the suite's own zone is not UTC.
+    env: { TZ: 'America/New_York' },
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],

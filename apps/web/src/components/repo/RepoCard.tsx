@@ -23,7 +23,7 @@ import { MirrorStatusBadge } from './MirrorStatusBadge';
 import { RepoHealthPill } from './RepoHealthPill';
 import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoRoleBadge } from './RepoRoleBadge';
-import { relativeTime } from './relativeTime';
+import { When } from '../../format/When';
 import './repo.css';
 
 export interface RepoCardProps {
@@ -96,7 +96,7 @@ export function RepoCard({ repo }: RepoCardProps): JSX.Element {
           className="repo-card__meta-item"
           title={repo.updated_at}
         >
-          {relativeTime(repo.updated_at)}
+          <When at={repo.updated_at} />
         </span>
       </div>
       <div className="repo-card__actions">

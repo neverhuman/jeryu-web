@@ -7,6 +7,7 @@
 // to the commit that last touched those lines.
 
 import { repoFrontPath } from './repoBrowserModel';
+import { formatCount } from '../format/number';
 
 /** Commits per page: enough to scan, small enough to render at once. */
 export const COMMITS_PAGE_SIZE = 30;
@@ -43,8 +44,7 @@ export function historyRangeLabel(
 ): string {
   if (shown === 0) return 'No commits';
   const first = (page - 1) * limit + 1;
-  const count = total.toLocaleString('en-US');
-  return `Commits ${first.toLocaleString('en-US')}–${(first + shown - 1).toLocaleString('en-US')} of ${count}`;
+  return `Commits ${formatCount(first)}–${formatCount(first + shown - 1)} of ${formatCount(total)}`;
 }
 
 /** What the list says it is showing: the whole ref, or one path of it. */

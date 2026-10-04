@@ -26,7 +26,8 @@ import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import { useAttentionAction } from '../../hooks/useAttentionAction';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useShiftTodoAction } from '../../hooks/useShift';
-import { formatAgo, untilInputDefault, untilRfc3339 } from '../shift/shiftModel';
+import { untilInputDefault, untilRfc3339 } from '../shift/shiftModel';
+import { When } from '../../format/When';
 import {
   acknowledgeTarget,
   alsoLine,
@@ -87,9 +88,7 @@ export function AttentionRow({
             {subject.since ? (
               <>
                 {' · '}
-                <time dateTime={subject.since} title={subject.since}>
-                  {formatAgo(subject.since, now)}
-                </time>
+                <When at={subject.since} now={now} />
               </>
             ) : null}
           </span>

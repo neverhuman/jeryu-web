@@ -25,7 +25,7 @@ import {
   shortSha,
   type AutomationTone,
 } from '../../pages/repoAutomationModel';
-import { relativeTime } from './relativeTime';
+import { When } from '../../format/When';
 
 import './repoAutomation.css';
 
@@ -35,15 +35,6 @@ export interface RepoAutomationPanelProps {
 
 function toneClass(tone: AutomationTone): string {
   return `repo-automation__row repo-automation__row--${tone}`;
-}
-
-function When({ at }: { at?: string | null }): JSX.Element {
-  if (!at) return <span className="repo-automation__when">never</span>;
-  return (
-    <time className="repo-automation__when" dateTime={at} title={at}>
-      {relativeTime(at)}
-    </time>
-  );
 }
 
 export function RepoAutomationPanel({
@@ -125,7 +116,7 @@ export function RepoAutomationPanel({
                       {shortSha(check.lastHeadSha)}
                     </code>
                   ) : null}
-                  <When at={check.lastRunAt} />
+                  <When at={check.lastRunAt} fallback="never" className="repo-automation__when" />
                   {check.detailsUrl ? (
                     <a
                       href={check.detailsUrl}
@@ -167,7 +158,7 @@ export function RepoAutomationPanel({
                       {lastRunText(actor)}
                     </span>
                   ) : null}
-                  <When at={actor.lastRun?.at} />
+                  <When at={actor.lastRun?.at} fallback="never" className="repo-automation__when" />
                 </li>
               ))}
             </ul>
@@ -185,7 +176,7 @@ export function RepoAutomationPanel({
                   <span className="repo-automation__state">
                     granted by {grant.grantedBy}
                   </span>
-                  <When at={grant.grantedAt} />
+                  <When at={grant.grantedAt} fallback="never" className="repo-automation__when" />
                 </li>
               ))}
             </ul>
@@ -237,7 +228,7 @@ export function RepoAutomationPanel({
                     {shortSha(mirror.lastPushedSha)}
                   </code>
                 ) : null}
-                <When at={mirror.lastPushedAt} />
+                <When at={mirror.lastPushedAt} fallback="never" className="repo-automation__when" />
                 {mirror.lastError ? (
                   <span className="repo-automation__state">
                     {mirror.lastError}
