@@ -25,6 +25,7 @@ import type {
   QualityGateOverview,
   QualityGateRuleDetail,
 } from '../api/types';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export const QUALITY_GATE_KEY = ['quality-gate'] as const;
 
@@ -46,6 +47,7 @@ export function useQualityGateOverview(
     queryKey: [...QUALITY_GATE_KEY, 'overview', days],
     queryFn: ({ signal }) =>
       apiGet<QualityGateOverview>(endpoints.qualityGateOverview(days), { signal }),
+    ...OPERATOR_REFRESH,
     staleTime: 30_000,
     retry: false,
   });
@@ -61,6 +63,7 @@ export function useQualityGateRule(
     queryFn: ({ signal }) =>
       apiGet<QualityGateRuleDetail>(endpoints.qualityGateRule(rule, days), { signal }),
     enabled: rule !== '',
+    ...OPERATOR_REFRESH,
     staleTime: 30_000,
     retry: false,
   });
@@ -76,6 +79,7 @@ export function useQualityGateHead(
     queryFn: ({ signal }) =>
       apiGet<QualityGateHeadDetail>(endpoints.qualityGateHead(repo, sha), { signal }),
     enabled: repo !== '' && sha !== '',
+    ...OPERATOR_REFRESH,
     staleTime: 30_000,
     retry: false,
   });

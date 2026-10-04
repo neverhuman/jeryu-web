@@ -113,23 +113,6 @@
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.wiki-doc__crumbs {
-  font-size: var(--font-size-sm);
-  color: var(--color-fg-muted);
-}
-
-.wiki-doc__crumbs a {
-  color: inherit;
-}
-
-.wiki-doc__title {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-fg-primary);
-}
-
 .wiki-doc__meta {
   margin: 0;
   font-size: var(--font-size-sm);
@@ -330,21 +313,11 @@
 
 /* Links inside a line of text are underlined, not told apart by colour alone. */
 .wiki-doc__meta a,
-.wiki-doc__crumbs a,
 .wiki-note__since a,
 .wiki__hint a,
 .wiki-invite p a {
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-/* Top row: breadcrumb on the left; the page's date and status on the right. */
-.wiki-doc__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
 }
 
 .wiki-doc__badges {

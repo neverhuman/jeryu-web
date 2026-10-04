@@ -385,9 +385,9 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   return (
     <div className="page page--full pr-page" data-testid="pr-page">
       <div className="pr-cockpit__header">
-        <h1 className="pr-cockpit__title">
+        <h2 className="pr-cockpit__title">
           Pull request #{summary.number}: {summary.title}
-        </h1>
+        </h2>
         <span
           className={`pr-cockpit__state pr-cockpit__state--${badge.tone}`}
           data-testid="pr-state-badge"

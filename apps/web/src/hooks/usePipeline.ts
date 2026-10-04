@@ -25,6 +25,7 @@ import type {
 } from '../api/types';
 import { useRealtimeStore } from '../stores/realtimeStore';
 import { useRealtime } from './useRealtime';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export const PIPELINE_KEY = ['pipeline'] as const;
 export const ATTENTION_QUERY_KEY: readonly string[] = [...PIPELINE_KEY, 'attention'];
@@ -112,6 +113,7 @@ export function useAttention(enabled = true): UseQueryResult<AttentionResponse, 
     queryKey: ATTENTION_QUERY_KEY,
     queryFn: ({ signal }) => apiGet<AttentionResponse>(endpoints.attention(), { signal }),
     enabled,
+    ...OPERATOR_REFRESH,
     staleTime: 5_000,
     refetchInterval: (query) => (query.state.error ? false : 15_000),
     retry: false,
@@ -128,6 +130,7 @@ export function usePipelineEvents(
     queryFn: ({ signal }) =>
       apiGet<PipelineEventsResponse>(endpoints.events(query), { signal }),
     enabled: options?.enabled ?? true,
+    ...OPERATOR_REFRESH,
     staleTime: 2_000,
     refetchInterval: (q) => (q.state.error ? false : (options?.refetchInterval ?? false)),
     retry: false,
@@ -163,6 +166,7 @@ export function usePins(enabled = true): UseQueryResult<PinsResponse, Error> {
     queryKey: PINS_QUERY_KEY,
     queryFn: ({ signal }) => apiGet<PinsResponse>(endpoints.pins(), { signal }),
     enabled,
+    ...OPERATOR_REFRESH,
     staleTime: 30_000,
     refetchInterval: (query) => (query.state.error ? false : 60_000),
     retry: false,

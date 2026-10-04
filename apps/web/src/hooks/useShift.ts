@@ -40,6 +40,7 @@ import type {
   ShiftWorkersHistoryResponse,
   ShiftWorkersResponse,
 } from '../api/types';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 const SHIFT_KEY = ['shift'] as const;
 
@@ -48,6 +49,7 @@ export function useShiftFamilies(): UseQueryResult<ShiftFamiliesResponse, Error>
     queryKey: [...SHIFT_KEY, 'families'],
     queryFn: ({ signal }) =>
       apiGet<ShiftFamiliesResponse>(endpoints.shiftFamilies(), { signal }),
+    ...OPERATOR_REFRESH,
     staleTime: 60_000,
     retry: false,
   });
@@ -60,6 +62,7 @@ export function useShiftTodos(
     queryKey: [...SHIFT_KEY, 'todos', family ?? ''],
     // Every page of the list: a todo past the first 100 rows is still a todo.
     queryFn: ({ signal }) => fetchShiftTodos(family, signal),
+    ...OPERATOR_REFRESH,
     staleTime: 10_000,
     refetchInterval: 30_000,
     retry: false,
@@ -73,6 +76,7 @@ export function useShiftShifts(
     queryKey: [...SHIFT_KEY, 'shifts', family ?? ''],
     queryFn: ({ signal }) =>
       apiGet<ShiftShiftsResponse>(endpoints.shiftShifts(family), { signal }),
+    ...OPERATOR_REFRESH,
     staleTime: 10_000,
     // A review PR opened by a worker or by `todoq shift pr` shows up on its own.
     refetchInterval: 30_000,
@@ -101,6 +105,7 @@ export function useShiftShiftsByFamily(families: string[]): {
       queryKey: [...SHIFT_KEY, 'shifts', family],
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         apiGet<ShiftShiftsResponse>(endpoints.shiftShifts(family), { signal }),
+      ...OPERATOR_REFRESH,
       staleTime: 10_000,
       // A review PR opened by a worker or by `todoq shift pr` shows up on its own.
       refetchInterval: 30_000,
@@ -121,6 +126,7 @@ export function useShiftWorkers(): UseQueryResult<ShiftWorkersResponse, Error> {
     queryKey: [...SHIFT_KEY, 'workers'],
     queryFn: ({ signal }) =>
       apiGet<ShiftWorkersResponse>(endpoints.shiftWorkers(), { signal }),
+    ...OPERATOR_REFRESH,
     staleTime: 10_000,
     refetchInterval: 15_000,
     retry: false,
@@ -136,6 +142,7 @@ export function useShiftWorkersHistory(
       apiGet<ShiftWorkersHistoryResponse>(endpoints.shiftWorkersHistory(hours), {
         signal,
       }),
+    ...OPERATOR_REFRESH,
     staleTime: 60_000,
     refetchInterval: 120_000,
     retry: false,

@@ -18,25 +18,6 @@
   padding: var(--space-6) var(--space-7) 0;
 }
 
-.repo-shell__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.repo-shell__owner {
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-lg);
-}
-
-.repo-shell__title {
-  margin: 0;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: -0.01em;
-}
-
 .repo-tabs {
   display: flex;
   gap: var(--space-5);

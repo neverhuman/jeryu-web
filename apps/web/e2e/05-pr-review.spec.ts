@@ -58,11 +58,11 @@ test.describe('PR cockpit (W-T-13)', () => {
       `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}`
     );
 
-    // The not-implemented envelope renders `Pull request #42` as its <h1>;
-    // the Phase 3 cockpit renders the PR title as the <h1>. Either is
-    // acceptable.
-    const heading = page.locator('h1', {
-      hasText: new RegExp(`Pull request #${PR_NUMBER}|PR #${PR_NUMBER}|Add JeRyu Phase 3 backend`, 'i'),
+    // The not-implemented envelope renders `Pull request #42` as a heading;
+    // the Phase 3 cockpit heads its part of the repository page with the PR
+    // title (the repository is the page's h1). Either is acceptable.
+    const heading = page.getByRole('heading', {
+      name: new RegExp(`Pull request #${PR_NUMBER}|PR #${PR_NUMBER}|Add JeRyu Phase 3 backend`, 'i'),
     });
     const errorState = page.locator('[role="alert"]');
 

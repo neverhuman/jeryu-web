@@ -5,6 +5,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { ControlPlaneSnapshot } from '../api/types';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export const CONTROL_PLANE_QUERY_KEY: readonly ['control-plane', 'status'] = [
   'control-plane',
@@ -25,8 +26,8 @@ export function useControlPlane(options?: {
     queryKey: limit === undefined ? CONTROL_PLANE_QUERY_KEY : [...CONTROL_PLANE_QUERY_KEY, limit],
     queryFn: ({ signal }) =>
       apiGet<ControlPlaneSnapshot>(endpoints.controlPlaneStatus(limit), { signal }),
+    ...OPERATOR_REFRESH,
     staleTime: 15_000,
     refetchInterval: options?.refetchInterval ?? false,
-    refetchOnWindowFocus: true,
   });
 }

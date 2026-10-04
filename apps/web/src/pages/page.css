@@ -45,13 +45,6 @@
   color: var(--color-fg-primary);
 }
 
-.page__title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
 .page__subtitle {
   margin: 0;
   color: var(--color-fg-secondary);
@@ -168,23 +161,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.page__welcome {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-}
-
-.page__welcome-greeting {
-  color: var(--color-fg-muted);
-  font-size: var(--font-size-md);
-}
-
-.page__welcome-login {
-  font-size: var(--font-size-md);
-  color: var(--color-fg-primary);
-  font-family: var(--font-mono);
 }
 
 /* Design token discipline: admin access controls use tokenized color, spacing,

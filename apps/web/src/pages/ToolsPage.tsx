@@ -10,6 +10,7 @@
 
 import { Radar, Sparkles } from 'lucide-react';
 
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import {
   useToolFinderDashboard,
@@ -40,9 +41,13 @@ export function ToolsPage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="tools-page">
-      <header className="page__header tools-header">
-        <div className="tools-header__row">
-          <h1 className="page__title">Shared tools</h1>
+      <PageHeader
+        title="Shared tools"
+        className="tools-header"
+        testId="shared-tools-header"
+        freshness={queryFreshness(dashboard)}
+        subtitle="Duplicated code across every split family, ranked by the lines a shared tool would save. Propose a cluster to send it to Proposals; the scan re-runs on its own every day."
+        actions={
           <div className="tools-header__scan">
             {dashboard.data && !scanFailed ? (
               <span className="tools-header__meta">
@@ -63,18 +68,14 @@ export function ToolsPage(): JSX.Element {
               {scan.isRunning ? 'Scanning…' : 'Run live scan'}
             </button>
           </div>
-        </div>
-        <p className="page__subtitle">
-          Duplicated code across every split family, ranked by the lines a
-          shared tool would save. Propose a cluster to send it to Proposals;
-          the scan re-runs on its own every day.
-        </p>
+        }
+      >
         <UseThisWhen id="nav.shared-tools" />
+        <SharedToolsTabs />
         {scan.startError ? (
           <p className="tools-scan__error">{scan.startError.message}</p>
         ) : null}
-      </header>
-      <SharedToolsTabs />
+      </PageHeader>
 
       {showProgress && scan.status ? (
         <ScanProgressPanel status={scan.status} feed={scan.feed} />

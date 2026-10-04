@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { MapPinOff } from 'lucide-react';
 
 import { ActionButton } from '../components/action/ActionButton';
+import { PageHeader } from '../components/pageHeader';
 import { EmptyState } from '../components/state';
 import { usePageTitle } from '../hooks/usePageTitle';
 
@@ -23,10 +24,11 @@ export function NotFoundPage({ movedTo }: { movedTo?: MovedTo } = {}): JSX.Eleme
   if (movedTo) {
     return (
       <div className="page">
+        <PageHeader title="Page not found" testId="not-found-header" />
         <EmptyState
           icon={MapPinOff}
-          title="Page not found"
-          description={`${location.pathname} no longer has its own page. ${movedTo.what}`}
+          title={`${location.pathname} no longer has its own page.`}
+          description={movedTo.what}
           action={
             <ActionButton variant="primary" onClick={() => navigate(movedTo.to)}>
               {movedTo.label}
@@ -38,10 +40,11 @@ export function NotFoundPage({ movedTo }: { movedTo?: MovedTo } = {}): JSX.Eleme
   }
   return (
     <div className="page">
+      <PageHeader title="Page not found" testId="not-found-header" />
       <EmptyState
         icon={MapPinOff}
-        title="Page not found"
-        description={`We couldn't find ${location.pathname}. The link may be outdated, or the resource may have been moved.`}
+        title={`We couldn't find ${location.pathname}.`}
+        description="The link may be outdated, or the resource may have been moved."
         action={
           <ActionButton variant="primary" onClick={() => navigate('/')}>
             Back to home

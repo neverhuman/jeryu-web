@@ -1,19 +1,5 @@
 /* ToolsPage.css — the /tools left-rail + dashboard layout. */
 
-.tools-header__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.tools-header__row .page__title {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .tools-header__scan {
   display: flex;
   align-items: center;

@@ -40,7 +40,7 @@ test.describe('Settings preview (W-T-15)', () => {
 
     // SPA renders either the not-implemented envelope or the real settings
     // page; both must put SOMETHING readable on screen.
-    const heading = page.locator('h1', { hasText: /settings/i });
+    const heading = page.getByRole('heading', { name: /settings/i }).first();
     const errorState = page.locator('[role="alert"]');
     await expect(heading.or(errorState)).toBeVisible({ timeout: 15_000 });
 

@@ -1,0 +1,88 @@
+/* pageHeader.css — the shared page header: breadcrumb, title, actions, stamp. */
+
+.page-header {
+  gap: var(--space-2);
+}
+
+.page-header__bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.page-header__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.page-header__title-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.page-header__eyebrow {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-fg-muted);
+}
+
+.page-header__aside {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* How old what you are reading is. Quiet: it is a fact, not a warning. */
+.page-header__freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+}
+
+.page-header__refresh {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-1);
+  color: var(--color-fg-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.page-header__refresh:hover:not(:disabled) {
+  background: var(--color-bg-2);
+  color: var(--color-fg-primary);
+}
+
+.page-header__refresh:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+@media (max-width: 720px) {
+  .page-header__aside {
+    margin-left: 0;
+  }
+}

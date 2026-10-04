@@ -108,9 +108,9 @@ export function RepositoryCommitPage({
       ) : (
         <>
           <header className="page__header">
-            <h1 className="page__title" data-testid="repo-commit-subject">
+            <h2 className="page__title" data-testid="repo-commit-subject">
               {message.subject || shortSha(commit.data.sha)}
-            </h1>
+            </h2>
             <p className="repo-commit__meta">
               <GitCommitHorizontal aria-hidden="true" size={14} />
               <code title={commit.data.sha}>{shortSha(commit.data.sha)}</code>

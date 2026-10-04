@@ -29,6 +29,7 @@ import type {
 } from '../api/types';
 import { useRealtime } from './useRealtime';
 import { useRealtimeStore } from '../stores/realtimeStore';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 /** The WebSocket scope the scan streams on (mirrors the server constant). */
 export const TOOL_FINDER_SCAN_SCOPE = 'tool_finder.scan';
@@ -41,6 +42,7 @@ export function useToolFinderDashboard(): UseQueryResult<
     queryKey: ['tool-finder', 'dashboard'],
     queryFn: ({ signal }) =>
       apiGet<ToolFinderDashboard>(endpoints.toolFinderDashboard(), { signal }),
+    ...OPERATOR_REFRESH,
     staleTime: 30_000,
     retry: false,
   });

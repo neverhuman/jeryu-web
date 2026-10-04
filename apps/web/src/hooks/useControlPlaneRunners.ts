@@ -5,6 +5,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { RunnerFabricResponse } from '../api/types';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export const CONTROL_PLANE_RUNNERS_QUERY_KEY: readonly [
   'control-plane',
@@ -21,8 +22,8 @@ export function useControlPlaneRunners(): UseQueryResult<
       apiGet<RunnerFabricResponse>(endpoints.controlPlaneRunners(), {
         signal,
       }),
+    ...OPERATOR_REFRESH,
     staleTime: 15_000,
     refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
   });
 }

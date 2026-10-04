@@ -21,6 +21,7 @@ import { ActionButton } from '../../components/action/ActionButton';
 import { relativeText } from '../../format/when';
 import { FamilyPill, FamilyStrip } from '../../components/family/FamilyPills';
 import { pillClass } from '../../components/tone/tone';
+import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
@@ -111,12 +112,12 @@ export function ShiftQueuePage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="shift-queue-page" ref={rows}>
-      <header className="page__header">
-        <h1 className="page__title">Work</h1>
-        <p className="page__subtitle">
-          Add work, see who is working, and follow every family&apos;s queue to main.
-        </p>
-      </header>
+      <PageHeader
+        title="Work"
+        subtitle="Add work, see who is working, and follow every family's queue to main."
+        testId="work-header"
+        freshness={queryFreshness(todos)}
+      />
 
       {/* The rows themselves, as every other page shows them, rather than a
           sentence of this page's own about how many wait. Above the queue's own

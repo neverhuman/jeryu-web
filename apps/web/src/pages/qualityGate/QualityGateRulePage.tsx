@@ -5,18 +5,15 @@
 // row is a head the rule raised a finding on, newest first, and leads to that
 // head's score detail.
 
-import { ChevronLeft, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { pillClass, scoreTone } from '../../components/tone/tone';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useQualityGateRule } from '../../hooks/useQualityGate';
+import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { QualityGateQueryState } from './QualityGateQueryState';
-import {
-  QUALITY_GATE_PATH,
-  qualityGateHeadPath,
-  shortSha,
-} from './qualityGateModel';
+import { qualityGateHeadPath, shortSha } from './qualityGateModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import '../page.css';
 import './QualityGate.css';
@@ -25,21 +22,24 @@ import { When } from '../../format/When';
 export function QualityGateRulePage(): JSX.Element {
   const { rule = '' } = useParams();
   usePageTitle(rule ? `${rule} · Quality gate` : 'Quality gate');
-  const { data, isPending, isError, error } = useQualityGateRule(rule);
+  const detail = useQualityGateRule(rule);
+  const { data, isPending, isError, error } = detail;
 
   return (
     <div className="page page--wide" data-testid="quality-gate-rule-page">
-      <header className="page__header">
-        <Link className="quality-gate__back" to={QUALITY_GATE_PATH}>
-          <ChevronLeft aria-hidden="true" size={14} />
-          Quality gate
-        </Link>
-        <h1 className="page__title">{data?.title ?? rule}</h1>
-        <p className="page__subtitle">
+      <PageHeader
+        title={data?.title ?? rule}
+        testId="quality-gate-rule-header"
+        parent="nav.quality-gate"
+        crumbs={[{ label: data?.title ?? rule }]}
+        freshness={queryFreshness(detail)}
+        subtitle={
+          <>
           <code>{rule}</code>
           {data ? ` — ${data.description}` : null}
-        </p>
-      </header>
+          </>
+        }
+      />
 
       {isPending ? (
         <LoadingState title="Loading the flagged heads…" variant="message" />

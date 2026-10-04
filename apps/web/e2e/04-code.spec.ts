@@ -100,7 +100,7 @@ test.describe('Code browser (W-T-12)', () => {
     await files.getByRole('treeitem', { name: 'lib.rs' }).click();
     await expect(page).toHaveURL(/\/blob\/main\/src\/lib\.rs$/);
     await expect(files.getByRole('treeitem', { name: 'lib.rs' })).toHaveAttribute('aria-selected', 'true');
-    await page.locator('nav[aria-label="Breadcrumb"] a[href$="/neverhuman/jeryu"]').click();
+    await page.locator('nav[aria-label="File path"] a[href$="/neverhuman/jeryu"]').click();
     await expect(page.getByTestId('repo-overview-page')).toBeVisible();
     await expect(files.getByRole('treeitem', { name: 'web', exact: true })).toHaveAttribute('aria-expanded', 'true');
     await expect(files.locator('[aria-selected="true"]')).toHaveCount(0);

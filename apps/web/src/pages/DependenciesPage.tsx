@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { ErrorState, LoadingState } from '../components/state';
 import { useDependencyGraph } from '../hooks/useDependencyGraph';
 import { buildDependencyGraph } from './intelligenceGraphModel';
@@ -36,17 +37,15 @@ export function DependenciesPage(): JSX.Element {
 
   return (
     <div className="page intelligence" data-testid="dependencies-page">
-      <header className="page__header intelligence__header">
-        <div className="intelligence__title-line">
-          <h1 className="page__title">Dependencies</h1>
-        </div>
-        <p className="page__roadmap-note intelligence__header-note">
-          Every repository by how deep it sits in the dependency chain, with
-          each edge coloured by the pin behind it: where a re-pin wave has
-          landed and where it has not.
-        </p>
+      <PageHeader
+        title="Dependencies"
+        className="intelligence__header"
+        testId="dependencies-header"
+        freshness={queryFreshness(query)}
+        subtitle="Every repository by how deep it sits in the dependency chain, with each edge coloured by the pin behind it: where a re-pin wave has landed and where it has not."
+      >
         <UseThisWhen id="nav.dependencies" />
-      </header>
+      </PageHeader>
 
       <section className="page__section" aria-labelledby="dependencies-graph">
         <div className="intelligence__section-head">

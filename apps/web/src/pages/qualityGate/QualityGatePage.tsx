@@ -11,6 +11,7 @@ import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type { QualityGateDimensionSummary, QualityGateOverview } from '../../api/types';
+import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { useQualityGateOverview, QUALITY_GATE_WINDOW_DAYS } from '../../hooks/useQualityGate';
@@ -58,20 +59,26 @@ function Tile({
 
 export function QualityGatePage(): JSX.Element {
   usePageTitle('Quality gate');
-  const { data, isPending, isError, error } = useQualityGateOverview();
+  const overview = useQualityGateOverview();
+  const { data, isPending, isError, error } = overview;
 
   return (
     <div className="page page--wide" data-testid="quality-gate-page">
-      <header className="page__header">
-        <h1 className="page__title">Quality gate</h1>
-        <p className="page__subtitle">
-          How the <code>jankurai/proof</code> score behaves on every head that is
-          scored. The gate is watched, not required: this is what it would have
-          blocked over the last {QUALITY_GATE_WINDOW_DAYS} days, and how often
-          the person reading a finding disagreed with it.
-        </p>
+      <PageHeader
+        title="Quality gate"
+        testId="quality-gate-header"
+        freshness={queryFreshness(overview)}
+        subtitle={
+          <>
+            How the <code>jankurai/proof</code> score behaves on every head that
+            is scored. The gate is watched, not required: this is what it would
+            have blocked over the last {QUALITY_GATE_WINDOW_DAYS} days, and how
+            often the person reading a finding disagreed with it.
+          </>
+        }
+      >
         <UseThisWhen id="nav.quality-gate" />
-      </header>
+      </PageHeader>
 
       {isPending ? (
         <LoadingState title="Loading the quality gate overview…" variant="message" />

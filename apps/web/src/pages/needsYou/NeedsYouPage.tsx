@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
+import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { pillClass } from '../../components/tone/tone';
 import { LoadingState, PipelineQueryState } from '../../components/state';
 import { useControlPlaneRunners } from '../../hooks/useControlPlaneRunners';
@@ -75,23 +76,19 @@ export function NeedsYouPage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="needs-you-page" ref={rows}>
-      <header className="page__header">
-        <h1 className="page__title">
-          Needs you
-          {waiting > 0 ? (
-            <>
-              {' '}
-              <span className={pillClass('human')} data-testid="needs-you-count">
-                {waiting}
-              </span>
-            </>
-          ) : null}
-        </h1>
-        <p className="page__subtitle">
-          Where the pipeline is waiting on a person. Rows clear themselves when
-          the cause is fixed.
-        </p>
-      </header>
+      <PageHeader
+        title="Needs you"
+        subtitle="Where the pipeline is waiting on a person. Rows clear themselves when the cause is fixed."
+        testId="needs-you-header"
+        freshness={queryFreshness(attention)}
+        badges={
+          waiting > 0 ? (
+            <span className={pillClass('human')} data-testid="needs-you-count">
+              {waiting}
+            </span>
+          ) : null
+        }
+      />
 
       {attention.isPending ? (
         <LoadingState title="Checking what needs you…" variant="message" />

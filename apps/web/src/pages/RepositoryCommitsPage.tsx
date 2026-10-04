@@ -103,7 +103,7 @@ export function RepositoryCommitsPage({
     <div className="page" data-testid="repo-commits-page">
       <Breadcrumbs segments={crumbs} />
       <header className="page__header">
-        <h1 className="page__title">{historyTitle(refName, path)}</h1>
+        <h2 className="page__title">{historyTitle(refName, path)}</h2>
         {path ? (
           <p className="page__subtitle">
             Only the commits that touched{' '}

@@ -20,6 +20,7 @@ import {
   usePreferencesStore,
   type ThemePreference,
 } from '../stores/preferencesStore';
+import { PageHeader } from '../components/pageHeader';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
@@ -33,17 +34,19 @@ export function AdminSettingsPage(): JSX.Element {
 
   return (
     <div className="page" data-testid="settings-page">
-      <header className="page__header">
-        <h1 className="page__title">Settings</h1>
-        <p className="page__subtitle">
-          {isAdmin
+      <PageHeader
+        title="Settings"
+        subtitle={
+          isAdmin
             ? 'Your preferences, plus the instance settings and account access controls.'
-            : 'Your preferences and this session.'}
-        </p>
+            : 'Your preferences and this session.'
+        }
+        testId="settings-header"
+      >
         <div className="page__inline-actions">
           <span className={pillClass('unknown')}>Theme preferences</span>
         </div>
-      </header>
+      </PageHeader>
 
       <section className="page__section" aria-labelledby="theme-section">
         <h2 className="page__section-title" id="theme-section">

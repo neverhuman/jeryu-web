@@ -6,6 +6,7 @@ import { useQueries } from '@tanstack/react-query';
 
 import { fetchPullList } from '../api/pullLists';
 import type { PullRequestSummary } from '../api/types';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export interface RepoPullLists {
   pulls: PullRequestSummary[];
@@ -25,6 +26,7 @@ export function useRepoPullLists(
       queryKey: ['repo-pulls', repo, state ?? 'all'],
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         fetchPullList(repo, state, signal),
+      ...OPERATOR_REFRESH,
       staleTime: 15_000,
       refetchInterval,
     })),

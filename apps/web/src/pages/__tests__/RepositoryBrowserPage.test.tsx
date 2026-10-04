@@ -188,8 +188,9 @@ describe('RepositoryBrowserPage (one repository page)', () => {
 
   it('labels a family crumb named unlike its owner, and links it to the family', async () => {
     renderAt(FRONT);
+    // The shell's trail; the family crumb joins it once the repository is read.
     const crumbs = await screen.findByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(crumbs).getByRole('link', { name: 'family jeryu-split' })).toHaveAttribute(
+    expect(await within(crumbs).findByRole('link', { name: 'family jeryu-split' })).toHaveAttribute(
       'href',
       '/repos/family/jeryu-split'
     );
@@ -201,8 +202,8 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     repoOwner = 'acme';
     renderAt('/repos/jeryu/acme/jeryu');
     const crumbs = await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(await within(crumbs).findByRole('link', { name: 'acme' })).toHaveAttribute('href', '/repos/family/acme');
     expect(within(crumbs).getAllByText('acme')).toHaveLength(1);
-    expect(within(crumbs).getByRole('link', { name: 'acme' })).toHaveAttribute('href', '/repos/family/acme');
     expect(within(crumbs).queryByText('family')).toBeNull();
   });
 
@@ -214,6 +215,24 @@ describe('RepositoryBrowserPage (one repository page)', () => {
       '/repos?host=jeryu'
     );
     expect(within(crumbs).getByText('host')).toBeInTheDocument();
+  });
+
+  it('says the trail once: the repository front has no breadcrumb of its own', async () => {
+    renderAt(FRONT);
+    expect(await screen.findByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Repositories');
+    expect(await screen.findByRole('treeitem', { name: 'src' })).toBeInTheDocument();
+    expect(screen.getAllByRole('navigation', { name: 'Breadcrumb' })).toHaveLength(1);
+    expect(screen.queryByRole('navigation', { name: 'File path' })).toBeNull();
+  });
+
+  it('starts a file\'s path at the repository, not at Repositories', async () => {
+    renderAt(`${FRONT}/blob/main/src/lib.rs`);
+    const path = await screen.findByRole('navigation', { name: 'File path' });
+    const items = within(path).getAllByRole('listitem').map((item) => item.textContent);
+    expect(items[0]).toContain('jeryu');
+    expect(items.join(' ')).not.toMatch(/Repos|host/);
+    expect(within(path).getByRole('link', { name: 'jeryu' })).toHaveAttribute('href', FRONT);
+    expect(within(path).getByText('lib.rs')).toBeInTheDocument();
   });
 
   it('keeps the Files panel and its open folders while a file opens, and highlights the file', async () => {

@@ -116,10 +116,6 @@
 /* ─── Page header and tab bar ─────────────────────────────────────── */
 
 .pr-cockpit__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
   padding: var(--space-4) var(--space-5) var(--space-2);
   background-color: var(--color-bg-1);
 }
@@ -130,13 +126,18 @@
   background-color: var(--color-bg-1);
 }
 
-.pr-cockpit__title {
-  margin: 0;
+/* A pull request title is long; it reads at the cockpit's own size. */
+.pr-cockpit__header .page__title {
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-fg-primary);
-  flex: 1 1 auto;
   min-width: 240px;
+}
+
+/* Branch, author, sha: one row under the title, wrapping on a narrow pane. */
+.pr-cockpit__metas {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
 .pr-cockpit__meta {

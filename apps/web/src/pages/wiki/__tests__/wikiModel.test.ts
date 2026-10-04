@@ -13,6 +13,7 @@ import {
   splitSections,
   wikiHref,
   wikiScope,
+  withoutTitleHeading,
 } from '../wikiModel';
 
 const REPO = [
@@ -205,5 +206,24 @@ describe('sectionNote', () => {
     expect(note?.commitCount).toBe(2);
     expect(sectionNote(blame, 5, 6)?.commitCount).toBe(1);
     expect(sectionNote(blame, 9, 12)).toBeNull();
+  });
+});
+
+describe('withoutTitleHeading', () => {
+  it('blanks the title the body opens with, keeping every line number', () => {
+    const body = '# Runbook\n\nWhat to do when a gate wedges.\n';
+    const out = withoutTitleHeading(body);
+    expect(out).toBe('\n\nWhat to do when a gate wedges.\n');
+    expect(out.split('\n')).toHaveLength(body.split('\n').length);
+  });
+
+  it('leaves a body whose first heading is not its first content alone', () => {
+    const body = 'An intro line.\n\n# Runbook\n';
+    expect(withoutTitleHeading(body)).toBe(body);
+  });
+
+  it('leaves a body that opens on a deeper heading alone', () => {
+    const body = '## Step one\n\nDo the thing.\n';
+    expect(withoutTitleHeading(body)).toBe(body);
   });
 });

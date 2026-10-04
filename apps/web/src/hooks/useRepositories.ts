@@ -14,6 +14,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { RepositoryListResponse } from '../api/types';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export type RepoSort =
   | 'recent_activity'
@@ -72,6 +73,7 @@ export function useRepositories(
     queryKey: repositoriesQueryKey(query),
     queryFn: ({ signal }) =>
       apiGet<RepositoryListResponse>(buildUrl(query), { signal }),
+    ...OPERATOR_REFRESH,
     staleTime: 30_000,
     enabled: options.enabled ?? true,
   });

@@ -69,7 +69,10 @@ describe('RepoLayout (the repository shell)', () => {
   it('draws one header and one tab bar, and marks the tab the page is', async () => {
     renderAt('agents');
     expect(await screen.findByRole('heading', { level: 1, name: 'widget-api' })).toBeInTheDocument();
-    expect(screen.getByText('acme /')).toBeInTheDocument();
+    // The trail starts at the nav entry and names the owner above the title.
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(trail).toHaveTextContent('Repositories');
+    expect(trail).toHaveTextContent('acme');
 
     const bar = screen.getByRole('navigation', { name: 'Repository' });
     expect(

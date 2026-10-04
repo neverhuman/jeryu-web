@@ -4,6 +4,7 @@
 // (`…/blob/<ref>/<path>`) are one layout: content on the left, a Files panel on
 // the right that stays put while you move between them.
 
+import type { BreadcrumbSegment } from '../components/browser';
 import { failingLabel } from './repoStatusModel';
 import { formatCount } from '../format/number';
 
@@ -68,6 +69,38 @@ export function repoUrl(ref: RepoRef, tab?: RepoTab, tail?: string): string {
 /** `/repos/<provider>/<owner>/<name>`: the repository's front page. */
 export function repoFrontPath(provider: string, fullName: string): string {
   return repoUrl(repoRefOf(provider, fullName));
+}
+
+/** What the shell's trail needs to know about the repository, once it is read. */
+export interface RepoTrailFacts {
+  family?: string | null;
+}
+
+/**
+ * The trail above every repository page, after its nav parent (Repositories):
+ * the host, the family, the owner and the repository itself. The host is often
+ * named like the owner under it ("jeryu / … / jeryu"), so it says it is the
+ * host. The family is often named like the owner ("veox-ai / veox-ai"): then
+ * one crumb is both and opens the family; a different family says it is one.
+ */
+export function repoShellCrumbs(
+  provider: string,
+  fullName: string,
+  facts: RepoTrailFacts | null
+): BreadcrumbSegment[] {
+  const slash = fullName.lastIndexOf('/');
+  const owner = slash === -1 ? '' : fullName.slice(0, slash);
+  const name = slash === -1 ? fullName : fullName.slice(slash + 1);
+  const family = facts?.family ?? null;
+  const familyPath = family ? `/repos/family/${encodeURIComponent(family)}` : null;
+  return [
+    { label: provider, prefix: 'host', to: `/repos?host=${encodeURIComponent(provider)}` },
+    ...(family && familyPath && family !== owner
+      ? [{ label: family, prefix: 'family', to: familyPath }]
+      : []),
+    family === owner && familyPath ? { label: owner, to: familyPath } : { label: owner },
+    { label: name },
+  ];
 }
 
 /** The page of one file at one ref. */

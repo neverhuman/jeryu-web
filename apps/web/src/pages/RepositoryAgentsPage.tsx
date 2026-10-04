@@ -191,7 +191,7 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
     return (
       <div className="page" data-testid="repo-agents-page">
         <header className="page__header">
-          <h1 className="page__title">Active agents</h1>
+          <h2 className="page__title">Active agents</h2>
         </header>
         <ErrorState
           title="Could not resolve the repository."
@@ -213,7 +213,7 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
     <div className="page page--full agents" data-testid="repo-agents-page">
       <header className="page__header">
         <div>
-          <h1 className="page__title">Active agents</h1>
+          <h2 className="page__title">Active agents</h2>
           <p className="page__subtitle">
             {resolved.data.summary.id.owner}/{resolved.data.summary.id.name}
           </p>

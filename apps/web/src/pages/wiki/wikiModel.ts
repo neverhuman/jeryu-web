@@ -204,6 +204,19 @@ export function pageTitle(path: string, page: Frontmatter): string {
   return heading ?? fallbackTitle(path);
 }
 
+/**
+ * The body without the `# Title` line it may open with: the page header
+ * carries the title, so rendering it again would give the page two <h1>s. The
+ * line is blanked rather than removed, so every later line keeps its number
+ * and the change notes in the margin still point at the right commit.
+ */
+export function withoutTitleHeading(body: string): string {
+  const match = body.match(/^(\s*)(#\s+.*)$/m);
+  if (!match || body.slice(0, match.index ?? 0).trim() !== '') return body;
+  const at = (match.index ?? 0) + match[1].length;
+  return `${body.slice(0, at)}${body.slice(at + match[2].length)}`;
+}
+
 export interface Section {
   /** First and last file line (1-based, inclusive). */
   startLine: number;

@@ -33,15 +33,18 @@
 // through the moved-path table (`app/movedRoutes.tsx`) because the forge's own
 // attention items still link to it.
 
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { sameFamily } from '../components/family/familyScope';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { pillClass, type Tone } from '../components/tone/tone';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { usePins } from '../hooks/usePipeline';
 
+import { RELEASE_BOARD_KEY, useReleaseBoardList } from '../hooks/useReleaseBoard';
 import { useReleaseOverview } from '../hooks/useReleaseOverview';
 import { useForgeHost } from '../hooks/useForgeHost';
 import { useRepositories } from '../hooks/useRepositories';
@@ -108,16 +111,39 @@ export function ReleasesPage(): JSX.Element {
   // another one is not what this page is waiting on. A family scope is already
   // a family filter, and the board is about a whole family.
   const scopeRepos = perRepository && repoScope.repo ? [repoScope.repo] : null;
+  // The read the view below makes anyway, so the freshness stamp says how old
+  // what is on screen is without a request of its own. The per-repository view
+  // never asks for a board, so its stamp rides on the pins it does read.
+  const { user } = useAuth();
+  const admin = user?.role === 'admin';
+  const boards = useReleaseBoardList(admin && !perRepository);
+  const pins = usePins(admin && perRepository);
+  const queryClient = useQueryClient();
+  const freshness = perRepository
+    ? queryFreshness(pins)
+    : {
+        updatedAt: boards.dataUpdatedAt || null,
+        isFetching: boards.isFetching,
+        // Every board read, not just the list: the lanes below are the page.
+        onRefresh: () => {
+          void queryClient.invalidateQueries({ queryKey: RELEASE_BOARD_KEY });
+        },
+      };
 
   return (
     <div className="page page--wide" data-testid="releases-page">
-      <header className="page__header">
-        <h1 className="page__title">Releases</h1>
-        <p className="page__subtitle">
-          {perRepository
+      <PageHeader
+        title={boardFamily ?? 'Releases'}
+        testId="releases-header"
+        parent={boardFamily ? 'nav.releases' : undefined}
+        crumbs={boardFamily ? [{ label: boardFamily }] : undefined}
+        freshness={freshness}
+        subtitle={
+          perRepository
             ? 'What every environment runs, and what is holding the next release.'
-            : 'What each family ships, stage by stage, and how much of its work has reached customers.'}
-        </p>
+            : 'What each family ships, stage by stage, and how much of its work has reached customers.'
+        }
+      >
         <nav className="releases__views" aria-label="Releases view">
           <Link
             className="releases__view"
@@ -136,7 +162,7 @@ export function ReleasesPage(): JSX.Element {
             Per repository
           </Link>
         </nav>
-      </header>
+      </PageHeader>
 
       <NeedsYouHere
         area="releases"

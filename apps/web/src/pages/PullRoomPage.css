@@ -2,14 +2,6 @@
   width: 100%;
 }
 
-.pull-room__header {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  gap: var(--space-4);
-  align-items: flex-start;
-}
-
 /* The page in one line, where three stat tiles used to be. */
 .pull-room__sentence {
   margin-top: var(--space-2);
@@ -298,11 +290,6 @@
 
 @media (max-width: 1180px) {
   .pull-room__content,
-  .pull-room__header {
-    grid-template-columns: 1fr;
-    flex-direction: column;
-  }
-
   .pull-lanes {
     grid-template-columns: repeat(2, minmax(240px, 1fr));
   }

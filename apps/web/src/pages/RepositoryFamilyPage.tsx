@@ -12,7 +12,6 @@ import type { RepositorySummary, TreeEntry } from '../api/types';
 import { ActionButton } from '../components/action/ActionButton';
 import {
   BranchSelector,
-  Breadcrumbs,
   CodeViewer,
   FileTree,
   ReadmePanel,
@@ -23,6 +22,7 @@ import {
   portalRank,
 } from '../components/repo';
 import { RepoHealthPill } from '../components/repo/RepoHealthPill';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import {
   EmptyState,
   ErrorState,
@@ -98,15 +98,18 @@ export function RepositoryFamilyPage(): JSX.Element {
   }
 
   return (
-    <div className="page page--wide split-family-page" data-testid="repository-family-page">
-      <Breadcrumbs
-        segments={[{ label: 'Repos', to: '/repos' }, { label: family }]}
-      />
-
-      <header className="page__header split-family-page__header">
-        <div className="page__welcome">
-          <h1 className="page__title">{formatFamilyName(family)}</h1>
-        </div>
+    <div
+      className="page page--wide split-family-page"
+      data-testid="repository-family-page"
+    >
+      <PageHeader
+        title={formatFamilyName(family)}
+        testId="repository-family-header"
+        className="split-family-page__header"
+        parent="nav.repos"
+        crumbs={[{ label: family }]}
+        freshness={queryFreshness(list)}
+      >
         {!list.isPending && !list.error && repos.length > 0 ? (
           <div
             className="repo-family-strip"
@@ -143,7 +146,7 @@ export function RepositoryFamilyPage(): JSX.Element {
             </span>
           </div>
         ) : null}
-      </header>
+      </PageHeader>
 
       {body}
     </div>

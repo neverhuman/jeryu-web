@@ -13,6 +13,7 @@ import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { useDecideProposal, useToolRegistry } from '../hooks/useToolRegistry';
 import type { ToolRegistryEntry } from '../api/types';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { SharedToolsTabs } from './sharedTools/SharedToolsTabs';
 import { formatCount } from './tools';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -102,15 +103,14 @@ export function ProposalsPage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="proposals-page">
-      <header className="page__header">
-        <h1 className="page__title">Shared tools</h1>
-        <p className="page__subtitle">
-          Shared tools proposed from Findings. Approving one starts its build;
-          rejecting it drops the proposal and stops the scan from suggesting it
-          again.
-        </p>
-      </header>
+      <PageHeader
+        title="Shared tools"
+        testId="shared-tools-header"
+        freshness={queryFreshness(registry)}
+        subtitle="Shared tools proposed from Findings. Approving one starts its build; rejecting it drops the proposal and stops the scan from suggesting it again."
+      >
       <SharedToolsTabs />
+      </PageHeader>
 
       {registry.isPending ? (
         <LoadingState title="Loading proposals…" variant="message" />

@@ -36,6 +36,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { toneModifier } from '../components/tone/tone';
 import { pageWebCommit } from '../build/webCommit';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import {
   CONTROL_PLANE_RUNNERS_QUERY_KEY,
@@ -156,9 +157,13 @@ export function FleetPage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="fleet-page">
-      <header className="page__header">
-        <div className="fleet__header-bar">
-          <h1 className="page__title">Runners</h1>
+      <PageHeader
+        title="Runners"
+        subtitle="The machines that gate pull requests and the agents that review and merge them, from their heartbeats."
+        testId="fleet-header"
+        freshness={queryFreshness(runnersQuery)}
+        badges={
+          <>
           {stale ? (
             <span
               className="page__pill page__pill--warning"
@@ -176,11 +181,9 @@ export function FleetPage(): JSX.Element {
               Runner availability unknown
             </span>
           )}
-        </div>
-        <p className="page__subtitle">
-          The machines that gate pull requests and the agents that review and
-          merge them, from their heartbeats.
-        </p>
+          </>
+        }
+      >
         <UseThisWhen id="nav.runners" />
         {build ? (
           <p
@@ -229,7 +232,7 @@ export function FleetPage(): JSX.Element {
             </Link>
           </p>
         ) : null}
-      </header>
+      </PageHeader>
 
       {/* The Runners badge counts worker and gate-runner rows; this is where
           they are, so the badge leads to the rows it counted. */}

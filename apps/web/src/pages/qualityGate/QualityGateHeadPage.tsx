@@ -10,9 +10,9 @@
 // with a reason; it changes no score, it is how the owner learns whether the
 // gate is accurate enough to be required.
 
-import { ChevronLeft, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import type { QualityGateAppliedCap, QualityGateFinding } from '../../api/types';
 import { pillClass, scoreTone } from '../../components/tone/tone';
@@ -20,8 +20,9 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { useDisputeFinding, useQualityGateHead } from '../../hooks/useQualityGate';
+import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { QualityGateQueryState } from './QualityGateQueryState';
-import { QUALITY_GATE_PATH, repoCodeHref, shortSha } from './qualityGateModel';
+import { repoCodeHref, shortSha } from './qualityGateModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import '../page.css';
 import './QualityGate.css';
@@ -30,8 +31,11 @@ import { When } from '../../format/When';
 export function QualityGateHeadPage(): JSX.Element {
   const { owner = '', name = '', sha = '' } = useParams();
   const repo = owner && name ? `${owner}/${name}` : '';
-  usePageTitle(repo ? `${repo}@${sha.slice(0, 7)} · Quality gate` : 'Quality gate');
-  const { data, isPending, isError, error } = useQualityGateHead(repo, sha);
+  usePageTitle(
+    repo ? `${repo}@${sha.slice(0, 7)} · Quality gate` : 'Quality gate'
+  );
+  const head = useQualityGateHead(repo, sha);
+  const { data, isPending, isError, error } = head;
   const { user } = useAuth();
   const forgeHost = useForgeHost();
   const dispute = useDisputeFinding(repo, sha);
@@ -39,19 +43,19 @@ export function QualityGateHeadPage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="quality-gate-head-page">
-      <header className="page__header">
-        <Link className="quality-gate__back" to={QUALITY_GATE_PATH}>
-          <ChevronLeft aria-hidden="true" size={14} />
-          Quality gate
-        </Link>
-        <h1 className="page__title">
-          {repo}@{shortSha(sha)}
-        </h1>
-        <p className="page__subtitle">
+      <PageHeader
+        title={`${repo}@${shortSha(sha)}`}
+        testId="quality-gate-head-header"
+        parent="nav.quality-gate"
+        crumbs={[{ label: `${repo}@${shortSha(sha)}` }]}
+        freshness={queryFreshness(head)}
+        subtitle={
+          <>
           The <code>jankurai/proof</code> score of this head and the findings
           behind it.
-        </p>
-      </header>
+          </>
+        }
+      />
 
       {isPending ? (
         <LoadingState title="Loading the score detail…" variant="message" />

@@ -171,7 +171,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
       return (
         <div className="page" data-testid="repo-settings-page">
           <header className="page__header">
-            <h1 className="page__title">Settings · {fullName}</h1>
+            <h2 className="page__title">Settings · {fullName}</h2>
             <p className="page__subtitle">
               Read-only on this server: rules are changed through the API.
             </p>
@@ -202,7 +202,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
     // "the settings page" whether it loaded, failed or was refused.
     <div className="page page--full" data-testid="repo-settings-page">
       <header className="page__header">
-        <h1 className="page__title">Settings · {current.general.name}</h1>
+        <h2 className="page__title">Settings · {current.general.name}</h2>
         <p className="page__subtitle">{sectionTitle}</p>
       </header>
 

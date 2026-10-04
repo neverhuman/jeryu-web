@@ -25,6 +25,7 @@ import { ActionButton } from '../components/action/ActionButton';
 import { sameFamily } from '../components/family/familyScope';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { useFamilyNames } from '../components/family/useFamilyNames';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { CreateRepoDialog } from '../components/repo';
 import {
   useRepositories,
@@ -113,9 +114,12 @@ export function RepositoriesPage({
 
   return (
     <div className="page page--wide" data-testid="repositories-page">
-      <header className="page__header">
-        <div className="page__title-row">
-          <h1 className="page__title">Repositories</h1>
+      <PageHeader
+        title="Repositories"
+        subtitle="Browse, search, and create repositories across all hosts."
+        testId="repositories-header"
+        freshness={queryFreshness(list)}
+        actions={
           <ActionButton
             variant="primary"
             icon={<Plus size={14} aria-hidden="true" />}
@@ -124,10 +128,8 @@ export function RepositoriesPage({
           >
             Create repo
           </ActionButton>
-        </div>
-        <p className="page__subtitle">
-          Browse, search, and create repositories across all hosts.
-        </p>
+        }
+      >
         <div className="repo-toolbar">
           <div className="repo-toolbar__search">
             <label htmlFor="repos-search" className="sr-only">
@@ -217,7 +219,7 @@ export function RepositoriesPage({
           </select>
 
         </div>
-      </header>
+      </PageHeader>
 
       <RunningPassesContext.Provider value={runningPasses}>
         <RepositoriesBody

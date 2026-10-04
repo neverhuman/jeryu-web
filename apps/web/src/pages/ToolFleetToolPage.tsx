@@ -8,10 +8,11 @@
 // to its page on the forge the repository list says it is on.
 
 import { useMemo, useState } from 'react';
-import { ArrowLeft, Wrench } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { ActionButton } from '../components/action/ActionButton';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { formatFamilyName } from '../components/repo/familyRollup';
 import { useAuth } from '../hooks/useAuth';
@@ -102,7 +103,8 @@ export function ToolFleetToolPage(): JSX.Element {
   usePageTitle(tool ? `${tool} · Tool adoption` : 'Tool adoption');
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const { data, isPending, isError, error } = useToolFleet();
+  const adoption = useToolFleet();
+  const { data, isPending, isError, error } = adoption;
   const families = useShiftFamilies();
   const file = useFileShiftTodos();
   // Which family is being filed right now, and which ones are done: filing is
@@ -170,9 +172,26 @@ export function ToolFleetToolPage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="tool-fleet-tool-page">
-      <Link className="tool-fleet__back" to={ADOPTION_PATH}>
-        <ArrowLeft size={14} aria-hidden="true" /> Adoption
-      </Link>
+      <PageHeader
+        title={
+        <>
+            <Wrench size={20} aria-hidden="true" /> {entry?.tool ?? tool}
+          </>
+        }
+        testId="tool-fleet-tool-header"
+        parent="nav.shared-tools"
+        crumbs={[{ label: 'Adoption', to: ADOPTION_PATH }, { label: tool }]}
+        freshness={queryFreshness(adoption)}
+      >
+        {entry ? (
+            <p className="page__subtitle tool-fleet__meta">
+              <span className="page__pill">{entry.category}</span>
+              <span className={adoptionPillClass(toolRow(entry))}>
+                {toolRow(entry).adopted}/{toolRow(entry).total} adopted
+              </span>
+            </p>
+        ) : null}
+      </PageHeader>
       {isPending ? (
         <LoadingState title="Loading tool adoption…" variant="message" />
       ) : isError ? (
@@ -181,17 +200,6 @@ export function ToolFleetToolPage(): JSX.Element {
         <EmptyState icon={Wrench} title={`No adoption data for “${tool}”.`} />
       ) : (
         <>
-          <header className="page__header">
-            <h1 className="page__title">
-              <Wrench size={20} aria-hidden="true" /> {entry.tool}
-            </h1>
-            <p className="page__subtitle tool-fleet__meta">
-              <span className="page__pill">{entry.category}</span>
-              <span className={adoptionPillClass(toolRow(entry))}>
-                {toolRow(entry).adopted}/{toolRow(entry).total} adopted
-              </span>
-            </p>
-          </header>
           <section className="page__section">
             <h2 className="page__section-title">
               Should adopt ({entry.applicable_missing_repos.length})

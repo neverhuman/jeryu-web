@@ -401,7 +401,9 @@ describe('ReleasesPage — family release board', () => {
   // no repository to show rather than naming one of its own.
   it('says the board needs an admin session on a 403, and keeps the per-repository view', async () => {
     serveBoards(ALL_BOARDS, (req) =>
-      req.pathname === '/api/v1/release-board' ? errorResponse(403, 'admin only') : undefined
+      req.pathname === '/api/v1/release-board' || req.pathname === '/api/v1/pins'
+        ? errorResponse(403, 'admin only')
+        : undefined
     );
     open('/releases');
     expect(await screen.findByTestId('release-board-needs-admin')).toHaveTextContent(

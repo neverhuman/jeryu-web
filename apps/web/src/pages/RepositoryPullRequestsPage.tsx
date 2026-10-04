@@ -72,7 +72,7 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
     return (
       <div className="page" data-testid="repo-pulls-page">
         <header className="page__header">
-          <h1 className="page__title">Pull requests</h1>
+          <h2 className="page__title">Pull requests</h2>
         </header>
         <ErrorState
           title="Could not resolve the repository."
@@ -89,7 +89,7 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
     <div className="page page--full pull-room" data-testid="repo-pulls-page">
       <header className="page__header pull-room__header">
         <div>
-          <h1 className="page__title">Pull requests</h1>
+          <h2 className="page__title">Pull requests</h2>
           <p className="page__subtitle">
             {resolved.data.summary.id.owner}/{resolved.data.summary.id.name}
           </p>

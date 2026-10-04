@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { PageHeader, queryFreshness, type FreshnessQuery } from '../components/pageHeader';
 import { pillClass } from '../components/tone/tone';
 import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
 import { ErrorState, LoadingState } from '../components/state';
@@ -65,6 +66,37 @@ const EVIDENCE_STATES: EvidenceState[] = [
   'failed',
   'unknown',
 ];
+
+/**
+ * The page's header, the same while it loads, when the read fails and when the
+ * rows are there, so "In flight" and the freshness stamp never move.
+ */
+function PullRoomHeader({
+  snapshot,
+  sentence,
+  views
+}: {
+  snapshot: FreshnessQuery;
+  sentence?: string;
+  views?: ReactNode;
+}): JSX.Element {
+  return (
+    <PageHeader
+      title="In flight"
+      subtitle="Every change between claimed work and release, across every repository."
+      className="pull-room__header"
+      testId="pull-room-header"
+      freshness={queryFreshness(snapshot)}
+      actions={views}
+    >
+      {sentence ? (
+        <p className="pull-room__sentence" data-testid="pull-room-sentence">
+          {sentence}
+        </p>
+      ) : null}
+    </PageHeader>
+  );
+}
 
 export function PullRoomPage(): JSX.Element {
   usePageTitle('In flight');
@@ -279,9 +311,7 @@ export function PullRoomPage(): JSX.Element {
   if (snapshot.isLoading) {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
-        <header className="page__header">
-          <h1 className="page__title">In flight</h1>
-        </header>
+        <PullRoomHeader snapshot={snapshot} />
         <LoadingState variant="message" title="Loading pull requests." />
       </div>
     );
@@ -290,9 +320,7 @@ export function PullRoomPage(): JSX.Element {
   if (snapshot.isError || !snapshot.data) {
     return (
       <div className="page pull-room" data-testid="pull-room-page">
-        <header className="page__header">
-          <h1 className="page__title">In flight</h1>
-        </header>
+        <PullRoomHeader snapshot={snapshot} />
         <ErrorState
           title="Could not load pull requests."
           error={snapshot.error}
@@ -321,28 +349,23 @@ export function PullRoomPage(): JSX.Element {
 
   return (
     <div className="page page--full pull-room" data-testid="pull-room-page">
-      <header className="page__header pull-room__header">
-        <div>
-          <h1 className="page__title">In flight</h1>
-          <p className="page__subtitle">
-            Every change between claimed work and release, across every repository.
-          </p>
-          <p className="pull-room__sentence" data-testid="pull-room-sentence">
-            {pullCountsSentence(
-              headerCounts,
-              board ? undefined : awaitingReleaseCount(rows, ladderFor)
-            )}
-          </p>
-        </div>
-        <div className="pull-room__views" role="group" aria-label="View">
-          <button type="button" aria-pressed={!board} onClick={() => setBoard(false)}>
-            Timeline
-          </button>
-          <button type="button" aria-pressed={board} onClick={() => setBoard(true)}>
-            Board
-          </button>
-        </div>
-      </header>
+      <PullRoomHeader
+        snapshot={snapshot}
+        sentence={pullCountsSentence(
+          headerCounts,
+          board ? undefined : awaitingReleaseCount(rows, ladderFor)
+        )}
+        views={
+          <div className="pull-room__views" role="group" aria-label="View">
+            <button type="button" aria-pressed={!board} onClick={() => setBoard(false)}>
+              Timeline
+            </button>
+            <button type="button" aria-pressed={board} onClick={() => setBoard(true)}>
+              Board
+            </button>
+          </div>
+        }
+      />
 
       {unshipped ? (
         <p className="pull-room__unshipped" role="status" data-testid="pull-room-unshipped">

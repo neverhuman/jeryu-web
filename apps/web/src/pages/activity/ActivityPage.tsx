@@ -41,6 +41,7 @@ import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { usePageTakesScreen } from '../../layout/fullScreen';
 import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
+import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { PipelineQueryState } from '../../components/state';
 import { toneClass, type Tone } from '../../components/tone/tone';
 import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
@@ -370,12 +371,18 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       {/* On a repository tab the shell's name is the page's heading and says
           what the feed is about, so this one goes under it as a section and
           repeats neither the sentence nor the h1. */}
-      <header className="page__header">
-        {pinned ? (
+      {pinned ? (
+        <header className="page__header">
           <h2 className="page__title">Activity</h2>
-        ) : (
-          <div className="page__title-row">
-            <h1 className="page__title">Activity</h1>
+          {wall ? null : <RowLegend />}
+        </header>
+      ) : (
+        <PageHeader
+          title="Activity"
+          testId="activity-header"
+          freshness={queryFreshness(feed.base)}
+          subtitle={wall ? undefined : 'Every step the pipeline takes, as it happens.'}
+          actions={
             <Link
               className="activity__wall-toggle"
               to={wall ? exitWall : wallHref(params, true)}
@@ -385,14 +392,12 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
               {wall ? <Minimize2 aria-hidden="true" size={14} /> : <Maximize2 aria-hidden="true" size={14} />}
               {wall ? 'Exit wall' : 'Wall mode'}
             </Link>
-          </div>
-        )}
-        {wall ? <WallClock /> : null}
-        {wall || pinned ? null : (
-          <p className="page__subtitle">Every step the pipeline takes, as it happens.</p>
-        )}
-        {wall ? null : <RowLegend />}
-      </header>
+          }
+        >
+          {wall ? <WallClock /> : null}
+          {wall ? null : <RowLegend />}
+        </PageHeader>
+      )}
 
       {/* The band is a filter on the feed, so it sits above the chips it sets.
           On the wall it has no chips to set and goes under the counters, at the

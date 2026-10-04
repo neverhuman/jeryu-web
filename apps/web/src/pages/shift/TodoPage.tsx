@@ -15,11 +15,11 @@ import { Link, useParams } from 'react-router-dom';
 import type { ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
 import { relativeText } from '../../format/when';
-import { Breadcrumbs } from '../../components/browser/Breadcrumbs';
 import { FamilyPill } from '../../components/family/FamilyPills';
 import { sameFamily } from '../../components/family/familyScope';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { pillClass } from '../../components/tone/tone';
+import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
@@ -115,15 +115,48 @@ export function TodoPage(): JSX.Element {
   const shown = matches.length === 1 ? matches[0] : null;
   return (
     <div className="page page--wide" data-testid="todo-page">
-      <Breadcrumbs
-        segments={[
-          { label: 'Work', to: WORK_PATH },
-          ...(shown ? [{ label: shown.family, to: queueHref(shown.family) }] : []),
+      <PageHeader
+        title={shown ? shown.title : key}
+        testId="todo-header"
+        parent="nav.work"
+        crumbs={[
+          ...(shown
+            ? [{ label: shown.family, to: queueHref(shown.family) }]
+            : []),
           { label: key },
         ]}
-      />
+        freshness={queryFreshness(todos)}
+      >
+        {shown ? <TodoMeta todo={shown} /> : null}
+      </PageHeader>
       {body}
     </div>
+  );
+}
+
+/** The todo's family, state and id, under its title. */
+function TodoMeta({ todo }: { todo: ShiftTodo }): JSX.Element {
+  const scope = useFamilyScope();
+  return (
+    <p className="page__subtitle shift-todo-page__meta">
+      {/* The pill is this todo's family: pressing it takes the scope with
+          it to the queue, so Work opens on the family just read. */}
+      <FamilyPill
+        family={todoFamily(todo)}
+        picked={scope.family}
+        onPick={(name) => scope.setFamily(name, { to: WORK_PATH, drop: ['todo'] })}
+      />
+      <span
+        className={pillClass(statusTone(todo.status))}
+        data-testid="todo-page-status"
+      >
+        {todo.merged ? 'merged' : todo.status}
+      </span>
+      <span className="shift__id shift-todo-page__id">
+        {todo.id} · P{todo.priority} · {todo.mode}
+        {todo.triaged ? '' : ' · untriaged'}
+      </span>
+    </p>
   );
 }
 
@@ -136,7 +169,6 @@ function TodoView({
   refs: RepoRefs;
   isAdmin: boolean;
 }): JSX.Element {
-  const scope = useFamilyScope();
   const now = new Date();
   const stuck = todo.status === 'blocked' || todo.status === 'handoff';
   const attempts = attemptSummary(todo);
@@ -144,29 +176,6 @@ function TodoView({
   const commits = Object.entries(todo.commits);
   return (
     <>
-      <header className="page__header">
-        <h1 className="page__title">{todo.title}</h1>
-        <p className="page__subtitle shift-todo-page__meta">
-          {/* The pill is this todo's family: pressing it takes the scope with
-              it to the queue, so Work opens on the family just read. */}
-          <FamilyPill
-            family={todoFamily(todo)}
-            picked={scope.family}
-            onPick={(name) => scope.setFamily(name, { to: WORK_PATH, drop: ['todo'] })}
-          />
-          <span
-            className={pillClass(statusTone(todo.status))}
-            data-testid="todo-page-status"
-          >
-            {todo.merged ? 'merged' : todo.status}
-          </span>
-          <span className="shift__id shift-todo-page__id">
-            {todo.id} · P{todo.priority} · {todo.mode}
-            {todo.triaged ? '' : ' · untriaged'}
-          </span>
-        </p>
-      </header>
-
       {stuck && todo.note ? <WhyStuck id={todo.id} note={todo.note} /> : null}
       <WorkTrace
         stages={workTrace(todoFacts(todo))}

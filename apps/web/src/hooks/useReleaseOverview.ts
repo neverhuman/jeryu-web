@@ -9,6 +9,7 @@ import { endpoints } from '../api/endpoints';
 import { fetchPullList } from '../api/pullLists';
 import type { CompareResponse, EnvironmentsResponse } from '../api/types/deployments';
 import { buildEnvironmentRows, type EnvironmentRow } from '../pages/releasesModel';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export interface ReleaseOverview {
   rows: EnvironmentRow[];
@@ -26,6 +27,7 @@ export function useReleaseOverview(repoId: string, defaultBranch: string): Relea
     queryFn: ({ signal }) =>
       apiGet<EnvironmentsResponse>(endpoints.repoEnvironments(owner, repo), { signal }),
     enabled: owner !== '' && repo !== '',
+    ...OPERATOR_REFRESH,
     staleTime: 15_000,
   });
   const pulls = useQuery({
@@ -33,6 +35,7 @@ export function useReleaseOverview(repoId: string, defaultBranch: string): Relea
     queryFn: ({ signal }) =>
       fetchPullList(repoId, 'all', signal),
     enabled: owner !== '' && repo !== '',
+    ...OPERATOR_REFRESH,
     staleTime: 30_000,
   });
 
@@ -51,6 +54,7 @@ export function useReleaseOverview(repoId: string, defaultBranch: string): Relea
       queryKey: ['releases', 'compare', repoId, sha, defaultBranch],
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         apiGet<CompareResponse>(endpoints.compare(repoId, sha, defaultBranch), { signal }),
+      ...OPERATOR_REFRESH,
       staleTime: 30_000,
     })),
   });

@@ -26,6 +26,9 @@ export interface UseResolveRepoResult {
   isError: boolean;
   error: Error | null;
   data: ResolvedRepo | undefined;
+  /** When the list this resolve read landed, for the page's freshness stamp. */
+  dataUpdatedAt: number;
+  isFetching: boolean;
   /** Asks for the repository list again, for a Retry on a failed resolve. */
   refetch: () => void;
 }
@@ -82,6 +85,10 @@ export function useResolveRepo(
     isError: list.isError || (lookingInArchived && archivedList.isError),
     error: list.error ?? (lookingInArchived ? archivedList.error : null) ?? null,
     data,
+    dataUpdatedAt: lookingInArchived
+      ? Math.max(list.dataUpdatedAt, archivedList.dataUpdatedAt)
+      : list.dataUpdatedAt,
+    isFetching: list.isFetching || (lookingInArchived && archivedList.isFetching),
     refetch: () => {
       void list.refetch();
       if (lookingInArchived) void archivedList.refetch();

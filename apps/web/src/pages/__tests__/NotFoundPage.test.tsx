@@ -19,7 +19,10 @@ describe('NotFoundPage', () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.getByText('/audit no longer has its own page. Events are on Activity.')).toBeTruthy();
+    // The header names the page; the state surface says what is missing and where it went.
+    expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeTruthy();
+    expect(screen.getByText('/audit no longer has its own page.')).toBeTruthy();
+    expect(screen.getByText('Events are on Activity.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open Activity' }));
     expect(screen.getByTestId('activity')).toBeTruthy();
   });
@@ -31,5 +34,6 @@ describe('NotFoundPage', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('button', { name: 'Back to home' })).toBeTruthy();
+    expect(screen.getByText("We couldn't find /nowhere.")).toBeTruthy();
   });
 });

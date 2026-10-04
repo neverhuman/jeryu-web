@@ -19,13 +19,14 @@ import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoHealthPill } from './RepoHealthPill';
 import { RepoRoleBadge } from './RepoRoleBadge';
 import { TabBar } from './TabBar';
+import { PageHeader, queryFreshness } from '../pageHeader';
 import { PermissionDeniedState } from '../state';
 import { useBootstrap } from '../../hooks/useBootstrap';
 import { useAuth } from '../../hooks/useAuth';
 import { useRepoAutomation } from '../../hooks/useRepoAutomation';
 import { useResolveRepo } from '../../hooks/useResolveRepo';
 import { QUALITY_GATE_PATH } from '../../pages/qualityGate/qualityGateModel';
-import { healthOpensChecks, repoFrontPath } from '../../pages/repoBrowserModel';
+import { healthOpensChecks, repoFrontPath, repoShellCrumbs } from '../../pages/repoBrowserModel';
 import {
   RepoHealthChecks,
   RepoHealthChip,
@@ -68,11 +69,20 @@ export function RepoLayout({
 
   return (
     <div className="repo-shell" data-testid="repo-shell">
-      <header className="repo-shell__header">
-        <div className="repo-shell__head">
-          <span className="repo-shell__owner">{ownerOf(fullName)} /</span>
-          <h1 className="repo-shell__title" data-testid="repo-shell-title">{nameOf(fullName)}</h1>
-          {summary ? (
+      {/* The shell's header is the page header of every repository route: the
+          trail from Repositories down, the repository's name as the page's one
+          h1, and how old the repository read is. The page inside the shell
+          heads its own part with an h2. */}
+      <PageHeader
+        title={<span data-testid="repo-shell-title">{nameOf(fullName)}</span>}
+        className="repo-shell__header"
+        testId="repo-shell-header"
+        parent="nav.repos"
+        crumbs={repoShellCrumbs(provider, fullName, summary)}
+        freshness={queryFreshness(resolved)}
+        subtitle={summary?.description || undefined}
+        badges={
+          summary ? (
             <>
               {healthOpensChecks(summary) ? (
                 <RepoHealthChip
@@ -103,11 +113,9 @@ export function RepoLayout({
                 <span className="page__pill">{summary.language}</span>
               ) : null}
             </>
-          ) : null}
-        </div>
-        {summary?.description ? (
-          <p className="page__subtitle">{summary.description}</p>
-        ) : null}
+          ) : null
+        }
+      >
         {summary && checksOpen && healthOpensChecks(summary) ? (
           <RepoHealthChecks repo={summary} />
         ) : null}
@@ -119,7 +127,7 @@ export function RepoLayout({
           openPullRequests={summary?.open_pull_requests ?? null}
           activeAgents={summary?.active_agents ?? null}
         />
-      </header>
+      </PageHeader>
 
       {tab === 'settings' && !mayOpenSettings ? (
         <PermissionDeniedState
@@ -131,10 +139,6 @@ export function RepoLayout({
       )}
     </div>
   );
-}
-
-function ownerOf(fullName: string): string {
-  return fullName.split('/').slice(0, -1).join('/');
 }
 
 function nameOf(fullName: string): string {

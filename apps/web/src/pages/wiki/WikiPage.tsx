@@ -44,6 +44,7 @@ import {
   wikiScope,
   WIKI_DIR,
   WIKI_PATH,
+  withoutTitleHeading,
   type TreeFolder,
   type WikiScope,
 } from './wikiModel';
@@ -56,6 +57,7 @@ import {
   statusTone,
   type WikiSource,
 } from './wikiSources';
+import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
@@ -75,6 +77,11 @@ export function WikiPage(): JSX.Element {
   if (!wiki) {
     return (
       <div className="page" data-testid="wiki-page">
+        <PageHeader
+          title="Wiki"
+          testId="wiki-header"
+          freshness={queryFreshness(settings)}
+        />
         <EmptyState
           icon={BookOpen}
           title="No wiki has been set up"
@@ -140,8 +147,21 @@ function WikiReader({ wiki }: { wiki: WikiRepository }): JSX.Element {
         {listing.isPending || listing.error ? null : path ? (
           <WikiDocument wiki={wiki} gitRef={ref} path={path} scope={scope} />
         ) : splat === '' ? (
+          <>
+            <PageHeader
+              title="Wiki"
+              testId="wiki-header"
+              freshness={queryFreshness(listing)}
+            />
           <StartInvitation wiki={wiki} scope={scope} />
+          </>
         ) : (
+          <>
+            <PageHeader
+              title="Wiki"
+              testId="wiki-header"
+              freshness={queryFreshness(listing)}
+            />
           <EmptyState
             icon={FileText}
             title="No page here"
@@ -152,6 +172,7 @@ function WikiReader({ wiki }: { wiki: WikiRepository }): JSX.Element {
               </Link>
             }
           />
+          </>
         )}
       </div>
     </div>
@@ -164,9 +185,9 @@ function StartInvitation({ wiki, scope }: { wiki: WikiRepository; scope: WikiSco
   return (
     <section className="wiki-invite" aria-labelledby="wiki-invite-title" data-testid="wiki-invite">
       <FilePlus2 aria-hidden="true" size={22} />
-      <h1 className="wiki-invite__title" id="wiki-invite-title">
+      <h2 className="wiki-invite__title" id="wiki-invite-title">
         Start the wiki
-      </h1>
+      </h2>
       <p>
         The wiki opens on <code>{HOME_CANDIDATES[0]}</code> at the top of {wiki.full_name}, or on{' '}
         <code>{HOME_CANDIDATES[1]}</code> when there is no {HOME_CANDIDATES[0]}. Its pages are the
@@ -266,8 +287,9 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
 
   const page = splitFrontmatter(blob.data.text ?? '');
   const title = pageTitle(path, page);
-  const sections = splitSections(linkWikiReferences(page.body, scope), page.offset);
-  const bodyHasTitle = /^#\s/.test(page.body.trimStart());
+  // The header carries the title; a body that opens with it would repeat it.
+  const body = withoutTitleHeading(page.body);
+  const sections = splitSections(linkWikiReferences(body, scope), page.offset);
   const docDir = path.includes('/') ? `${path.slice(0, path.lastIndexOf('/'))}/` : '';
   // Folders inside `wiki/`, for the breadcrumb (the start page has none).
   const folders = path.startsWith(WIKI_DIR) ? path.slice(WIKI_DIR.length).split('/').slice(0, -1) : [];
@@ -290,25 +312,25 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
 
   return (
     <article className={`wiki-doc${notesOn ? ' wiki-doc--notes' : ''}`} aria-label={title}>
-      <header className="wiki-doc__header">
-        <div className="wiki-doc__top">
-          {folders.length > 0 ? (
-            <nav className="wiki-doc__crumbs" aria-label="Folder">
-              <Link to={WIKI_PATH}>Wiki</Link>
-              {folders.map((folder, index) => (
-                <span key={folder}>
-                  {' / '}
-                  <Link to={`${WIKI_PATH}/${folders.slice(0, index + 1).map(encodeURIComponent).join('/')}`}>
-                    {folder}
-                  </Link>
-                </span>
-              ))}
-            </nav>
-          ) : (
-            <span />
-          )}
-          {updated || status ? (
-            <div className="wiki-doc__badges" data-testid="wiki-page-badges">
+      <PageHeader
+        title={title}
+        className="wiki-doc__header"
+        testId="wiki-header"
+        parent="nav.wiki"
+        crumbs={[
+          ...folders.map((folder, index) => ({
+            label: folder,
+            to: `${WIKI_PATH}/${folders
+              .slice(0, index + 1)
+              .map(encodeURIComponent)
+              .join('/')}`,
+          })),
+          { label: title },
+        ]}
+        freshness={queryFreshness(blob)}
+        badges={
+          updated || status ? (
+            <span className="wiki-doc__badges" data-testid="wiki-page-badges">
               {updated ? (
                 <time className="wiki-doc__date" dateTime={updated}>
                   {dateText(updated)}
@@ -319,10 +341,10 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
                   {status}
                 </span>
               ) : null}
-            </div>
-          ) : null}
-        </div>
-        {bodyHasTitle ? null : <h1 className="wiki-doc__title">{title}</h1>}
+            </span>
+          ) : null
+        }
+      >
         <p className="wiki-doc__meta" data-testid="wiki-page-meta">
           {newest ? (
             <>
@@ -362,7 +384,7 @@ function WikiDocument({ wiki, gitRef, path, scope }: WikiDocumentProps): JSX.Ele
             ))}
           </dl>
         ) : null}
-      </header>
+      </PageHeader>
       {sections.map((section) => (
         <section
           key={section.startLine}

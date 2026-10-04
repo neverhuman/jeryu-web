@@ -3,13 +3,6 @@
  * spacing, type, radius, and shadow for the changed Fleet surface.
  */
 
-.fleet__header-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
 /* The whole gate network in one sentence; red only when a runner is offline. */
 .fleet__sentence {
   margin: 0;

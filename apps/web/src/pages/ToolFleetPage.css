@@ -88,13 +88,6 @@
   font-size: var(--font-size-sm);
 }
 
-.tool-fleet__back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-bottom: var(--space-3);
-  font-size: var(--font-size-sm);
-}
 
 .tool-fleet__meta {
   display: flex;

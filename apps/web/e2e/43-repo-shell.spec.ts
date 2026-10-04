@@ -126,7 +126,9 @@ test('every repository page carries the same header and tab bar @action:repo.she
 
     // The same header, on all six: the repository, its visibility, its family.
     await expect(page.getByTestId('repo-shell-title')).toHaveText('widget-api');
-    await expect(page.getByTestId('repo-shell')).toContainText('acme /');
+    const trail = page.getByTestId('repo-shell-header').getByRole('navigation', { name: 'Breadcrumb' });
+    await expect(trail).toContainText('Repositories');
+    await expect(trail).toContainText('acme');
     const bar = page.getByRole('navigation', { name: 'Repository', exact: true });
     await expect(bar.getByRole('link')).toHaveCount(6);
     await expect(page.getByTestId(`repo-tab-${sub.tab}`)).toHaveAttribute(

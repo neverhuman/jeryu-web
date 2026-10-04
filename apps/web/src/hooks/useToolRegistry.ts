@@ -17,12 +17,14 @@ import {
 import { apiGet, apiSend } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { ToolRegistrySummary } from '../api/types';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export function useToolRegistry(): UseQueryResult<ToolRegistrySummary, Error> {
   return useQuery({
     queryKey: ['tools', 'registry', 'summary'],
     queryFn: ({ signal }) =>
       apiGet<ToolRegistrySummary>(endpoints.toolRegistrySummary(), { signal }),
+    ...OPERATOR_REFRESH,
     staleTime: 30_000,
     // The endpoint may not exist yet (backend in parallel). A 404/network
     // miss is a permanent "not ready" signal for this surface, not a flake —

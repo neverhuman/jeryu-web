@@ -190,33 +190,18 @@ export function RepositoryBrowserPage({
     activeRef && activeRef !== defaultBranch
       ? `${front}?ref=${encodeURIComponent(activeRef)}`
       : front;
-  const crumbs: BreadcrumbSegment[] = [
-    { label: 'Repos', to: '/repos' },
-    // The host is often named like the owner under it ("jeryu / … / jeryu"):
-    // say which one it is so the repeat reads as two different things.
-    { label: provider, prefix: 'host', to: `/repos?host=${provider}` },
-    // The family is often named like the owner ("veox-ai / veox-ai"): then one
-    // crumb is both and opens the family; a different family says it is one.
-    ...(summary.family && summary.family !== summary.id.owner
-      ? [
-          {
-            label: summary.family,
-            prefix: 'family',
-            to: `/repos/family/${encodeURIComponent(summary.family)}`,
-          },
-        ]
-      : []),
-    summary.family === summary.id.owner
-      ? { label: summary.id.owner, to: `/repos/family/${encodeURIComponent(summary.family)}` }
-      : { label: summary.id.owner },
-    onFile ? { label: summary.id.name, to: frontWithRef } : { label: summary.id.name },
-    ...(onFile
-      ? file.path
+  // The trail from Repositories down to this repository is the shell's
+  // (components/repo/RepoLayout). On a file this page adds only the path,
+  // starting at the repository it is in, so no crumb is said twice.
+  const pathCrumbs: BreadcrumbSegment[] = onFile
+    ? [
+        { label: summary.id.name, to: frontWithRef },
+        ...file.path
           .split('/')
           .filter(Boolean)
-          .map((part) => ({ label: part }))
-      : []),
-  ];
+          .map((part) => ({ label: part })),
+      ]
+    : [];
   const showPanel = filesOpen && !treeMissing;
   const findFiles = (
     <ActionButton variant="ghost" onClick={() => setFinderOpen(true)} aria-label="Find files">
@@ -226,7 +211,9 @@ export function RepositoryBrowserPage({
 
   return (
     <div className="page" data-testid={testId}>
-      <Breadcrumbs segments={crumbs} />
+      {pathCrumbs.length > 0 ? (
+        <Breadcrumbs segments={pathCrumbs} ariaLabel="File path" />
+      ) : null}
 
       {/* The repository's name, health, score and badges are the shell's
           header (components/repo/RepoLayout), above the tab bar. */}

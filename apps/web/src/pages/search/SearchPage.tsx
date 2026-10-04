@@ -9,6 +9,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 
 import { ActionButton } from '../../components/action/ActionButton';
+import { PageHeader } from '../../components/pageHeader';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useSearch } from '../../hooks/useSearch';
 import { useCommandStore } from '../../stores/commandStore';
@@ -44,14 +45,18 @@ export function SearchPage(): JSX.Element {
 
   return (
     <div className="page" data-testid="search-page">
-      <header className="page__header">
-        <h1 className="page__title">Search</h1>
-        <p className="page__subtitle">
-          Repositories, pull requests, issues and todos, plus this app&apos;s own pages. A
-          number (<code>name#12</code>) finds the pull request it names. The address of this
-          page is the search: copy it to share the results.
-        </p>
-      </header>
+      <PageHeader
+        title="Search"
+        testId="search-header"
+        subtitle={
+          <>
+            Repositories, pull requests, issues and todos, plus this app&apos;s
+            own pages. A number (<code>name#12</code>) finds the pull request it
+            names. The address of this page is the search: copy it to share the
+            results.
+          </>
+        }
+      />
       <form role="search" className="search-page__form" onSubmit={submit}>
         <input
           type="search"

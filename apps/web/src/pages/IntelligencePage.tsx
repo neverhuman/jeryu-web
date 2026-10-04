@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { ErrorState, LoadingState } from '../components/state';
 import { DEPENDENCIES_PATH } from './DependenciesPage';
 import { useControlPlane } from '../hooks/useControlPlane';
@@ -36,23 +37,27 @@ export function IntelligencePage(): JSX.Element {
   usePageTitle('Intelligence');
   const query = useControlPlane();
 
-  if (query.isLoading) {
-    return (
-      <div className="page intelligence" data-testid="intelligence-page">
-        <header className="page__header">
-          <h1 className="page__title">Intelligence</h1>
-        </header>
+  return (
+    <div className="page intelligence" data-testid="intelligence-page">
+      <PageHeader
+        title="Intelligence"
+        subtitle="Operational snapshot of the repository graph and its evidence."
+        className="intelligence__header"
+        testId="intelligence-header"
+        freshness={queryFreshness(query)}
+        badges={
+          query.data ? (
+            <span data-testid="intelligence-snapshot-state">
+              <StatePill state={snapshotState(query.data)} label="snapshot" />
+            </span>
+          ) : null
+        }
+      >
+        <UseThisWhen id="nav.intelligence" />
+      </PageHeader>
+      {query.isLoading ? (
         <LoadingState variant="message" title="Loading intelligence snapshot." />
-      </div>
-    );
-  }
-
-  if (query.isError || !query.data) {
-    return (
-      <div className="page intelligence" data-testid="intelligence-page">
-        <header className="page__header">
-          <h1 className="page__title">Intelligence</h1>
-        </header>
+      ) : query.isError || !query.data ? (
         <ErrorState
           title="Could not load the intelligence snapshot."
           error={query.error}
@@ -60,12 +65,10 @@ export function IntelligencePage(): JSX.Element {
           onRetry={() => void query.refetch()}
           testId="intelligence-error"
         />
-      </div>
-    );
-  }
-
-  return (
-    <IntelligenceSnapshot snapshot={query.data} outOfDate={query.isStale} />
+      ) : (
+        <IntelligenceSnapshot snapshot={query.data} outOfDate={query.isStale} />
+      )}
+    </div>
   );
 }
 
@@ -124,75 +127,63 @@ function IntelligenceSnapshot({
   );
 
   return (
-    <div className="page intelligence" data-testid="intelligence-page">
-      <header className="page__header intelligence__header">
-        <div className="intelligence__title-line">
-          <h1 className="page__title">Intelligence</h1>
-          <span data-testid="intelligence-snapshot-state">
-            <StatePill state={snapshotState(snapshot)} label="snapshot" />
-          </span>
-        </div>
-        <p className="page__roadmap-note intelligence__header-note">
-          Operational snapshot of the repository graph and its evidence.
-        </p>
-        <UseThisWhen id="nav.intelligence" />
-        <div className="intelligence__status-strip">
-          <MetricCard
-            icon={<GitPullRequest size={18} aria-hidden="true" />}
-            label="Open pull requests"
-            to={IN_FLIGHT_PATH}
-            value={snapshot.summary.openPrCount}
-            detail={`${snapshot.summary.missingCheckPrCount} missing checks`}
-            state={
-              snapshot.summary.missingCheckPrCount > 0 ? 'missing' : 'fresh'
-            }
-          />
-          <MetricCard
-            icon={<ServerCog size={18} aria-hidden="true" />}
-            label="Runners"
-            to="/runners"
-            value={runnerCapacityKnown ? runners.onlineRunners : '—'}
-            detail={
-              runnerCapacityKnown
-                ? `${runners.offlineRunners} offline`
-                : runners.state === 'fresh'
-                  ? 'Runner snapshot out of date'
-                  : runners.state === 'unknown'
-                    ? 'Runner capacity unknown'
-                    : 'Runner capacity unavailable'
-            }
-            state={
-              runners.state !== 'fresh'
-                ? runners.state
-                : outOfDate
-                  ? 'unknown'
-                  : runners.offlineRunners > 0
-                    ? 'failed'
-                    : 'fresh'
-            }
-          />
-          <MetricCard
-            icon={<Package size={18} aria-hidden="true" />}
-            label="Artifacts"
-            value={snapshot.artifacts.latestRelease.artifactCount}
-            detail={
-              snapshot.artifacts.latestRelease.artifactCount > 0
-                ? 'in the latest release'
-                : snapshot.artifacts.absenceIsSuccess
-                  ? 'none expected'
-                  : 'none recorded yet'
-            }
-            state={snapshot.artifacts.state}
-          />
-          <MetricCard
-            icon={<Network size={18} aria-hidden="true" />}
-            label="Graph"
-            value={operatorGraph.nodes.length}
-            detail={`${snapshot.codegraph.indexedSymbols} symbols · ${snapshot.toolBuild.clusterCount} tool clusters`}
-            state={snapshot.codegraph.state}
-          />
-        </div>
-      </header>
+    <>
+      <div className="intelligence__status-strip">
+        <MetricCard
+          icon={<GitPullRequest size={18} aria-hidden="true" />}
+          label="Open pull requests"
+          to={IN_FLIGHT_PATH}
+          value={snapshot.summary.openPrCount}
+          detail={`${snapshot.summary.missingCheckPrCount} missing checks`}
+          state={
+            snapshot.summary.missingCheckPrCount > 0 ? 'missing' : 'fresh'
+          }
+        />
+        <MetricCard
+          icon={<ServerCog size={18} aria-hidden="true" />}
+          label="Runners"
+          to="/runners"
+          value={runnerCapacityKnown ? runners.onlineRunners : '—'}
+          detail={
+            runnerCapacityKnown
+              ? `${runners.offlineRunners} offline`
+              : runners.state === 'fresh'
+                ? 'Runner snapshot out of date'
+                : runners.state === 'unknown'
+                  ? 'Runner capacity unknown'
+                  : 'Runner capacity unavailable'
+          }
+          state={
+            runners.state !== 'fresh'
+              ? runners.state
+              : outOfDate
+                ? 'unknown'
+                : runners.offlineRunners > 0
+                  ? 'failed'
+                  : 'fresh'
+          }
+        />
+        <MetricCard
+          icon={<Package size={18} aria-hidden="true" />}
+          label="Artifacts"
+          value={snapshot.artifacts.latestRelease.artifactCount}
+          detail={
+            snapshot.artifacts.latestRelease.artifactCount > 0
+              ? 'in the latest release'
+              : snapshot.artifacts.absenceIsSuccess
+                ? 'none expected'
+                : 'none recorded yet'
+          }
+          state={snapshot.artifacts.state}
+        />
+        <MetricCard
+          icon={<Network size={18} aria-hidden="true" />}
+          label="Graph"
+          value={operatorGraph.nodes.length}
+          detail={`${snapshot.codegraph.indexedSymbols} symbols · ${snapshot.toolBuild.clusterCount} tool clusters`}
+          state={snapshot.codegraph.state}
+        />
+      </div>
 
       {/* What needs a person is one list, in one place. This page used to rank its
           own "priorities" from an older rule set (generic items such as "latest
@@ -263,6 +254,6 @@ function IntelligenceSnapshot({
           />
         </div>
       </section>
-    </div>
+    </>
   );
 }

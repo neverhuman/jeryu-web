@@ -29,6 +29,7 @@ import {
 } from './toolFleetModel';
 import './page.css';
 import './ToolFleetPage.css';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { ADOPTION_PATH, SharedToolsTabs } from './sharedTools/SharedToolsTabs';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useViewState } from '../hooks/useViewState';
@@ -109,7 +110,8 @@ function ToolRow({ row }: { row: ToolFleetRow }): JSX.Element {
 
 export function ToolFleetPage(): JSX.Element {
   usePageTitle('Tool adoption');
-  const { data, isPending, isError, error } = useToolFleet();
+  const fleet = useToolFleet();
+  const { data, isPending, isError, error } = fleet;
   // The filters and the sort are in the URL, so a filtered, sorted table is a
   // link. Both narrow one view, so both replace: Back leaves the page.
   const view = useViewState();
@@ -146,15 +148,20 @@ export function ToolFleetPage(): JSX.Element {
 
   return (
     <div className="page page--wide" data-testid="tool-fleet-page">
-      <header className="page__header">
-        <h1 className="page__title">Shared tools</h1>
-        <p className="page__subtitle">
+      <PageHeader
+        title="Shared tools"
+        testId="shared-tools-header"
+        freshness={queryFreshness(fleet)}
+        subtitle={
+          <>
           Where each shared tool is in use: which repos have adopted it, and
           which should but haven&apos;t yet. Read from each repo&apos;s latest
           jankurai score, recorded on every push.
-        </p>
-      </header>
+          </>
+        }
+      >
       <SharedToolsTabs />
+      </PageHeader>
 
       {isPending ? (
         <LoadingState title="Loading tool adoption…" variant="message" />

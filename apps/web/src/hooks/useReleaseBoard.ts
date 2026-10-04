@@ -16,6 +16,7 @@ import type { EnvironmentSummary, EnvironmentsResponse } from '../api/types/depl
 import type { ReleaseBoard, ReleaseBoardListResponse } from '../api/types/releaseBoard';
 import { BOARD_REFETCH_MS } from '../pages/releaseBoard/model';
 import { usePipelineNudge } from './usePipeline';
+import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export const RELEASE_BOARD_KEY = ['release-board'] as const;
 
@@ -27,6 +28,7 @@ export function useReleaseBoardList(
     queryFn: ({ signal }) =>
       apiGet<ReleaseBoardListResponse>(endpoints.releaseBoards(), { signal }),
     enabled,
+    ...OPERATOR_REFRESH,
     staleTime: 10_000,
     refetchInterval: (query) => (query.state.error ? false : BOARD_REFETCH_MS),
     retry: false,
@@ -46,6 +48,7 @@ export function useReleaseBoard(
     queryFn: ({ signal }) =>
       apiGet<ReleaseBoard>(endpoints.releaseBoard(family ?? ''), { signal }),
     enabled: enabled && family !== null && family !== '',
+    ...OPERATOR_REFRESH,
     staleTime: 10_000,
     refetchInterval: (query) => (query.state.error ? false : BOARD_REFETCH_MS),
     retry: false,
@@ -67,6 +70,7 @@ export function useBoardEnvironments(
         queryKey: [...RELEASE_BOARD_KEY, 'environments', repo],
         queryFn: ({ signal }: { signal: AbortSignal }) =>
           apiGet<EnvironmentsResponse>(endpoints.repoEnvironments(owner, name), { signal }),
+        ...OPERATOR_REFRESH,
         staleTime: 10_000,
         refetchInterval: BOARD_REFETCH_MS,
         retry: false,
