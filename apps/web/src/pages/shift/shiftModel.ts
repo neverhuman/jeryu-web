@@ -15,7 +15,7 @@ import type {
   ShiftWorker,
 } from '../../api/types';
 
-export const SHIFT_STATUSES = ['open', 'claimed', 'done', 'blocked', 'handoff'] as const;
+export const SHIFT_STATUSES = ['open', 'claimed', 'done', 'blocked', 'handoff', 'closed'] as const;
 export const SHIFT_MODES = ['now', 'night'] as const;
 export const SHIFT_PRIORITIES = [1, 2, 3, 4] as const;
 
@@ -96,7 +96,7 @@ const STATUS_RANK: Record<string, number> = {
  */
 export function needsHuman(todo: Pick<ShiftTodo, 'status' | 'triaged'>): boolean {
   if (todo.status === 'blocked' || todo.status === 'handoff') return true;
-  return !todo.triaged && todo.status !== 'done';
+  return !todo.triaged && !isFinishedTodo(todo);
 }
 
 export function countNeedsHuman(todos: ShiftTodo[]): number {
@@ -364,9 +364,80 @@ export function todoPrHref(todo: Pick<ShiftTodo, 'pr'>, owners: RepoOwners): str
   return owner === null ? null : `${repoPath(owner, pr.repo)}/pulls/${pr.number}`;
 }
 
-/** A todo nobody has to think about any more: it is done. */
+/** A todo nobody has to think about any more: it is done, or it was closed. */
 export function isFinishedTodo(todo: Pick<ShiftTodo, 'status'>): boolean {
-  return todo.status === 'done';
+  return todo.status === 'done' || todo.status === 'closed';
+}
+
+/** The actions a todo offers, in the order they are offered. */
+export type TodoActionId = 'release' | 'block' | 'done' | 'close' | 'park' | 'edit';
+
+export interface TodoActionChoice {
+  id: TodoActionId;
+  /** The button's own words. */
+  label: string;
+  /** What the confirmation's button says once the action is spelled out. */
+  confirm: string;
+  /** Outlined or quiet: the page's one filled button belongs to the review PR. */
+  variant: 'default' | 'ghost' | 'danger';
+}
+
+const TODO_ACTIONS: Record<TodoActionId, TodoActionChoice> = {
+  release: { id: 'release', label: 'Release', confirm: 'Confirm release', variant: 'default' },
+  block: { id: 'block', label: 'Block', confirm: 'Confirm block', variant: 'ghost' },
+  done: { id: 'done', label: 'Mark done', confirm: 'Confirm done', variant: 'default' },
+  close: { id: 'close', label: 'Close', confirm: 'Confirm close', variant: 'danger' },
+  park: { id: 'park', label: 'Park until…', confirm: 'Confirm park', variant: 'ghost' },
+  edit: { id: 'edit', label: 'Edit', confirm: 'Save changes', variant: 'ghost' },
+};
+
+/**
+ * What to offer on a todo: the first thing to do, then the rest behind a menu.
+ * An `owner_task` is the operator's own job, so marking it done leads and
+ * handing it to a worker is not offered; every other todo still leads with
+ * releasing what is stuck or blocking what should not run. A finished todo
+ * offers nothing.
+ */
+export function todoActions(todo: Pick<ShiftTodo, 'status' | 'block_kind'>): {
+  primary: TodoActionChoice | null;
+  more: TodoActionChoice[];
+} {
+  if (isFinishedTodo(todo)) return { primary: null, more: [] };
+  const releasable =
+    todo.status === 'claimed' || todo.status === 'blocked' || todo.status === 'handoff';
+  const release: TodoActionChoice = {
+    ...TODO_ACTIONS.release,
+    variant: todo.status === 'claimed' ? 'ghost' : 'default',
+  };
+  const offered: TodoActionChoice[] =
+    todo.block_kind === 'owner_task'
+      ? [TODO_ACTIONS.done, TODO_ACTIONS.close, TODO_ACTIONS.park, TODO_ACTIONS.edit]
+      : [
+          releasable ? release : TODO_ACTIONS.block,
+          TODO_ACTIONS.done,
+          TODO_ACTIONS.close,
+          TODO_ACTIONS.park,
+          TODO_ACTIONS.edit,
+        ];
+  return { primary: offered[0] ?? null, more: offered.slice(1) };
+}
+
+/**
+ * An `<input type="datetime-local">` value as the RFC 3339 instant the API
+ * takes: UTC, to the second. An empty or unparsable value is no instant.
+ */
+export function untilRfc3339(local: string): string | null {
+  const at = new Date(local.trim());
+  return Number.isNaN(at.getTime()) ? null : `${at.toISOString().slice(0, 19)}Z`;
+}
+
+/** What the "until" input starts at: `days` from `now`, in the reader's zone. */
+export function untilInputDefault(now: Date, days = 1): string {
+  const at = new Date(now.getTime() + days * 86_400_000);
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(
+    at.getHours()
+  )}:${pad(at.getMinutes())}`;
 }
 
 /** Live todos first in their own list, finished ones apart. */

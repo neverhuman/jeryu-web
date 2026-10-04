@@ -8,7 +8,14 @@
 import type { ShiftTodoPr } from './pipeline';
 
 export type ShiftMode = 'now' | 'night';
-export type ShiftTodoStatus = 'open' | 'claimed' | 'done' | 'blocked' | 'handoff';
+export type ShiftTodoStatus = 'open' | 'claimed' | 'done' | 'blocked' | 'handoff' | 'closed';
+/**
+ * Who the todo waits on. `worker_task` is the default: a worker picks it up.
+ * `owner_task` is a person's own job, so marking it done is the first thing
+ * offered and releasing it to a worker is not offered at all. Absent on
+ * servers that predate the field, which means `worker_task`.
+ */
+export type ShiftBlockKind = 'worker_task' | 'owner_task';
 export type ShiftLanding = 'shifts' | 'batch' | string;
 
 export interface ShiftFamilyRepo {
@@ -78,6 +85,10 @@ export interface ShiftTodo {
   cost_usd?: number | null;
   note: string;
   triaged: boolean;
+  /** Who has to act on it (absent on older servers: a worker does). */
+  block_kind?: ShiftBlockKind | string | null;
+  /** While this instant is in the future the todo is parked: nothing claims it. */
+  parked_until?: string | null;
   worked_by: ShiftAttempt[];
 }
 
@@ -119,12 +130,29 @@ export interface ShiftTodosBulkResponse {
   todos: ShiftTodo[];
 }
 
-export type ShiftTodoActionKind = 'release' | 'block' | 'priority' | 'mode';
+export type ShiftTodoActionKind =
+  | 'release'
+  | 'block'
+  | 'priority'
+  | 'mode'
+  | 'done'
+  | 'close'
+  | 'park'
+  | 'edit'
+  | 'acknowledge';
 
 export interface ShiftTodoActionRequest {
   action: ShiftTodoActionKind;
   value?: string | number;
   note?: string;
+  /**
+   * When the todo comes back: RFC 3339, UTC, to the second. `park` sets it on
+   * the todo; `acknowledge` keeps the todo's Needs-you row quiet until then.
+   */
+  until?: string;
+  /** `edit` only, and only the parts being changed. */
+  title?: string;
+  body?: string;
 }
 
 export type ShiftWorkerState = 'idle' | 'working' | 'stopping' | 'paused';

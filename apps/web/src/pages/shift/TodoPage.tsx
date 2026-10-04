@@ -29,7 +29,7 @@ import {
   todoCost,
   type RepoOwners,
 } from './shiftModel';
-import { RepoName, TodoDetail, TodoPrimaryAction, TodoTrace, WhyStuck } from './todoParts';
+import { RepoName, TodoActions, TodoDetail, TodoTrace, WhyStuck } from './todoParts';
 import { WORK_PATH, queueHref, todoHref } from './workPaths';
 import { todoFamily } from './workPageModel';
 
@@ -152,7 +152,7 @@ function TodoView({
       <TodoTrace todo={todo} owners={owners} />
       {isAdmin ? (
         <p className="shift__actions">
-          <TodoPrimaryAction todo={todo} />
+          <TodoActions todo={todo} />
         </p>
       ) : null}
 

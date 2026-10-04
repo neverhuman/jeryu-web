@@ -2,7 +2,9 @@
 //
 // Reads (families, todos, shifts, workers, history) need any logged-in user;
 // every mutation is admin-only server-side. Queue writes invalidate the todo
-// and shift lists so the Queue tab reflects the new queue commit.
+// and shift lists so the Queue tab reflects the new queue commit, and the
+// pipeline reads with them: parking, closing or acknowledging a todo settles
+// what "Needs you" says about it.
 
 import {
   useMutation,
@@ -14,6 +16,7 @@ import {
 } from '@tanstack/react-query';
 
 import { apiGet, apiSend } from '../api/client';
+import { PIPELINE_KEY } from './usePipeline';
 import { endpoints } from '../api/endpoints';
 import type {
   CreateShiftTodoRequest,
@@ -166,6 +169,7 @@ export function useShiftTodoAction(): UseMutationResult<
       apiSend<ShiftTodo>(endpoints.shiftTodoAction(family, id), body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [...SHIFT_KEY, 'todos'] });
+      void queryClient.invalidateQueries({ queryKey: PIPELINE_KEY });
     },
   });
 }

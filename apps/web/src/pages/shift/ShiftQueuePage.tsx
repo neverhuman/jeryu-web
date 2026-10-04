@@ -51,7 +51,7 @@ import {
   unmergedTodosNote,
   type QueueFilters,
 } from './shiftModel';
-import { RepoName, TodoDetail, TodoPrimaryAction, TodoTrace, WhyStuck } from './todoParts';
+import { RepoName, TodoActions, TodoDetail, TodoTrace, WhyStuck } from './todoParts';
 import { WorkComposer } from './WorkComposer';
 import { todoHref } from './workPaths';
 import { WorkersStrip } from './WorkersStrip';
@@ -490,7 +490,7 @@ function TodoRow({
         ) : null}
         {isAdmin ? (
           <td>
-            <TodoPrimaryAction todo={todo} />
+            <TodoActions todo={todo} />
           </td>
         ) : null}
       </tr>

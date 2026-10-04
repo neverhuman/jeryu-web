@@ -40,6 +40,10 @@ import {
   traceSummary,
   todoWorkers,
   isLongNote,
+  isFinishedTodo,
+  todoActions,
+  untilInputDefault,
+  untilRfc3339,
 } from '../shift/shiftModel';
 import { SHIFTS, TODOS, WORKERS, attempt, todo } from './shiftTestData';
 
@@ -337,3 +341,50 @@ describe('isLongNote', () => {
   });
 });
 
+describe('todo actions', () => {
+  it("leads an owner's own task with Mark done and never offers Release", () => {
+    const owner = todoActions(todo({ block_kind: 'owner_task', status: 'open' }));
+    expect(owner.primary?.label).toBe('Mark done');
+    expect([owner.primary, ...owner.more].map((c) => c?.id)).toEqual([
+      'done',
+      'close',
+      'park',
+      'edit',
+    ]);
+  });
+
+  it("leads a worker's task with what is stuck, and keeps the rest behind it", () => {
+    const open = todoActions(todo({ status: 'open' }));
+    expect(open.primary?.id).toBe('block');
+    expect(open.more.map((c) => c.id)).toEqual(['done', 'close', 'park', 'edit']);
+    expect(todoActions(todo({ status: 'blocked' })).primary?.id).toBe('release');
+    // A claimed todo's Release is quiet: it takes work away from a worker.
+    expect(todoActions(todo({ status: 'claimed' })).primary?.variant).toBe('ghost');
+    // An unknown block_kind is a worker's task, as an older server's absent one is.
+    expect(todoActions(todo({ status: 'open', block_kind: 'something_new' })).primary?.id).toBe(
+      'block'
+    );
+  });
+
+  it('offers nothing on a todo that is finished, done or closed', () => {
+    for (const status of ['done', 'closed']) {
+      const actions = todoActions(todo({ status }));
+      expect(actions.primary).toBeNull();
+      expect(actions.more).toEqual([]);
+    }
+    expect(isFinishedTodo({ status: 'closed' })).toBe(true);
+    expect(needsHuman({ status: 'closed', triaged: false })).toBe(false);
+  });
+
+  it('sends an until as an RFC 3339 instant in UTC, and refuses a non-date', () => {
+    const at = untilRfc3339('2026-10-05T09:30');
+    expect(at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+    expect(at).toBe(`${new Date('2026-10-05T09:30').toISOString().slice(0, 19)}Z`);
+    expect(untilRfc3339('')).toBeNull();
+    expect(untilRfc3339('tomorrow')).toBeNull();
+    // The input starts a day out, in the reader's own zone, so it parses back.
+    const started = untilInputDefault(new Date('2026-10-04T12:00:00Z'));
+    expect(started).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(untilRfc3339(started)).toBe('2026-10-05T12:00:00Z');
+  });
+});

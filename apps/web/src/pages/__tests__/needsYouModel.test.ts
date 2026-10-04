@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   FORGE_FAMILY,
+  acknowledgeTarget,
   familyCounts,
   familyName,
   familyOf,
@@ -228,5 +229,17 @@ describe('needsYouModel', () => {
         { id: { owner: 'jeryu', name: 'orphan' }, family: null },
       ]),
     ]).toEqual([['jeryu/jeryu-deploy', 'jeryu-split']]);
+  });
+});
+
+describe('acknowledgeTarget', () => {
+  it('is the todo behind the row, and nothing when the row is not about one', () => {
+    expect(acknowledgeTarget({ family: 'jeryu', todo_id: '20260919-1' })).toEqual({
+      family: 'jeryu',
+      id: '20260919-1',
+    });
+    expect(acknowledgeTarget({ family: 'jeryu', todo_id: null })).toBeNull();
+    expect(acknowledgeTarget({ family: null, todo_id: '20260919-1' })).toBeNull();
+    expect(acknowledgeTarget({ family: ' ', todo_id: ' ' })).toBeNull();
   });
 });

@@ -159,6 +159,19 @@ export function safeHref(href: string | null | undefined): string | null {
   return href && href.startsWith('/') && !href.startsWith('//') ? href : null;
 }
 
+/**
+ * The todo a row is about, when it is about one: what "Acknowledge until…"
+ * writes to. Rows about a pull request, a release or the runners name no todo,
+ * so they are not acknowledged from here.
+ */
+export function acknowledgeTarget(
+  item: Pick<AttentionItem, 'family' | 'todo_id'>
+): { family: string; id: string } | null {
+  const family = (item.family ?? '').trim();
+  const id = (item.todo_id ?? '').trim();
+  return family && id ? { family, id } : null;
+}
+
 export function findAttention(
   data: AttentionResponse | undefined,
   kind: string

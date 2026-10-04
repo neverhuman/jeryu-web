@@ -72,8 +72,8 @@ test.describe('Work, one page', () => {
     await expect(jain).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();
     const strip = page.getByRole('group', { name: 'Filter by family' });
-    await expect(strip.getByRole('button', { name: /^All 4$/ })).toHaveAttribute('aria-pressed', 'true');
-    await expect(strip.getByRole('button', { name: /^jeryu 3$/ })).toBeVisible();
+    await expect(strip.getByRole('button', { name: /^All 5$/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(strip.getByRole('button', { name: /^jeryu 4$/ })).toBeVisible();
 
     // The pill is the first thing in the row.
     await expect(jain.locator('td').first().getByRole('button', { name: 'Show only jain' })).toBeVisible();
@@ -88,9 +88,9 @@ test.describe('Work, one page', () => {
     await jain.getByRole('button', { name: /^Showing only jain/ }).click();
     await expect(page).toHaveURL(/\/work$/);
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();
-    await strip.getByRole('button', { name: /^jeryu 3$/ }).click();
+    await strip.getByRole('button', { name: /^jeryu 4$/ }).click();
     await expect(jain).toHaveCount(0);
-    await strip.getByRole('button', { name: /^All 4$/ }).click();
+    await strip.getByRole('button', { name: /^All 5$/ }).click();
     await expect(jain).toBeVisible();
   });
 
@@ -191,6 +191,78 @@ test.describe('Work, one page', () => {
     // The trail leads back to the family's queue.
     await todoPage.getByRole('link', { name: 'jeryu', exact: true }).first().click();
     await expect(page).toHaveURL(/\/work\?family=jeryu$/);
+  });
+
+  test("an owner's own task leads with Mark done, and done, close, park and edit each confirm @action:shift.todo_actions", async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    const log = await mockShiftApi(page);
+
+    // On the Work row first: the primary action follows the todo's block_kind.
+    await page.goto('/work');
+    const row = page.getByTestId('shift-todo-20260919-0950-fff');
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await expect(row.getByRole('button', { name: 'Mark done 20260919-0950-fff' })).toBeVisible();
+    await expect(row.getByRole('button', { name: /^Release/ })).toHaveCount(0);
+
+    // The todo's own page offers the same set, and each one asks first.
+    await page.goto('/work/20260919-0950-fff');
+    const todoPage = page.getByTestId('todo-page');
+    await expect(
+      todoPage.getByRole('button', { name: 'Mark done 20260919-0950-fff' })
+    ).toBeVisible();
+    await expect(todoPage.getByRole('button', { name: /^Release/ })).toHaveCount(0);
+    await todoPage.getByRole('button', { name: 'Mark done 20260919-0950-fff' }).click();
+    await expect(todoPage.getByText('Mark 20260919-0950-fff done?')).toBeVisible();
+    expect(log.posts).toHaveLength(0);
+    await todoPage.getByRole('button', { name: 'Confirm done' }).click();
+    await expect.poll(() => log.posts.length).toBe(1);
+    expect(log.posts[0]).toEqual({
+      path: '/api/v1/shift/todos/jeryu/20260919-0950-fff/action',
+      body: { action: 'done' },
+    });
+
+    // Park sends the instant the API takes: RFC 3339, UTC, to the second.
+    await todoPage.getByLabel('More actions for 20260919-0950-fff').click();
+    await todoPage.getByRole('button', { name: 'Park until… 20260919-0950-fff' }).click();
+    await todoPage
+      .getByLabel('Park 20260919-0950-fff until')
+      .fill('2026-10-05T09:30');
+    await todoPage.getByRole('button', { name: 'Confirm park' }).click();
+    await expect.poll(() => log.posts.length).toBe(2);
+    const parked = log.posts[1].body as { action: string; until: string };
+    expect(parked.action).toBe('park');
+    expect(parked.until).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+
+    // Closing asks why, and the reason rides along.
+    await todoPage.getByRole('button', { name: 'Close 20260919-0950-fff' }).click();
+    await todoPage
+      .getByLabel('Reason for closing 20260919-0950-fff')
+      .fill('decided in the release meeting');
+    await todoPage.getByRole('button', { name: 'Confirm close' }).click();
+    await expect.poll(() => log.posts.length).toBe(3);
+    expect(log.posts[2].body).toEqual({
+      action: 'close',
+      note: 'decided in the release meeting',
+    });
+
+    // An edit the server refuses is said beside the form, which stays open.
+    await todoPage.getByRole('button', { name: 'Edit 20260919-0950-fff' }).click();
+    const title = todoPage.getByLabel('Title of 20260919-0950-fff');
+    await expect(title).toHaveValue('Decide the jeryu-core tag name');
+    await title.fill('');
+    await todoPage.getByRole('button', { name: 'Save changes' }).click();
+    await expect(todoPage.getByRole('alert')).toHaveText('title must not be empty');
+    await expect(todoPage.getByRole('button', { name: 'Save changes' })).toBeVisible();
+    await title.fill('Decide the next split tag');
+    await todoPage.getByRole('button', { name: 'Save changes' }).click();
+    await expect.poll(() => log.posts.length).toBe(5);
+    expect(log.posts[4].body).toEqual({
+      action: 'edit',
+      title: 'Decide the next split tag',
+      body: 'Pick the split tag the next bump uses.',
+    });
   });
 
   test('admin files one todo from the one-line composer, and many from the opened form @action:shift.add_single @action:shift.add_many', async ({

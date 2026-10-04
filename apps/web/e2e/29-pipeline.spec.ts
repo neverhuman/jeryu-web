@@ -13,6 +13,7 @@ import {
   pinsBody,
 } from './fixtures/pipelineMocks';
 import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
+import { mockShiftApi } from './fixtures/shiftMocks';
 
 test.describe('Pipeline visibility', () => {
 
@@ -122,6 +123,35 @@ test.describe('Pipeline visibility', () => {
     await page.getByTestId('todo-page').getByRole('link', { name: 'Work', exact: true }).click();
     await expect(page.getByTestId('shift-queue-page')).toBeVisible();
     await expect(page.getByTestId('needs-you-here-work')).toHaveCount(0);
+  });
+
+  test('a Needs-you row about a todo is acknowledged until a date @action:needs_you.acknowledge', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    const shift = await mockShiftApi(page);
+
+    await page.goto('/needs-you');
+    const blocked = page.getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66');
+    await expect(blocked).toBeVisible({ timeout: 15_000 });
+    // It is folded away: a row still reads as one title, one reason, one act.
+    const until = blocked.getByLabel('Acknowledge 20260919-130515-f8cc66 until');
+    await expect(until).toBeHidden();
+    await blocked.getByLabel('More for Allow PATCH of repo default_branch').click();
+    await until.fill('2026-10-05T09:30');
+    await blocked.getByRole('button', { name: 'Acknowledge' }).click();
+    await expect.poll(() => shift.posts.length).toBe(1);
+    expect(shift.posts[0].path).toBe(
+      '/api/v1/shift/todos/jeryu/20260919-130515-f8cc66/action'
+    );
+    const body = shift.posts[0].body as { action: string; until: string };
+    expect(body.action).toBe('acknowledge');
+    expect(body.until).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+
+    // A row about a release names no todo: there is nothing to acknowledge.
+    const staged = page.getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
+    await expect(staged.getByText('More', { exact: true })).toHaveCount(0);
   });
 
   test('narrow screens: the header never overflows and a Needs-you title keeps its width @action:chrome.narrow_header', async ({

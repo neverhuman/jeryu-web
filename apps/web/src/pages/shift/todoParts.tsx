@@ -1,11 +1,12 @@
 // todoParts.tsx — one todo's parts, shared by a Work queue row and the todo's
 // own page (`/work/<id>`): its lifecycle trace, why it is stuck, its body,
-// note and attempts, and the admin actions on it.
+// note and attempts, and the admin actions on it (done, close, park, edit, and
+// release or block), each of which asks before it writes to the queue.
 
 import { Fragment, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
-import type { ShiftTodo } from '../../api/types';
+import type { ShiftTodo, ShiftTodoActionRequest } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
 import { useShiftTodoAction } from '../../hooks/useShift';
 import {
@@ -16,9 +17,14 @@ import {
   repoCodeHref,
   slotLabel,
   todoPrHref,
+  todoActions,
   todoTrace,
   traceSummary,
+  untilInputDefault,
+  untilRfc3339,
   type RepoOwners,
+  type TodoActionChoice,
+  type TodoActionId,
 } from './shiftModel';
 import { todoHref } from './workPaths';
 
@@ -144,66 +150,72 @@ export function TodoDetail({
   );
 }
 
-/** The one thing to do with this row: release what is stuck, block what should not run. */
-export function TodoPrimaryAction({ todo }: { todo: ShiftTodo }): JSX.Element | null {
+/**
+ * What to do with this row. The first action is a button; the rest sit behind
+ * a "More" menu, and each one but Release spells itself out and asks before it
+ * goes: these edit a queue the workers are reading.
+ */
+export function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element | null {
   const action = useShiftTodoAction();
-  const base = { family: todo.family, id: todo.id };
-  const [blocking, setBlocking] = useState(false);
-  const [note, setNote] = useState('');
-  const submitBlock = (event: FormEvent): void => {
-    event.preventDefault();
-    action.mutate(
-      { ...base, action: 'block', note: note.trim() },
-      {
-        onSuccess: () => {
-          setBlocking(false);
-          setNote('');
-        },
-      }
-    );
+  const { primary, more } = todoActions(todo);
+  const [asking, setAsking] = useState<TodoActionId | null>(null);
+  if (!primary) return null;
+  const run = (choice: TodoActionChoice): void => {
+    // Release is one keystroke back to the queue; everything else confirms.
+    if (choice.id === 'release') {
+      setAsking(null);
+      action.mutate({ family: todo.family, id: todo.id, action: 'release' });
+      return;
+    }
+    setAsking((current) => (current === choice.id ? null : choice.id));
   };
-  const releasable =
-    todo.status === 'claimed' || todo.status === 'blocked' || todo.status === 'handoff';
-  if (todo.status === 'done') return null;
+  const open = [primary, ...more].find((choice) => choice.id === asking) ?? null;
   return (
     <span className="shift__actions">
-      {releasable ? (
-        <ActionButton
-          // Outlined, never filled: the page's one filled action is "Open review PR".
-          variant={todo.status === 'claimed' ? 'ghost' : 'default'}
-          disabled={action.isPending}
-          onClick={() => action.mutate({ ...base, action: 'release' })}
-          aria-label={`Release ${todo.id}`}
-        >
-          Release
-        </ActionButton>
-      ) : (
-        <ActionButton
-          variant="ghost"
-          disabled={action.isPending}
-          onClick={() => setBlocking((v) => !v)}
-          aria-expanded={blocking}
-          aria-label={`Block ${todo.id}`}
-        >
-          Block
-        </ActionButton>
-      )}
-      {blocking ? (
-        <form className="shift__block-form" onSubmit={submitBlock} aria-label={`Why block ${todo.id}?`}>
-          <input
-            type="text"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="Why? (shown on the todo)"
-            aria-label={`Reason for blocking ${todo.id}`}
-          />
-          <ActionButton variant="danger" type="submit" disabled={action.isPending}>
-            Confirm block
-          </ActionButton>
-          <ActionButton variant="ghost" type="button" onClick={() => setBlocking(false)}>
-            Cancel
-          </ActionButton>
-        </form>
+      <ActionButton
+        variant={primary.variant}
+        disabled={action.isPending}
+        onClick={() => run(primary)}
+        aria-expanded={primary.id === 'release' ? undefined : asking === primary.id}
+        aria-label={`${primary.label} ${todo.id}`}
+      >
+        {primary.label}
+      </ActionButton>
+      {more.length > 0 ? (
+        <details className="shift__more-actions">
+          <summary aria-label={`More actions for ${todo.id}`}>More</summary>
+          <span className="shift__more-actions-list">
+            {more.map((choice) => (
+              <ActionButton
+                key={choice.id}
+                variant={choice.variant}
+                disabled={action.isPending}
+                onClick={() => run(choice)}
+                aria-expanded={asking === choice.id}
+                aria-label={`${choice.label} ${todo.id}`}
+              >
+                {choice.label}
+              </ActionButton>
+            ))}
+          </span>
+        </details>
+      ) : null}
+      {open ? (
+        <TodoActionForm
+          todo={todo}
+          choice={open}
+          pending={action.isPending}
+          onSubmit={(request) =>
+            action.mutate(
+              { family: todo.family, id: todo.id, ...request },
+              { onSuccess: () => setAsking(null) }
+            )
+          }
+          onCancel={() => {
+            action.reset();
+            setAsking(null);
+          }}
+        />
       ) : null}
       {action.error ? (
         <span className="shift__error" role="alert">
@@ -211,6 +223,101 @@ export function TodoPrimaryAction({ todo }: { todo: ShiftTodo }): JSX.Element | 
         </span>
       ) : null}
     </span>
+  );
+}
+
+/** One action spelled out: what it will do, what it needs, and confirm or cancel. */
+function TodoActionForm({
+  todo,
+  choice,
+  pending,
+  onSubmit,
+  onCancel,
+}: {
+  todo: ShiftTodo;
+  choice: TodoActionChoice;
+  pending: boolean;
+  onSubmit: (request: ShiftTodoActionRequest) => void;
+  onCancel: () => void;
+}): JSX.Element {
+  const [note, setNote] = useState('');
+  const [until, setUntil] = useState(() => untilInputDefault(new Date()));
+  const [title, setTitle] = useState(todo.title);
+  const [body, setBody] = useState(todo.body);
+  const submit = (event: FormEvent): void => {
+    event.preventDefault();
+    switch (choice.id) {
+      case 'block':
+        return onSubmit({ action: 'block', note: note.trim() });
+      case 'close':
+        return onSubmit({ action: 'close', note: note.trim() });
+      case 'done':
+        return onSubmit({ action: 'done' });
+      case 'park': {
+        const at = untilRfc3339(until);
+        if (at) onSubmit({ action: 'park', until: at });
+        return;
+      }
+      case 'edit':
+        return onSubmit({ action: 'edit', title: title.trim(), body });
+      default:
+        return undefined;
+    }
+  };
+  return (
+    <form
+      className="shift__block-form"
+      onSubmit={submit}
+      aria-label={`${choice.label} ${todo.id}?`}
+    >
+      {choice.id === 'block' || choice.id === 'close' ? (
+        <input
+          type="text"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="Why? (shown on the todo)"
+          aria-label={`Reason for ${choice.id === 'block' ? 'blocking' : 'closing'} ${todo.id}`}
+        />
+      ) : null}
+      {choice.id === 'park' ? (
+        <label>
+          Until{' '}
+          <input
+            type="datetime-local"
+            value={until}
+            onChange={(event) => setUntil(event.target.value)}
+            aria-label={`Park ${todo.id} until`}
+          />
+        </label>
+      ) : null}
+      {choice.id === 'edit' ? (
+        <>
+          <input
+            type="text"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            aria-label={`Title of ${todo.id}`}
+          />
+          <textarea
+            value={body}
+            rows={4}
+            onChange={(event) => setBody(event.target.value)}
+            aria-label={`Body of ${todo.id}`}
+          />
+        </>
+      ) : null}
+      {choice.id === 'done' ? <span>Mark {todo.id} done?</span> : null}
+      <ActionButton
+        variant={choice.id === 'edit' || choice.id === 'done' ? 'default' : 'danger'}
+        type="submit"
+        disabled={pending || (choice.id === 'park' && untilRfc3339(until) === null)}
+      >
+        {choice.confirm}
+      </ActionButton>
+      <ActionButton variant="ghost" type="button" onClick={onCancel}>
+        Cancel
+      </ActionButton>
+    </form>
   );
 }
 

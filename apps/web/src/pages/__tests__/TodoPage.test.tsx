@@ -2,11 +2,11 @@
 // row, why it is stuck, links to its blockers, admin actions, and the states
 // for an unknown id and an id two families share.
 
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TodoPage } from '../shift/TodoPage';
-import { json, mockShiftApi, renderAt } from './shiftPageHelpers';
+import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
 import { TODOS, todo } from './shiftTestData';
 
 let role: 'admin' | 'user' = 'user';
@@ -84,6 +84,58 @@ describe('TodoPage', () => {
     renderTodo('/work/20260919-0900-q1q');
     expect(await screen.findByRole('button', { name: 'Release 20260919-0900-q1q' })).toBeInTheDocument();
     expect(screen.getByLabelText('Priority for 20260919-0900-q1q')).toBeInTheDocument();
+  });
+
+  it("leads an owner's own task with Mark done, and never offers to release it", async () => {
+    role = 'admin';
+    serveTodos([
+      todo({ id: '20260919-1200-own', title: 'Decide the tag', block_kind: 'owner_task' }),
+    ]);
+    renderTodo('/work/20260919-1200-own');
+    const done = await screen.findByRole('button', { name: 'Mark done 20260919-1200-own' });
+    expect(done.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', { name: /^Release/ })).toBeNull();
+    // Marking done says what it will do before it does it.
+    fireEvent.click(done);
+    expect(screen.getByText('Mark 20260919-1200-own done?')).toBeInTheDocument();
+  });
+
+  it('parks a todo until an instant it sends as RFC 3339', async () => {
+    role = 'admin';
+    const calls = mockShiftApi((req) =>
+      req.method === 'POST' ? json(TODOS[0]) : undefined
+    );
+    renderTodo('/work/20260919-0900-q1q');
+    fireEvent.click(await screen.findByRole('button', { name: 'Park until… 20260919-0900-q1q' }));
+    fireEvent.change(screen.getByLabelText('Park 20260919-0900-q1q until'), {
+      target: { value: '2026-10-05T09:30' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm park' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1));
+    const post = calls.find((c) => c.method === 'POST');
+    expect(post?.pathname).toBe('/api/v1/shift/todos/jeryu/20260919-0900-q1q/action');
+    expect(post?.body).toEqual({
+      action: 'park',
+      until: `${new Date('2026-10-05T09:30').toISOString().slice(0, 19)}Z`,
+    });
+  });
+
+  it('shows the server\'s refusal of an edit beside the form, and keeps the text', async () => {
+    role = 'admin';
+    mockShiftApi((req) =>
+      req.method === 'POST' ? errorResponse(422, 'title is already used by 20260918-1832-k3f') : undefined
+    );
+    renderTodo('/work/20260919-0900-q1q');
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit 20260919-0900-q1q' }));
+    const title = screen.getByLabelText('Title of 20260919-0900-q1q');
+    expect(title).toHaveValue('Claimed thing');
+    fireEvent.change(title, { target: { value: 'Fix the cache key' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'title is already used by 20260918-1832-k3f'
+    );
+    // The form stays open with what was typed: the edit is still there to fix.
+    expect(screen.getByLabelText('Title of 20260919-0900-q1q')).toHaveValue('Fix the cache key');
   });
 
   it('says so when no todo has the id', async () => {

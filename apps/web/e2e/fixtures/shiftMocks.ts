@@ -117,6 +117,16 @@ export const SHIFT_TODOS = [
       },
     ],
   }),
+  // An owner_task: the operator's own job. Marking it done leads, and handing
+  // it to a worker is not offered at all.
+  todo({
+    id: '20260919-0950-fff',
+    title: 'Decide the jeryu-core tag name',
+    body: 'Pick the split tag the next bump uses.',
+    block_kind: 'owner_task',
+    priority: 2,
+    repos: [],
+  }),
   // A second family, so the one Work page shows every family and a pill filters it.
   todo({
     id: '20260919-0940-eee',
@@ -152,6 +162,17 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
           });
         }
         return fulfill(route, todo({ id: '20260919-1000-new', family: body.family, title: body.text, mode: body.mode }));
+      }
+      if (path.endsWith('/action')) {
+        // The server refuses a todo with no title, and says so.
+        if (body.action === 'edit' && String(body.title ?? '').trim() === '') {
+          return fulfill(
+            route,
+            { error: { code: 'invalid_todo', message: 'title must not be empty' } },
+            422
+          );
+        }
+        return fulfill(route, SHIFT_TODOS[0]);
       }
       if (path.endsWith('/pr')) {
         return fulfill(route, {

@@ -57,8 +57,15 @@ describe('NeedsYouPage', () => {
       'href',
       '/work/shift?family=jeryu&todo=20260919-130515-f8cc66'
     );
-    // The only button on a link row is its family pill, which filters and never acts.
-    expect(within(blocked).getAllByRole('button')).toHaveLength(1);
+    // The only button on the row itself is its family pill, which filters and
+    // never acts; acknowledging the row waits inside its folded menu.
+    const folded = blocked.querySelector('.needs-you__more');
+    expect(folded).not.toHaveAttribute('open');
+    expect(
+      within(blocked)
+        .getAllByRole('button')
+        .filter((button) => !folded?.contains(button))
+    ).toHaveLength(1);
     expect(within(blocked).getByRole('button', { name: 'Show only jeryu' })).toBeInTheDocument();
 
     // Watch rows are neutral and collapsed behind a count.
@@ -181,6 +188,34 @@ describe('NeedsYouPage', () => {
       'href',
       '/repos/jeryu/veox/jain-deploy/pulls/80'
     );
+  });
+
+  it('acknowledges a row about a todo until an instant it sends as RFC 3339', async () => {
+    const calls = mockPipelineApi((req) =>
+      req.method === 'POST' ? json({ ok: true }) : undefined
+    );
+    renderPage();
+    const blocked = await screen.findByTestId(
+      'needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66'
+    );
+    fireEvent.click(within(blocked).getByText('More'));
+    fireEvent.change(
+      within(blocked).getByLabelText('Acknowledge 20260919-130515-f8cc66 until'),
+      { target: { value: '2026-10-05T09:30' } }
+    );
+    fireEvent.click(within(blocked).getByRole('button', { name: 'Acknowledge' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1));
+    const post = calls.find((c) => c.method === 'POST');
+    expect(post?.pathname).toBe(
+      '/api/v1/shift/todos/jeryu/20260919-130515-f8cc66/action'
+    );
+    expect(post?.body).toEqual({
+      action: 'acknowledge',
+      until: `${new Date('2026-10-05T09:30').toISOString().slice(0, 19)}Z`,
+    });
+    // A row about a release names no todo, so it is not acknowledged from here.
+    const staged = screen.getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
+    expect(within(staged).queryByText('More')).toBeNull();
   });
 
   it('filters to one family from the pill on a row, and back from the strip', async () => {
