@@ -3,7 +3,7 @@
 
 import { vi } from 'vitest';
 
-import { errorResponse, json, type Override, type Recorded } from './shiftPageHelpers';
+import { errorResponse, json, recordHeaders, type Override, type Recorded } from './shiftPageHelpers';
 import { ATTENTION, EVENTS, PINS } from './pipelineTestData';
 
 /** The SPA shell an older server returns for an unknown `/api/v1/*` path. */
@@ -24,6 +24,7 @@ export function mockPipelineApi(override?: Override): Recorded[] {
       pathname: url.pathname,
       search: url.search,
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      headers: recordHeaders(init?.headers),
     };
     calls.push(req);
     const custom = override?.(req);

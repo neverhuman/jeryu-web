@@ -14,6 +14,10 @@
 // above all, since an author cannot approve their own pull request) is worded
 // by `approveRefusal` and shown next to the Approve button.
 //
+// A merge queue entry that failed or left the queue is the one case where the
+// queue stops and a person starts: the page then offers "Queue again"
+// (`components/merge/QueueAgain`).
+//
 // On approve mutation 409 with `merge_sha_stale`, the page shows a recovery
 // banner with the previous/current SHA and a Refresh button that re-runs the
 // detail query. The banner also appears for `merge_passport_stale` /
@@ -25,7 +29,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
-import type { DiffViewerMode } from '../components/merge';
+import { QueueAgain, type DiffViewerMode } from '../components/merge';
 import {
   ErrorState,
   LoadingState,
@@ -411,6 +415,8 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           </div>
         </div>
       ) : null}
+
+      <QueueAgain repoId={repoId} prNumber={prNumber} enabled={!settled} />
 
       <PullRequestCockpit
         data={data}

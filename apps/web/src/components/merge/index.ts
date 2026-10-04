@@ -14,6 +14,8 @@ export { ChecksPanel } from './ChecksPanel';
 export type { ChecksPanelProps } from './ChecksPanel';
 export { MergeGatePanel } from './MergeGatePanel';
 export type { MergeGatePanelProps } from './MergeGatePanel';
+export { QueueAgain } from './QueueAgain';
+export type { QueueAgainProps } from './QueueAgain';
 export { PullCloseControls } from './PullCloseControls';
 export type { PullCloseControlsProps } from './PullCloseControls';
 export { ReviewSidebar } from './ReviewSidebar';

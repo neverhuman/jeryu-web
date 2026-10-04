@@ -97,22 +97,77 @@ export function attentionContext(item: AttentionItem): string {
   return [kindLabel(item.kind), item.family ?? '', where].filter(Boolean).join(' · ');
 }
 
+export type ApiMethod = 'POST' | 'DELETE';
+
 export type PrimaryAction =
+  | {
+      type: 'api';
+      label: string;
+      method: ApiMethod;
+      path: string;
+      body: unknown;
+      confirm: string;
+    }
   | { type: 'command'; label: string; command: string; where: string | null }
   | { type: 'link'; label: string; to: string }
   | null;
 
 /**
- * Exactly one thing to do per row: the copyable command when the act happens
- * off-site, else the link to where to act.
+ * Exactly one thing to do per row: the call the forge can make for you, else
+ * the copyable command when the act happens off-site, else the link to where
+ * to act. A row's title links to `href` either way, so a row whose act is a
+ * button still leads to its subject.
  */
 export function primaryAction(item: AttentionItem): PrimaryAction {
   const label = item.action?.label || 'Open';
+  const api = item.action?.api;
+  const path = safeApiPath(api?.path);
+  const method = api ? apiMethod(api.method) : null;
+  if (api && path && method) {
+    return {
+      type: 'api',
+      label,
+      method,
+      path,
+      body: api.body,
+      confirm: api.confirm?.trim() || `${label} now? The forge acts straight away.`,
+    };
+  }
   if (item.action?.command) {
     return { type: 'command', label, command: item.action.command, where: commandPlace(item) };
   }
   const to = safeHref(item.href);
   return to ? { type: 'link', label, to } : null;
+}
+
+/**
+ * Only a same-origin v1 API path is called, and only `POST` or `DELETE`:
+ * anything else is not an act this page knows how to make, so the row falls
+ * back to its command or its link rather than offering a button that lies.
+ */
+export function safeApiPath(path: string | null | undefined): string | null {
+  const trimmed = (path ?? '').trim();
+  return trimmed.startsWith('/api/') && !trimmed.startsWith('//') ? trimmed : null;
+}
+
+export function apiMethod(method: string | null | undefined): ApiMethod | null {
+  const name = (method ?? 'POST').trim().toUpperCase();
+  if (name === '' || name === 'POST') return 'POST';
+  return name === 'DELETE' ? 'DELETE' : null;
+}
+
+/**
+ * The row's second line: the server's one-sentence next step when it sends
+ * one, else the reason. The reason stays the tooltip either way, since it is
+ * often the longer of the two.
+ */
+export function rowDetail(
+  item: Pick<AttentionItem, 'next_step' | 'reason'>
+): { text: string; title: string } | null {
+  const step = (item.next_step ?? '').trim();
+  const reason = (item.reason ?? '').trim();
+  const text = step || reason;
+  return text ? { text, title: reason || text } : null;
 }
 
 /**

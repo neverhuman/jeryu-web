@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ToolFleetResponse } from '../../api/types';
 import { ToolFleetToolPage } from '../ToolFleetToolPage';
 import { FAMILIES } from './shiftTestData';
-import { json, renderAt, type Recorded } from './shiftPageHelpers';
+import { json, renderAt, type Recorded, recordHeaders } from './shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
@@ -37,6 +37,7 @@ function mockPage(): Recorded[] {
       pathname: url.pathname,
       search: url.search,
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      headers: recordHeaders(init?.headers),
     });
     if (url.pathname === '/api/v1/fleet/tool-adoption') return json(FLEET);
     if (url.pathname === '/api/v1/shift/families') return json(FAMILIES);

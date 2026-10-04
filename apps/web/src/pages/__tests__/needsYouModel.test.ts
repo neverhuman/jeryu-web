@@ -11,8 +11,11 @@ import {
   attentionArea,
   attentionBadgeCount,
   attentionContext,
+  apiMethod,
   commandPlace,
   primaryAction,
+  rowDetail,
+  safeApiPath,
   systemPulse,
   findAttention,
   groupAttention,
@@ -64,6 +67,91 @@ describe('needsYouModel', () => {
     const blocked = findAttention(ATTENTION, 'todo_blocked')!;
     expect(primaryAction(blocked)).toEqual({ type: 'link', label: 'Open', to: blocked.href });
     expect(primaryAction(attentionItem({ id: 'x', kind: 'y', href: 'https://evil.example' }))).toBeNull();
+  });
+
+  it('prefers the call the forge can make itself, and words a confirmation for it', () => {
+    const queued = attentionItem({
+      id: 'queue_failed:acme/web:7',
+      kind: 'queue_failed',
+      href: '/repos/jeryu/acme/web/pulls/7',
+      action: {
+        label: 'Queue again',
+        command: 'gh pr merge 7',
+        api: { path: '/api/v1/repos/jeryu:acme%2Fweb/pulls/7/queue' },
+      },
+    });
+    expect(primaryAction(queued)).toEqual({
+      type: 'api',
+      label: 'Queue again',
+      method: 'POST',
+      path: '/api/v1/repos/jeryu:acme%2Fweb/pulls/7/queue',
+      body: undefined,
+      confirm: 'Queue again now? The forge acts straight away.',
+    });
+    // The server's own sentence wins when it sends one.
+    const spoken = attentionItem({
+      id: 'q2',
+      kind: 'queue_failed',
+      action: {
+        label: 'Leave the queue',
+        command: null,
+        api: {
+          method: 'delete',
+          path: '/api/v1/repos/acme/pulls/7/queue',
+          body: { reason: 'rebasing by hand' },
+          confirm: 'Take acme/web#7 out of the merge queue?',
+        },
+      },
+    });
+    expect(primaryAction(spoken)).toEqual({
+      type: 'api',
+      label: 'Leave the queue',
+      method: 'DELETE',
+      path: '/api/v1/repos/acme/pulls/7/queue',
+      body: { reason: 'rebasing by hand' },
+      confirm: 'Take acme/web#7 out of the merge queue?',
+    });
+  });
+
+  it('offers no button for a call it cannot make: off-origin, outside the API, or another method', () => {
+    const api = (over: Record<string, unknown>): ReturnType<typeof attentionItem> =>
+      attentionItem({
+        id: 'x',
+        kind: 'queue_failed',
+        href: '/repos/jeryu/acme/web/pulls/7',
+        action: { label: 'Queue again', command: null, api: { path: '/api/v1/ok', ...over } },
+      });
+    expect(safeApiPath('https://evil.example/api/v1/x')).toBeNull();
+    expect(safeApiPath('//evil.example/api/v1/x')).toBeNull();
+    expect(safeApiPath('/work/shift')).toBeNull();
+    expect(safeApiPath(' /api/v1/ok ')).toBe('/api/v1/ok');
+    expect(safeApiPath(undefined)).toBeNull();
+    expect(apiMethod(undefined)).toBe('POST');
+    expect(apiMethod('post')).toBe('POST');
+    expect(apiMethod('PATCH')).toBeNull();
+    // Each of these falls back to the row's link rather than lying about an act.
+    for (const over of [{ path: '//evil.example/x' }, { path: '/work/shift' }, { method: 'PATCH' }]) {
+      expect(primaryAction(api(over))).toEqual({
+        type: 'link',
+        label: 'Queue again',
+        to: '/repos/jeryu/acme/web/pulls/7',
+      });
+    }
+  });
+
+  it('reads the second line as the next step, keeping the reason as the tooltip', () => {
+    expect(
+      rowDetail({ next_step: 'Deploy: on xbabe0, run `deploy.sh`', reason: 'Production is 3 commits behind.' })
+    ).toEqual({
+      text: 'Deploy: on xbabe0, run `deploy.sh`',
+      title: 'Production is 3 commits behind.',
+    });
+    // A server that predates `next_step`, or sent it blank: the reason is the line.
+    expect(rowDetail({ next_step: '  ', reason: 'Checks are failing.' })).toEqual({
+      text: 'Checks are failing.',
+      title: 'Checks are failing.',
+    });
+    expect(rowDetail({ next_step: null, reason: null })).toBeNull();
   });
 
   it('says where a command runs: the server\'s place, else a checkout of the repository, else nothing', () => {

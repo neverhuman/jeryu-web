@@ -3,7 +3,7 @@
 
 import { vi } from 'vitest';
 
-import { errorResponse, json, type Override, type Recorded } from './shiftPageHelpers';
+import { errorResponse, json, recordHeaders, type Override, type Recorded } from './shiftPageHelpers';
 import { HEAD, OVERVIEW, RULE } from './qualityGateTestData';
 
 export function mockQualityGateApi(override?: Override): Recorded[] {
@@ -16,6 +16,7 @@ export function mockQualityGateApi(override?: Override): Recorded[] {
       pathname: url.pathname,
       search: url.search,
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      headers: recordHeaders(init?.headers),
     };
     calls.push(req);
     const custom = override?.(req);

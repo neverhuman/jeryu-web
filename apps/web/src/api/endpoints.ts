@@ -138,6 +138,12 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge`,
   pullMergeAttempt: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge-attempt`,
+  /** POST joins the merge queue (idempotent); DELETE leaves it. */
+  pullQueue: (id: string, prNumber: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/queue`,
+  /** Every queue entry of one repository, whatever state it is in. */
+  repoMergeQueue: (id: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/merge-queue`,
   /** What acts on the repository (checks, reviewer, merger, runners,
    *  deployers, grants) and where it is mirrored to. */
   repoAutomation: (id: string): string =>

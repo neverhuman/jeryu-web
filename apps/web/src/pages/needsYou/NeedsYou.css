@@ -67,19 +67,28 @@
   overflow: hidden;
 }
 
-/* A row with a link is the link: one target, one tab stop, the whole row. */
+/* The title is the row's link to its subject, whatever the row's act is. It
+   keeps the row's own colour (red where a person is the next step). */
 .needs-you__row {
   position: relative;
 }
 
-.needs-you__open::after {
-  content: '';
-  position: absolute;
-  inset: 0;
+.needs-you__title:any-link {
+  text-decoration: none;
 }
 
-.needs-you__row:has(.needs-you__open):hover .needs-you__title {
+.needs-you__title:any-link:hover,
+.needs-you__title:any-link:focus-visible {
   text-decoration: underline;
+}
+
+/* The act and, under it, what the forge said when it refused. */
+.needs-you__act {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
 }
 
 .needs-you__title-line {
@@ -165,11 +174,8 @@
   overflow: visible;
 }
 
-/* Acknowledging sits above the link stretched over the row, or it is
-   unreachable: the row's one link covers everything under it. */
 .needs-you__more {
   position: relative;
-  z-index: 1;
   flex: 0 0 auto;
 }
 

@@ -15,6 +15,7 @@ export type * from './types/controlPlane';
 export type * from './types/toolBuild';
 export type * from './types/shift';
 export type * from './types/pipeline';
+export type * from './types/mergeQueue';
 export type * from './types/qualityGate';
 export type * from './types/search';
 export type * from './types/automation';

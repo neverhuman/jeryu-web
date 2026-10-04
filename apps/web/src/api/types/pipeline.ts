@@ -8,6 +8,22 @@
 
 export type AttentionSeverity = 'critical' | 'action' | 'watch';
 
+/**
+ * An act the forge itself can carry out, so the row does not have to send
+ * anybody to another page: one same-origin API call the button makes. Absent
+ * from a server that predates it, and from every act that happens off-site.
+ */
+export interface AttentionApiAction {
+  /** `POST` (the default) or `DELETE`; the web offers no other method. */
+  method?: string | null;
+  /** The call's own path, under `/api/v1/`. */
+  path: string;
+  /** The JSON body, when the call takes one. */
+  body?: unknown;
+  /** One sentence naming what the call does, shown before it is made. */
+  confirm?: string | null;
+}
+
 export interface AttentionAction {
   label: string;
   /** A copyable shell line when the act happens off-site. */
@@ -18,6 +34,8 @@ export interface AttentionAction {
    * every action without a command.
    */
   run_in?: string | null;
+  /** The call the row's own button makes, when the forge can act itself. */
+  api?: AttentionApiAction | null;
 }
 
 export interface AttentionItem {
@@ -36,6 +54,11 @@ export interface AttentionItem {
   /** In-app path to the place to act. */
   href: string | null;
   action: AttentionAction | null;
+  /**
+   * The one next step as one sentence, with no other context ("Deploy: on
+   * xbabe0, run `…`"). Absent from a server that predates it.
+   */
+  next_step?: string | null;
 }
 
 export interface AttentionCounts {

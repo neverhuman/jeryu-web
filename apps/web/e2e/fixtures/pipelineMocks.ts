@@ -81,6 +81,40 @@ export function attentionBody(): Record<string, unknown> {
   };
 }
 
+/**
+ * One row whose act the forge makes itself (`action.api`): a merge queue entry
+ * that failed, which a button queues again.
+ */
+export function queueFailedBody(): Record<string, unknown> {
+  return {
+    schema_version: 1,
+    generated_at: minutesAgo(0),
+    counts: { critical: 0, action: 1, watch: 0 },
+    items: [
+      item({
+        id: 'queue_failed:acme/web:7',
+        kind: 'queue_failed',
+        title: 'acme/web#7 failed in the merge queue',
+        reason: 'The queue gate failed twice on the same commit.',
+        next_step: 'Queue again: open /repos/jeryu/acme/web/pulls/7',
+        since: minutesAgo(8),
+        family: 'acme',
+        repo: 'acme/web',
+        pr: 7,
+        href: '/repos/jeryu/acme/web/pulls/7',
+        action: {
+          label: 'Queue again',
+          command: null,
+          api: {
+            path: '/api/v1/repos/jeryu:acme%2Fweb/pulls/7/queue',
+            confirm: 'Queue acme/web#7 again on its current head?',
+          },
+        },
+      }),
+    ],
+  };
+}
+
 function event(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
     source: 'forge',

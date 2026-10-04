@@ -11,6 +11,7 @@ import {
   DEPLOY_RUN_IN,
   mockPipelineApi,
   pinsBody,
+  queueFailedBody,
 } from './fixtures/pipelineMocks';
 import { compareBody, mockRepo, production, pull } from './fixtures/releaseFixtures';
 import { mockShiftApi } from './fixtures/shiftMocks';
@@ -78,7 +79,11 @@ test.describe('Pipeline visibility', () => {
     await expect(staged.getByRole('button', { name: /^Copy Deploy command/ })).toHaveAccessibleDescription(
       `Run on ${DEPLOY_RUN_IN}`
     );
-    await expect(staged.getByRole('link')).toHaveCount(0);
+    // The command is the row's act; the title still leads to its subject.
+    await expect(staged.getByRole('link', { name: /^Release prod-/ })).toHaveAttribute(
+      'href',
+      '/releases'
+    );
     // One act (copy) plus the family pill, which only filters.
     await expect(staged.getByRole('button')).toHaveCount(2);
 
@@ -152,6 +157,76 @@ test.describe('Pipeline visibility', () => {
     // A row about a release names no todo: there is nothing to acknowledge.
     const staged = page.getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
     await expect(staged.getByText('More', { exact: true })).toHaveCount(0);
+  });
+
+  test("a Needs-you row runs the forge's own call in place @action:needs_you.run_action", async ({
+    page,
+  }) => {
+    // The row names one API call; its button makes it, once, behind a confirm
+    // step, and the title still leads to the pull request behind the row.
+    const queuePath = '/api/v1/repos/jeryu:acme%2Fweb/pulls/7/queue';
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page, { attention: queueFailedBody() });
+    const posts: Array<{ method: string; key: string | undefined }> = [];
+    let refuse = true;
+    await page.route('**/pulls/7/queue', async (route, request) => {
+      posts.push({
+        method: request.method(),
+        key: request.headers()['idempotency-key'],
+      });
+      if (refuse) {
+        return route.fulfill({
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: {
+              code: 'permission_denied',
+              message: 'enqueueing needs write access to the repository',
+            },
+          }),
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ number: 7, state: 'building' }),
+      });
+    });
+
+    await page.goto('/needs-you');
+    const row = page.getByTestId('needs-you-item-queue_failed:acme/web:7');
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    // The next step is the row's second line.
+    await expect(row).toContainText('Queue again: open /repos/jeryu/acme/web/pulls/7');
+    await expect(row.getByRole('link', { name: 'acme/web#7 failed in the merge queue' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/acme/web/pulls/7'
+    );
+    // One act plus the family pill, which only filters.
+    await expect(row.getByRole('button')).toHaveCount(2);
+
+    await row.getByRole('button', { name: /^Queue again: / }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Queue acme/web#7 again on its current head?');
+    expect(posts).toHaveLength(0);
+    await dialog.getByRole('button', { name: 'Queue again', exact: true }).click();
+
+    // One POST, with its own Idempotency-Key, and the refusal worded in place.
+    await expect.poll(() => posts.length).toBe(1);
+    expect(posts[0].method).toBe('POST');
+    expect(posts[0].key).toBeTruthy();
+    await expect(row.getByRole('alert')).toContainText(
+      'enqueueing needs write access to the repository'
+    );
+    expect(new URL(page.url()).pathname).toBe('/needs-you');
+
+    // Asked again it is one more call and no more, on a fresh key.
+    refuse = false;
+    await row.getByRole('button', { name: /^Queue again: / }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Queue again', exact: true }).click();
+    await expect.poll(() => posts.length).toBe(2);
+    expect(posts[0].key).not.toBe(posts[1].key);
+    await expect(row.getByRole('alert')).toHaveCount(0);
   });
 
   test('narrow screens: the header never overflows and a Needs-you title keeps its width @action:chrome.narrow_header', async ({

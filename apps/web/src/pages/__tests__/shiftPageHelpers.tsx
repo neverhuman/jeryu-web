@@ -14,6 +14,17 @@ export interface Recorded {
   pathname: string;
   search: string;
   body: unknown;
+  /** The request's own headers, so a test can prove the `Idempotency-Key`. */
+  headers: Record<string, string>;
+}
+
+/** `init.headers` as a plain object, whatever shape the caller built it in. */
+export function recordHeaders(headers: HeadersInit | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  new Headers(headers ?? {}).forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
 }
 
 export type Override = (req: Recorded) => Response | undefined;
@@ -40,6 +51,7 @@ export function mockShiftApi(override?: Override): Recorded[] {
       pathname: url.pathname,
       search: url.search,
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      headers: recordHeaders(init?.headers),
     };
     calls.push(req);
     const custom = override?.(req);

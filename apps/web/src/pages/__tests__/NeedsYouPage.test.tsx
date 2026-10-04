@@ -1,5 +1,6 @@
-// NeedsYouPage.test.tsx — the landing page: severity groups, the copyable
-// command, the empty state, and graceful degradation on an older server.
+// NeedsYouPage.test.tsx — the landing page: severity groups, the title link
+// every row keeps, the copyable command, the button that makes the forge's own
+// call, the empty state, and graceful degradation on an older server.
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -27,11 +28,14 @@ describe('NeedsYouPage', () => {
     expect(within(critical).getByText('No healthy worker slot for jain')).toBeInTheDocument();
     const action = screen.getByTestId('needs-you-action');
 
-    // Off-site act: the command is the one action; there is no second link.
+    // Off-site act: the command is the one action, and the title still leads
+    // to the row's subject.
     const staged = within(action).getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
     expect(staged).toHaveClass('needs-you__row--danger');
     expect(within(staged).getByText(DEPLOY_COMMAND)).toBeInTheDocument();
-    expect(within(staged).queryByRole('link')).toBeNull();
+    expect(
+      within(staged).getByRole('link', { name: 'Release prod-20260919T130210Z-01dfe68-unsigned is staged' })
+    ).toHaveAttribute('href', '/releases');
     // One act (the copy control) plus the family pill, which filters and never acts.
     expect(within(staged).getAllByRole('button')).toHaveLength(2);
     expect(within(staged).getByRole('button', { name: /^Show only / })).toBeInTheDocument();
@@ -52,11 +56,17 @@ describe('NeedsYouPage', () => {
     expect(within(blocked).getByText(/^Blocked todo · jeryu/)).toBeInTheDocument();
     expect(within(blocked).queryByText(/todo_blocked/)).toBeNull();
     expect(within(blocked).getByText('Both halves of this todo need jeryu-core changes.')).toBeInTheDocument();
-    expect(within(blocked).getAllByRole('link')).toHaveLength(1);
-    expect(within(blocked).getByRole('link', { name: /^Open: Allow PATCH/ })).toHaveAttribute(
-      'href',
-      '/work/shift?family=jeryu&todo=20260919-130515-f8cc66'
-    );
+    // Both the title and the act lead to the same place.
+    expect(
+      within(blocked)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href'))
+    ).toEqual([
+      '/work/shift?family=jeryu&todo=20260919-130515-f8cc66',
+      '/work/shift?family=jeryu&todo=20260919-130515-f8cc66',
+    ]);
+    expect(within(blocked).getByRole('link', { name: /^Open: Allow PATCH/ })).toBeInTheDocument();
+    expect(within(blocked).getByRole('link', { name: 'Allow PATCH of repo default_branch' })).toBeInTheDocument();
     // The only button on the row itself is its family pill, which filters and
     // never acts; acknowledging the row waits inside its folded menu.
     const folded = blocked.querySelector('.needs-you__more');
@@ -130,10 +140,12 @@ describe('NeedsYouPage', () => {
       'aria-describedby'
     );
 
-    // Still one act per row: the where-line added no link and no button.
+    // Still one act per row: the where-line added no button, and the row's
+    // only link is its title.
     for (const id of ['placed', 'older-server', 'blank-place', 'no-hint']) {
       const each = screen.getByTestId(`needs-you-item-${id}`);
-      expect(within(each).queryByRole('link')).toBeNull();
+      expect(within(each).getAllByRole('link')).toHaveLength(1);
+      expect(within(each).getByRole('link', { name: id })).toHaveAttribute('href', '/unreleased');
       expect(within(each).getAllByRole('button')).toHaveLength(2);
     }
   });
@@ -177,7 +189,10 @@ describe('NeedsYouPage', () => {
     expect(within(stale).getByText(/^Merged, not pinned for release · jeryu\/jeryu-deploy/)).toBeInTheDocument();
     expect(within(stale).queryByText(/pin_behind/)).toBeNull();
     expect(within(stale).getByText(BUMP)).toBeInTheDocument();
-    expect(within(stale).queryByRole('link')).toBeNull();
+    expect(within(stale).getAllByRole('link')).toHaveLength(1);
+    expect(
+      within(stale).getByRole('link', { name: /^9 merged commits of jeryu-web/ })
+    ).toHaveAttribute('href', '/unreleased?repo=jeryu%2Fjeryu-deploy');
     expect(within(stale).getAllByRole('button')).toHaveLength(2);
 
     const watch = screen.getByTestId('needs-you-watch');
@@ -187,6 +202,95 @@ describe('NeedsYouPage', () => {
     expect(within(bumping).getByRole('link', { name: /^Open the bump PR/ })).toHaveAttribute(
       'href',
       '/repos/jeryu/veox/jain-deploy/pulls/80'
+    );
+  });
+
+  it("runs the row's own call once, with an Idempotency-Key, and words a refusal in place", async () => {
+    const QUEUE_PATH = '/api/v1/repos/jeryu:acme%2Fweb/pulls/7/queue';
+    const row = (over: Partial<AttentionItem>): AttentionItem =>
+      attentionItem({
+        id: 'queue_failed:acme/web:7',
+        kind: 'queue_failed',
+        title: 'acme/web#7 failed in the merge queue',
+        reason: 'The queue gate failed twice on the same commit.',
+        next_step: 'Queue again: open /repos/jeryu/acme/web/pulls/7',
+        repo: 'acme/web',
+        pr: 7,
+        href: '/repos/jeryu/acme/web/pulls/7',
+        action: {
+          label: 'Queue again',
+          command: null,
+          api: { path: QUEUE_PATH, confirm: 'Queue acme/web#7 again on its current head?' },
+        },
+        ...over,
+      });
+    let refuse = true;
+    const calls = mockPipelineApi((req) => {
+      if (req.pathname === '/api/v1/attention') {
+        return json({
+          schema_version: 'jeryu.attention/v1',
+          generated_at: '2026-10-01T09:00:00Z',
+          counts: { critical: 0, action: 1, watch: 0 },
+          items: [row({})],
+        });
+      }
+      if (req.pathname !== QUEUE_PATH) return undefined;
+      return refuse
+        ? errorResponse(403, 'enqueueing needs write access to the repository')
+        : json({ number: 7, state: 'building' });
+    });
+    renderPage();
+
+    const failed = await screen.findByTestId('needs-you-item-queue_failed:acme/web:7');
+    // The next step is the row's second line; the longer reason is its tooltip.
+    const detail = within(failed).getByText('Queue again: open /repos/jeryu/acme/web/pulls/7');
+    expect(detail).toHaveAttribute('title', 'The queue gate failed twice on the same commit.');
+    // One act, plus the family pill; the title still leads to the pull request.
+    expect(within(failed).getAllByRole('button')).toHaveLength(2);
+    expect(
+      within(failed).getByRole('link', { name: 'acme/web#7 failed in the merge queue' })
+    ).toHaveAttribute('href', '/repos/jeryu/acme/web/pulls/7');
+    const run = within(failed).getByRole('button', {
+      name: 'Queue again: acme/web#7 failed in the merge queue',
+    });
+
+    // The act is confirmed first, in the server's own words.
+    fireEvent.click(run);
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByText('Queue acme/web#7 again on its current head?')
+    ).toBeInTheDocument();
+    expect(calls.filter((c) => c.pathname === QUEUE_PATH)).toHaveLength(0);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Queue again' }));
+
+    // Exactly one POST, carrying its own Idempotency-Key.
+    await waitFor(() =>
+      expect(calls.filter((c) => c.pathname === QUEUE_PATH)).toHaveLength(1)
+    );
+    const post = calls.find((c) => c.pathname === QUEUE_PATH);
+    expect(post?.method).toBe('POST');
+    expect(post?.headers['idempotency-key']).toBeTruthy();
+
+    // The forge's refusal is worded on the row itself.
+    expect(
+      await within(failed).findByText('enqueueing needs write access to the repository')
+    ).toBeInTheDocument();
+
+    // Asked again, it is one more call and no more: a fresh key per attempt.
+    refuse = false;
+    fireEvent.click(run);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Queue again' }));
+    await waitFor(() =>
+      expect(calls.filter((c) => c.pathname === QUEUE_PATH)).toHaveLength(2)
+    );
+    const keys = calls
+      .filter((c) => c.pathname === QUEUE_PATH)
+      .map((c) => c.headers['idempotency-key']);
+    expect(new Set(keys).size).toBe(2);
+    await waitFor(() =>
+      expect(
+        within(failed).queryByText('enqueueing needs write access to the repository')
+      ).toBeNull()
     );
   });
 
