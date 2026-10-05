@@ -2,8 +2,8 @@
 //
 // Each slide has a headline, a one-line tagline, an accent (a design-token
 // var reference), and a decorative ASCII "mini-mock" of the feature surface.
-// Copy avoids retired-provider vocabulary (see the vocab guard test): we say
-// pull requests / PRs, never the retired review noun.
+// Copy follows the glossary (`src/words/glossary.ts`) and its guard test: we
+// say pull requests, never the retired review noun and never "PR".
 
 export interface FeatureSlide {
   id: string;
@@ -21,13 +21,13 @@ export const FEATURES: readonly FeatureSlide[] = [
     id: 'repos',
     label: 'REPOSITORIES',
     title: 'Repositories',
-    tagline: 'Every repo, one grid — search, health, PRs, one-click create.',
+    tagline: 'Every repo, one grid — search, health, pull requests, one-click create.',
     accent: 'var(--color-accent-info)',
     preview: `repos ▸ 12                 ⌕ search
 ──────────────────────────────────
-▸ jeryu-core     ● 3 PR    ✓ ci
-▸ jeryu-web      ● 1 PR    ✓ ci
-▸ jeryu-deploy   ● 0 PR    ▲ ci
+▸ jeryu-core     ● 3 open   ✓ ci
+▸ jeryu-web      ● 1 open   ✓ ci
+▸ jeryu-deploy   ● 0 open   ▲ ci
 ＋ new repository`,
   },
   {
@@ -45,9 +45,9 @@ export const FEATURES: readonly FeatureSlide[] = [
     id: 'work',
     label: 'WORK',
     title: 'Work',
-    tagline: 'Split-wide tracker for tasks, bugs, chores, docs & CI follow-up.',
+    tagline: 'Split-wide tracker for todos, bugs, chores, docs & CI follow-up.',
     accent: 'var(--color-accent-warning)',
-    preview: `[ TASK  ] auth cutover        ▰▰▰▱ 74%
+    preview: `[ FEAT  ] auth cutover        ▰▰▰▱ 74%
 [ BUG   ] ws reconnect drift  ▰▱▱▱ 20%
 [ CHORE ] bump toolchain      ▰▰▰▰ done
 [ DOC   ] forge runbook       ▱▱▱▱  new`,

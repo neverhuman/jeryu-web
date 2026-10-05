@@ -107,12 +107,12 @@ export function BootScreen({
               for repo families moving at machine speed.
             </p>
             <p className="boot__story-rail">
-              Issue -&gt; agent session -&gt; evidence -&gt; PR -&gt; gated merge -&gt; autonomous deploy
+              Issue -&gt; agent session -&gt; evidence -&gt; pull request -&gt; gated merge -&gt; autonomous deploy
             </p>
             <div className="boot__gains" aria-label="JeRyu gains">
               <p>Preserve agent work.</p>
               <p>Remove release handoffs.</p>
-              <p>Operate billion-token/day repo families at 1000-PR/day pace.</p>
+              <p>Operate billion-token/day repo families at 1000-pull-request/day pace.</p>
             </div>
           </div>
         </section>

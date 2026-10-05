@@ -404,7 +404,7 @@ test.describe('Pipeline visibility', () => {
     await expect(dock).toContainText('1 need you');
     await dock.getByRole('button', { name: 'Live activity' }).click();
     await expect(dock.getByRole('log')).toContainText('Merged neverhuman/jeryu#99');
-    await expect(dock.getByRole('log')).toContainText('PR merged');
+    await expect(dock.getByRole('log')).toContainText('Pull request merged');
 
     // Opening it is remembered.
     await page.reload();
@@ -473,7 +473,7 @@ test.describe('Pipeline visibility', () => {
     await page.goto('/unreleased');
     await expect(page).toHaveURL(/\/releases$/);
     await expect(
-      page.getByTestId('pin-jeryu/jeryu-web').getByRole('link', { name: 'bump PR #53 is open' })
+      page.getByTestId('pin-jeryu/jeryu-web').getByRole('link', { name: 'bump pull request #53 is open' })
     ).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-deploy/pulls/53');
 
     // A server that predates the route answers with the SPA shell.

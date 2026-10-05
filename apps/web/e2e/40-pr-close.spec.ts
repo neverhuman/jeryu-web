@@ -96,7 +96,7 @@ test.describe('Close and reopen a pull request', () => {
 
     await page.goto(PR_URL);
     await expect(
-      page.getByRole('heading', { name: /PR #99: Stale shift work/i })
+      page.getByRole('heading', { name: /Pull request #99: Stale shift work/i })
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('pr-state-badge')).toHaveText('Open');
 

@@ -1,9 +1,11 @@
 // KeyboardShortcutsOverlay.test.tsx — the overlay opens from `?` or from the
-// palette, and prints combos the way they are printed on a key.
+// palette, prints combos the way they are printed on a key, and carries the
+// glossary below the shortcut list.
 
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { GLOSSARY } from '../../words/glossary';
 import { KeyboardShortcutsOverlay } from '../KeyboardShortcutsOverlay';
 import { KeyboardProvider, formatCombo, useKeyboardShortcut } from '../../hooks/useKeyboard';
 import { useShortcutsStore } from '../../stores/shortcutsStore';
@@ -79,5 +81,16 @@ describe('KeyboardShortcutsOverlay', () => {
     act(() => useShortcutsStore.getState().open());
     fireEvent.click(screen.getByRole('button', { name: 'Close shortcuts overlay' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('prints every glossary term with its meaning', () => {
+    renderOverlay();
+    act(() => useShortcutsStore.getState().open());
+    const glossary = screen.getByTestId('kbd-overlay-glossary');
+    expect(glossary.textContent).toContain('Glossary');
+    for (const entry of GLOSSARY) {
+      expect(glossary.textContent).toContain(entry.term);
+      expect(glossary.textContent).toContain(entry.meaning);
+    }
   });
 });

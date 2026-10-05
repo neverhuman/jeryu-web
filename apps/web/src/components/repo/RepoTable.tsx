@@ -335,7 +335,7 @@ export function RepoTable({
       },
       {
         id: 'open_prs',
-        header: 'Open PRs',
+        header: 'Open pull requests',
         accessorFn: (row) => row.open_pull_requests,
         cell: ({ row }: RepoCell) => (
           <Link

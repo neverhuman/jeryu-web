@@ -47,7 +47,7 @@ const GATE_EXPLANATIONS: Record<
   },
   passport_blocked_policy_sha: {
     title: 'Policy SHA drift',
-    hint: 'The policy file changed since this PR was opened. Re-review under the current policy.',
+    hint: 'The policy file changed since this pull request was opened. Re-review under the current policy.',
   },
   passport_blocked_passport_sha: {
     title: 'Passport SHA drift',
@@ -75,7 +75,7 @@ const GATE_EXPLANATIONS: Record<
   },
   passport_blocked_secret_scan: {
     title: 'Secret scan finding',
-    hint: 'A secret-scanning finding is open against this PR.',
+    hint: 'A secret-scanning finding is open against this pull request.',
   },
 };
 

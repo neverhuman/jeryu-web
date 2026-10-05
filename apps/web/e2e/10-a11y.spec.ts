@@ -286,7 +286,7 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
 
     await page.goto(`/repos/${repo.host}/${repo.owner}/${repo.name}/pulls/99`);
     await expect(
-      page.getByRole('heading', { name: /PR #99: A11y cockpit scan/i })
+      page.getByRole('heading', { name: /Pull request #99: A11y cockpit scan/i })
     ).toBeVisible({ timeout: 15_000 });
     await scanAndAssert(page, 'pr-cockpit');
   });
@@ -663,7 +663,7 @@ test.describe('Accessibility scans — the rows that must be read', () => {
     );
     await page.goto(`/repos/${repo.host}/${repo.owner}/${repo.name}/pulls/99`);
     await expect(
-      page.getByRole('heading', { name: /PR #99: A11y file tree scan/i })
+      page.getByRole('heading', { name: /Pull request #99: A11y file tree scan/i })
     ).toBeVisible({ timeout: 15_000 });
 
     for (const [status, path] of [

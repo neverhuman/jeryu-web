@@ -114,7 +114,7 @@ describe('releasesModel', () => {
     expect(prod.pendingAttempt?.state).toBe('failure');
     expect(prod.url).toBe('https://git.neverhuman.org');
     expect(prod.commitsBehind).toBe(2);
-    expect(behindLabel(prod)).toBe('2 PRs (2 commits) behind');
+    expect(behindLabel(prod)).toBe('2 pull requests (2 commits) behind');
 
     const canary = rows.find((r) => r.name === 'canary')!;
     expect(canary.configured).toBe(false);

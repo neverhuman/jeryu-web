@@ -53,7 +53,7 @@ describe('pullGhostGroups admission', () => {
   it('admits a done todo with no PR yet', () => {
     const [group] = groups([todo('a', { status: 'done', commits: { 'jeryu-web': 'abc' } })]);
     expect(ids(group)).toEqual(['a']);
-    expect(whens(group)).toEqual(['PR pending']);
+    expect(whens(group)).toEqual(['Pull request pending']);
   });
 
   it('excludes todos that already have a PR row, and merged ones', () => {
@@ -154,7 +154,7 @@ describe('pullGhostGroups when', () => {
 
   it('says PR pending for done work with no PR', () => {
     const [group] = groups([todo('a', { status: 'done' })]);
-    expect(group.rows[0]?.when).toBe('PR pending');
+    expect(group.rows[0]?.when).toBe('Pull request pending');
     expect(group.rows[0]?.attention).toBe(false);
   });
 

@@ -120,7 +120,7 @@ describe('FleetPage automation', () => {
       .getAllByRole('heading', { level: 2 })
       .filter((heading) => heading.classList.contains('page__section-title'))
       .map((heading) => heading.textContent);
-    expect(headings).toEqual(['Gate runners', 'PR reviewers', 'Automation']);
+    expect(headings).toEqual(['Gate runners', 'Pull request reviewers', 'Automation']);
 
     const section = screen.getByTestId('fleet-automation');
     expect(within(section).getAllByRole('listitem')).toHaveLength(2);

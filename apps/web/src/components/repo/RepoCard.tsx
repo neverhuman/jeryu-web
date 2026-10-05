@@ -109,7 +109,7 @@ export function RepoCard({ repo }: RepoCardProps): JSX.Element {
         >
           <GitMerge size={14} aria-hidden="true" />
           <span className="repo-card__agents-count">{repo.open_pull_requests}</span>
-          PRs
+          Pull requests
         </a>
         <a
           href={repoUrl(repo.id, 'agents')}

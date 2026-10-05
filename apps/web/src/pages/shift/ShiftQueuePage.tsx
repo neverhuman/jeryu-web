@@ -651,9 +651,9 @@ function ShiftCard({
             variant="primary"
             disabled={openPr.isPending}
             onClick={() => openPr.mutate({ family, branch: shift.branch })}
-            aria-label={`Open review PR for ${shift.branch}`}
+            aria-label={`Open review pull request for ${shift.branch}`}
           >
-            {openPr.isPending ? 'Opening…' : 'Open review PR'}
+            {openPr.isPending ? 'Opening…' : 'Open review pull request'}
           </ActionButton>
         </span>
       ) : null}
@@ -689,7 +689,7 @@ function ShiftCardRepo({ refs, repo }: { refs: RepoRefs; repo: ShiftBranch['repo
         <>
           {' · '}
           <PrLink url={repo.pr.url}>
-            PR #{repo.pr.number} ({repo.pr.state})
+            Pull request #{repo.pr.number} ({repo.pr.state})
           </PrLink>
         </>
       ) : null}

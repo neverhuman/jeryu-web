@@ -204,7 +204,7 @@ export function whenOf(todo: ShiftTodo, now: Date, queuePosition = 0): string {
   }
   if (todo.status === 'blocked') return 'blocked — needs a human';
   if (todo.status === 'handoff') return 'handed off — needs a human';
-  if (todo.status === 'done' && !todo.pr) return 'PR pending';
+  if (todo.status === 'done' && !todo.pr) return 'Pull request pending';
   if (todo.status === 'open') {
     if (todo.mode === 'night') return 'tonight';
     if (todo.mode === 'now' && queuePosition > 0) return queueWord(queuePosition);

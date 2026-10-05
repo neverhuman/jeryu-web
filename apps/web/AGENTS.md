@@ -27,6 +27,14 @@ Forbidden: do not import `sqlx`, `mysql`, `pg`, `better-sqlite3`,
 `@aws-sdk/client-s3`, or any other backend-only data client/SDK; this workspace
 must stay UI-tier and use typed HTTP endpoints.
 
+Copy vocabulary: `src/words/glossary.ts` holds the canonical word for each
+thing the UI names (pull request, todo, lane, worker) and the synonyms banned
+from user-facing strings. `src/__tests__/glossary-terms.test.ts` scans the
+`src/` copy and fails on a banned synonym; the help overlay renders the same
+list, so the words shipped and the words documented cannot drift. Code names
+(wire fields such as `activeTasks`, sort keys such as `open_prs`, test ids)
+are out of scope.
+
 Proof lane: rendered UX / Playwright. Marker-evidence companion lives at
 `ux-qa/` (`@jankurai/ux-qa`).
 Control-plane, pull-room, and repository PR surfaces must keep Playwright

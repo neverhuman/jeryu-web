@@ -274,7 +274,7 @@ function WallCounters({ events }: { events: Parameters<typeof wallCounters>[0] }
   const tiles: Array<[string, string, string?]> = [
     ['Todos finished', String(counters.todosFinished)],
     ['Blocked', String(counters.blocked), counters.blocked > 0 ? 'danger' : undefined],
-    ['PRs merged', String(counters.prsMerged)],
+    ['Pull requests merged', String(counters.prsMerged)],
     ['Deploys', String(counters.deploys)],
     ['Spent', formatCost(counters.spentUsd)],
   ];

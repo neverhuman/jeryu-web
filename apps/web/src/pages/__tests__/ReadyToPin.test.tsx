@@ -86,7 +86,7 @@ describe('ReadyToPin', () => {
     });
     renderSection();
     const web = await screen.findByTestId('pin-jeryu/jeryu-web');
-    expect(within(web).getByRole('link', { name: 'bump PR #53 is open' })).toHaveAttribute(
+    expect(within(web).getByRole('link', { name: 'bump pull request #53 is open' })).toHaveAttribute(
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/53'
     );

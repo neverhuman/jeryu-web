@@ -201,7 +201,7 @@ test('Shift work on a branch is one row per branch in its repository; queued tod
   await expect(branch.getByTestId('pull-ghost-t-claimed')).toBeHidden();
   await branch.locator('summary').click();
   await expect(branch.getByTestId('pull-ghost-t-claimed')).toContainText('hands off in');
-  await expect(branch.getByTestId('pull-ghost-t-done-no-pr')).toContainText('PR pending');
+  await expect(branch.getByTestId('pull-ghost-t-done-no-pr')).toContainText('Pull request pending');
 
   // Queued todos have no branch yet: they are the Work page's, only counted here.
   await expect(page.getByTestId('pull-ghost-t-open-1')).toHaveCount(0);

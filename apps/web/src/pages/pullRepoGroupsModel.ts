@@ -392,7 +392,7 @@ function branchRow(key: string, todos: GhostRow[]): BranchRow {
       ? `${stuck} ${stuck === 1 ? 'needs' : 'need'} a human`
       : status === 'active'
         ? `${working} working`
-        : 'no PR yet';
+        : 'no pull request yet';
   return {
     kind: 'branch',
     key,

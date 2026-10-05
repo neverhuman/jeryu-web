@@ -125,7 +125,7 @@ export function buildEnvironmentRows(
   });
 }
 
-/** "3 PRs behind" / "up to date" / null when it cannot be known yet. */
+/** "3 pull requests behind" / "up to date" / null when it cannot be known yet. */
 export function behindLabel(row: EnvironmentRow): string | null {
   if (!row.current || row.commitsBehind === null) return null;
   if (row.commitsBehind === 0) return 'up to date';
@@ -133,7 +133,7 @@ export function behindLabel(row: EnvironmentRow): string | null {
   const commits = `${row.commitsBehind} commit${row.commitsBehind === 1 ? '' : 's'}`;
   return prs === undefined
     ? `${commits} behind`
-    : `${prs} PR${prs === 1 ? '' : 's'} (${commits}) behind`;
+    : `${prs} pull request${prs === 1 ? '' : 's'} (${commits}) behind`;
 }
 
 /** `repo:owner/name` or `family:name`: the value of one option in the scope picker. */

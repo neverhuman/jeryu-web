@@ -284,7 +284,7 @@ describe('the Pull requests timeline', () => {
     expect(within(branch).getByTestId('pull-ghost-t2')).not.toBeVisible();
     await userEvent.click(within(branch).getByText(/2 todos/));
     expect(within(branch).getByTestId('pull-ghost-t1')).toHaveTextContent('hands off in');
-    expect(within(branch).getByTestId('pull-ghost-t2')).toHaveTextContent('PR pending');
+    expect(within(branch).getByTestId('pull-ghost-t2')).toHaveTextContent('Pull request pending');
 
     // A repository with no pull requests still gets a section for its branch.
     expect(screen.getByTestId('pull-repo-jeryu/jeryu-api')).toHaveTextContent('todo t3');

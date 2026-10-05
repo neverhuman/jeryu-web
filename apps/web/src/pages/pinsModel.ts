@@ -58,7 +58,7 @@ export interface PinNextStep {
 export function pinNextStep(pin: Pin): PinNextStep {
   const state = pinStateOf(pin);
   if (pin.bump_pr) {
-    return { text: `bump PR #${pin.bump_pr.number} is open`, to: safeHref(pin.bump_pr.url) };
+    return { text: `bump pull request #${pin.bump_pr.number} is open`, to: safeHref(pin.bump_pr.url) };
   }
   if (state === 'diverged') {
     return { text: 'the pin is not on main: check which commit should ship', to: null };

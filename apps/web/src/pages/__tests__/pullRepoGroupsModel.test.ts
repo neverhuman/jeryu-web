@@ -332,7 +332,7 @@ describe('shift work as branch rows', () => {
       key: 'batch',
       label: 'batch branch',
       status: 'done',
-      detail: 'no PR yet',
+      detail: 'no pull request yet',
     });
   });
 

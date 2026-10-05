@@ -82,7 +82,7 @@ describe('pinsModel', () => {
           bump_pr: { number: 53, state: 'open', url: '/repos/jeryu/jeryu/jeryu-deploy/pulls/53' },
         })
       )
-    ).toEqual({ text: 'bump PR #53 is open', to: '/repos/jeryu/jeryu/jeryu-deploy/pulls/53' });
+    ).toEqual({ text: 'bump pull request #53 is open', to: '/repos/jeryu/jeryu/jeryu-deploy/pulls/53' });
     // An off-site or protocol-relative URL is text, not a link.
     expect(
       pinNextStep(

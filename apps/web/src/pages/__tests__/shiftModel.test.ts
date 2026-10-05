@@ -224,9 +224,9 @@ describe('slotLabel', () => {
     const shipped = { ...landed, pr: { ...pr, state: 'merged' }, merged: true, released: true };
     expect(states(shipped)).toBe('queued:done claimed:done done:done pr:done merged:done released:done');
     expect(states({ ...shipped, released: false })).toContain('released:pending');
-    expect(todoTrace(shipped)[3].label).toBe('PR #35');
+    expect(todoTrace(shipped)[3].label).toBe('Pull request #35');
     expect(traceSummary(todoTrace(todo({ status: 'blocked' })))).toBe(
-      'Queued, Claimed not yet, blocked — needs a human, PR not yet, Merged not yet, Released not yet'
+      'Queued, Claimed not yet, blocked — needs a human, Pull request not yet, Merged not yet, Released not yet'
     );
   });
 
@@ -293,13 +293,13 @@ describe('slotLabel', () => {
     expect(repoNeedsReviewPr(repo({ ahead: 1, unmerged_todos: ['t'], pr: { number: 71, state: 'mergeable', url: '/x' } }))).toBe(false);
     // The card says what the count means: a review PR to open, or a request to wait on.
     expect(unmergedTodosNote(repo({ ahead: 1, unmerged_todos: ['t'] }))).toBe(
-      '1 todo needs a review PR to reach the base branch'
+      '1 todo needs a review pull request to reach the base branch'
     );
     expect(unmergedTodosNote(repo({ ahead: 2, unmerged_todos: ['t', 'u'], pr: { number: 70, state: 'merged', url: '/x' } }))).toBe(
-      '2 todos need a review PR to reach the base branch'
+      '2 todos need a review pull request to reach the base branch'
     );
     expect(unmergedTodosNote(repo({ ahead: 1, unmerged_todos: ['t'], pr: { number: 71, state: 'mergeable', url: '/x' } }))).toBe(
-      '1 todo waiting for PR #71 to merge into the base branch'
+      '1 todo waiting for pull request #71 to merge into the base branch'
     );
     // Nothing to say: all of it is on the base branch, or an older server sent no todos.
     expect(unmergedTodosNote(repo({ ahead: 0, unmerged_todos: [] }))).toBeNull();

@@ -320,11 +320,11 @@ export function eventLabel(event: Pick<PipelineEvent, 'kind' | 'outcome'>): stri
       if (outcome === 'request_changes' || outcome === 'hold') return 'Review: changes requested';
       return failed ? 'Review failed' : 'Review finished';
     case 'pr.opened':
-      return 'PR opened';
+      return 'Pull request opened';
     case 'pr.approved':
-      return 'PR approved';
+      return 'Pull request approved';
     case 'pr.merged':
-      return 'PR merged';
+      return 'Pull request merged';
     case 'queue.enqueued':
       return 'Queued to merge';
     case 'queue.building':
@@ -358,7 +358,7 @@ export function eventLabel(event: Pick<PipelineEvent, 'kind' | 'outcome'>): stri
     case 'worker.error':
       return 'Worker error';
     case 'shift.pr_opened':
-      return 'Shift PR opened';
+      return 'Shift pull request opened';
     case 'shift.exhausted':
       return 'Shift budget spent';
     case 'release.staged':

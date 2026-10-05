@@ -417,7 +417,7 @@ describe('FleetPage render', () => {
     );
     expect(screen.queryByTestId('fleet-node-xbabe0_redteam')).not.toBeInTheDocument();
     const reviewers = screen.getByTestId('fleet-reviewers');
-    expect(reviewers).toHaveTextContent('PR reviewers');
+    expect(reviewers).toHaveTextContent('Pull request reviewers');
     expect(screen.getByTestId('fleet-reviewer-xbabe0_redteam')).toHaveTextContent('xbabe0 · redteam');
     expect(screen.getByTestId('fleet-reviewer-now-xbabe0_redteam')).toHaveTextContent(
       /^reviewing jeryu\/jeryu-web#44 for /
@@ -473,7 +473,7 @@ describe('FleetPage render', () => {
         },
       }
     );
-    expect(screen.getByTestId('fleet-reviewers')).toHaveTextContent('PR reviewers');
+    expect(screen.getByTestId('fleet-reviewers')).toHaveTextContent('Pull request reviewers');
     expect(screen.getByTestId('fleet-no-reviewer')).toHaveTextContent(
       'No review agent has reported in the last 3 minutes.'
     );

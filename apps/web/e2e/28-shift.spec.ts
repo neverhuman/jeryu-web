@@ -48,7 +48,7 @@ test.describe('Work, one page', () => {
     await expect(detail).toContainText('landed clean');
     await expect(detail).toContainText('alton@xbabe0/w1');
     // Non-admins see no row actions, no review-PR button, and why they cannot file.
-    await expect(page.getByRole('button', { name: /Open review PR/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Open review pull request/ })).toHaveCount(0);
     await expect(page.getByRole('columnheader', { name: 'Action' })).toHaveCount(0);
     await expect(page.getByTestId('work-composer-readonly')).toContainText('Only admins can file todos');
 
@@ -127,7 +127,7 @@ test.describe('Work, one page', () => {
     ]);
     expect(log.posts[0].path).toBe('/api/v1/shift/todos/jeryu/20260919-0800-aaa/action');
 
-    await page.getByRole('button', { name: `Open review PR for ${NIGHT}` }).click();
+    await page.getByRole('button', { name: `Open review pull request for ${NIGHT}` }).click();
     await expect(page.getByRole('link', { name: 'jeryu-deploy#41' })).toBeVisible();
     expect(log.posts[3]).toEqual({ path: '/api/v1/shift/shifts/jeryu/pr', body: { branch: NIGHT } });
   });
@@ -153,8 +153,8 @@ test.describe('Work, one page', () => {
     // The landed todo links to the PR that carries it, from the trace and the commit chip.
     await page.getByTestId('shift-finished-todos').getByText('1 finished todo').click();
     const done = page.getByTestId('shift-todo-20260918-2200-bbb');
-    await expect(done.getByRole('list', { name: /PR #41, Merged, Released not yet/ })).toBeVisible();
-    await expect(done.getByRole('link', { name: 'PR #41' })).toHaveAttribute(
+    await expect(done.getByRole('list', { name: /Pull request #41, Merged, Released not yet/ })).toBeVisible();
+    await expect(done.getByRole('link', { name: 'Pull request #41' })).toHaveAttribute(
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/41'
     );

@@ -1,6 +1,6 @@
 // ShiftQueuePage.test.tsx — the Work page's queue: every family with family
 // pills, the shifts panel, filters, row expansion, admin-only row actions and
-// "Open review PR", and the UX states.
+// "Open review pull request", and the UX states.
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -36,7 +36,7 @@ describe('ShiftQueuePage', () => {
     expect(night).toHaveClass('is-last-night');
     expect(within(night).getByText('last night')).toBeInTheDocument();
     const bullet = screen.getByTestId('shift-branch-dayshift/2026-09-17');
-    expect(within(bullet).getByRole('link', { name: 'PR #12 (open)' })).toHaveAttribute(
+    expect(within(bullet).getByRole('link', { name: 'Pull request #12 (open)' })).toHaveAttribute(
       'href',
       'https://git.example/jeryu/jeryu-web/pulls/12'
     );
@@ -134,12 +134,12 @@ describe('ShiftQueuePage', () => {
     expect(keys.every((key) => Boolean(key))).toBe(true);
     expect(new Set(keys).size).toBe(4);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open review PR for nightshift/2026-09-18' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open review pull request for nightshift/2026-09-18' }));
     expect(await screen.findByRole('link', { name: 'jeryu-deploy#7' })).toBeInTheDocument();
     const pr = calls.find((c) => c.pathname === '/api/v1/shift/shifts/jeryu/pr');
     expect(pr?.body).toEqual({ branch: 'nightshift/2026-09-18' });
     // A shift whose repos all have PRs offers no button.
-    expect(screen.queryByRole('button', { name: 'Open review PR for dayshift/2026-09-17' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open review pull request for dayshift/2026-09-17' })).toBeNull();
   });
 
   it('hides admin actions from non-admins', async () => {
@@ -148,7 +148,7 @@ describe('ShiftQueuePage', () => {
     renderQueue();
     await screen.findByTestId('shift-todo-20260918-1832-k3f');
     expect(screen.queryByRole('columnheader', { name: 'Action' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Open review PR/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Open review pull request/ })).toBeNull();
   });
 
   it('renders empty, error and permission states', async () => {
@@ -206,7 +206,7 @@ describe('ShiftQueuePage', () => {
     expect(within(blocked).getByText('2 attempts · last: blocked')).toHaveClass('is-failing');
     // Why it is stuck is on the row, and the row offers the one thing to do.
     expect(within(blocked).getByTestId('shift-why-blk-1')).toHaveTextContent('tag split.7 does not exist');
-    // Outlined: the page's one filled action stays "Open review PR".
+    // Outlined: the page's one filled action stays "Open review pull request".
     const release = within(blocked).getByRole('button', { name: 'Release blk-1' });
     expect(release.className).not.toContain('action-button--primary');
     // A short note needs no disclosure.
@@ -215,9 +215,9 @@ describe('ShiftQueuePage', () => {
     expect(within(blocked).getByRole('list', { name: /blocked — needs a human/ })).toBeInTheDocument();
 
     const done = screen.getByTestId('shift-todo-20260918-2201-a9z');
-    expect(within(done).getByRole('link', { name: 'PR #48' })).toHaveAttribute('href', pr.url);
+    expect(within(done).getByRole('link', { name: 'Pull request #48' })).toHaveAttribute('href', pr.url);
     expect(within(done).getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute('href', pr.url);
-    expect(within(done).getByRole('list', { name: /PR #48, Merged, Released not yet/ })).toBeInTheDocument();
+    expect(within(done).getByRole('list', { name: /Pull request #48, Merged, Released not yet/ })).toBeInTheDocument();
     expect(within(done).getByText('$2.50')).toBeInTheDocument();
 
     // The chip counts the rows Needs you shows (3 urgent attention items), not
@@ -305,14 +305,14 @@ describe('ShiftQueuePage', () => {
     const live = await screen.findByTestId('shift-branch-nightshift/2026-09-18');
     // Work landed after the PR merged: a review PR would carry it.
     expect(
-      within(live).getByText(/1 todo needs a review PR to reach the base branch/)
+      within(live).getByText(/1 todo needs a review pull request to reach the base branch/)
     ).toBeInTheDocument();
-    expect(within(live).getByRole('button', { name: 'Open review PR for nightshift/2026-09-18' })).toBeInTheDocument();
+    expect(within(live).getByRole('button', { name: 'Open review pull request for nightshift/2026-09-18' })).toBeInTheDocument();
     expect(within(live).getByRole('link', { name: 'jain-deploy' })).toHaveAttribute(
       'href',
       '/repos/jeryu/veox/jain-deploy'
     );
-    expect(within(live).getByRole('link', { name: 'PR #70 (merged)' })).toHaveAttribute(
+    expect(within(live).getByRole('link', { name: 'Pull request #70 (merged)' })).toHaveAttribute(
       'href',
       '/repos/jeryu/veox/jain-deploy/pulls/70'
     );
@@ -321,7 +321,7 @@ describe('ShiftQueuePage', () => {
     const folded = screen.getByTestId('shift-finished-shifts');
     expect(folded).toHaveTextContent('1 finished shift');
     const done = within(folded).getByTestId('shift-branch-bulletshift/2026-09-19.3');
-    expect(within(done).queryByRole('button', { name: /Open review PR/ })).toBeNull();
+    expect(within(done).queryByRole('button', { name: /Open review pull request/ })).toBeNull();
     expect(within(done).queryByRole('link', { name: 'jain-gone' })).toBeNull();
     expect(within(done).getByText('jain-gone')).toBeInTheDocument();
   });

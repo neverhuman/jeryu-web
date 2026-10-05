@@ -137,7 +137,7 @@ function IntelligenceSnapshot({
         <div className="intelligence__status-strip">
           <MetricCard
             icon={<GitPullRequest size={18} aria-hidden="true" />}
-            label="Open PRs"
+            label="Open pull requests"
             to={IN_FLIGHT_PATH}
             value={snapshot.summary.openPrCount}
             detail={`${snapshot.summary.missingCheckPrCount} missing checks`}

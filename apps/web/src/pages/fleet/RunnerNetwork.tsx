@@ -74,7 +74,7 @@ export function ReviewerList({
       nodes={reviewers}
       nowMs={nowMs}
       places={places}
-      label="PR reviewers"
+      label="Pull request reviewers"
       testId="fleet-reviewer-list"
       rowTestId="fleet-reviewer"
       heads={['Reviewer', 'Now', 'Last review', 'Seen']}

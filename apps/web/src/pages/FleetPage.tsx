@@ -233,7 +233,7 @@ export function FleetPage(): JSX.Element {
         data-testid="fleet-reviewers"
       >
         <h2 className="page__section-title" id="fleet-reviewers">
-          PR reviewers
+          Pull request reviewers
         </h2>
         {runnerNetworkState ? null : runnerNetwork.reviewers.length === 0 ? (
           // Said, not hidden: an operator looking for the agents that approve

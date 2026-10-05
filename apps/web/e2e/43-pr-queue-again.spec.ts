@@ -82,7 +82,7 @@ test.describe('Queue a pull request again', () => {
     });
 
     await page.goto(PR_URL);
-    await expect(page.getByRole('heading', { name: /PR #99: Shift queue depth/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /Pull request #99: Shift queue depth/i })).toBeVisible({
       timeout: 15_000,
     });
 

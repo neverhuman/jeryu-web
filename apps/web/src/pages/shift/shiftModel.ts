@@ -292,13 +292,13 @@ export function todoTrace(todo: ShiftTodo): TraceStep[] {
     step('queued', 'Queued', 'done'),
     step('claimed', 'Claimed', todo.status === 'claimed' ? 'current' : claimed ? 'done' : 'pending'),
     step('done', stuck ? todo.status : 'Done', stuck ? 'failed' : done ? 'done' : 'pending'),
-    step('pr', todo.pr ? `PR #${todo.pr.number}` : 'PR', prState),
+    step('pr', todo.pr ? `Pull request #${todo.pr.number}` : 'Pull request', prState),
     step('merged', 'Merged', merged ? 'done' : 'pending'),
     step('released', 'Released', releasedState),
   ];
 }
 
-/** One line for the trace's accessible name, e.g. "Queued, Claimed, Done, PR #35, Merged; Released not yet". */
+/** One line for the trace's accessible name, e.g. "Queued, Claimed, Done, Pull request #35, Merged; Released not yet". */
 export function traceSummary(steps: TraceStep[]): string {
   const word: Record<TraceState, string> = {
     done: '',
@@ -458,11 +458,11 @@ export function unmergedTodosNote(repo: ShiftBranchRepo): string | null {
   if (count === 0) return null;
   const todos = `${count} todo${count === 1 ? '' : 's'}`;
   return prIsOpen(repo.pr)
-    ? `${todos} waiting for PR #${repo.pr?.number} to merge into the base branch`
-    : `${todos} ${count === 1 ? 'needs' : 'need'} a review PR to reach the base branch`;
+    ? `${todos} waiting for pull request #${repo.pr?.number} to merge into the base branch`
+    : `${todos} ${count === 1 ? 'needs' : 'need'} a review pull request to reach the base branch`;
 }
 
-/** Offer "Open review PR" only when it would carry something. */
+/** Offer "Open review pull request" only when it would carry something. */
 export function canOpenReviewPr(shift: Pick<ShiftBranch, 'repos'>): boolean {
   return shift.repos.some(repoNeedsReviewPr);
 }

@@ -89,7 +89,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     });
 
     await page.goto(PR_URL);
-    await expect(page.getByRole('heading', { name: /PR #99: Needs a test/i })).toBeVisible({
+    await expect(page.getByRole('heading', { name: /Pull request #99: Needs a test/i })).toBeVisible({
       timeout: 15_000,
     });
     const request = page.getByRole('button', { name: 'Request changes' });
@@ -224,7 +224,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
 
     // The cockpit hydrates: the PR title heading + the exact-SHA approve CTA.
     await expect(
-      page.getByRole('heading', { name: /PR #99: Approve happy path/i })
+      page.getByRole('heading', { name: /Pull request #99: Approve happy path/i })
     ).toBeVisible({ timeout: 15_000 });
     const approve = approveButton(page);
     await expect(approve).toBeVisible();
@@ -256,7 +256,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
 
     await page.goto(PR_URL);
     await expect(
-      page.getByRole('heading', { name: /PR #99: Approve stale path/i })
+      page.getByRole('heading', { name: /Pull request #99: Approve stale path/i })
     ).toBeVisible({ timeout: 15_000 });
 
     await approveButton(page).click();
@@ -315,7 +315,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
 
     await page.goto(PR_URL);
     await expect(
-      page.getByRole('heading', { name: /PR #99: Merge happy path/i })
+      page.getByRole('heading', { name: /Pull request #99: Merge happy path/i })
     ).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole('button', { name: /^Merge$/ }).click();
@@ -362,7 +362,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
 
     await page.goto(PR_URL);
     await expect(
-      page.getByRole('heading', { name: /PR #99: Diverged from linear main/i })
+      page.getByRole('heading', { name: /Pull request #99: Diverged from linear main/i })
     ).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole('button', { name: /^Merge$/ }).click();
@@ -393,7 +393,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
 
     await page.goto(PR_URL);
     await expect(
-      page.getByRole('heading', { name: /PR #99: Telemetry counters/i })
+      page.getByRole('heading', { name: /Pull request #99: Telemetry counters/i })
     ).toBeVisible({ timeout: 15_000 });
 
     const approve = approveButton(page);
@@ -455,7 +455,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
 
     await page.goto(PR_URL);
     await expect(
-      page.getByRole('heading', { name: /PR #99: Telemetry counters/i })
+      page.getByRole('heading', { name: /Pull request #99: Telemetry counters/i })
     ).toBeVisible({ timeout: 15_000 });
 
     const approve = approveButton(page);

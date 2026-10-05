@@ -70,7 +70,7 @@ test.describe('Auth hardening browser proof', () => {
     ).toBeVisible();
     await expect(
       page.getByText(
-        'Issue -> agent session -> evidence -> PR -> gated merge -> autonomous deploy'
+        'Issue -> agent session -> evidence -> pull request -> gated merge -> autonomous deploy'
       )
     ).toBeVisible();
     await page.getByRole('button', { name: 'Log in' }).click();

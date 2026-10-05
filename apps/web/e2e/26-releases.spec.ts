@@ -110,8 +110,8 @@ test('environments show the live release, rollback target and unshipped PRs @act
   await expect(production).toContainText('aaaaaaa');
 
   const behind = page.getByTestId('releases-behind-production');
-  await expect(behind).toContainText('2 PRs (2 commits) behind');
-  await behind.getByText('2 PRs (2 commits) behind').click();
+  await expect(behind).toContainText('2 pull requests (2 commits) behind');
+  await behind.getByText('2 pull requests (2 commits) behind').click();
   await expect(behind.getByRole('listitem')).toHaveText([
     /#21 feat: runners page/,
     /#20 chore: jankurai pin/,

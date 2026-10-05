@@ -270,7 +270,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     return (
       <div className="page">
         <LoadingState
-          title={`Loading PR #${prNumber}…`}
+          title={`Loading pull request #${prNumber}…`}
           variant="message"
           description="Resolving the repository."
         />
@@ -340,7 +340,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     <div className="page page--full">
       <div className="pr-cockpit__header">
         <h1 className="pr-cockpit__title">
-          PR #{summary.number}: {summary.title}
+          Pull request #{summary.number}: {summary.title}
         </h1>
         <span
           className={`pr-cockpit__state pr-cockpit__state--${badge.tone}`}

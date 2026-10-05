@@ -1,11 +1,14 @@
 // KeyboardShortcutsOverlay.tsx — help dialog (W-CC-04).
 //
-// Lists all registered shortcuts grouped by `group` label. Triggered with `?`
-// and Esc to dismiss. Used by the global shell.
+// Lists all registered shortcuts grouped by `group` label, then the glossary
+// (`src/words/glossary.ts`): the canonical word for each thing the UI names, so
+// the help entry answers "what is a lane?" as well as "what does `?` do?".
+// Triggered with `?` and Esc to dismiss. Used by the global shell.
 
 import { useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 
+import { GLOSSARY } from '../words/glossary';
 import {
   formatCombo,
   type KeyboardShortcutDescriptor,
@@ -109,6 +112,17 @@ export function KeyboardShortcutsOverlay(): JSX.Element {
               </section>
             ))
           )}
+          <section className="kbd-overlay__group" data-testid="kbd-overlay-glossary">
+            <h3 className="kbd-overlay__group-title">Glossary</h3>
+            <dl className="kbd-overlay__glossary">
+              {GLOSSARY.map((entry) => (
+                <div key={entry.term} className="kbd-overlay__term">
+                  <dt>{entry.term}</dt>
+                  <dd>{entry.meaning}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
         </div>
       </div>
     </div>
