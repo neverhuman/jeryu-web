@@ -8,7 +8,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FamilyScopeChip } from '../FamilyScopeChip';
-import { FAMILY_SCOPE_STORAGE_KEY } from '../familyScope';
+import { FAMILY_SCOPE_STORAGE_SLOT } from '../familyScope';
 import { FamilyScopeProvider } from '../FamilyScopeProvider';
 
 const FAMILIES = {
@@ -83,7 +83,7 @@ describe('FamilyScopeChip', () => {
 
   it('says a page is outside the scope, and switches to it in one click', async () => {
     mockApi();
-    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_KEY, 'acme');
+    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_SLOT, 'acme');
     renderAt('/work?family=globex');
     const select = screen.getByTestId('family-scope-select');
     // The chip keeps saying which family the tab carries everywhere else.

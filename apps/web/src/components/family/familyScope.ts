@@ -14,7 +14,7 @@
 export const FAMILY_PARAM = 'family';
 
 /** Where a tab remembers the scope it last chose (session, not durable). */
-export const FAMILY_SCOPE_STORAGE_KEY = 'jeryu.familyScope.v1';
+export const FAMILY_SCOPE_STORAGE_SLOT = 'jeryu.familyScope.v1';
 
 /** Paths that hold the family as a path segment: `<base>/family/<key>`. */
 const FAMILY_PATH_BASES = ['/releases', '/repos'] as const;

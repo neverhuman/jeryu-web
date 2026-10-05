@@ -35,7 +35,7 @@ import {
 } from '../../storage/browserStorage';
 import {
   canonicalFamily,
-  FAMILY_SCOPE_STORAGE_KEY,
+  FAMILY_SCOPE_STORAGE_SLOT,
   familyFromHref,
   familyFromLocation,
   sameFamily,
@@ -105,12 +105,12 @@ export function useFamilyScope(): FamilyScope {
 }
 
 function readRemembered(): string {
-  return canonicalFamily(readBrowserText('tab', FAMILY_SCOPE_STORAGE_KEY));
+  return canonicalFamily(readBrowserText('tab', FAMILY_SCOPE_STORAGE_SLOT));
 }
 
 function remember(family: string): void {
-  if (family) writeBrowserText('tab', FAMILY_SCOPE_STORAGE_KEY, family);
-  else removeBrowserText('tab', FAMILY_SCOPE_STORAGE_KEY);
+  if (family) writeBrowserText('tab', FAMILY_SCOPE_STORAGE_SLOT, family);
+  else removeBrowserText('tab', FAMILY_SCOPE_STORAGE_SLOT);
 }
 
 export function FamilyScopeProvider({ children }: { children: ReactNode }): JSX.Element {

@@ -8,7 +8,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FAMILY_SCOPE_STORAGE_KEY } from '../../components/family/familyScope';
+import { FAMILY_SCOPE_STORAGE_SLOT } from '../../components/family/familyScope';
 import { ActivityPage } from '../activity';
 import { NeedsYouPage } from '../needsYou';
 import { ReleasesPage } from '../ReleasesPage';
@@ -118,7 +118,7 @@ describe('the family scope on every family-aware page', () => {
     expect(await screen.findByText('Nothing for initech here')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('family-scope-show-all'));
     expect(await screen.findByTestId('shift-todo-20261003-0001-aaa')).toBeInTheDocument();
-    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBeNull();
   });
 
   it('Needs you, scoped and quiet, names the family and gives back every one', async () => {
@@ -145,7 +145,7 @@ describe('the family scope on every family-aware page', () => {
 
     fireEvent.change(select, { target: { value: '' } });
     await waitFor(() =>
-      expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBeNull()
+      expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBeNull()
     );
   });
 
@@ -157,7 +157,7 @@ describe('the family scope on every family-aware page', () => {
   });
 
   it('Releases per repository follows the family the tab carries', async () => {
-    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_KEY, 'globex');
+    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_SLOT, 'globex');
     mockPipelineApi((req) =>
       req.pathname === '/api/v1/repos'
         ? json({

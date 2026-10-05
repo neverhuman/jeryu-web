@@ -7,7 +7,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
-import { FAMILY_SCOPE_STORAGE_KEY } from '../familyScope';
+import { FAMILY_SCOPE_STORAGE_SLOT } from '../familyScope';
 import { FamilyScopeProvider, useFamilyScope } from '../FamilyScopeProvider';
 
 function Probe(): JSX.Element {
@@ -72,7 +72,7 @@ describe('useFamilyScope', () => {
   });
 
   it('falls back to the family this tab last chose', () => {
-    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_KEY, 'globex');
+    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_SLOT, 'globex');
     renderAt('/runners');
     expect(text('family')).toBe('globex');
     expect(text('active')).toBe('true');
@@ -80,7 +80,7 @@ describe('useFamilyScope', () => {
 
   it('remembers what an address states, for the pages that state nothing', () => {
     renderAt('/releases/family/initech');
-    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBe('initech');
+    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBe('initech');
   });
 
   it('every family is the scope when nothing states one', () => {
@@ -102,7 +102,7 @@ describe('useFamilyScope', () => {
     click('globex');
     expect(text('where')).toBe('/work?todo=7&family=globex');
     expect(text('family')).toBe('globex');
-    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBe('globex');
+    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBe('globex');
   });
 
   it('drops the parameters the page asks it to drop', () => {
@@ -116,11 +116,11 @@ describe('useFamilyScope', () => {
     click('all');
     expect(text('where')).toBe('/releases');
     expect(text('family')).toBe('');
-    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBeNull();
   });
 
   it('clearing wins over what the tab remembered', () => {
-    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_KEY, 'acme');
+    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_SLOT, 'acme');
     renderAt('/work');
     expect(text('family')).toBe('acme');
     click('all');
@@ -129,7 +129,7 @@ describe('useFamilyScope', () => {
   });
 
   it('opens another family without moving the scope, until that is asked for', () => {
-    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_KEY, 'acme');
+    window.sessionStorage.setItem(FAMILY_SCOPE_STORAGE_SLOT, 'acme');
     renderAt('/work?family=globex&todo=7');
     // The page shows the family its address states; the tab still carries acme.
     expect(text('family')).toBe('globex');
@@ -137,12 +137,12 @@ describe('useFamilyScope', () => {
     expect(text('outside')).toBe('globex');
     // And a link out of this page carries the scope, not the visited family.
     expect(text('work-link')).toBe('/work?family=acme');
-    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBe('acme');
+    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBe('acme');
 
     click('switch');
     expect(text('carried')).toBe('globex');
     expect(text('outside')).toBe('');
-    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_KEY)).toBe('globex');
+    expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBe('globex');
   });
 
   it('takes the family to another page when one is asked for', () => {
