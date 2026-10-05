@@ -408,7 +408,7 @@ export function todoActions(todo: Pick<ShiftTodo, 'status' | 'block_kind'>): {
 }
 
 /**
- * An `<input type="datetime-local">` value as the RFC 3339 instant the API
+ * An `<input type="datetime-local">` value, turned into the RFC 3339 instant the API
  * takes: UTC, to the second. An empty or unparsable value is no instant.
  */
 export function untilRfc3339(local: string): string | null {
