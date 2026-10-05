@@ -702,7 +702,8 @@ test.describe('Accessibility scans — the rows that must be read', () => {
         }),
       })
     );
-    await page.goto(`/repos/${repo.host}/${repo.owner}/${repo.name}/pulls/99`);
+    // The changed files live on the Files tab since the page split into tabs.
+    await page.goto(`/repos/${repo.host}/${repo.owner}/${repo.name}/pulls/99/files`);
     await expect(
       page.getByRole('heading', { name: /Pull request #99: A11y file tree scan/i })
     ).toBeVisible({ timeout: 15_000 });
