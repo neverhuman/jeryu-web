@@ -107,6 +107,8 @@ export const endpoints = {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/release-tag`;
     return branch ? `${base}?branch=${encodeURIComponent(branch)}` : base;
   },
+  /** Commits of other repositories that live deployments carry, forge-wide. */
+  releasePins: (): string => '/api/v1/release-pins',
   pulls: (id: string, state?: string, paging?: { limit: number; page: number }): string => {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/pulls`;
     const query = new URLSearchParams();

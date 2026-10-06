@@ -99,6 +99,36 @@ describe('pullStateOf', () => {
     expect(first?.kind === 'pr' && pullRowHint(first)).toBe('prod v2.3 compare capped');
   });
 
+  it('counts a change behind a capped compare apart from an unknown release', () => {
+    // The compare listed its cap and stopped: how far behind the release is
+    // is known even though where the change shipped is not.
+    const capped: ReleaseLadder = {
+      kind: 'channels',
+      pips: [
+        {
+          id: 'production',
+          label: 'prod',
+          membership: 'unknown',
+          release: null,
+          at: null,
+          baseline: 'v2.3',
+          undecided: 'capped',
+          listed: 250,
+        },
+      ],
+      furthest: null,
+      release: null,
+      uncertain: true,
+    };
+    const { groups } = buildRepoGroups([pull(82, 'merged')], { ladderFor: () => capped });
+    const first = groups[0]?.rows[0];
+    expect(first?.kind === 'pr' && first.state).toBe('capped');
+    expect(first?.kind === 'pr' && pullRowHint(first)).toBe('over 250 commits since prod v2.3');
+    expect(groups[0]?.counts.releaseUnknown).toBe(0);
+    expect(groups[0]?.counts.pastCompareCap).toBe(1);
+    expect(groups[0]?.counts.released).toBe(0);
+  });
+
   it('places a closed pull request where nothing moves again', () => {
     expect(pullStateOf(row(pull(13, 'closed'), ladder('production')))).toBe('closed');
   });
@@ -217,15 +247,23 @@ describe('buildRepoGroups', () => {
       awaitingRelease: 1,
       released: 1,
       releaseUnknown: 0,
+      pastCompareCap: 0,
       closed: 1,
     });
     expect(countsSentence(groups[0]!.counts)).toBe(
       '1 in flight · 1 awaiting release · 1 released · 1 closed'
     );
     expect(
-      countsSentence({ inFlight: 0, awaitingRelease: 0, released: 4, releaseUnknown: 2, closed: 0 })
+      countsSentence({
+        inFlight: 0,
+        awaitingRelease: 0,
+        released: 4,
+        releaseUnknown: 2,
+        pastCompareCap: 1,
+        closed: 0,
+      })
     ).toBe(
-      '4 released · 2 merged, release unknown'
+      '4 released · 1 merged, past the compare cap · 2 merged, release unknown'
     );
   });
 

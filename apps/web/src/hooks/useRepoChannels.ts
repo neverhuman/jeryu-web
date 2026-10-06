@@ -1,20 +1,23 @@
 // useRepoChannels.ts — the release ladder of several repositories at once:
 // one baseline per environment that has a live deployment (dev, canary,
-// stable, production), else the newest tag on the branch, plus the compare
-// each baseline needs to place a merged pull request on it.
+// stable, production), else the commit a parent deployment pins, else the
+// newest tag on the branch, plus the compare each baseline needs to place a
+// merged pull request on it.
 //
-// Three dependent rounds — environments, then tags only where no environment
-// answered, then one compare per baseline — so a repository that ships by tag
-// costs one extra request and one that ships by deployment costs none.
-// Everything is cached by repo, so switching family or filter re-reads nothing.
+// Three dependent rounds — environments, then the forge's release pins and
+// the tags of whatever they do not cover, then one compare per baseline — so
+// a repository that ships inside a parent release costs one shared request
+// and one that ships by deployment costs none. Everything is cached by repo,
+// so switching family or filter re-reads nothing.
 
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type {
   CompareResponse,
   EnvironmentsResponse,
+  ReleasePinsResponse,
   ReleaseTagResponse,
 } from '../api/types/deployments';
 import {
@@ -55,11 +58,28 @@ export function useRepoChannels(repos: string[], branch = 'main'): RepoChannelsM
       };
     }),
   });
-  // A repository with no deployed environment is released by tag instead.
-  const needTag = repos.map(
+  // A repository with no deployed environment ships inside another's release,
+  // or is released by tag. The pins are forge-wide, so one request answers for
+  // every such repository at once.
+  const unDeployed = repos.map(
     (_repo, index) =>
       !environments[index]?.isLoading &&
       !(environments[index]?.data?.environments ?? []).some((env) => env.current)
+  );
+  const pins = useQuery({
+    queryKey: ['releases', 'release-pins'],
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      apiGet<ReleasePinsResponse>(endpoints.releasePins(), { signal }),
+    enabled: unDeployed.some(Boolean),
+    staleTime: 30_000,
+    retry: false,
+  });
+  const pinsFor = (repo: string) =>
+    (pins.data?.pins ?? []).filter((pin) => pin.repo === repo);
+  // Only a repository no parent release carries falls back to a tag.
+  const needTag = repos.map(
+    (repo, index) =>
+      unDeployed[index] === true && !pins.isLoading && pinsFor(repo).length === 0
   );
   const tags = useQueries({
     queries: repos.map((repo, index) => ({
@@ -74,8 +94,8 @@ export function useRepoChannels(repos: string[], branch = 'main'): RepoChannelsM
 
   // Projections, not state: both are cheap and pure, and every query below is
   // keyed by repo and sha, so recomputing them per render refetches nothing.
-  const baselines = repos.map((_repo, index) =>
-    ladderBaselines(environments[index]?.data, tags[index]?.data)
+  const baselines = repos.map((repo, index) =>
+    ladderBaselines(environments[index]?.data, tags[index]?.data, pinsFor(repo))
   );
 
   // One compare per baseline, flattened so React Query sees a flat list.
@@ -105,6 +125,6 @@ export function useRepoChannels(repos: string[], branch = 'main'): RepoChannelsM
   });
   return {
     byRepo,
-    isLoading: [...environments, ...tags, ...compares].some((query) => query.isLoading),
+    isLoading: [...environments, pins, ...tags, ...compares].some((query) => query.isLoading),
   };
 }

@@ -5,6 +5,12 @@
 // (production, else the newest tag). This widens it to one baseline per
 // environment so a row can say "in canary, not yet in stable".
 //
+// A repository that ships inside another's release records no deployment of
+// its own: jeryu-deploy's production release names the jeryu-web commit it was
+// built from. Those pins are the baselines for such a repository, so it reads
+// as released by the parent's release rather than falling back to a tag from
+// months ago.
+//
 // Membership is ancestry: the forge only fast-forwards, so a merged PR's head
 // sha IS its commit on the default branch, and the PR is in a channel exactly
 // when that sha is an ancestor of what the channel runs. `compare?base=<the
@@ -17,6 +23,7 @@ import type { PullRequestSummary } from '../api/types';
 import type {
   CompareResponse,
   EnvironmentsResponse,
+  ReleasePin,
   ReleaseTagResponse,
 } from '../api/types/deployments';
 
@@ -57,6 +64,8 @@ export interface ChannelPip {
   baseline?: string;
   /** Why an `unknown` pip stayed undecided: its compare was capped, or never answered. */
   undecided?: Undecided | null;
+  /** How many commits a capped compare managed to list: the server's cap. */
+  listed?: number | null;
 }
 
 export type Undecided = 'capped' | 'unanswered';
@@ -104,7 +113,8 @@ export const UNKNOWN_LADDER: ReleaseLadder = {
  */
 export function ladderBaselines(
   environments: EnvironmentsResponse | undefined,
-  releaseTag: ReleaseTagResponse | undefined
+  releaseTag: ReleaseTagResponse | undefined,
+  pins: readonly ReleasePin[] = []
 ): LadderBaselines {
   const baselines: ChannelBaseline[] = [];
   for (const channel of CHANNEL_ORDER) {
@@ -119,6 +129,10 @@ export function ladderBaselines(
     });
   }
   if (baselines.length > 0) return { kind: 'channels', baselines };
+  // No deployment of its own: the parent release that carries it is the
+  // baseline, named after that release.
+  const pinned = pinBaselines(pins);
+  if (pinned.length > 0) return { kind: 'channels', baselines: pinned };
   if (releaseTag?.tag && releaseTag.sha) {
     return {
       kind: 'tag',
@@ -128,6 +142,27 @@ export function ladderBaselines(
     };
   }
   return NO_LADDER;
+}
+
+/**
+ * One baseline per channel whose parent deployment pins this repository,
+ * deepest last. The name is the parent's release id, so a row reads
+ * "prod · prod-20261005T144904Z-c29a93e" rather than naming a tag the
+ * repository was never released by.
+ */
+function pinBaselines(pins: readonly ReleasePin[]): ChannelBaseline[] {
+  const baselines: ChannelBaseline[] = [];
+  for (const channel of CHANNEL_ORDER) {
+    const pin = pins.find((candidate) => candidate.environment === channel);
+    if (!pin) continue;
+    baselines.push({
+      id: channel,
+      name: pin.release && pin.release !== '' ? pin.release : channel,
+      sha: pin.sha,
+      at: pin.deployed_at,
+    });
+  }
+  return baselines;
 }
 
 /** Every compare this ladder needs, as `{ id, base }` pairs to fetch. */
@@ -191,6 +226,7 @@ export function releaseLadder(
       baseline: baseline.name,
       undecided:
         membership === 'unknown' ? (compares.get(baseline.id) ? 'capped' : 'unanswered') : null,
+      listed: membership === 'unknown' ? (compares.get(baseline.id)?.commits.length ?? null) : null,
     };
   });
   const deepestIn = [...pips].reverse().find((pip) => pip.membership === 'in') ?? null;
@@ -232,6 +268,10 @@ export function ladderDetail(ladder: ReleaseLadder, state: string): string {
       : label;
   }
   if (ladder.uncertain) {
+    // A capped compare is a known quantity, not a mystery: say how far behind
+    // the release is instead of calling the change's whereabouts unknown.
+    const capped = ladderCapped(ladder);
+    if (capped) return capped;
     const gaveUp = ladderUndecided(ladder);
     return gaveUp ? `release unknown · ${gaveUp}` : 'release unknown';
   }
@@ -250,13 +290,30 @@ export function ladderUndecided(ladder: ReleaseLadder): string | null {
   if (ladder.pips.length === 0) return 'not compared';
   const pip = ladder.pips.find((candidate) => candidate.membership === 'unknown');
   if (!pip) return null;
-  const against =
-    pip.baseline && pip.baseline !== pip.label && pip.baseline !== pip.id
-      ? `${pip.label} ${pip.baseline}`
-      : pip.label;
+  const against = pipAgainst(pip);
   return pip.undecided === 'unanswered'
     ? `${against} compare did not answer`
     : `${against} compare capped`;
+}
+
+/**
+ * Why a capped compare could not decide, in a few words: `over 250 commits
+ * since prod v2`. Null unless a pip is undecided because its compare hit the
+ * server's cap and said how many commits it listed.
+ */
+export function ladderCapped(ladder: ReleaseLadder): string | null {
+  const pip = ladder.pips.find(
+    (candidate) => candidate.membership === 'unknown' && candidate.undecided === 'capped'
+  );
+  if (!pip?.listed) return null;
+  return `over ${pip.listed} commits since ${pipAgainst(pip)}`;
+}
+
+/** The release a pip was compared against, qualified by its channel. */
+function pipAgainst(pip: ChannelPip): string {
+  return pip.baseline && pip.baseline !== pip.label && pip.baseline !== pip.id
+    ? `${pip.label} ${pip.baseline}`
+    : pip.label;
 }
 
 /**

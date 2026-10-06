@@ -18,7 +18,7 @@ import { compareInstants } from '../format/when';
 import type { PullRequestSummary } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
 import { queueHref } from './shift/workPaths';
-import { ladderUndecided, type PipId, type ReleaseLadder } from './releaseChannelsModel';
+import { ladderCapped, ladderUndecided, type PipId, type ReleaseLadder } from './releaseChannelsModel';
 
 /** Every state a row can sit at, pipeline order: least far first. */
 export type PullStateId =
@@ -28,6 +28,7 @@ export type PullStateId =
   | 'mergeable'
   | 'merged'
   | PipId
+  | 'capped'
   | 'unknown'
   | 'unrecorded'
   | 'closed';
@@ -36,10 +37,10 @@ export type PullStateId =
 const OPEN_STATES: PullStateId[] = ['draft', 'checks', 'review', 'mergeable'];
 
 /** Merged, but in no environment the page knows of: they wait together. */
-const WAITING_STATES: PullStateId[] = ['merged', 'unknown', 'unrecorded'];
+const WAITING_STATES: PullStateId[] = ['merged', 'capped', 'unknown', 'unrecorded'];
 
 /** States after the channels: cannot be placed, then work that will never move. */
-const TAIL_STATES: PullStateId[] = ['unknown', 'unrecorded', 'closed'];
+const TAIL_STATES: PullStateId[] = ['capped', 'unknown', 'unrecorded', 'closed'];
 
 export const PULL_STATE_LABELS: Record<string, string> = {
   draft: 'Draft',
@@ -52,6 +53,7 @@ export const PULL_STATE_LABELS: Record<string, string> = {
   stable: 'In stable',
   production: 'In prod',
   tag: 'Released',
+  capped: 'Merged · past the compare cap',
   unknown: 'Merged · release unknown',
   unrecorded: 'Merged · no release recorded',
   closed: 'Closed',
@@ -63,7 +65,8 @@ export const PULL_STATE_LABELS: Record<string, string> = {
  */
 export const PULL_STATE_HINTS: Record<string, string> = {
   merged: 'ready for the next release',
-  unknown: 'the compare was capped or did not answer',
+  capped: 'the last release is more commits behind than one compare lists',
+  unknown: 'the compare did not answer',
   unrecorded: 'no deployment and no release tag',
 };
 
@@ -73,6 +76,10 @@ export const PULL_STATE_HINTS: Record<string, string> = {
  * release to go and look at rather than only that something was unknown.
  */
 export function pullRowHint(row: PullRow): string | undefined {
+  if (row.state === 'capped') {
+    const behind = ladderCapped(row.row.ladder);
+    if (behind) return behind;
+  }
   if (row.state === 'unknown') {
     const gaveUp = ladderUndecided(row.row.ladder);
     if (gaveUp) return gaveUp;
@@ -131,6 +138,8 @@ export interface RepoCounts {
   released: number;
   /** Merged, but where it shipped is unknown or never recorded. */
   releaseUnknown: number;
+  /** Merged, and the last release is further back than one compare reaches. */
+  pastCompareCap: number;
   closed: number;
 }
 
@@ -261,11 +270,15 @@ function countRows(branches: BranchRow[], prs: PullRow[]): RepoCounts {
   // Merged work the page cannot place is not "released": saying so would be a
   // claim about a release this repository may not record.
   const unplaced = prs.filter((row) => row.state === 'unknown' || row.state === 'unrecorded').length;
+  // A capped compare says how far behind the release is, so these are counted
+  // apart from the ones nothing is known about.
+  const capped = prs.filter((row) => row.state === 'capped').length;
   return {
     inFlight: branches.length + open,
     awaitingRelease: awaiting,
-    released: prs.length - open - closed - awaiting - unplaced,
+    released: prs.length - open - closed - awaiting - unplaced - capped,
     releaseUnknown: unplaced,
+    pastCompareCap: capped,
     closed,
   };
 }
@@ -286,6 +299,12 @@ export function countParts(counts: RepoCounts): CountPart[] {
     parts.push({ text: `${counts.awaitingRelease} awaiting release`, target: 'releases' });
   }
   if (counts.released > 0) parts.push({ text: `${counts.released} released`, target: 'releases' });
+  if (counts.pastCompareCap > 0) {
+    parts.push({
+      text: `${counts.pastCompareCap} merged, past the compare cap`,
+      target: 'releases',
+    });
+  }
   if (counts.releaseUnknown > 0) {
     parts.push({ text: `${counts.releaseUnknown} merged, release unknown`, target: 'releases' });
   }
@@ -425,7 +444,8 @@ export function pullStateOf(row: TimelineRow): PullStateId {
   if (pr.state === 'merged') {
     if (ladder.kind === 'none') return 'unrecorded';
     if (ladder.furthest) return ladder.furthest;
-    return ladder.uncertain ? 'unknown' : 'merged';
+    if (!ladder.uncertain) return 'merged';
+    return ladderCapped(ladder) ? 'capped' : 'unknown';
   }
   if (pr.draft) return 'draft';
   if (pr.checks.total === 0 || pr.checks.failing > 0 || pr.checks.pending > 0) return 'checks';

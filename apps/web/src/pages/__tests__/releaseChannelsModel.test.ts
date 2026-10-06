@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import type {
   CompareResponse,
   EnvironmentsResponse,
+  ReleasePin,
   ReleaseTagResponse,
 } from '../../api/types/deployments';
 import {
   ladderBaselines,
+  ladderCapped,
   ladderCompares,
   ladderDetail,
   ladderReach,
@@ -43,7 +45,57 @@ describe('ladderBaselines', () => {
     expect(ladderBaselines(empty, undefined).kind).toBe('none');
   });
 
-  it('falls back to the newest tag when no environment is deployed', () => {
+  it('takes the baseline from the parent deployment that carries the repository', () => {
+    // jeryu-web records no deployment and its newest tag is months behind;
+    // jeryu-deploy's releases name the jeryu-web commit they were built from.
+    const ladder = ladderBaselines(undefined, tag('web-v0.9.0', 'o'), [
+      pin('production', 'w', 'prod-20261005T144904Z-c29a93e'),
+      pin('stable', 'v', 'stable-20260930T120000Z-aaaaaaa'),
+    ]);
+    expect(ladder.kind).toBe('channels');
+    expect(ladder.baselines).toEqual([
+      {
+        id: 'stable',
+        name: 'stable-20260930T120000Z-aaaaaaa',
+        sha: sha('v'),
+        at: '2026-10-05T14:49:04Z',
+      },
+      {
+        id: 'production',
+        name: 'prod-20261005T144904Z-c29a93e',
+        sha: sha('w'),
+        at: '2026-10-05T14:49:04Z',
+      },
+    ]);
+    // Production runs the change, so the row names the parent's release.
+    const placed = releaseLadder(
+      { state: 'merged', head_sha: sha('a') },
+      ladder,
+      compares(ladder, { stable: [], production: [] })
+    );
+    expect(placed.furthest).toBe('production');
+    expect(ladderDetail(placed, 'merged')).toBe('prod · prod-20261005T144904Z-c29a93e');
+  });
+
+  it('names a pinning channel after itself when the parent release is unnamed', () => {
+    const ladder = ladderBaselines(undefined, undefined, [pin('canary', 'w', null)]);
+    expect(ladder.baselines[0]).toMatchObject({ id: 'canary', name: 'canary', sha: sha('w') });
+  });
+
+  it('prefers the repository\'s own deployment over a parent that pins it', () => {
+    const ladder = ladderBaselines(environments({ production: ['p', 'v7'] }), undefined, [
+      pin('production', 'w', 'prod-1'),
+    ]);
+    expect(ladder.baselines).toEqual([
+      { id: 'production', name: 'v7', sha: sha('p'), at: '2026-09-14T00:00:00Z' },
+    ]);
+  });
+
+  it('ignores a pin for an environment outside the ladder', () => {
+    expect(ladderBaselines(undefined, undefined, [pin('preview', 'w', 'p-1')]).kind).toBe('none');
+  });
+
+  it('falls back to the newest tag when no environment is deployed and no parent pins it', () => {
     const ladder = ladderBaselines(undefined, tag('rel-b', 't'));
     expect(ladder.kind).toBe('tag');
     expect(ladder.baselines).toEqual([
@@ -130,6 +182,18 @@ describe('releaseLadder', () => {
     // It names the release it gave up comparing against, and why.
     expect(ladderDetail(ladder, 'merged')).toBe('release unknown · dev v9 compare did not answer');
     expect(ladderReach(ladder)).toBe('unknown');
+  });
+
+  it('says how far behind the release is when the compare was capped', () => {
+    // 250 commits listed and more left: the compare cannot place the change,
+    // but it can say the release is further back than it reaches.
+    const capped = new Map<PipId, CompareResponse | null>([
+      ['production', { ...compare(['b']), ahead_by: 262, commits: manyCommits(250), truncated: true }],
+    ]);
+    const ladder = releaseLadder(merged, four, capped);
+    expect(ladder.pips[3]).toMatchObject({ membership: 'unknown', undecided: 'capped', listed: 250 });
+    expect(ladderCapped(ladder)).toBe('over 250 commits since prod v6');
+    expect(ladderDetail(ladder, 'merged')).toBe('over 250 commits since prod v6');
   });
 
   it('says which release a capped compare left undecided', () => {
@@ -266,6 +330,28 @@ function compare(missing: string[]): CompareResponse {
     })),
     truncated: false,
   };
+}
+
+/** A pin: a parent deployment of `environment` carrying this repo's commit. */
+function pin(environment: string, commit: string, release: string | null): ReleasePin {
+  return {
+    repo: 'jeryu/jeryu-web',
+    environment,
+    sha: sha(commit),
+    parent: 'jeryu/jeryu-deploy',
+    release,
+    deployed_at: '2026-10-05T14:49:04Z',
+  };
+}
+
+/** `count` distinct commits, as a capped compare's page of them. */
+function manyCommits(count: number): CompareResponse['commits'] {
+  return Array.from({ length: count }, (_value, index) => ({
+    sha: String(index).padStart(40, '0'),
+    summary: `commit ${index}`,
+    author: 'operator',
+    committed_at: '2026-09-15T00:00:00Z',
+  }));
 }
 
 function compares(

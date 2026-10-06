@@ -90,3 +90,28 @@ export interface ReleaseTagResponse {
   sha: string | null;
   tagged_at: string | null;
 }
+
+/**
+ * One commit of a repository that another repository's live deployment
+ * carries: jeryu-deploy's production release names the jeryu-web commit it
+ * was built from, so jeryu-web is released by that deployment even though it
+ * records none of its own.
+ */
+export interface ReleasePin {
+  /** The pinned repository, `owner/name`. */
+  repo: string;
+  /** The parent deployment's environment: dev, canary, stable, production. */
+  environment: string;
+  /** The pinned repository's commit the parent release carries. */
+  sha: string;
+  /** `owner/name` of the repository whose deployment carries it. */
+  parent: string;
+  /** The parent deployment's release id, when its payload names one. */
+  release: string | null;
+  deployed_at: string;
+}
+
+/** `GET /api/v1/release-pins`: every such pin the caller can read. */
+export interface ReleasePinsResponse {
+  pins: ReleasePin[];
+}
