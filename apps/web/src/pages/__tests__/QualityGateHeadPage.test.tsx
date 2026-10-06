@@ -12,7 +12,7 @@ import { HEAD } from './qualityGateTestData';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 const PATH = `/quality-gate/heads/jeryu/jeryu-web/${HEAD.sha}`;
@@ -87,7 +87,7 @@ describe('QualityGateHeadPage', () => {
               ...HEAD.findings[0],
               disputed: true,
               dispute_reason: 'The name is current.',
-              disputed_by: 'alton',
+              disputed_by: 'operator',
               disputed_at: '2026-09-19T17:00:00Z',
             },
           })
@@ -103,7 +103,7 @@ describe('QualityGateHeadPage', () => {
     fireEvent.click(within(finding).getByRole('button', { name: 'Record dispute' }));
 
     await waitFor(() => expect(within(finding).getByText('Disputed')).toBeInTheDocument());
-    expect(finding).toHaveTextContent('Disputed by alton: The name is current.');
+    expect(finding).toHaveTextContent('Disputed by operator: The name is current.');
     const posted = calls.find((call) => call.method === 'POST');
     expect(posted?.pathname).toBe('/api/v1/quality-gate/findings/f-1/dispute');
     expect(posted?.body).toEqual({ reason: 'The name is current.' });
@@ -135,7 +135,7 @@ describe('QualityGateHeadPage', () => {
     renderHead();
 
     const settled = await screen.findByTestId('quality-gate-finding-f-2');
-    expect(settled).toHaveTextContent('Disputed by alton: The link is one line above.');
+    expect(settled).toHaveTextContent('Disputed by operator: The link is one line above.');
     expect(screen.queryByRole('button', { name: 'Dispute this finding' })).toBeNull();
   });
 

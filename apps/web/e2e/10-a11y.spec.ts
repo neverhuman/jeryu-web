@@ -462,7 +462,7 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
     await mockShiftTodos(page, [
       shiftTodo('a11y-claimed', {
         status: 'claimed',
-        claim_by: 'alice@xbabe0/w1',
+        claim_by: 'alice@node-0/w1',
         lease_until: new Date(Date.now() + 15 * 60_000).toISOString(),
         lease_live: true,
       }),

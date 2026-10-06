@@ -19,7 +19,7 @@ describe('repoQueueRuns', () => {
     expect(runs[0]).toMatchObject({
       todoId: 't-1',
       family: 'jeryu',
-      worker: 'xbabe2 · w3',
+      worker: 'node-2 · w3',
       model: 'opus',
       outcome: 'running',
       running: true,
@@ -48,8 +48,8 @@ describe('repoQueueRuns', () => {
 
 function attempt(over: Partial<ShiftAttempt>): ShiftAttempt {
   return {
-    by: 'alton',
-    host: 'xbabe2',
+    by: 'operator',
+    host: 'node-2',
     slot: 'w3',
     model: 'opus',
     session: null,
@@ -75,7 +75,7 @@ function todo(id: string, repos: string[], worked_by: ShiftAttempt[]): ShiftTodo
     blocked_by: [],
     status: 'claimed',
     attempts: worked_by.length,
-    requested_by: 'alton',
+    requested_by: 'operator',
     filed_at: '2026-09-20T08:00:00Z',
     claim_by: null,
     lease_until: null,

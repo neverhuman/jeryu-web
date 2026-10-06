@@ -151,13 +151,13 @@ test('Shift work on a branch is one row per branch in its repository; queued tod
   await mockShiftTodos(page, [
     shiftTodo('t-claimed', {
       status: 'claimed',
-      claim_by: 'alice@xbabe0/w2',
+      claim_by: 'alice@node-0/w2',
       lease_until: new Date(Date.now() + 20 * 60_000).toISOString(),
       lease_live: true,
       worked_by: [
         {
-          by: 'alice@xbabe0',
-          host: 'xbabe0',
+          by: 'alice@node-0',
+          host: 'node-0',
           slot: 'w2',
           model: 'claude-opus-5',
           session: null,
@@ -189,7 +189,7 @@ test('Shift work on a branch is one row per branch in its repository; queued tod
   const section = page.getByTestId('pull-repo-alice/jeryu');
   const branch = page.getByTestId('pull-branch-alice/jeryu-dayshift/2026-06-05');
   await expect(branch).toContainText('dayshift/2026-06-05 · 2 todos');
-  await expect(branch).toContainText('1 working · alice@xbabe0/w2');
+  await expect(branch).toContainText('1 working · alice@node-0/w2');
   await expect(branch).toHaveAttribute('data-status', 'active');
   await expect(section.locator('.pull-timeline__rows > li').first()).toHaveAttribute(
     'data-testid',

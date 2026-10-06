@@ -101,7 +101,7 @@ describe('RepositoryAgentsPage — empty repository', () => {
 
     const row = await screen.findByTestId('agent-queue-row-20260921-002116');
     expect(row).toHaveTextContent('Feed the agents page');
-    expect(row).toHaveTextContent('xbabe2 · w3');
+    expect(row).toHaveTextContent('node-2 · w3');
     expect(screen.getByTestId('agent-queue-status-20260921-002116')).toHaveTextContent(
       'running'
     );
@@ -124,9 +124,9 @@ function queueTodo(): Record<string, unknown> {
     blocked_by: [],
     status: 'claimed',
     attempts: 1,
-    requested_by: 'alton',
+    requested_by: 'operator',
     filed_at: NOW,
-    claim_by: 'xbabe2/w3',
+    claim_by: 'node-2/w3',
     lease_until: null,
     lease_live: true,
     shift: null,
@@ -137,8 +137,8 @@ function queueTodo(): Record<string, unknown> {
     triaged: true,
     worked_by: [
       {
-        by: 'alton',
-        host: 'xbabe2',
+        by: 'operator',
+        host: 'node-2',
         slot: 'w3',
         model: 'opus',
         session: null,

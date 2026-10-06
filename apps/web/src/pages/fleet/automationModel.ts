@@ -13,7 +13,7 @@ import {
   type RunnerNetworkNode
 } from '../runnerNetworkModel';
 
-/** "Auto-pin" for `xbabe0/auto-pin`; the recipe when the id has no suffix. */
+/** "Auto-pin" for `node-0/auto-pin`; the recipe when the id has no suffix. */
 export function automationName(node: RunnerNetworkNode): string {
   const suffix = node.runnerId.includes('/')
     ? (node.runnerId.split('/').at(-1) ?? '')

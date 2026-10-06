@@ -181,7 +181,7 @@ describe('needsYouModel', () => {
       type: 'command',
       label: 'Deploy',
       command: staged.action!.command,
-      where: 'Run on xbabe0, in a jeryu/jeryu-deploy checkout',
+      where: 'Run on node-0, in a jeryu/jeryu-deploy checkout',
     });
     const blocked = findAttention(ATTENTION, 'todo_blocked')!;
     expect(primaryAction(blocked)).toEqual({ type: 'link', label: 'Open', to: blocked.href });
@@ -260,9 +260,9 @@ describe('needsYouModel', () => {
 
   it('reads the second line as the next step, keeping the reason as the tooltip', () => {
     expect(
-      rowDetail({ next_step: 'Deploy: on xbabe0, run `deploy.sh`', reason: 'Production is 3 commits behind.' })
+      rowDetail({ next_step: 'Deploy: on node-0, run `deploy.sh`', reason: 'Production is 3 commits behind.' })
     ).toEqual({
-      text: 'Deploy: on xbabe0, run `deploy.sh`',
+      text: 'Deploy: on node-0, run `deploy.sh`',
       title: 'Production is 3 commits behind.',
     });
     // A server that predates `next_step`, or sent it blank: the reason is the line.
@@ -322,8 +322,8 @@ describe('needsYouModel', () => {
     const command = 'systemctl --user start jeryu-auto-pin.service';
     const item = (action: { run_in?: string | null }, repo: string | null): ReturnType<typeof attentionItem> =>
       attentionItem({ id: 'x', kind: 'pin_behind', repo, action: { label: 'Run', command, ...action } });
-    expect(commandPlace(item({ run_in: 'xbabe0, any directory' }, 'jeryu/jeryu-deploy'))).toBe(
-      'Run on xbabe0, any directory'
+    expect(commandPlace(item({ run_in: 'node-0, any directory' }, 'jeryu/jeryu-deploy'))).toBe(
+      'Run on node-0, any directory'
     );
     // A server that predates `run_in`, or sent it blank: the repository is the hint.
     expect(commandPlace(item({}, 'jeryu/jeryu-deploy'))).toBe('Run in a checkout of jeryu/jeryu-deploy');

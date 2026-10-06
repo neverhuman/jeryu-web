@@ -31,8 +31,8 @@ function detail(over: {
       number: 38,
       entity: { kind: 'pull_request', id: 'r1#38' },
       title: 'Ready to pin',
-      author: 'alton2',
-      head_ref: 'alton/pin-visibility',
+      author: 'rel-bot',
+      head_ref: 'operator/pin-visibility',
       base_ref: 'main',
       head_sha: SHA,
       base_sha: SHA,
@@ -116,15 +116,15 @@ describe('pull review model', () => {
 
 describe('approveAvailability', () => {
   it('refuses the author their own approval and names the short SHA', () => {
-    const availability = approveAvailability(detail({}), 'alton2');
+    const availability = approveAvailability(detail({}), 'rel-bot');
     expect(availability.enabled).toBe(false);
     expect(availability.reason).toContain('You opened this pull request');
-    expect(availability.reason).toContain('other than alton2');
+    expect(availability.reason).toContain('other than rel-bot');
     expect(availability.reason).toContain(SHA.slice(0, 7));
   });
 
   it('matches the author across the @ prefix and letter case', () => {
-    expect(approveAvailability(detail({}), '@Alton2').enabled).toBe(false);
+    expect(approveAvailability(detail({}), '@Rel-Bot').enabled).toBe(false);
   });
 
   it('leaves the button live for another reviewer or an unknown viewer', () => {
@@ -159,14 +159,14 @@ describe('approveRefusal', () => {
         status: 403,
         code: 'pull_self_approval_forbidden',
         message: 'pull request authors cannot approve their own changes',
-        details: { author: 'alton', reviewer: 'alton' },
+        details: { author: 'operator', reviewer: 'operator' },
       },
       pr
     );
     expect(refusal.message).toBe(
       'pull request authors cannot approve their own changes'
     );
-    expect(refusal.guidance).toContain('signed in as alton, which is also the author');
+    expect(refusal.guidance).toContain('signed in as operator, which is also the author');
     expect(refusal.guidance).toContain('independent authenticated reviewer');
     expect(refusal.guidance).toContain(SHA.slice(0, 7));
   });
@@ -181,7 +181,7 @@ describe('approveRefusal', () => {
       },
       pr
     );
-    expect(refusal.guidance).toContain('signed in as the author (alton2)');
+    expect(refusal.guidance).toContain('signed in as the author (rel-bot)');
   });
 
   it('asks for reviewer access on any other 403', () => {

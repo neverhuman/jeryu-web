@@ -135,7 +135,7 @@ async function gotoTerminal(page: Page): Promise<AppShellPage> {
     {
       run_id: RUN_ID,
       branch: 'fix/parser',
-      runner: 'runnerd-xbabe0',
+      runner: 'runnerd-node-0',
       status: 'running',
       tty_live: true,
       agent: 'editbot',

@@ -30,7 +30,7 @@ export interface AttentionAction {
   command: string | null;
   /**
    * Where `command` is run: a short phrase naming the machine and directory
-   * ("xbabe0, any directory"). Absent from a server that predates it, and on
+   * ("node-0, any directory"). Absent from a server that predates it, and on
    * every action without a command.
    */
   run_in?: string | null;
@@ -69,7 +69,7 @@ export interface AttentionItem {
   action: AttentionAction | null;
   /**
    * The one next step as one sentence, with no other context ("Deploy: on
-   * xbabe0, run `…`"). Absent from a server that predates it.
+   * node-0, run `…`"). Absent from a server that predates it.
    */
   next_step?: string | null;
 }

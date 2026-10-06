@@ -31,7 +31,7 @@ const calmRunners: RunnerFabricResponse = {
     lastUpdated: '2026-06-05T00:00:00Z',
     nodeDetails: [
       {
-        runnerId: 'xbabe0',
+        runnerId: 'node-0',
         source: 'runnerd',
         state: 'active',
         capacity: 10,
@@ -60,7 +60,7 @@ const calmRunners: RunnerFabricResponse = {
         ],
       },
       {
-        runnerId: 'xbabe1',
+        runnerId: 'node-1',
         source: 'runnerd',
         state: 'draining',
         capacity: 10,
@@ -72,7 +72,7 @@ const calmRunners: RunnerFabricResponse = {
         activeTasks: [],
       },
       {
-        runnerId: 'xbabe2',
+        runnerId: 'node-2',
         source: 'runnerd',
         state: 'dead',
         capacity: 10,

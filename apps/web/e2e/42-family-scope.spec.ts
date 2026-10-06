@@ -188,7 +188,7 @@ async function mockShiftQueue(page: Page): Promise<void> {
     blocked_by: [],
     status: 'open',
     attempts: 0,
-    requested_by: 'alton',
+    requested_by: 'operator',
     filed_at: new Date(Date.now() - 3_600_000).toISOString(),
     claim_by: null,
     lease_until: null,

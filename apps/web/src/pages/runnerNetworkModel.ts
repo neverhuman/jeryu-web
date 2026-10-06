@@ -550,7 +550,7 @@ export function pullRefFromLabel(label: string): PullRef | null {
   return pr > 0 ? { repo: match[1], pr } : null;
 }
 
-/** "xbabe2 · slot 0" for `xbabe2/slot0`, "xbabe0 · redteam" for a reviewer. */
+/** "node-2 · slot 0" for `node-2/slot0`, "node-0 · redteam" for a reviewer. */
 export function runnerName(runnerId: string): string {
   const slot = /^(.+)\/slot(\d+)$/.exec(runnerId);
   if (slot) return `${slot[1]} · slot ${slot[2]}`;
@@ -870,7 +870,7 @@ export function splitReviewers(reviewers: readonly RunnerNetworkNode[]): {
   };
 }
 
-/** "4 reviewers have not reviewed anything yet: xbabe0 · redteam, …". */
+/** "4 reviewers have not reviewed anything yet: node-0 · redteam, …". */
 export function idleReviewerSentence(
   idle: readonly RunnerNetworkNode[]
 ): string {
@@ -898,7 +898,7 @@ export interface NetworkSentence {
 }
 
 /**
- * The whole gate network in one sentence: "6 gate runners on xbabe2: all idle
+ * The whole gate network in one sentence: "6 gate runners on node-2: all idle
  * · 0 offline". Red only when a runner is offline.
  */
 export function networkSentence(

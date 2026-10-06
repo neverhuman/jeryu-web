@@ -30,7 +30,7 @@ sanitizer pipeline.</p>
 <ol>
   <li>Clone the repo.</li>
   <li>Run <code>just fast</code>.</li>
-  <li>Open <a href="/repos/jeryu/veox/redline">veox/redline</a>.</li>
+  <li>Open <a href="/repos/jeryu/acme/widgets">acme/widgets</a>.</li>
 </ol>
 <pre><code class="language-rust">fn main() {
     println!("hello, world");
@@ -80,7 +80,7 @@ const MERMAID_SOURCE = `flowchart TD
   Queue --> Store[(Store)]`;
 
 const MERMAID_HTML = `
-<h1>veox-telemetry</h1>
+<h1>acme-telemetry</h1>
 <p>How a batch moves through the collector.</p>
 <pre><code class="language-mermaid">${MERMAID_SOURCE}</code></pre>
 <p>Text after the diagram.</p>
@@ -88,7 +88,7 @@ const MERMAID_HTML = `
 
 // The library refuses this source, so the panel shows the code block and a note.
 const BROKEN_MERMAID_HTML = `
-<h1>veox-telemetry</h1>
+<h1>acme-telemetry</h1>
 <pre><code class="language-mermaid">flowchart TD
   A --&gt; </code></pre>
 `;

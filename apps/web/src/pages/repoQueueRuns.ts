@@ -15,7 +15,7 @@ export interface RepoQueueRun {
   todoId: string;
   family: string;
   title: string;
-  /** Host and slot the worker ran in, e.g. `xbabe2 · w3`. */
+  /** Host and slot the worker ran in, e.g. `node-2 · w3`. */
   worker: string;
   model: string;
   started: string;

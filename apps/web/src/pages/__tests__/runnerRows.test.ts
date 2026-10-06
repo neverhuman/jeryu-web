@@ -20,7 +20,7 @@ const NOW = new Date('2026-09-19T19:01:00Z').getTime();
 
 function node(overrides: Partial<RunnerNetworkNode> = {}): RunnerNetworkNode {
   return {
-    runnerId: 'xbabe2/slot0',
+    runnerId: 'node-2/slot0',
     kind: 'gate',
     source: 'pr-gate-runner',
     state: 'active',
@@ -28,7 +28,7 @@ function node(overrides: Partial<RunnerNetworkNode> = {}): RunnerNetworkNode {
     activityState: 'idle',
     capacity: 1,
     inFlight: 0,
-    labels: ['xbabe2', 'slot 0', 'pr-gate'],
+    labels: ['node-2', 'slot 0', 'pr-gate'],
     classes: ['pr-gate'],
     activeTaskCount: 0,
     lastUpdated: '2026-09-19T19:00:48Z',
@@ -60,8 +60,8 @@ function task(
 
 describe('runner rows in words', () => {
   it('names a runner by host and slot, and a reviewer by host and role', () => {
-    expect(runnerName('xbabe2/slot0')).toBe('xbabe2 · slot 0');
-    expect(runnerName('xbabe0/redteam')).toBe('xbabe0 · redteam');
+    expect(runnerName('node-2/slot0')).toBe('node-2 · slot 0');
+    expect(runnerName('node-0/redteam')).toBe('node-0 · redteam');
     expect(runnerName('local')).toBe('local');
   });
 
@@ -236,12 +236,12 @@ describe('runner rows in words', () => {
       local: {
         nodeDetails: [
           {
-            runnerId: 'xbabe0/redteam',
+            runnerId: 'node-0/redteam',
             source: 'pr-redteam',
             state: 'active',
             capacity: 0,
             inFlight: 0,
-            labels: ['xbabe0', 'slot 0', 'redteam'],
+            labels: ['node-0', 'slot 0', 'redteam'],
             classes: ['reviewer'],
             activeTaskCount: 0,
             lastUpdated: '2026-09-19T19:00:48Z',
@@ -284,28 +284,28 @@ describe('runner rows in words', () => {
 
   it('says the whole gate network in one sentence, red only when something is offline', () => {
     const six = Array.from({ length: 6 }, (_, i) =>
-      node({ runnerId: `xbabe2/slot${i}` })
+      node({ runnerId: `node-2/slot${i}` })
     );
     expect(networkSentence(six)).toEqual({
-      text: '6 gate runners on xbabe2: all idle · 0 offline',
+      text: '6 gate runners on node-2: all idle · 0 offline',
       tone: 'unknown'
     });
     const mixed = [
-      node({ runnerId: 'xbabe2/slot0', activityState: 'active' }),
-      node({ runnerId: 'xbabe2/slot1', activityState: 'active' }),
-      node({ runnerId: 'xbabe3/slot0' }),
+      node({ runnerId: 'node-2/slot0', activityState: 'active' }),
+      node({ runnerId: 'node-2/slot1', activityState: 'active' }),
+      node({ runnerId: 'node-3/slot0' }),
       node({
-        runnerId: 'xbabe3/slot1',
+        runnerId: 'node-3/slot1',
         availability: 'offline',
         activityState: 'unknown'
       })
     ];
     expect(networkSentence(mixed)).toEqual({
-      text: '4 gate runners on xbabe2, xbabe3: 2 busy, 1 idle · 1 offline',
+      text: '4 gate runners on node-2, node-3: 2 busy, 1 idle · 1 offline',
       tone: 'failed'
     });
     expect(networkSentence([node({ activityState: 'active' })]).text).toBe(
-      '1 gate runner on xbabe2: all busy · 0 offline'
+      '1 gate runner on node-2: all busy · 0 offline'
     );
     expect(networkSentence([])).toEqual({
       text: 'No gate runner is reporting.',
@@ -326,33 +326,33 @@ describe('runner rows in words', () => {
       mergeAttempt: null
     };
     const reviewers = [
-      reviewer('xbabe0/redteam', { lastActivity: review }),
-      reviewer('xbabe1/redteam', {
+      reviewer('node-0/redteam', { lastActivity: review }),
+      reviewer('node-1/redteam', {
         activityState: 'active',
         tasks: [task('jeryu/jeryu-web#7', '2026-09-19T19:00:00Z')]
       }),
-      reviewer('xbabe2/redteam', {
+      reviewer('node-2/redteam', {
         mergeGrantGaps: [
           { repo: 'jeryu/jeryu-web', identity: 'redteam', message: 'no merge grant' }
         ]
       }),
-      reviewer('xbabe3/redteam', { availability: 'offline', activityState: 'unknown' }),
-      reviewer('xbabe4/redteam'),
-      reviewer('xbabe5/redteam')
+      reviewer('node-3/redteam', { availability: 'offline', activityState: 'unknown' }),
+      reviewer('node-4/redteam'),
+      reviewer('node-5/redteam')
     ];
     const { listed, idle } = splitReviewers(reviewers);
     expect(listed.map((n) => n.runnerId)).toEqual([
-      'xbabe0/redteam',
-      'xbabe1/redteam',
-      'xbabe2/redteam',
-      'xbabe3/redteam'
+      'node-0/redteam',
+      'node-1/redteam',
+      'node-2/redteam',
+      'node-3/redteam'
     ]);
-    expect(idle.map((n) => n.runnerId)).toEqual(['xbabe4/redteam', 'xbabe5/redteam']);
+    expect(idle.map((n) => n.runnerId)).toEqual(['node-4/redteam', 'node-5/redteam']);
     expect(idleReviewerSentence(idle)).toBe(
-      '2 reviewers have not reviewed anything yet: xbabe4 · redteam, xbabe5 · redteam.'
+      '2 reviewers have not reviewed anything yet: node-4 · redteam, node-5 · redteam.'
     );
     expect(idleReviewerSentence(idle.slice(0, 1))).toBe(
-      '1 reviewer has not reviewed anything yet: xbabe4 · redteam.'
+      '1 reviewer has not reviewed anything yet: node-4 · redteam.'
     );
   });
 });

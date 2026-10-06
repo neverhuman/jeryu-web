@@ -130,7 +130,7 @@ function pr(o: {
     number: o.number ?? 1,
     entity: { kind: 'pull_request', id: 'repo-1#1' },
     title: 'A change',
-    author: 'alton',
+    author: 'operator',
     head_ref: 'feature',
     base_ref: 'main',
     head_sha: 'abc',

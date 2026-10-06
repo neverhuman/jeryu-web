@@ -51,7 +51,7 @@ async function seed(page: Page): Promise<void> {
     {
       run_id: 'run-1',
       branch: 'agent/run-1',
-      runner: 'xbabe0',
+      runner: 'node-0',
       status: 'running',
       tty_live: true,
     },

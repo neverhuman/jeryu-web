@@ -33,7 +33,7 @@ async function seed(page: Page): Promise<void> {
     {
       run_id: 'run-1',
       branch: 'fix/parser',
-      runner: 'runnerd-xbabe0',
+      runner: 'runnerd-node-0',
       status: 'running',
       tty_live: true,
       agent: 'editbot',
@@ -72,7 +72,7 @@ test('renders the active-agents list with branch / runner / status / tty-live @a
   // Row 1: running + live TTY.
   const row1 = page.getByTestId('agent-row-run-1');
   await expect(row1).toContainText('fix/parser');
-  await expect(row1).toContainText('runnerd-xbabe0');
+  await expect(row1).toContainText('runnerd-node-0');
   await expect(row1).toContainText('editbot');
   await expect(page.getByTestId('agent-status-run-1')).toHaveText('running');
   await expect(page.getByTestId('agent-tty-run-1')).toHaveClass(/is-live/);
@@ -144,7 +144,7 @@ test('an empty repository shows the queue runs, not two empty states @action:age
       worked_by: [
         {
           by: 'alice',
-          host: 'xbabe2',
+          host: 'node-2',
           slot: 'w3',
           model: 'opus',
           session: null,
@@ -169,7 +169,7 @@ test('an empty repository shows the queue runs, not two empty states @action:age
 
   const row = page.getByTestId('agent-queue-row-20260921-002116');
   await expect(row).toContainText('Feed the agents page');
-  await expect(row).toContainText('xbabe2 · w3');
+  await expect(row).toContainText('node-2 · w3');
   await expect(page.getByTestId('agent-queue-status-20260921-002116')).toHaveText(
     'running'
   );

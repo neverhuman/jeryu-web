@@ -18,7 +18,7 @@ import { errorResponse, json, renderAt, type Recorded } from './shiftPageHelpers
 import { todo } from './shiftTestData';
 
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role: 'admin' } }),
+  useAuth: () => ({ user: { login: 'operator', role: 'admin' } }),
 }));
 
 const FAMILIES = ['acme-split', 'globex', 'initech'];

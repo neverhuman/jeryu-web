@@ -21,12 +21,12 @@ function ago(seconds: number): string {
 
 function node(overrides: Partial<RunnerNodeSummary>): RunnerNodeSummary {
   return {
-    runnerId: 'xbabe2/slot0',
+    runnerId: 'node-2/slot0',
     source: 'pr-gate-runner',
     state: 'active',
     capacity: 1,
     inFlight: 0,
-    labels: ['xbabe2', 'slot 0', 'pr-gate'],
+    labels: ['node-2', 'slot 0', 'pr-gate'],
     classes: ['pr-gate'],
     activeTaskCount: 0,
     lastUpdated: ago(20),
@@ -40,10 +40,10 @@ function timerNode(
   overrides: Partial<RunnerNodeSummary>
 ): RunnerNodeSummary {
   return node({
-    runnerId: `xbabe0/${name}`,
+    runnerId: `node-0/${name}`,
     source: 'automation',
     capacity: 0,
-    labels: ['xbabe0', 'slot 0', 'automation'],
+    labels: ['node-0', 'slot 0', 'automation'],
     classes: ['automation'],
     offlineAfterSeconds: 900,
     ...overrides
@@ -129,19 +129,19 @@ describe('FleetPage automation', () => {
     const section = screen.getByTestId('fleet-automation');
     expect(within(section).getAllByRole('listitem')).toHaveLength(2);
     // A timer is not a gate slot or a reviewer as well.
-    expect(screen.queryByTestId('fleet-node-xbabe0_auto-pin')).toBeNull();
-    expect(screen.queryByTestId('fleet-reviewer-xbabe0_auto-pin')).toBeNull();
+    expect(screen.queryByTestId('fleet-node-node-0_auto-pin')).toBeNull();
+    expect(screen.queryByTestId('fleet-reviewer-node-0_auto-pin')).toBeNull();
     expect(screen.getByTestId('fleet-metrics').textContent).toContain(
-      '1 gate runner on xbabe2'
+      '1 gate runner on node-2'
     );
 
-    const pin = screen.getByTestId('fleet-automation-xbabe0_auto-pin');
+    const pin = screen.getByTestId('fleet-automation-node-0_auto-pin');
     expect(pin.className).toContain('is-online');
     expect(within(pin).getByRole('heading', { level: 3 }).textContent).toBe(
       'Auto-pin'
     );
-    expect(pin.textContent).toContain('xbabe0');
-    const pinDid = screen.getByTestId('fleet-automation-did-xbabe0_auto-pin');
+    expect(pin.textContent).toContain('node-0');
+    const pinDid = screen.getByTestId('fleet-automation-did-node-0_auto-pin');
     expect(pinDid.textContent).toContain('opened jeryu-deploy#74');
     const links = within(pin).getAllByRole('link');
     expect(links).toHaveLength(1);
@@ -149,17 +149,17 @@ describe('FleetPage automation', () => {
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/74'
     );
     expect(
-      screen.getByTestId('fleet-automation-seen-xbabe0_auto-pin').textContent
+      screen.getByTestId('fleet-automation-seen-node-0_auto-pin').textContent
     ).not.toContain('offline');
 
-    const stage = screen.getByTestId('fleet-automation-xbabe0_auto-stage');
+    const stage = screen.getByTestId('fleet-automation-node-0_auto-stage');
     expect(stage.className).toContain('is-offline');
     expect(stage.getAttribute('aria-label')).toBe('Auto-stage: offline');
     expect(
-      screen.getByTestId('fleet-automation-did-xbabe0_auto-stage').textContent
+      screen.getByTestId('fleet-automation-did-node-0_auto-stage').textContent
     ).toContain('staged 77dc331');
     expect(within(stage).queryAllByRole('link')).toHaveLength(0);
-    const seen = screen.getByTestId('fleet-automation-seen-xbabe0_auto-stage');
+    const seen = screen.getByTestId('fleet-automation-seen-node-0_auto-stage');
     expect(seen.textContent).toContain('offline, last seen');
     expect(seen.querySelector('.fleet__tone--failed')).not.toBeNull();
     expect(within(section).queryAllByRole('button')).toHaveLength(0);
@@ -168,7 +168,7 @@ describe('FleetPage automation', () => {
   it('says nothing yet for a timer with no history', () => {
     renderFleet([node({}), timerNode('auto-pin', {})]);
     expect(
-      screen.getByTestId('fleet-automation-did-xbabe0_auto-pin').textContent
+      screen.getByTestId('fleet-automation-did-node-0_auto-pin').textContent
     ).toBe('nothing yet');
   });
 

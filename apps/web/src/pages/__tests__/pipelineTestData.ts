@@ -22,7 +22,7 @@ export function attentionItem(partial: Partial<AttentionItem> & Pick<AttentionIt
 }
 
 /** Where the deploy command runs, as the server phrases it (`action.run_in`). */
-export const DEPLOY_RUN_IN = 'xbabe0, in a jeryu/jeryu-deploy checkout';
+export const DEPLOY_RUN_IN = 'node-0, in a jeryu/jeryu-deploy checkout';
 
 export const DEPLOY_COMMAND =
   'scripts/release/deploy-release.sh prod-20260919T130210Z-01dfe68-unsigned';
@@ -203,7 +203,7 @@ export const EVENTS: PipelineEvent[] = [
     repo: 'jeryu/jeryu-web',
     pr: 35,
     sha: 'b761244b76371995527bfe7795e98492703553a8',
-    actor: 'xbabe2/slot0',
+    actor: 'node-2/slot0',
     outcome: 'failure',
     seconds: 114,
     summary: 'Gate failed on jeryu/jeryu-web#35',
@@ -216,7 +216,7 @@ export const EVENTS: PipelineEvent[] = [
     kind: 'todo.attempt_finished',
     family: 'jeryu',
     todo_id: '20260919-121041-9d0b27',
-    actor: 'alton@xbabe0/w1',
+    actor: 'operator@node-0/w1',
     outcome: 'done',
     cost_usd: 0.33,
     seconds: 240,

@@ -167,7 +167,7 @@ export const HEAD: QualityGateHeadDetail = {
       evidence: 'The gate runs on every push.',
       disputed: true,
       dispute_reason: 'The link is one line above.',
-      disputed_by: 'alton',
+      disputed_by: 'operator',
       disputed_at: '2026-09-19T13:00:00Z',
     },
   ],

@@ -2,7 +2,7 @@
 //
 // A supervisor slot starts and stops workers; it never carries a todo, so its
 // rows and lanes say nothing about work. They fold away until asked for. Lane
-// labels lead with the family, because "alton@xbabe0/w1" three times over tells
+// labels lead with the family, because "operator@node-0/w1" three times over tells
 // nobody which queue a lane belongs to.
 
 const SUPERVISOR_SLOT = 'supervisor';

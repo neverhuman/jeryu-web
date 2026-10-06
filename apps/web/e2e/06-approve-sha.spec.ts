@@ -376,13 +376,13 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
   test('the author sees Approve disabled with the reason @action:pr.approve_self_blocked', async ({
     page,
   }) => {
-    await mockBootstrap(page, { login: 'alton' });
+    await mockBootstrap(page, { login: 'operator' });
     await mockRepoList(page, [{ id: REPO, default_branch: 'main' }]);
     await mockPullRequestDetail(page, {
       repoId: REPO_ID,
       number: PR_NUMBER,
       title: 'Telemetry counters',
-      author: 'alton',
+      author: 'operator',
       head_sha: OLD_SHA,
       passport: 'blocked',
     });
@@ -404,7 +404,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
       'You opened this pull request, so you cannot approve it.'
     );
     await expect(page.getByTestId('pr-approve-note')).toContainText(
-      `An authenticated reviewer other than alton has to approve exact SHA ${OLD_SHA.slice(0, 7)}.`
+      `An authenticated reviewer other than operator has to approve exact SHA ${OLD_SHA.slice(0, 7)}.`
     );
     await approve.click({ force: true });
     expect(approveCalls).toBe(0);
@@ -415,13 +415,13 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
   }) => {
     // The web login and the forge handle differ, so only the server can tell
     // that the reviewer is the author.
-    await mockBootstrap(page, { login: 'alton' });
+    await mockBootstrap(page, { login: 'operator' });
     await mockRepoList(page, [{ id: REPO, default_branch: 'main' }]);
     await mockPullRequestDetail(page, {
       repoId: REPO_ID,
       number: PR_NUMBER,
       title: 'Telemetry counters',
-      author: 'alton.veox',
+      author: 'operator.two',
       head_sha: OLD_SHA,
       passport: 'blocked',
     });
@@ -446,8 +446,8 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
               message,
               details: {
                 pull_number: Number(PR_NUMBER),
-                author: 'alton',
-                reviewer: 'alton',
+                author: 'operator',
+                reviewer: 'operator',
               },
             },
           }),
@@ -469,7 +469,7 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     await expect(refusal).toHaveAttribute('role', 'alert');
     await expect(refusal).toContainText(`Approval refused: ${message}`);
     await expect(refusal).toContainText(
-      'signed in as alton, which is also the author (alton)'
+      'signed in as operator, which is also the author (operator)'
     );
     await expect(refusal).toContainText(
       `independent authenticated reviewer with write access has to approve exact SHA ${OLD_SHA.slice(0, 7)}`

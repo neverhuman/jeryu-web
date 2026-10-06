@@ -41,7 +41,7 @@ describe('workPageModel', () => {
       [todo({ id: '20260919-0900-q1q', title: 'Claimed thing' })],
       now
     );
-    // xbabe1/w2 was last seen an hour ago: a ghost, not an unhealthy slot.
+    // node-1/w2 was last seen an hour ago: a ghost, not an unhealthy slot.
     expect(line.text).toBe('1 of 1 slot healthy · 1 working · 0 paused');
     expect(line.unhealthy).toBe(0);
     expect(line.working).toEqual([

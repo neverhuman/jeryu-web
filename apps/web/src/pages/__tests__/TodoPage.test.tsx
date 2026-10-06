@@ -11,7 +11,7 @@ import { TODOS, todo } from './shiftTestData';
 
 let role: 'admin' | 'user' = 'user';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 function renderTodo(path: string): void {
@@ -44,7 +44,7 @@ describe('TodoPage', () => {
     expect(screen.getByTestId('todo-page-status')).toHaveTextContent('done');
     expect(screen.getByText('POST heartbeats every 30 s.')).toBeInTheDocument();
     expect(screen.getByText('green on first try')).toBeInTheDocument();
-    expect(screen.getByText('alton@xbabe0/w1')).toBeInTheDocument();
+    expect(screen.getByText('operator@node-0/w1')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute(
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy'

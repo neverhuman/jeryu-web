@@ -118,7 +118,7 @@ describe('FleetPage render', () => {
           lastUpdated: '2026-06-05T00:05:00Z',
           nodeDetails: [
             {
-              runnerId: 'xbabe0',
+              runnerId: 'node-0',
               source: 'runnerd',
               state: 'active',
               capacity: 10,
@@ -189,11 +189,11 @@ describe('FleetPage render', () => {
     expect(screen.getByTestId('fleet-network')).toBeInTheDocument();
     expect(screen.getByTestId('fleet-node-list')).toBeInTheDocument();
     expect(within(screen.getByTestId('fleet-node-list')).getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByTestId('fleet-node-xbabe0')).toHaveTextContent('xbabe0');
+    expect(screen.getByTestId('fleet-node-node-0')).toHaveTextContent('node-0');
     expect(screen.getByTestId('fleet-node-local')).toHaveTextContent('local');
     // A task with an agent run opens its terminal; its last TTY line is the hint.
     const task = screen.getByTestId('fleet-task-ar-1');
-    expect(screen.getByTestId('fleet-node-now-xbabe0')).toHaveTextContent('running editbot');
+    expect(screen.getByTestId('fleet-node-now-node-0')).toHaveTextContent('running editbot');
     expect(task.tagName).toBe('A');
     expect(task.getAttribute('title')).toContain('publishing patch');
     const local = screen.getByTestId('fleet-task-ar-local');
@@ -218,7 +218,7 @@ describe('FleetPage render', () => {
           lastUpdated: now,
           nodeDetails: [
             {
-              runnerId: 'xbabe0/slot0',
+              runnerId: 'node-0/slot0',
               source: 'runnerd',
               state: 'registering',
               capacity: 4,
@@ -238,13 +238,13 @@ describe('FleetPage render', () => {
       'Runner availability unknown'
     );
     expect(screen.getByTestId('fleet-metrics')).toHaveTextContent(
-      '1 gate runner on xbabe0: availability unknown'
+      '1 gate runner on node-0: availability unknown'
     );
     expect(screen.getByTestId('fleet-metrics')).not.toHaveTextContent('idle');
     expect(
-      screen.getByTestId('fleet-node-now-xbabe0_slot0')
+      screen.getByTestId('fleet-node-now-node-0_slot0')
     ).toHaveTextContent('availability unknown');
-    expect(screen.getByTestId('fleet-node-xbabe0_slot0').className).toContain(
+    expect(screen.getByTestId('fleet-node-node-0_slot0').className).toContain(
       'is-unknown'
     );
   });
@@ -272,18 +272,18 @@ describe('FleetPage render', () => {
           lastUpdated: '2026-09-17T03:05:00Z',
           nodeDetails: [
           {
-            runnerId: 'xbabe2/slot0',
+            runnerId: 'node-2/slot0',
             source: 'pr-gate-runner',
             state: 'active',
             capacity: 1,
             inFlight: 1,
-            labels: ['xbabe2', 'slot 0'],
+            labels: ['node-2', 'slot 0'],
             classes: ['pr-gate'],
             activeTaskCount: 1,
             lastUpdated: '2026-09-17T03:05:00Z',
             activeTasks: [
               {
-                taskId: 'xbabe2/slot0@abc30d78',
+                taskId: 'node-2/slot0@abc30d78',
                 jobId: 'veox/jain-web#13',
                 agentRunId: null,
                 workcellId: null,
@@ -318,21 +318,21 @@ describe('FleetPage render', () => {
     );
     expect(screen.getByRole('heading', { level: 1, name: 'Runners' })).toBeInTheDocument();
     // Now and Last job are separate cells: a running gate no longer hides the last one.
-    expect(screen.getByTestId('fleet-node-now-xbabe2_slot0')).toHaveTextContent(
+    expect(screen.getByTestId('fleet-node-now-node-2_slot0')).toHaveTextContent(
       /^gating veox\/jain-web#13/
     );
     // How long it has run is the progress bar's to say, not a "for 1h 30m".
-    expect(screen.getByTestId('fleet-node-progress-xbabe2_slot0')).toHaveTextContent(/so far/);
-    const last = screen.getByTestId('fleet-node-last-xbabe2_slot0');
+    expect(screen.getByTestId('fleet-node-progress-node-2_slot0')).toHaveTextContent(/so far/);
+    const last = screen.getByTestId('fleet-node-last-node-2_slot0');
     expect(last).toHaveTextContent('veox/jain-deploy#31 passed in 46s');
     expect(within(last).getByRole('link')).toHaveAttribute(
       'href',
       '/repos/jeryu/veox/jain-deploy/pulls/31'
     );
-    expect(screen.getByTestId('fleet-node-xbabe2_slot0')).toHaveTextContent('xbabe2 · slot 0');
+    expect(screen.getByTestId('fleet-node-node-2_slot0')).toHaveTextContent('node-2 · slot 0');
     // One sentence instead of six tiles; the dropped columns are gone.
     expect(screen.getByTestId('fleet-metrics')).toHaveTextContent(
-      '1 gate runner on xbabe2: all busy · 0 offline'
+      '1 gate runner on node-2: all busy · 0 offline'
     );
     for (const gone of ['Slots', 'In flight', 'Tasks', 'Labels', 'Status']) {
       expect(screen.queryByText(gone)).not.toBeInTheDocument();
@@ -344,12 +344,12 @@ describe('FleetPage render', () => {
   it('lists pr-redteam as a PR reviewer apart from the gate slots', () => {
     useRealtimeStore.setState({ events: [], status: 'open' });
     const gate = {
-      runnerId: 'xbabe2/slot0',
+      runnerId: 'node-2/slot0',
       source: 'pr-gate-runner',
       state: 'active',
       capacity: 1,
       inFlight: 0,
-      labels: ['xbabe2', 'slot 0'],
+      labels: ['node-2', 'slot 0'],
       classes: ['pr-gate'],
       activeTaskCount: 0,
       lastUpdated: '2026-09-19T05:22:00Z',
@@ -365,7 +365,7 @@ describe('FleetPage render', () => {
       state: 'active',
       capacity: 0,
       inFlight: reviewing ? 1 : 0,
-      labels: ['xbabe0', 'slot 0', 'redteam'],
+      labels: ['node-0', 'slot 0', 'redteam'],
       classes: ['reviewer'],
       activeTaskCount: reviewing ? 1 : 0,
       lastUpdated: '2026-09-19T05:22:00Z',
@@ -410,30 +410,30 @@ describe('FleetPage render', () => {
           lastUpdated: '2026-09-19T05:22:00Z',
           nodeDetails: [
             gate,
-            reviewer('xbabe0/redteam', 'approve', true),
-            reviewer('xbabe1/redteam', 'hold', false),
-            reviewer('xbabe3/redteam', 'failed', false),
+            reviewer('node-0/redteam', 'approve', true),
+            reviewer('node-1/redteam', 'hold', false),
+            reviewer('node-3/redteam', 'failed', false),
           ],
         },
       }
     );
     // Reviewers are not gate slots: the gate list and its totals skip them.
     expect(screen.getByTestId('fleet-metrics')).toHaveTextContent(
-      '1 gate runner on xbabe2: all idle · 0 offline'
+      '1 gate runner on node-2: all idle · 0 offline'
     );
-    expect(screen.queryByTestId('fleet-node-xbabe0_redteam')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-node-node-0_redteam')).not.toBeInTheDocument();
     const reviewers = screen.getByTestId('fleet-reviewers');
     expect(reviewers).toHaveTextContent('Pull request reviewers');
-    expect(screen.getByTestId('fleet-reviewer-xbabe0_redteam')).toHaveTextContent('xbabe0 · redteam');
-    expect(screen.getByTestId('fleet-reviewer-now-xbabe0_redteam')).toHaveTextContent(
+    expect(screen.getByTestId('fleet-reviewer-node-0_redteam')).toHaveTextContent('node-0 · redteam');
+    expect(screen.getByTestId('fleet-reviewer-now-node-0_redteam')).toHaveTextContent(
       /^reviewing jeryu\/jeryu-web#44/
     );
-    expect(screen.getByTestId('fleet-reviewer-progress-xbabe0_redteam')).toHaveTextContent(
+    expect(screen.getByTestId('fleet-reviewer-progress-node-0_redteam')).toHaveTextContent(
       /so far/
     );
-    expect(screen.getByTestId('fleet-reviewer-now-xbabe1_redteam')).toHaveTextContent('idle');
+    expect(screen.getByTestId('fleet-reviewer-now-node-1_redteam')).toHaveTextContent('idle');
     // The same row shape in review words; the PR it last judged opens that PR.
-    const verdict = screen.getByTestId('fleet-reviewer-last-xbabe0_redteam');
+    const verdict = screen.getByTestId('fleet-reviewer-last-node-0_redteam');
     expect(verdict).toHaveTextContent('approved jeryu/jeryu-deploy#43 in 22s');
     expect(within(verdict).getByRole('link')).toHaveAttribute(
       'href',
@@ -442,10 +442,10 @@ describe('FleetPage render', () => {
     // A relative time for a person; the exact stamp stays on hover.
     expect(verdict).not.toHaveTextContent('2026-09-19T05:21:43Z');
     expect(within(verdict).getByTitle('2026-09-19T05:21:43Z')).toBeInTheDocument();
-    expect(screen.getByTestId('fleet-reviewer-last-xbabe1_redteam')).toHaveTextContent(
+    expect(screen.getByTestId('fleet-reviewer-last-node-1_redteam')).toHaveTextContent(
       'held jeryu/jeryu-deploy#43'
     );
-    expect(screen.getByTestId('fleet-reviewer-last-xbabe3_redteam')).toHaveTextContent(
+    expect(screen.getByTestId('fleet-reviewer-last-node-3_redteam')).toHaveTextContent(
       'no usable verdict on jeryu/jeryu-deploy#43'
     );
     expect(screen.queryByTestId('fleet-no-reviewer')).not.toBeInTheDocument();
@@ -467,12 +467,12 @@ describe('FleetPage render', () => {
           lastUpdated: '2026-09-19T05:22:00Z',
           nodeDetails: [
             {
-              runnerId: 'xbabe2/slot0',
+              runnerId: 'node-2/slot0',
               source: 'pr-gate-runner',
               state: 'offline',
               capacity: 1,
               inFlight: 0,
-              labels: ['xbabe2', 'slot 0'],
+              labels: ['node-2', 'slot 0'],
               classes: ['pr-gate'],
               activeTaskCount: 0,
               lastUpdated: '2026-09-19T05:00:00Z',
@@ -488,8 +488,8 @@ describe('FleetPage render', () => {
     );
     // An offline runner is the one thing that turns the sentence red.
     const metrics = screen.getByTestId('fleet-metrics');
-    expect(metrics).toHaveTextContent('1 gate runner on xbabe2: 0 busy, 0 idle · 1 offline');
+    expect(metrics).toHaveTextContent('1 gate runner on node-2: 0 busy, 0 idle · 1 offline');
     expect(metrics.className).toContain('fleet__tone--failed');
-    expect(screen.getByTestId('fleet-node-now-xbabe2_slot0')).toHaveTextContent('offline');
+    expect(screen.getByTestId('fleet-node-now-node-2_slot0')).toHaveTextContent('offline');
   });
 });

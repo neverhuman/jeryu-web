@@ -60,7 +60,7 @@ export function mergeAllowed(detail: PullRequestDetail): boolean {
   return detail.merge_passport.status === 'pass' && detail.summary.mergeable.can_merge;
 }
 
-/** `@alton` and `alton` are the same account. */
+/** `@operator` and `operator` are the same account. */
 function sameAccount(a: string, b: string): boolean {
   const normalize = (value: string): string =>
     value.trim().replace(/^@/, '').toLowerCase();

@@ -10,7 +10,7 @@ import { renderAt } from '../../pages/__tests__/shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 // The gate's Node defines a global localStorage that is undefined without a

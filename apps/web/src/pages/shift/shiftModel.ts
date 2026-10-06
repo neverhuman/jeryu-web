@@ -47,7 +47,7 @@ export function todoWorkers(todo: ShiftTodo): string[] {
   return uniqueSorted(names.map(operatorOf));
 }
 
-/** `alton@xbabe0/w2` and `alton/w2` style claimants reduce to the operator. */
+/** `operator@node-0/w2` and `operator/w2` style claimants reduce to the operator. */
 export function operatorOf(claim: string): string {
   return claim.split(/[@/]/)[0] ?? claim;
 }

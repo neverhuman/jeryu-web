@@ -155,7 +155,7 @@ export function headBody(): Record<string, unknown> {
         evidence: 'The gate runs on every push.',
         disputed: true,
         dispute_reason: 'The link is one line above.',
-        disputed_by: 'alton',
+        disputed_by: 'operator',
         disputed_at: '2026-09-19T13:00:00Z',
       },
     ],
@@ -189,7 +189,7 @@ export async function mockQualityGateApi(page: Page): Promise<QualityGateMockLog
         ...finding,
         disputed: true,
         dispute_reason: body.reason ?? '',
-        disputed_by: 'alton',
+        disputed_by: 'operator',
         disputed_at: '2026-09-19T17:00:00Z',
       },
     });

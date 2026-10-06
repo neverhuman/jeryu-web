@@ -26,8 +26,8 @@ export const FAMILIES: ShiftFamiliesResponse = {
 
 export function attempt(overrides: Partial<ShiftAttempt> = {}): ShiftAttempt {
   return {
-    by: 'alton',
-    host: 'xbabe0',
+    by: 'operator',
+    host: 'node-0',
     slot: 'w1',
     model: 'opus',
     session: 's-1',
@@ -53,7 +53,7 @@ export function todo(overrides: Partial<ShiftTodo> = {}): ShiftTodo {
     blocked_by: [],
     status: 'open',
     attempts: 0,
-    requested_by: 'alton',
+    requested_by: 'operator',
     filed_at: '2026-09-18T18:32:00Z',
     claim_by: null,
     lease_until: null,
@@ -89,7 +89,7 @@ export const TODOS: ShiftTodo[] = [
     id: '20260919-0900-q1q',
     title: 'Claimed thing',
     status: 'claimed',
-    claim_by: 'bob@xbabe1/w2',
+    claim_by: 'bob@node-1/w2',
     lease_until: '2026-09-19T10:00:00Z',
     lease_live: true,
   }),
@@ -126,8 +126,8 @@ export const WORKERS: ShiftWorkersResponse = {
   generated_at: '2026-09-19T09:00:00Z',
   workers: [
     {
-      operator: 'alton',
-      host: 'xbabe0',
+      operator: 'operator',
+      host: 'node-0',
       slot: 'w1',
       family: 'jeryu',
       state: 'working',
@@ -138,8 +138,8 @@ export const WORKERS: ShiftWorkersResponse = {
       healthy: true,
     },
     {
-      operator: 'alton',
-      host: 'xbabe1',
+      operator: 'operator',
+      host: 'node-1',
       slot: 'w2',
       family: 'jeryu',
       state: 'idle',
@@ -154,8 +154,8 @@ export const HISTORY: ShiftWorkersHistoryResponse = {
   to: '2026-09-19T09:00:00Z',
   slots: [
     {
-      operator: 'alton',
-      host: 'xbabe0',
+      operator: 'operator',
+      host: 'node-0',
       slot: 'w1',
       family: 'jeryu',
       segments: [

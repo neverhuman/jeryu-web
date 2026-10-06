@@ -36,7 +36,7 @@ function todo(overrides: Record<string, unknown>): Record<string, unknown> {
     blocked_by: [],
     status: 'open',
     attempts: 0,
-    requested_by: 'alton',
+    requested_by: 'operator',
     filed_at: iso(-600),
     claim_by: null,
     lease_until: null,
@@ -72,8 +72,8 @@ export const SHIFT_TODOS = [
     note: 'landed clean',
     worked_by: [
       {
-        by: 'alton',
-        host: 'xbabe0',
+        by: 'operator',
+        host: 'node-0',
         slot: 'w1',
         model: 'opus',
         session: 's-1',
@@ -90,7 +90,7 @@ export const SHIFT_TODOS = [
     id: '20260919-0900-ccc',
     title: 'Claimed refactor',
     status: 'claimed',
-    claim_by: 'bob@xbabe1/w2',
+    claim_by: 'bob@node-1/w2',
     lease_until: iso(30),
     lease_live: true,
   }),
@@ -103,8 +103,8 @@ export const SHIFT_TODOS = [
     note: 'The jeryu-core tag split.7 does not exist.',
     worked_by: [
       {
-        by: 'alton',
-        host: 'xbabe0',
+        by: 'operator',
+        host: 'node-0',
         slot: 'w1',
         model: 'opus',
         session: 's-2',
@@ -246,8 +246,8 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
           generated_at: iso(0),
           workers: [
             {
-              operator: 'alton',
-              host: 'xbabe0',
+              operator: 'operator',
+              host: 'node-0',
               slot: 'w1',
               family: 'jeryu',
               state: 'working',
@@ -258,8 +258,8 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
               healthy: true,
             },
             {
-              operator: 'alton',
-              host: 'xbabe1',
+              operator: 'operator',
+              host: 'node-1',
               slot: 'w2',
               family: 'jeryu',
               state: 'idle',
@@ -276,8 +276,8 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
           to: iso(0),
           slots: [
             {
-              operator: 'alton',
-              host: 'xbabe0',
+              operator: 'operator',
+              host: 'node-0',
               slot: 'w1',
               family: 'jeryu',
               segments: [

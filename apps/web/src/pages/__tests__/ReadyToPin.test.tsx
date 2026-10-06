@@ -12,7 +12,7 @@ import { json, renderAt } from './shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 const DEPLOY_SCOPE = { repo: 'jeryu/jeryu-deploy', family: null, familyRepos: [] };

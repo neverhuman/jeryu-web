@@ -12,7 +12,7 @@ import { json, renderAt, type Recorded, recordHeaders } from './shiftPageHelpers
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 const FLEET: ToolFleetResponse = {

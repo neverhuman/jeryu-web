@@ -261,7 +261,7 @@ function compare(missing: string[]): CompareResponse {
     commits: missing.map((c) => ({
       sha: sha(c),
       summary: `commit ${c}`,
-      author: 'alton',
+      author: 'operator',
       committed_at: '2026-09-15T00:00:00Z',
     })),
     truncated: false,

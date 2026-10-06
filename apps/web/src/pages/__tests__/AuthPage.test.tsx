@@ -73,14 +73,14 @@ describe('AuthPage', () => {
   it('logs in with the remember-me choice and lands an admin on Needs you', async () => {
     auth.login.mutateAsync.mockResolvedValue({ role: 'admin', mustChangePassword: false });
     renderPage();
-    type('Username', 'alton');
+    type('Username', 'operator');
     type('Password', SIGN_IN);
     fireEvent.click(screen.getByLabelText('Remember me'));
     fireEvent.click(screen.getByRole('button', { name: 'Login' }));
 
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/needs-you'));
     expect(auth.login.mutateAsync).toHaveBeenCalledWith({
-      login: 'alton',
+      login: 'operator',
       password: SIGN_IN,
       rememberMe: true,
     });
@@ -89,7 +89,7 @@ describe('AuthPage', () => {
   it('stays put when the server still requires a password change', async () => {
     auth.login.mutateAsync.mockResolvedValue({ role: 'user', mustChangePassword: true });
     renderPage();
-    type('Username', 'alton');
+    type('Username', 'operator');
     type('Password', SIGN_IN);
     fireEvent.click(screen.getByRole('button', { name: 'Login' }));
 

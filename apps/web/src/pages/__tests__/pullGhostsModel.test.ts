@@ -17,7 +17,7 @@ function todo(id: string, extra: Partial<ShiftTodo> = {}): ShiftTodo {
     blocked_by: [],
     status: 'open',
     attempts: 0,
-    requested_by: 'alton',
+    requested_by: 'operator',
     filed_at: '2026-09-19T00:00:00Z',
     claim_by: null,
     lease_until: null,
@@ -43,7 +43,7 @@ const whens = (group: GhostGroup): string[] => group.rows.map((r) => r.when);
 describe('pullGhostGroups admission', () => {
   it('admits claimed, blocked and handoff todos', () => {
     const [group] = groups([
-      todo('a', { status: 'claimed', lease_live: true, lease_until: '2026-09-20T04:14:00Z', claim_by: 'alton/w2' }),
+      todo('a', { status: 'claimed', lease_live: true, lease_until: '2026-09-20T04:14:00Z', claim_by: 'operator/w2' }),
       todo('b', { status: 'blocked' }),
       todo('c', { status: 'handoff' }),
     ]);
@@ -86,7 +86,7 @@ describe('pullGhostGroups admission', () => {
         filed_at: '2026-08-01T00:00:00Z',
         worked_by: [
           {
-            by: 'alton', host: 'xbabe0', slot: 'w1', model: 'opus', session: null,
+            by: 'operator', host: 'node-0', slot: 'w1', model: 'opus', session: null,
             started: '2026-09-19T00:00:00Z', ended: '2026-09-19T01:00:00Z',
             outcome: 'done', cost_usd: null, note: '', shift: null,
           },
@@ -126,10 +126,10 @@ describe('pullGhostGroups openLimit', () => {
 describe('pullGhostGroups when', () => {
   it('reports a live lease as a hand-off time', () => {
     const [group] = groups([
-      todo('a', { status: 'claimed', lease_live: true, lease_until: '2026-09-20T04:14:00Z', claim_by: 'alton/w2' }),
+      todo('a', { status: 'claimed', lease_live: true, lease_until: '2026-09-20T04:14:00Z', claim_by: 'operator/w2' }),
     ]);
     expect(group.rows[0]?.when).toBe('hands off in 14 min');
-    expect(group.rows[0]?.worker).toBe('alton/w2');
+    expect(group.rows[0]?.worker).toBe('operator/w2');
   });
 
   it('reports an expired lease as a stall', () => {

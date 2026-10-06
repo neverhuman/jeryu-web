@@ -100,7 +100,7 @@ describe('NeedsYouPage', () => {
         items: [
           row('placed', {
             repo: 'jeryu/jeryu-deploy',
-            action: { label: 'Run auto-pin now', command, run_in: 'xbabe0, any directory' },
+            action: { label: 'Run auto-pin now', command, run_in: 'node-0, any directory' },
           }),
           // An older server: no `run_in`, so the repository is the only hint.
           row('older-server', {
@@ -119,10 +119,10 @@ describe('NeedsYouPage', () => {
 
     const placed = await screen.findByTestId('needs-you-item-placed');
     expect(within(placed).getByTestId('copy-command-where')).toHaveTextContent(
-      /^Run on xbabe0, any directory$/
+      /^Run on node-0, any directory$/
     );
     expect(within(placed).getByRole('button', { name: /^Copy Run auto-pin now command/ })).toHaveAccessibleDescription(
-      'Run on xbabe0, any directory'
+      'Run on node-0, any directory'
     );
 
     for (const id of ['older-server', 'blank-place']) {
@@ -411,8 +411,8 @@ describe('NeedsYouPage', () => {
         return json({
           generated_at: 'x',
           workers: [
-            { operator: 'alton', host: 'xbabe0', slot: 'w1', family: 'jeryu', state: 'working', last_seen: 'x', healthy: true },
-            { operator: 'alton', host: 'xbabe0', slot: 'w2', family: 'jeryu', state: 'idle', last_seen: 'x', healthy: true },
+            { operator: 'operator', host: 'node-0', slot: 'w1', family: 'jeryu', state: 'working', last_seen: 'x', healthy: true },
+            { operator: 'operator', host: 'node-0', slot: 'w2', family: 'jeryu', state: 'idle', last_seen: 'x', healthy: true },
           ],
         });
       }

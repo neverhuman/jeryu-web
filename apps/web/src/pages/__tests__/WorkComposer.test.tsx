@@ -19,7 +19,7 @@ const TWO_FAMILIES = {
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 function renderWork(path = '/work'): void {

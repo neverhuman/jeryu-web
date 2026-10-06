@@ -41,7 +41,7 @@ export interface GhostRow {
   when: string;
   /** A person is the next step: this todo is on the Needs you list. */
   attention: boolean;
-  /** Worker holding it, e.g. `alton/w2`, else null. */
+  /** Worker holding it, e.g. `operator/w2`, else null. */
   worker: string | null;
 }
 

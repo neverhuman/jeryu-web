@@ -31,14 +31,14 @@ async function seed(page: Page): Promise<void> {
     {
       run_id: 'run-1',
       branch: 'agent/run-1',
-      runner: 'xbabe0',
+      runner: 'node-0',
       status: 'running',
       tty_live: true,
     },
     {
       run_id: 'run-2',
       branch: 'agent/run-2',
-      runner: 'xbabe1',
+      runner: 'node-1',
       status: 'exited',
       tty_live: false,
     },

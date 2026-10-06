@@ -133,10 +133,10 @@ describe('actors', () => {
       actor({ kind: 'deployer', identity: 'buildhost1/publish' }),
       actor({ kind: 'gate-runner', identity: 'buildhost2/slot0' }),
       actor({ kind: 'merger', identity: 'jain-merge-bot' }),
-      actor({ kind: 'reviewer', identity: 'pragent' }),
+      actor({ kind: 'reviewer', identity: 'review-bot' }),
     ]).map((entry) => entry.identity);
     expect(order).toEqual([
-      'pragent',
+      'review-bot',
       'jain-merge-bot',
       'buildhost2/slot0',
       'buildhost1/publish',

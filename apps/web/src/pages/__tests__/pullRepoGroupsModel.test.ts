@@ -501,7 +501,7 @@ function pull(
     number,
     entity: { kind: 'pull_request', id: String(number) },
     title: extra.title ?? `change ${number}`,
-    author: 'alton',
+    author: 'operator',
     head_ref: `feat/${number}`,
     base_ref: 'main',
     head_sha: sha(extra.head ?? String(number % 10)),

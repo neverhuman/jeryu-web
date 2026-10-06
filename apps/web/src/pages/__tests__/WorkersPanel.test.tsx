@@ -18,18 +18,18 @@ describe('WorkersPanel', () => {
   it('renders the live table, timeline and capacity chart', async () => {
     const calls = mockShiftApi();
     renderWorkers();
-    const row = await screen.findByTestId('shift-worker-xbabe0-w1');
+    const row = await screen.findByTestId('shift-worker-node-0-w1');
     expect(within(row).getByText('healthy')).toBeInTheDocument();
     expect(within(row).getByText('working · agent')).toBeInTheDocument();
     expect(within(row).getByRole('link', { name: '20260919-0900-q1q' })).toHaveAttribute(
       'href',
       '/work/20260919-0900-q1q'
     );
-    // xbabe1/w2 was last seen long ago: a ghost, hidden until asked for.
-    expect(screen.queryByTestId('shift-worker-xbabe1-w2')).toBeNull();
+    // node-1/w2 was last seen long ago: a ghost, hidden until asked for.
+    expect(screen.queryByTestId('shift-worker-node-1-w2')).toBeNull();
     expect(screen.getByText('Live · 1 of 1 healthy')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Show 1 stale slot/ }));
-    const stale = within(screen.getByTestId('shift-worker-xbabe1-w2')).getByText('stale');
+    const stale = within(screen.getByTestId('shift-worker-node-1-w2')).getByText('stale');
     expect(stale).toHaveClass('page__pill--warning');
     expect(screen.getByText('Live · 1 of 2 healthy')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Hide 1 stale slot/ })).toHaveAttribute('aria-pressed', 'true');
@@ -63,14 +63,14 @@ describe('WorkersPanel', () => {
       return undefined;
     });
     renderWorkers();
-    await screen.findByTestId('shift-worker-xbabe0-w1');
-    expect(screen.queryByTestId('shift-worker-xbabe0-supervisor')).toBeNull();
+    await screen.findByTestId('shift-worker-node-0-w1');
+    expect(screen.queryByTestId('shift-worker-node-0-supervisor')).toBeNull();
     expect(screen.getByText('Live · 1 of 1 healthy')).toBeInTheDocument();
     const timeline = await screen.findByTestId('shift-timeline');
     expect(within(timeline).getByRole('img', { name: /Worker timeline: 1 slot/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 supervisor' }));
-    expect(screen.getByTestId('shift-worker-xbabe0-supervisor')).toBeInTheDocument();
+    expect(screen.getByTestId('shift-worker-node-0-supervisor')).toBeInTheDocument();
     expect(within(timeline).getByRole('img', { name: /Worker timeline: 2 slots/ })).toBeInTheDocument();
     expect(within(timeline).getByText('jeryu · supervisor')).toBeInTheDocument();
   });

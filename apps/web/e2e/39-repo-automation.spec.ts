@@ -42,7 +42,7 @@ const FULL_VIEW = {
   actors: [
     {
       kind: 'reviewer',
-      identity: 'pragent',
+      identity: 'review-bot',
       role: 'reviews pull requests and approves the head it read',
       state: 'configured',
       grant: { required: 'write', present: true, held: 'write' },
@@ -142,7 +142,7 @@ test('the Automation tab names its checks, reviewer, merger, deployer, grants an
 
   // Who reviews, who merges, who gates, who deploys — and what each last did.
   const actors = page.getByTestId('repo-automation-actors');
-  await expect(actors).toContainText('pragent');
+  await expect(actors).toContainText('review-bot');
   await expect(actors).toContainText('write grant ✓');
   await expect(actors).toContainText('jain-merge-bot');
   await expect(actors).toContainText('buildhost2/slot0');

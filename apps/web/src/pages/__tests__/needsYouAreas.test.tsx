@@ -25,7 +25,7 @@ import { errorResponse, json, renderAt } from './shiftPageHelpers';
 import { attentionItem, pipelineEvent } from './pipelineTestData';
 
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role: 'admin' } }),
+  useAuth: () => ({ user: { login: 'operator', role: 'admin' } }),
 }));
 
 // In flight hides everything behind its snapshot, which is not what is under

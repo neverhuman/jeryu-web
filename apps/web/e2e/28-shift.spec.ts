@@ -47,7 +47,7 @@ test.describe('Work, one page', () => {
     const detail = page.getByTestId('shift-todo-detail-20260918-2200-bbb');
     await expect(detail).toContainText('Slots POST heartbeats every 30 s.');
     await expect(detail).toContainText('landed clean');
-    await expect(detail).toContainText('alton@xbabe0/w1');
+    await expect(detail).toContainText('operator@node-0/w1');
     // Non-admins see no row actions, no review-PR button, and why they cannot file.
     await expect(page.getByRole('button', { name: /Open review pull request/ })).toHaveCount(0);
     await expect(page.getByRole('columnheader', { name: 'Action' })).toHaveCount(0);
@@ -347,13 +347,13 @@ test.describe('Work, one page', () => {
     await expect(page.getByTestId('shift-workers-panel')).toHaveCount(0);
 
     await workers.getByRole('button', { name: 'Workers' }).click();
-    const row = page.getByTestId('shift-worker-xbabe0-w1');
+    const row = page.getByTestId('shift-worker-node-0-w1');
     await expect(row).toContainText('healthy');
     await expect(row.getByRole('link', { name: '20260919-0900-ccc' })).toHaveAttribute(
       'href',
       '/work/20260919-0900-ccc'
     );
-    await expect(page.getByTestId('shift-worker-xbabe1-w2')).toContainText('stale');
+    await expect(page.getByTestId('shift-worker-node-1-w2')).toContainText('stale');
     await expect(page.getByTestId('shift-timeline').getByRole('img')).toBeVisible();
     await expect(page.getByTestId('shift-capacity').getByRole('img')).toBeVisible();
     const history = page.waitForRequest((req) => req.url().includes('/api/v1/shift/workers/history?hours=168'));

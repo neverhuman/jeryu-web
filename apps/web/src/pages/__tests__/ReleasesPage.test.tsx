@@ -12,7 +12,7 @@ import { json, renderAt } from './shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 const sha = (c: string): string => c.repeat(40);
@@ -30,7 +30,7 @@ function deployment(id: number, commit: string, state: string, logUrl: string | 
       environment: 'production',
       description: null,
       payload: { release: `rel-${commit}` },
-      creator: { login: 'alton2' },
+      creator: { login: 'rel-bot' },
       created_at: '2026-09-19T12:29:36Z',
       production_environment: true,
       transient_environment: false,
@@ -41,7 +41,7 @@ function deployment(id: number, commit: string, state: string, logUrl: string | 
       description: null,
       environment_url: null,
       log_url: logUrl,
-      creator: { login: 'alton2' },
+      creator: { login: 'rel-bot' },
       created_at: '2026-09-19T12:30:00Z',
     },
     succeeded: state === 'success',
@@ -64,7 +64,7 @@ function mockReleases(): void {
       });
     }
     if (req.pathname === '/api/v1/repos/jeryu%2Fjeryu-deploy/pulls') {
-      return json({ items: [{ number: 48, title: 'Shift PR', author: 'alton2', head_sha: sha('c'), state: 'merged' }] });
+      return json({ items: [{ number: 48, title: 'Shift PR', author: 'rel-bot', head_sha: sha('c'), state: 'merged' }] });
     }
     if (req.pathname === '/api/v1/repos/jeryu%2Fjeryu-deploy/compare') {
       return json({

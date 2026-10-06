@@ -243,7 +243,7 @@ describe('the Pull requests timeline', () => {
           status: 'claimed',
           lease_until: '2026-09-20T03:00:00Z',
           lease_live: true,
-          claim_by: 'alton@xbabe0/w1',
+          claim_by: 'operator@node-0/w1',
         }),
         todo('t2', { status: 'done' }),
         todo('t3', { status: 'claimed', repos: ['jeryu-api'] }),
@@ -266,7 +266,7 @@ describe('the Pull requests timeline', () => {
     const branch = screen.getByTestId('pull-branch-jeryu/jeryu-web-dayshift/2026-09-20');
     expect(screen.getByTestId('pull-repo-jeryu/jeryu-web')).toContainElement(branch);
     expect(branch).toHaveTextContent('dayshift/2026-09-20 · 2 todos');
-    expect(branch).toHaveTextContent('1 working · alton@xbabe0/w1');
+    expect(branch).toHaveTextContent('1 working · operator@node-0/w1');
     // The branch sits on the same track as the PR below it, ahead of it.
     const rows = screen.getAllByTestId(/^pull-(branch|timeline)-jeryu\/jeryu-web/);
     expect(rows[0]).toBe(branch);
@@ -392,7 +392,7 @@ function pull(
     number,
     entity: { kind: 'pull_request', id: String(number) },
     title: extra.title ?? `change ${number}`,
-    author: 'alton',
+    author: 'operator',
     head_ref: `feat/${number}`,
     base_ref: 'main',
     head_sha: sha(String(number % 10)),
@@ -434,7 +434,7 @@ function todo(id: string, extra: Partial<ShiftTodo>): ShiftTodo {
     blocked_by: [],
     status: 'open',
     attempts: 0,
-    requested_by: 'alton@xbabe0',
+    requested_by: 'operator@node-0',
     filed_at: '2026-09-20T02:00:00Z',
     claim_by: null,
     lease_until: null,

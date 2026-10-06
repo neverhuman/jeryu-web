@@ -84,9 +84,9 @@ describe('pull close model', () => {
   });
 
   it('matches the author whether or not the login carries the @ sigil', () => {
-    const open = detail({ author: 'alton' });
-    expect(mayClosePull(open, { login: '@alton', permissions: [] })).toBe(true);
-    expect(mayClosePull(open, { login: 'Alton', permissions: [] })).toBe(true);
+    const open = detail({ author: 'operator' });
+    expect(mayClosePull(open, { login: '@operator', permissions: [] })).toBe(true);
+    expect(mayClosePull(open, { login: 'Operator', permissions: [] })).toBe(true);
     expect(mayClosePull(detail({ author: '' }), { login: '', permissions: [] })).toBe(
       false
     );

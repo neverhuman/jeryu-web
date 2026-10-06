@@ -11,7 +11,7 @@ import { json, renderAt } from './shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 function renderPanel(): void {

@@ -11,7 +11,7 @@ import { TODOS, attempt, todo } from './shiftTestData';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'alton', role } }),
+  useAuth: () => ({ user: { login: 'operator', role } }),
 }));
 
 function renderQueue(path = '/work'): void {
@@ -70,7 +70,7 @@ describe('ShiftQueuePage', () => {
     const detail = screen.getByTestId('shift-todo-detail-20260918-2201-a9z');
     expect(within(detail).getByText('POST heartbeats every 30 s.')).toBeInTheDocument();
     expect(within(detail).getByText('green on first try')).toBeInTheDocument();
-    expect(within(detail).getByText('alton@xbabe0/w1')).toBeInTheDocument();
+    expect(within(detail).getByText('operator@node-0/w1')).toBeInTheDocument();
     expect(within(detail).getByText('$1.25')).toBeInTheDocument();
   });
 

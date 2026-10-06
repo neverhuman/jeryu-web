@@ -89,7 +89,7 @@ test.describe('Quality gate', () => {
     );
     // A finding already disputed says who disputed it, and offers no second vote.
     const settled = page.getByTestId('quality-gate-finding-f-2');
-    await expect(settled).toContainText('Disputed by alton: The link is one line above.');
+    await expect(settled).toContainText('Disputed by operator: The link is one line above.');
     await expect(settled.getByRole('button', { name: 'Dispute this finding' })).toHaveCount(0);
   });
 
@@ -108,7 +108,7 @@ test.describe('Quality gate', () => {
     await finding.getByLabel('Why is this finding wrong?').fill('The name is current.');
     await finding.getByRole('button', { name: 'Record dispute' }).click();
 
-    await expect(finding).toContainText('Disputed by alton: The name is current.');
+    await expect(finding).toContainText('Disputed by operator: The name is current.');
     expect(log.disputes).toEqual([
       { path: '/api/v1/quality-gate/findings/f-1/dispute', reason: 'The name is current.' },
     ]);

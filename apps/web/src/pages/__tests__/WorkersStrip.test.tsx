@@ -74,7 +74,7 @@ describe('WorkersStrip', () => {
     renderStrip();
     fireEvent.click(await screen.findByRole('button', { name: 'Workers' }));
     expect(screen.getByRole('button', { name: 'Workers' })).toHaveAttribute('aria-expanded', 'true');
-    expect(await screen.findByTestId('shift-worker-xbabe0-w1')).toBeInTheDocument();
+    expect(await screen.findByTestId('shift-worker-node-0-w1')).toBeInTheDocument();
     expect(window.localStorage.getItem('jeryu.work.workersOpen.v1')).toBe('1');
     fireEvent.click(screen.getByRole('button', { name: 'Workers' }));
     expect(screen.queryByTestId('shift-workers-panel')).toBeNull();

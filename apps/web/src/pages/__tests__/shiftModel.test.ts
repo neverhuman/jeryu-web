@@ -69,15 +69,15 @@ describe('shiftModel', () => {
   it('derives filter options and worker names', () => {
     const opts = queueOptions(TODOS);
     expect(opts.repos).toEqual(['jeryu-deploy', 'jeryu-web']);
-    expect(opts.requesters).toEqual(['alton', 'jeryu']);
-    expect(opts.workers).toEqual(['alton', 'bob']);
+    expect(opts.requesters).toEqual(['jeryu', 'operator']);
+    expect(opts.workers).toEqual(['bob', 'operator']);
     expect(opts.shifts).toEqual(['nightshift/2026-09-18']);
     expect(todoWorkers(TODOS[2])).toEqual(['bob']);
   });
 
   it('names the latest worker', () => {
-    expect(latestWorker(TODOS[1])).toBe('alton/w1');
-    expect(latestWorker(TODOS[2])).toBe('bob@xbabe1/w2');
+    expect(latestWorker(TODOS[1])).toBe('operator/w1');
+    expect(latestWorker(TODOS[2])).toBe('bob@node-1/w2');
     expect(latestWorker(todo({ worked_by: [attempt(), attempt({ by: 'eve', slot: '' })] }))).toBe('eve');
     expect(latestWorker(TODOS[0])).toBeNull();
   });
@@ -176,9 +176,9 @@ describe('shiftModel', () => {
 
 describe('slotLabel', () => {
   it('does not repeat a host the operator name already carries', () => {
-    expect(slotLabel('alton@xbabe0', 'xbabe0', 'w1')).toBe('alton@xbabe0/w1');
-    expect(slotLabel('alton', 'xbabe0', 'w1')).toBe('alton@xbabe0/w1');
-    expect(slotLabel('alton', '', 'w1')).toBe('alton/w1');
+    expect(slotLabel('operator@node-0', 'node-0', 'w1')).toBe('operator@node-0/w1');
+    expect(slotLabel('operator', 'node-0', 'w1')).toBe('operator@node-0/w1');
+    expect(slotLabel('operator', '', 'w1')).toBe('operator/w1');
   });
 
   it('totals a todo cost across attempts, null when none reported one', () => {

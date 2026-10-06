@@ -18,7 +18,7 @@ export interface CopyCommandProps {
   command: string;
   /** Names the command for assistive tech, e.g. "deploy command". */
   label: string;
-  /** Where to run it, e.g. "Run on xbabe0, any directory". Shown, never copied. */
+  /** Where to run it, e.g. "Run on node-0, any directory". Shown, never copied. */
   where?: string | null;
 }
 

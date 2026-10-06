@@ -21,8 +21,8 @@ describe('CopyCommand', () => {
   });
 
   it('names the copy button and says where the command runs', () => {
-    render(<CopyCommand command="just deploy" label="deploy command" where="Run on xbabe0" />);
+    render(<CopyCommand command="just deploy" label="deploy command" where="Run on node-0" />);
     const button = screen.getByRole('button', { name: 'Copy deploy command' });
-    expect(button).toHaveAccessibleDescription('Run on xbabe0');
+    expect(button).toHaveAccessibleDescription('Run on node-0');
   });
 });

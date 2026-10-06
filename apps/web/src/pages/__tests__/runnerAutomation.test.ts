@@ -24,12 +24,12 @@ const NOW = new Date('2026-09-20T04:20:00Z').getTime();
 
 function summary(overrides: Partial<RunnerNodeSummary>): RunnerNodeSummary {
   return {
-    runnerId: 'xbabe2/slot0',
+    runnerId: 'node-2/slot0',
     source: 'pr-gate-runner',
     state: 'active',
     capacity: 1,
     inFlight: 0,
-    labels: ['xbabe2', 'slot 0', 'pr-gate'],
+    labels: ['node-2', 'slot 0', 'pr-gate'],
     classes: ['pr-gate'],
     activeTaskCount: 0,
     lastUpdated: '2026-09-20T04:19:40Z',
@@ -78,7 +78,7 @@ function did(overrides: Partial<RunnerLastActivity>): RunnerLastActivity {
 
 function timer(overrides: Partial<RunnerNetworkNode> = {}): RunnerNetworkNode {
   return {
-    runnerId: 'xbabe0/auto-pin',
+    runnerId: 'node-0/auto-pin',
     kind: 'automation',
     source: 'automation',
     state: 'active',
@@ -86,7 +86,7 @@ function timer(overrides: Partial<RunnerNetworkNode> = {}): RunnerNetworkNode {
     activityState: 'idle',
     capacity: 0,
     inFlight: 0,
-    labels: ['xbabe0', 'slot 0', 'automation'],
+    labels: ['node-0', 'slot 0', 'automation'],
     classes: ['automation'],
     activeTaskCount: 0,
     lastUpdated: '2026-09-20T04:16:00Z',
@@ -103,29 +103,29 @@ describe('automation runners', () => {
       fabric([
         summary({}),
         summary({
-          runnerId: 'xbabe0/redteam',
+          runnerId: 'node-0/redteam',
           source: 'pr-redteam',
           capacity: 0,
-          labels: ['xbabe0', 'slot 0', 'redteam'],
+          labels: ['node-0', 'slot 0', 'redteam'],
           classes: ['reviewer']
         }),
         summary({
-          runnerId: 'xbabe0/auto-stage',
+          runnerId: 'node-0/auto-stage',
           source: 'automation',
           capacity: 0,
-          labels: ['xbabe0', 'slot 0', 'automation'],
+          labels: ['node-0', 'slot 0', 'automation'],
           classes: ['automation'],
           offlineAfterSeconds: 900,
           lastActivity: did({ recipe: 'auto-stage', conclusion: 'staged' })
         })
       ])
     );
-    expect(network.nodes.map((node) => node.runnerId)).toEqual(['xbabe2/slot0']);
+    expect(network.nodes.map((node) => node.runnerId)).toEqual(['node-2/slot0']);
     expect(network.reviewers.map((node) => node.runnerId)).toEqual([
-      'xbabe0/redteam'
+      'node-0/redteam'
     ]);
     expect(network.automation.map((node) => node.runnerId)).toEqual([
-      'xbabe0/auto-stage'
+      'node-0/auto-stage'
     ]);
     expect(network.automation[0]).toMatchObject({
       kind: 'automation',
@@ -144,7 +144,7 @@ describe('automation runners', () => {
 
   it('names a timer plainly and says where it runs', () => {
     expect(automationName(timer())).toBe('Auto-pin');
-    expect(automationName(timer({ runnerId: 'xbabe0/auto-stage' }))).toBe(
+    expect(automationName(timer({ runnerId: 'node-0/auto-stage' }))).toBe(
       'Auto-stage'
     );
     expect(
@@ -152,8 +152,8 @@ describe('automation runners', () => {
         timer({ runnerId: 'stager', lastActivity: did({ recipe: 'auto-stage' }) })
       )
     ).toBe('Auto-stage');
-    expect(automationHost(timer())).toBe('xbabe0');
-    expect(automationHost(timer({ runnerId: 'stager' }))).toBe('xbabe0');
+    expect(automationHost(timer())).toBe('node-0');
+    expect(automationHost(timer({ runnerId: 'stager' }))).toBe('node-0');
   });
 
   it('says what a timer last did, with the link only when there is a pull request', () => {

@@ -52,14 +52,14 @@ describe('runnerNetworkModel', () => {
       local: {
         ...EMPTY_RUNNERS.local,
         nodeDetails: [
-          node('xbabe2/slot0', ['pr-gate'], 1),
-          node('xbabe0/redteam', ['xbabe0', 'redteam'], 0),
+          node('node-2/slot0', ['pr-gate'], 1),
+          node('node-0/redteam', ['node-0', 'redteam'], 0),
         ],
       },
     });
-    expect(state.nodes.map((n) => n.runnerId)).toEqual(['xbabe2/slot0']);
+    expect(state.nodes.map((n) => n.runnerId)).toEqual(['node-2/slot0']);
     expect(state.reviewers.map((n) => [n.runnerId, n.kind])).toEqual([
-      ['xbabe0/redteam', 'reviewer'],
+      ['node-0/redteam', 'reviewer'],
     ]);
     expect(state.totals.nodes).toBe(1);
   });
@@ -93,7 +93,7 @@ describe('runnerNetworkModel', () => {
         activeSlots: 0,
         nodeDetails: [
           {
-            runnerId: 'xbabe1',
+            runnerId: 'node-1',
             source: 'runnerd',
             state: 'dead',
             capacity: 10,
@@ -107,7 +107,7 @@ describe('runnerNetworkModel', () => {
         ],
       },
     });
-    expect(state.nodes[0].runnerId).toBe('xbabe1');
+    expect(state.nodes[0].runnerId).toBe('node-1');
     expect(state.nodes[0].availability).toBe('offline');
     expect(state.nodes[0].activityState).toBe('unknown');
     expect(state.nodes[0].activeTaskCount).toBe(0);
@@ -129,7 +129,7 @@ describe('runnerNetworkModel', () => {
         lastUpdated: '2026-06-05T00:05:00Z',
         nodeDetails: [
           {
-            runnerId: 'xbabe0',
+            runnerId: 'node-0',
             source: 'runnerd',
             state: 'active',
             capacity: 10,
@@ -190,7 +190,7 @@ describe('runnerNetworkModel', () => {
       },
     });
 
-    expect(state.nodes.map((node) => node.runnerId)).toEqual(['local', 'xbabe0']);
+    expect(state.nodes.map((node) => node.runnerId)).toEqual(['local', 'node-0']);
     expect(state.nodes[1].activityState).toBe('active');
     expect(state.nodes[1].tasks[0].lastTtyLine).toBe('done');
     expect(state.nodes[0].tasks[0].lastTtyLine).toBeNull();
@@ -221,18 +221,18 @@ describe('runnerNetworkModel', () => {
         activeSlots: 1,
         nodeDetails: [
           {
-            runnerId: 'xbabe2/slot0',
+            runnerId: 'node-2/slot0',
             source: 'pr-gate-runner',
             state: 'active',
             capacity: 1,
             inFlight: 1,
-            labels: ['xbabe2', 'slot 0'],
+            labels: ['node-2', 'slot 0'],
             classes: ['pr-gate'],
             activeTaskCount: 1,
             lastUpdated: '2026-09-17T03:05:00Z',
             activeTasks: [
               {
-                taskId: 'xbabe2/slot0@abc30d78',
+                taskId: 'node-2/slot0@abc30d78',
                 jobId: 'veox/jain-web#13',
                 agentRunId: null,
                 workcellId: null,
@@ -272,8 +272,8 @@ describe('runnerNetworkModel', () => {
 describe('runnerTags', () => {
   it('says each fact once, whatever case and whichever list it came from', () => {
     expect(
-      runnerTags({ labels: ['xbabe2', 'slot 0', 'pr-gate'], classes: ['PR-GATE', ' ', 'linux'] })
-    ).toEqual(['xbabe2', 'slot 0', 'pr-gate', 'linux']);
+      runnerTags({ labels: ['node-2', 'slot 0', 'pr-gate'], classes: ['PR-GATE', ' ', 'linux'] })
+    ).toEqual(['node-2', 'slot 0', 'pr-gate', 'linux']);
     expect(runnerTags({ labels: [], classes: [] })).toEqual([]);
   });
 

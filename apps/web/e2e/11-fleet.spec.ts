@@ -46,7 +46,7 @@ function runnerFabric(includeLocal: boolean): RunnerFabricResponse {
       lastUpdated: '2026-06-05T00:05:00Z',
       nodeDetails: [
         {
-          runnerId: 'xbabe0',
+          runnerId: 'node-0',
           source: 'runnerd',
           state: 'active',
           capacity: 10,
@@ -75,7 +75,7 @@ function runnerFabric(includeLocal: boolean): RunnerFabricResponse {
           ],
         },
         {
-          runnerId: 'xbabe1',
+          runnerId: 'node-1',
           source: 'runnerd',
           state: 'draining',
           capacity: 10,
@@ -153,16 +153,16 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-page')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('fleet-network')).toBeVisible();
     await expect(page.getByTestId('fleet-node-list')).toBeVisible();
-    await expect(page.getByTestId('fleet-node-xbabe0')).toContainText(
-      /xbabe0/
+    await expect(page.getByTestId('fleet-node-node-0')).toContainText(
+      /node-0/
     );
-    await expect(page.getByTestId('fleet-node-xbabe1')).toContainText(
+    await expect(page.getByTestId('fleet-node-node-1')).toContainText(
       /draining/
     );
     await expect(page.getByTestId('fleet-node-local')).toContainText(/local/);
     // Four cells a row: Runner, Now, Last job, Seen. The header is one sentence.
     await expect(page.getByTestId('fleet-metrics')).toContainText(/gate runners? on /);
-    await expect(page.getByTestId('fleet-node-now-xbabe0')).toContainText('running');
+    await expect(page.getByTestId('fleet-node-now-node-0')).toContainText('running');
     await expect(page.getByTestId('fleet-task-ar-000001')).toHaveAttribute(
       'title',
       /publishing patch/
@@ -197,8 +197,8 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await shell.goto('/runners');
     await shell.assertShellLoaded();
 
-    await expect(page.getByTestId('fleet-node-xbabe0')).toBeVisible();
-    await expect(page.getByTestId('fleet-node-xbabe1')).toBeVisible();
+    await expect(page.getByTestId('fleet-node-node-0')).toBeVisible();
+    await expect(page.getByTestId('fleet-node-node-1')).toBeVisible();
     await expect(page.getByTestId('fleet-node-local')).toHaveCount(0);
     // No review agent in this snapshot: the section says so instead of vanishing.
     await expect(page.getByTestId('fleet-no-reviewer')).toHaveText(
@@ -269,12 +269,12 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await mockFleetBootstrap(page, []);
     const fabric = runnerFabric(false);
     fabric.local.nodeDetails.push({
-      runnerId: 'xbabe0/redteam',
+      runnerId: 'node-0/redteam',
       source: 'pr-redteam',
       state: 'active',
       capacity: 0,
       inFlight: 0,
-      labels: ['xbabe0', 'slot 0', 'redteam'],
+      labels: ['node-0', 'slot 0', 'redteam'],
       classes: ['reviewer'],
       activeTaskCount: 0,
       lastUpdated: '2026-06-05T00:05:00Z',
@@ -296,15 +296,15 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await shell.assertShellLoaded();
 
     await expect(page.getByTestId('fleet-reviewers')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('fleet-reviewer-now-xbabe0_redteam')).toHaveText('idle');
-    const lastReview = page.getByTestId('fleet-reviewer-last-xbabe0_redteam');
+    await expect(page.getByTestId('fleet-reviewer-now-node-0_redteam')).toHaveText('idle');
+    const lastReview = page.getByTestId('fleet-reviewer-last-node-0_redteam');
     await expect(lastReview).toContainText('held jeryu/jeryu-deploy#43 in 22s');
     await expect(lastReview.getByRole('link')).toHaveAttribute(
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/43'
     );
     await expect(page.getByTestId('fleet-no-reviewer')).toHaveCount(0);
-    await expect(page.getByTestId('fleet-node-xbabe0_redteam')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-node-node-0_redteam')).toHaveCount(0);
   });
 
   test('folds reviewers that have never reviewed anything into one line @action:fleet.reviewer_unused', async ({
@@ -327,7 +327,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
       ...(lastActivity ? { lastActivity } : {}),
     });
     fabric.local.nodeDetails.push(
-      reviewer('xbabe0', {
+      reviewer('node-0', {
         repo: 'jeryu/jeryu-deploy',
         pr: 43,
         sha: '55ee4dd0efe046dc716f77fa73536d35b760fe4e',
@@ -336,8 +336,8 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
         seconds: 22,
         finishedAt: '2026-06-05T00:04:30Z',
       }),
-      reviewer('xbabe1', null),
-      reviewer('xbabe2', null)
+      reviewer('node-1', null),
+      reviewer('node-2', null)
     );
     await mockControlPlaneRunners(page, fabric);
 
@@ -347,11 +347,11 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
 
     await expect(page.getByTestId('fleet-reviewers')).toBeVisible({ timeout: 10_000 });
     // The one that has reviewed keeps its row; the other two are one sentence.
-    await expect(page.getByTestId('fleet-reviewer-xbabe0_redteam')).toBeVisible();
-    await expect(page.getByTestId('fleet-reviewer-xbabe1_redteam')).toHaveCount(0);
-    await expect(page.getByTestId('fleet-reviewer-xbabe2_redteam')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-reviewer-node-0_redteam')).toBeVisible();
+    await expect(page.getByTestId('fleet-reviewer-node-1_redteam')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-reviewer-node-2_redteam')).toHaveCount(0);
     await expect(page.getByTestId('fleet-reviewers-idle')).toHaveText(
-      '2 reviewers have not reviewed anything yet: xbabe1 · redteam, xbabe2 · redteam.'
+      '2 reviewers have not reviewed anything yet: node-1 · redteam, node-2 · redteam.'
     );
     await expect(page.getByTestId('fleet-no-reviewer')).toHaveCount(0);
   });
@@ -364,12 +364,12 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     const fabric = runnerFabric(false);
     const beat = new Date(Date.now() - 240_000).toISOString();
     const timer = (name: string, lastActivity: RunnerLastActivity) => ({
-      runnerId: `xbabe0/${name}`,
+      runnerId: `node-0/${name}`,
       source: 'automation',
       state: 'active',
       capacity: 0,
       inFlight: 0,
-      labels: ['xbabe0', 'slot 0', 'automation'],
+      labels: ['node-0', 'slot 0', 'automation'],
       classes: ['automation'],
       activeTaskCount: 0,
       // Four minutes since the beat of a five-minute timer: healthy.
@@ -407,25 +407,25 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     const section = page.getByTestId('fleet-automation');
     await expect(section).toBeVisible({ timeout: 10_000 });
     await expect(section.getByRole('heading', { name: 'Automation' })).toBeVisible();
-    const pin = page.getByTestId('fleet-automation-xbabe0_auto-pin');
+    const pin = page.getByTestId('fleet-automation-node-0_auto-pin');
     await expect(pin).toContainText('Auto-pin');
     await expect(pin).toContainText('opened jeryu-deploy#74');
     await expect(pin.getByRole('link')).toHaveAttribute(
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/74'
     );
-    await expect(page.getByTestId('fleet-automation-seen-xbabe0_auto-pin')).not.toContainText('offline');
-    const stage = page.getByTestId('fleet-automation-xbabe0_auto-stage');
+    await expect(page.getByTestId('fleet-automation-seen-node-0_auto-pin')).not.toContainText('offline');
+    const stage = page.getByTestId('fleet-automation-node-0_auto-stage');
     await expect(stage).toContainText('staged 77dc331');
     await expect(stage.getByRole('link')).toHaveCount(0);
     // A timer is neither a gate slot nor a reviewer as well.
-    await expect(page.getByTestId('fleet-node-xbabe0_auto-pin')).toHaveCount(0);
-    await expect(page.getByTestId('fleet-reviewer-xbabe0_auto-pin')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-node-node-0_auto-pin')).toHaveCount(0);
+    await expect(page.getByTestId('fleet-reviewer-node-0_auto-pin')).toHaveCount(0);
 
     // An older forge, or timers never installed: no section, not an empty box.
     await mockControlPlaneRunners(page, runnerFabric(false));
     await page.reload();
-    await expect(page.getByTestId('fleet-node-xbabe0')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('fleet-node-node-0')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('fleet-automation')).toHaveCount(0);
   });
 
@@ -614,7 +614,7 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-metrics')).not.toContainText(
       /idle|busy|offline/
     );
-    await expect(page.getByTestId('fleet-node-now-xbabe1')).toContainText(
+    await expect(page.getByTestId('fleet-node-now-node-1')).toContainText(
       'availability unknown'
     );
     // The work actually observed on the node stays visible.

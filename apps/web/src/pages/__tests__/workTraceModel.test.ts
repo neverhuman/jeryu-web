@@ -30,7 +30,7 @@ describe('workTrace', () => {
     const inputs = [
       {},
       todoFacts(todo()),
-      todoFacts(todo({ status: 'claimed', claim_by: 'bob@xbabe1/w2' })),
+      todoFacts(todo({ status: 'claimed', claim_by: 'bob@node-1/w2' })),
       todoFacts(todo({ status: 'blocked', attempts: 2 })),
       todoFacts(todo({ status: 'done', attempts: 1, merged: true, released: true })),
       pullFacts(PULL),
