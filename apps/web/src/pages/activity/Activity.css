@@ -622,3 +622,145 @@
     transition: none;
   }
 }
+
+/* ---- What the pipeline is spending, under the chart -------------------- */
+
+.activity-usage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-1);
+}
+
+.activity-usage__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.activity-usage__title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-fg-secondary);
+}
+
+.activity-usage__count {
+  color: var(--color-fg-muted);
+  font-weight: var(--font-weight-normal);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.activity-usage__spark {
+  width: 240px;
+  height: 28px;
+}
+
+.activity-usage__spark-line {
+  fill: none;
+  stroke: var(--color-accent-primary);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.activity-usage__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.activity-usage__table th,
+.activity-usage__table td {
+  padding: var(--space-1) var(--space-2);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-subtle);
+  white-space: nowrap;
+}
+
+.activity-usage__table thead th {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-fg-muted);
+  font-weight: var(--font-weight-normal);
+}
+
+.activity-usage__num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.activity-usage__family {
+  color: var(--color-fg-muted);
+  font-weight: var(--font-weight-normal);
+}
+
+.activity-usage__silent,
+.activity-usage__quiet {
+  color: var(--color-fg-muted);
+}
+
+.activity-usage__quiet {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+/* A step of the digits: the span is remounted, so the fade plays again. */
+.activity-usage__digits {
+  display: inline-block;
+  animation: activity-usage-tick 420ms ease-out both;
+}
+
+@keyframes activity-usage-tick {
+  from {
+    opacity: 0.45;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.activity-usage__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.activity-usage__total {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-usage__total dt {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-fg-muted);
+}
+
+.activity-usage__total dd {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Values just update: no tween, no fade. */
+.activity-usage--still .activity-usage__digits {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-usage__digits {
+    animation: none;
+  }
+}

@@ -11,6 +11,7 @@ import {
   DEPLOY_RUN_IN,
   mockPipelineApi,
   pinsBody,
+  usageBody,
   queueFailedBody,
   reviewHoldBody,
 } from './fixtures/pipelineMocks';
@@ -417,6 +418,61 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByRole('region', { name: 'Activity filters' })).toHaveCount(0);
     await page.getByRole('link', { name: 'Leave wall mode' }).click();
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
+  });
+
+  test('Activity says what the pipeline is spending, live, and names a silent producer @action:activity.usage', async ({
+    page,
+    realtime,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    let spent = false;
+    await mockPipelineApi(page);
+    // The usage read answers more tokens once the socket says a slot reported:
+    // the panel must follow the push, well inside its 10-second poll.
+    await page.route(/\/api\/v1\/usage(\?.*)?$/, (route) => {
+      const body = usageBody();
+      if (spent) {
+        (body.slots as Array<Record<string, unknown>>)[0].input_tokens = 980_000;
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    });
+
+    await page.goto('/activity');
+    const panel = page.getByTestId('activity-usage');
+    await expect(panel).toBeVisible({ timeout: 15_000 });
+    const w1 = page.getByTestId('activity-usage-slot-w1');
+    await expect(w1).toContainText('opus-5');
+    await expect(w1).toContainText('12.4k');
+    await expect(w1).toContainText('$1.42');
+    await expect(w1.getByRole('link', { name: '20260919-0800-aaa' })).toHaveAttribute(
+      'href',
+      /^\/work\/20260919-0800-aaa/
+    );
+    // A producer that reports nothing is said in words, not counted as zero.
+    await expect(page.getByTestId('activity-usage-slot-w3')).toContainText(
+      'no usage reported (todoq too old)'
+    );
+    // Today, beside the slots, and the 24-hour sparkline above them.
+    await expect(page.getByTestId('activity-usage-totals')).toContainText('$18.40');
+    await expect(page.getByTestId('activity-usage-totals')).toContainText('74%');
+    await expect(page.getByTestId('activity-usage-spark')).toHaveAttribute(
+      'aria-label',
+      /Tokens per bucket over last 24 h/
+    );
+    // The attempt's own tokens sit beside its cost on the row that finished it.
+    const finished = page.getByTestId('activity-event-9');
+    await expect(finished).toContainText('$0.33');
+    await expect(finished).toContainText('258k in · 1.4k out');
+
+    await realtime.waitForOpen();
+    await realtime.hello();
+    spent = true;
+    await realtime.event({ seq: 14, scope: 'pipeline', kind: 'usage.changed', entity: 'usage' });
+    await expect(w1).toContainText('980k', { timeout: 8_000 });
   });
 
   test('the live dock is one quiet line on any page, opens to the newest events, and remembers @action:chrome.activity_dock', async ({

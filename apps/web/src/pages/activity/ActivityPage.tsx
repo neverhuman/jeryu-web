@@ -37,6 +37,7 @@ import { ActivityHistogram } from './ActivityHistogram';
 import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
 import { useListKeys } from '../../hooks/useListKeys';
+import { UsagePanel } from './UsagePanel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
@@ -143,6 +144,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       {/* The band is a filter on the feed, so it sits above the chips it sets.
           Wall mode has no filters and its own counters, so it has no band. */}
       {wall ? null : <ActivityHistogram family={filters.family} repo={repo} />}
+
+      {/* What the pipeline is spending, under the chart: live per working
+          slot, with today's totals. Wall mode has its own counters. */}
+      {wall ? null : <UsagePanel family={filters.family} />}
 
       {wall ? (
         <>

@@ -15,6 +15,7 @@ import { absoluteText, clockText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { LIST_ACTION_PROP, LIST_OPEN_PROP, listRowProps } from '../../hooks/useListKeys';
 import { formatCost, shortSha } from '../shift/shiftModel';
+import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
 import {
   eventLabel,
   eventLinks,
@@ -49,6 +50,8 @@ export function EventRow({
   const toggleLabel = open ? 'Hide' : event.log_tail ? 'Log' : event.reason ? 'Why' : 'More';
   const quiet = !open && !hasDetail(event);
   const duration = formatSeconds(event.seconds);
+  // What the attempt spent, when the producer attached it to the row.
+  const usage = attemptUsage(event);
 
   return (
     <li
@@ -83,6 +86,11 @@ export function EventRow({
         ) : null}
         {typeof event.cost_usd === 'number' ? (
           <span className="activity-row__meta">{formatCost(event.cost_usd)}</span>
+        ) : null}
+        {usage ? (
+          <span className="activity-row__meta" title={attemptUsageTitle(usage)}>
+            {attemptUsageText(usage)}
+          </span>
         ) : null}
         {duration ? <span className="activity-row__meta">{duration}</span> : null}
         <button

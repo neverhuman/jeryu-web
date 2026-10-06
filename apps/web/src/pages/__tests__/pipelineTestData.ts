@@ -8,6 +8,7 @@ import type {
   PinsResponse,
   PipelineEvent,
   PipelineHistogramResponse,
+  UsageResponse,
 } from '../../api/types';
 
 export function attentionItem(partial: Partial<AttentionItem> & Pick<AttentionItem, 'id' | 'kind'>): AttentionItem {
@@ -228,6 +229,14 @@ export const EVENTS: PipelineEvent[] = [
     cost_usd: 0.33,
     seconds: 240,
     summary: 'w1 finished 20260919-121041-9d0b27: done',
+    detail: {
+      usage: {
+        input_tokens: 18_000,
+        output_tokens: 1_400,
+        cache_read_tokens: 240_000,
+        cache_write_tokens: 12_000,
+      },
+    },
   }),
   pipelineEvent({
     seq: 8,
@@ -323,5 +332,53 @@ export const HISTOGRAM: PipelineHistogramResponse = {
       needs_human: 1,
     },
     { at: '2026-10-04T12:00:00Z', groups: { todos: 1, gates: 1 }, failures: 0, needs_human: 0 },
+  ],
+};
+
+/**
+ * `GET /api/v1/usage`: two slots working, one of them behind a producer that
+ * reports no usage at all, today's totals, and 5-minute buckets.
+ */
+export const USAGE: UsageResponse = {
+  schema_version: 1,
+  generated_at: '2026-09-19T13:05:00Z',
+  bucket_seconds: 300,
+  slots: [
+    {
+      operator: 'alton',
+      host: 'xbabe0',
+      slot: 'w1',
+      family: 'jeryu',
+      todo_id: '20260919-121041-9d0b27',
+      todo_title: 'Activity: realtime token usage panel',
+      model: 'opus-5',
+      attempt_started: '2026-09-19T12:55:00Z',
+      input_tokens: 12_400,
+      output_tokens: 3_100,
+      cache_read_tokens: 240_000,
+      cache_write_tokens: 8_000,
+      tokens_per_min: 1_800,
+      cost_usd: 1.42,
+    },
+    {
+      operator: 'alton',
+      host: 'xbabe1',
+      slot: 'w3',
+      family: 'jain',
+      todo_id: '20260919-130515-f8cc66',
+      reported: false,
+    },
+  ],
+  totals_today: {
+    input_tokens: 1_240_000,
+    output_tokens: 96_500,
+    cache_read_tokens: 3_600_000,
+    cache_write_tokens: 120_000,
+    cost_usd: 18.4,
+  },
+  buckets: [
+    { at: '2026-09-19T12:50:00Z', tokens: 12_000 },
+    { at: '2026-09-19T12:55:00Z', tokens: 48_000 },
+    { at: '2026-09-19T13:00:00Z', input_tokens: 20_000, output_tokens: 4_000 },
   ],
 };

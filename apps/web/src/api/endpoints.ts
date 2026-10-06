@@ -6,6 +6,7 @@
 import type { RepoGraphInclude } from './types/controlPlane';
 import type { PipelineEventsQuery, PipelineHistogramQuery } from './types/pipeline';
 import type { SearchQuery } from './types/search';
+import type { UsageQuery } from './types/usage';
 
 export const endpoints = {
   bootstrap: (): string => '/api/v1/bootstrap',
@@ -289,6 +290,18 @@ export const endpoints = {
     }
     const suffix = qs.toString();
     return suffix ? `/api/v1/events/histogram?${suffix}` : '/api/v1/events/histogram';
+  },
+  /** Token usage: what each working slot is spending right now, today's
+   *  totals and the tokens-per-bucket sparkline (admin-only; 404 on a server
+   *  that predates the route, where the panel is left out). */
+  usage: (params?: UsageQuery): string => {
+    const qs = new URLSearchParams();
+    for (const [key, value] of Object.entries(params ?? {})) {
+      if (value === undefined || value === '') continue;
+      qs.set(key, String(value));
+    }
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/usage?${suffix}` : '/api/v1/usage';
   },
   /** "Needs you": what is waiting on a human right now (admin-only). */
   attention: (): string => '/api/v1/attention',

@@ -244,8 +244,66 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
       cost_usd: 0.33,
       seconds: 240,
       summary: 'w1 finished 20260919-0800-aaa: done',
+      detail: {
+        usage: {
+          input_tokens: 18_000,
+          output_tokens: 1_400,
+          cache_read_tokens: 240_000,
+          cache_write_tokens: 12_000,
+        },
+      },
     }),
   ];
+}
+
+/**
+ * `GET /api/v1/usage`: one slot reporting, one behind a producer that reports
+ * nothing, today's totals and 5-minute buckets for the sparkline.
+ */
+export function usageBody(): Record<string, unknown> {
+  const buckets = Array.from({ length: 24 }, (_, i) => ({
+    at: new Date(Date.now() - (23 - i) * 300_000).toISOString(),
+    tokens: 4_000 + ((i * 7_919) % 56_000),
+  }));
+  return {
+    schema_version: 1,
+    generated_at: new Date().toISOString(),
+    bucket_seconds: 300,
+    slots: [
+      {
+        operator: 'alton',
+        host: 'xbabe0',
+        slot: 'w1',
+        family: 'jeryu',
+        todo_id: '20260919-0800-aaa',
+        todo_title: 'Activity: realtime token usage panel',
+        model: 'opus-5',
+        attempt_started: minutesAgo(8),
+        input_tokens: 12_400,
+        output_tokens: 3_100,
+        cache_read_tokens: 240_000,
+        cache_write_tokens: 8_000,
+        tokens_per_min: 1_800,
+        cost_usd: 1.42,
+      },
+      {
+        operator: 'alton',
+        host: 'xbabe1',
+        slot: 'w3',
+        family: 'jeryu',
+        todo_id: '20260919-130515-f8cc66',
+        reported: false,
+      },
+    ],
+    totals_today: {
+      input_tokens: 1_240_000,
+      output_tokens: 96_500,
+      cache_read_tokens: 3_600_000,
+      cache_write_tokens: 120_000,
+      cost_usd: 18.4,
+    },
+    buckets,
+  };
 }
 
 /** `GET /api/v1/pins`: jeryu-deploy's web pin is behind, a tag needs cutting, one pin is current. */
@@ -336,6 +394,7 @@ export async function mockPipelineApi(
     attention?: Record<string, unknown>;
     events?: Array<Record<string, unknown>>;
     pins?: Record<string, unknown>;
+    usage?: Record<string, unknown>;
   } = {}
 ): Promise<PipelineMockLog> {
   const log: PipelineMockLog = { eventQueries: [] };
@@ -345,6 +404,7 @@ export async function mockPipelineApi(
 
   await page.route(/\/api\/v1\/attention(\?.*)?$/, (route) => json(route, options.attention ?? attentionBody()));
   await page.route(/\/api\/v1\/pins(\?.*)?$/, (route) => json(route, options.pins ?? pinsBody()));
+  await page.route(/\/api\/v1\/usage(\?.*)?$/, (route) => json(route, options.usage ?? usageBody()));
   await page.route(/\/api\/v1\/events\/histogram(\?.*)?$/, (route, request) =>
     json(route, histogramBody(new URL(request.url()).searchParams.get('range') ?? '24h'))
   );
