@@ -11,6 +11,7 @@ import {
   compareInstants,
   dateText,
   instantOf,
+  isSameLocalDay,
   localDayKey,
   relativeText,
   rfc3339Seconds,
@@ -113,5 +114,16 @@ describe('absolute wordings', () => {
     expect(rfc3339Seconds('2026-09-19T13:03:26.481Z')).toBe('2026-09-19T13:03:26Z');
     expect(rfc3339Seconds('nonsense')).toBeNull();
     expect(utcDayKey('nonsense')).toBe('');
+  });
+});
+
+describe('isSameLocalDay', () => {
+  it('reads the days a reader sees, not UTC days', () => {
+    // 01:30Z is still the 19th in New York, so it belongs to the same day.
+    expect(isSameLocalDay('2026-09-20T01:30:00Z', NOW)).toBe(true);
+    expect(isSameLocalDay('2026-09-19T13:58:00Z', NOW)).toBe(true);
+    expect(isSameLocalDay('2026-09-18T23:00:00Z', NOW)).toBe(false);
+    expect(isSameLocalDay('nonsense', NOW)).toBe(false);
+    expect(isSameLocalDay(null, NOW)).toBe(false);
   });
 });

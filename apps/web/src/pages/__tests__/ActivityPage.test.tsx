@@ -5,6 +5,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ActivityPage } from '../activity';
+import { absoluteText, clockText } from '../../format/when';
 import { htmlShell, mockPipelineApi } from './pipelinePageHelpers';
 import { EVENTS, pipelineEvent } from './pipelineTestData';
 import { errorResponse, json, renderAt } from './shiftPageHelpers';
@@ -178,6 +179,47 @@ describe('ActivityPage', () => {
       expect(screen.getByTestId('activity-day-2026-09-18')).toHaveTextContent('Yesterday · 18 Sep 2026');
       expect(screen.getByTestId('activity-day-2026-09-16')).toHaveTextContent('16 Sep 2026');
       expect(screen.getAllByTestId(/^activity-day-/)).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("ages today's rows on one shared clock and leaves older rows their clock", async () => {
+    vi.useFakeTimers({
+      toFake: ['Date', 'setInterval', 'clearInterval'],
+      now: new Date('2026-09-19T14:00:00Z'),
+    });
+    try {
+      mockPipelineApi((req) =>
+        req.pathname === '/api/v1/events'
+          ? json({
+              events: [
+                pipelineEvent({ seq: 3, ts: '2026-09-19T13:58:00Z', kind: 'todo.claimed' }),
+                pipelineEvent({ seq: 1, ts: '2026-09-16T08:00:00Z', kind: 'todo.filed' }),
+              ],
+              latest_seq: 3,
+            })
+          : undefined
+      );
+      renderPage();
+      const today = await screen.findByTestId('activity-event-3');
+      const when = (row: HTMLElement): HTMLElement => within(row).getByText(/./, { selector: 'time' });
+      expect(when(today)).toHaveTextContent('2 min ago');
+      // The absolute instant stays on hover, which is where the clock lives now.
+      expect(when(today)).toHaveAttribute('title', absoluteText('2026-09-19T13:58:00Z'));
+      // An older day keeps its clock: its heading already says which day it is.
+      expect(when(screen.getByTestId('activity-event-1'))).toHaveTextContent(
+        clockText('2026-09-16T08:00:00Z')
+      );
+
+      // The tick moves the label on without a fetch or a timer per row.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(when(screen.getByTestId('activity-event-3'))).toHaveTextContent('3 min ago');
+      expect(when(screen.getByTestId('activity-event-1'))).toHaveTextContent(
+        clockText('2026-09-16T08:00:00Z')
+      );
     } finally {
       vi.useRealTimers();
     }

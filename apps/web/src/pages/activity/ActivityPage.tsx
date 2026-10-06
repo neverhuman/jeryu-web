@@ -54,6 +54,7 @@ import { useListKeys } from '../../hooks/useListKeys';
 import { UsagePanel } from './UsagePanel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+import { useTickingNow } from '../../hooks/useTickingNow';
 import { useCountUp } from '../../hooks/useCountUp';
 
 import '../page.css';
@@ -141,6 +142,9 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   // pill was holding are new to the list at the moment it is clicked, so they
   // arrive then, with the same cue.
   const still = usePrefersReducedMotion();
+  // One clock for the whole list: today's rows say how long ago they happened,
+  // and they all age together on this single tick.
+  const now = useTickingNow();
   const arriving = useArrivingRows(
     events.map((event) => event.seq),
     filterId,
@@ -276,9 +280,9 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           <ol className="activity__list" aria-label="Pipeline events">
             {groupByDay(events).map((group) => (
               <Fragment key={group.day}>
-                {/* Times on a row are a clock only; the day is said once, here. */}
+                {/* The day is said once, here; a row says its clock, or — for today — its age. */}
                 <li className="activity__day" data-testid={`activity-day-${group.day}`}>
-                  {formatDay(group.events[0].ts, new Date())}
+                  {formatDay(group.events[0].ts, new Date(now))}
                 </li>
                 {group.events.map((event) => (
                   <EventRow
@@ -287,6 +291,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                     resolved={resolved.has(event.seq)}
                     arriving={arriving.has(event.seq)}
                     longestSeconds={longestSeconds.get(event.kind)}
+                    now={now}
                     onOpenChange={wall ? undefined : onRowOpenChange}
                   />
                 ))}

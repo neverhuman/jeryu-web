@@ -153,3 +153,12 @@ export function localDayKey(at: string | number | Date | null | undefined): stri
   const day = `${d.getDate()}`.padStart(2, '0');
   return `${d.getFullYear()}-${month}-${day}`;
 }
+
+/** Whether `at` falls on the same local day as `now`: the day a reader calls today. */
+export function isSameLocalDay(
+  at: string | number | Date | null | undefined,
+  now: string | number | Date = Date.now()
+): boolean {
+  const key = localDayKey(at);
+  return key !== '' && key === localDayKey(now);
+}

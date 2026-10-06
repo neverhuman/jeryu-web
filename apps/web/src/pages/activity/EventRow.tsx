@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 
 import type { PipelineEvent } from '../../api/types';
 import { pillClass, toneClass } from '../../components/tone/tone';
-import { absoluteText, clockText } from '../../format/when';
+import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { LIST_ACTION_PROP, LIST_OPEN_PROP, listRowProps } from '../../hooks/useListKeys';
 import { formatCost, shortSha } from '../shift/shiftModel';
@@ -39,6 +39,7 @@ export function EventRow({
   resolved = false,
   arriving = false,
   longestSeconds,
+  now,
   onOpenChange,
 }: {
   event: PipelineEvent;
@@ -50,6 +51,10 @@ export function EventRow({
   /** The longest duration this row's kind reached in the loaded list: what the
    *  bar behind the duration is scaled against. Absent, the duration is text. */
   longestSeconds?: number;
+  /** The list's shared clock. Given it, a row from today reads as how long ago
+   *  it was and ages with the tick; an older row keeps its clock, because the
+   *  day is said once in its heading and "3 days ago" would hide it. */
+  now?: number;
   /** Told when this row opens or closes: a feed holds new rows back while a
    *  reader has one open, so it has to know. */
   onOpenChange?: (seq: number, open: boolean) => void;
@@ -80,6 +85,11 @@ export function EventRow({
   const share = durationShare(event.seconds, longestSeconds);
   // What the attempt spent, when the producer attached it to the row.
   const usage = attemptUsage(event);
+  // Today's rows read as an age; the clock is still in `title` either way.
+  const whenText =
+    now !== undefined && isSameLocalDay(event.ts, now)
+      ? relativeText(event.ts, now)
+      : clockText(event.ts);
 
   return (
     <li
@@ -91,7 +101,7 @@ export function EventRow({
     >
       <div className="activity-row__line">
         <time className="activity-row__time" dateTime={event.ts} title={absoluteText(event.ts)}>
-          {clockText(event.ts)}
+          {whenText}
         </time>
         <span
           className={pillClass(tone)}
