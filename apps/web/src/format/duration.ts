@@ -1,4 +1,4 @@
-// duration.ts — seconds as a person says them.
+// duration.ts — seconds in the words a person would use.
 
 /** 14 -> "14s", 127 -> "2m 7s", 3780 -> "1h 3m". */
 export function durationWords(totalSeconds: number): string {
@@ -14,7 +14,7 @@ export function durationWords(totalSeconds: number): string {
   return restMinutes === 0 ? `${hours}h` : `${hours}h ${restMinutes}m`;
 }
 
-/** Whole minutes, rounded up, as "3m" or "1h 5m": for estimates, where seconds are noise. */
+/** Whole minutes, rounded up ("3m", "1h 5m"): for estimates, where seconds are noise. */
 export function minutesWords(totalSeconds: number): string {
   const minutes = Math.max(1, Math.ceil(totalSeconds / 60));
   return durationWords(minutes * 60);

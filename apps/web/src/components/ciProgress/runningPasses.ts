@@ -10,7 +10,7 @@ import type { RunnerFabricResponse, RunnerTaskEstimate } from '../../api/types';
 
 export interface RunningPass {
   runnerId: string;
-  /** `owner/name#12`, as the runner names its work. */
+  /** `owner/name#12`: the runner's own name for its work. */
   label: string;
   startedAt: string;
   estimate: RunnerTaskEstimate | null;

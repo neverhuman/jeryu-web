@@ -1,4 +1,4 @@
-// CiProgress.tsx — a running gate or review, drawn as a bar with words.
+// CiProgress.tsx — a running gate or review: a bar with words.
 //
 // With an estimate the bar fills toward the usual time and the words say
 // about how long is left; past the usual time the bar stays full and turns

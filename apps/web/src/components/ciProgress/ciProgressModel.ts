@@ -33,7 +33,7 @@ export interface CiProgressView {
   headline: string;
   /** The context under it: "4m 10s so far · usually 7m". */
   detail: string;
-  /** Both, as one sentence for assistive technology. */
+  /** Both, in one sentence for assistive technology. */
   label: string;
 }
 

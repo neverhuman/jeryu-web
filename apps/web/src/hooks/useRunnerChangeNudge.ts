@@ -3,7 +3,7 @@
 // The forge pushes `runner.changed` on scope `runners` (for /runners) and on
 // `repo.<owner>.<name>` (for that repository's pages) whenever a heartbeat
 // starts or finishes a gate or review. The frame is a nudge: the page refetches
-// its own query, and keeps polling as it did without it.
+// its own query, and keeps polling on its usual timer too.
 //
 // Only a forge that publishes these frames also sends `serverTime`, so callers
 // enable the nudge once an answer carried it. An older forge never sees a
