@@ -780,3 +780,60 @@
     animation: none;
   }
 }
+
+/* A row the live tail just merged in: it slides down into its place, fades in,
+   and holds a wash that fades out over two seconds. Nothing else moves — the
+   rows below are already where they belong. */
+.activity-row.is-arriving {
+  animation:
+    activity-row-arrive 220ms ease-out both,
+    activity-row-wash 2s ease-out both;
+}
+
+/* A row that wants a person washes red, the colour it already carries. */
+.activity-row.is-arriving.is-needs-human {
+  animation:
+    activity-row-arrive 220ms ease-out both,
+    activity-row-wash-human 2s ease-out both;
+}
+
+@keyframes activity-row-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes activity-row-wash {
+  from {
+    background-color: var(--color-bg-3);
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes activity-row-wash-human {
+  from {
+    background-color: var(--color-accent-danger-bg);
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+/* Values just update: no slide, no wash. The class is already withheld when
+   the reader asked for less motion; this covers a row mid-flight. */
+@media (prefers-reduced-motion: reduce) {
+  .activity-row.is-arriving,
+  .activity-row.is-arriving.is-needs-human {
+    animation: none;
+  }
+}

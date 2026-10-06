@@ -3,6 +3,8 @@
 // the summary with its subject as the link, how long it took. Everything else
 // (who, which commit, why, the log tail) opens below. A row that needs a human
 // is red until a later event clears its cause; then it is marked resolved.
+// A row the live tail just brought in slides down with a short wash, so the
+// feed says "this is new" without moving anything else.
 // The toggle stays on the rows that have something to say (a reason, a log);
 // on the quiet ones it waits for the pointer or the keyboard.
 
@@ -31,11 +33,14 @@ export function EventRow({
   event,
   defaultOpen = false,
   resolved = false,
+  arriving = false,
 }: {
   event: PipelineEvent;
   defaultOpen?: boolean;
   /** A later event cleared this row's cause: no attention pill. */
   resolved?: boolean;
+  /** The row was not in the previous render: slide in and hold a wash. */
+  arriving?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(defaultOpen);
   const needsHuman = event.needs_human && !resolved;
@@ -55,7 +60,9 @@ export function EventRow({
 
   return (
     <li
-      className={`${toneClass('activity-row', tone)}${needsHuman ? ' is-needs-human' : ''}`}
+      className={`${toneClass('activity-row', tone)}${needsHuman ? ' is-needs-human' : ''}${
+        arriving ? ' is-arriving' : ''
+      }`}
       data-testid={`activity-event-${event.seq}`}
       {...listRowProps}
     >

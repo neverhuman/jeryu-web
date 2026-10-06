@@ -33,12 +33,14 @@ import {
   visibleEvents,
   type ActivityFilters,
 } from './activityModel';
+import { useArrivingRows } from './arrivalsModel';
 import { ActivityHistogram } from './ActivityHistogram';
 import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
 import { useListKeys } from '../../hooks/useListKeys';
 import { UsagePanel } from './UsagePanel';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 
 import '../page.css';
 import './Activity.css';
@@ -91,6 +93,15 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   const newest = events[0]?.seq ?? 0;
   // One `j`/`k` list over the whole feed, day headings and all.
   const rows = useListKeys<HTMLDivElement>();
+  // Rows the tail brought in since the last render, so they can announce
+  // themselves. The filter set is the list's identity: changing it starts a
+  // fresh page, which arrives all at once and so animates nothing.
+  const still = usePrefersReducedMotion();
+  const arriving = useArrivingRows(
+    events.map((event) => event.seq),
+    JSON.stringify(query),
+    still
+  );
 
   // Wall mode keeps the newest event in view as the tail grows.
   const top = useRef<HTMLDivElement | null>(null);
@@ -204,7 +215,12 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                   {formatDay(group.events[0].ts, new Date())}
                 </li>
                 {group.events.map((event) => (
-                  <EventRow key={event.seq} event={event} resolved={resolved.has(event.seq)} />
+                  <EventRow
+                    key={event.seq}
+                    event={event}
+                    resolved={resolved.has(event.seq)}
+                    arriving={arriving.has(event.seq)}
+                  />
                 ))}
               </Fragment>
             ))}
