@@ -112,11 +112,13 @@ describe('ActivityPage', () => {
     mockPipelineApi();
     renderPage();
     await screen.findByTestId('activity-event-12');
-    const page = screen.getByTestId('activity-page');
+    // The legend above draws the same tones as a key, so the claim is about
+    // the list: inside it, red only ever appears on a row that needs a person.
+    const list = screen.getByRole('list', { name: 'Pipeline events' });
 
     // Every element in the human tone — the red one — sits in a row that
     // says a person is needed, and those rows are the fixture's own.
-    const red = [...page.querySelectorAll('[class*="--human"]')];
+    const red = [...list.querySelectorAll('[class*="--human"]')];
     expect(red.length).toBeGreaterThan(0);
     const reddened = new Set(red.map((el) => el.closest('.is-needs-human')));
     expect(reddened.has(null)).toBe(false);
@@ -339,6 +341,32 @@ describe('ActivityPage', () => {
     expect(await screen.findByTestId('activity-event-11')).toBeInTheDocument();
     expect(screen.queryByTestId('activity-tail-paused')).toBeNull();
     expect(screen.getByText(/^Live ·/)).toBeInTheDocument();
+  });
+
+  it("keys the row edges with the rows' own classes, and not on the wall", async () => {
+    mockPipelineApi();
+    renderPage();
+    const legend = await screen.findByTestId('activity-legend');
+    expect(
+      within(legend)
+        .getAllByRole('listitem')
+        .map((key) => key.textContent)
+    ).toEqual(['needs you', 'an agent will pick it up', 'ok']);
+    // Each marker is an activity-row with its tone, so the colour and the
+    // dashes come from the same rules that draw the list.
+    const marker = (tone: string): Element | null =>
+      legend.querySelector(`.activity__marker.activity-row.activity-row--${tone}`);
+    for (const tone of ['human', 'failed', 'ok']) expect(marker(tone)).not.toBeNull();
+    // The paragraph above it is one line now, not the colour explanation.
+    const subtitle = screen.getByText('Every step the pipeline takes, as it happens.');
+    expect(subtitle).toHaveClass('page__subtitle');
+  });
+
+  it('leaves the legend off the wall, which has no subtitle either', async () => {
+    mockPipelineApi();
+    renderPage('/activity?wall=1');
+    await screen.findByTestId('activity-event-12');
+    expect(screen.queryByTestId('activity-legend')).toBeNull();
   });
 
   it('wall mode swaps the filters for 24-hour counters', async () => {

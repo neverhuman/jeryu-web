@@ -15,6 +15,7 @@ import { canonicalFamily } from '../../components/family/familyScope';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { LoadingState, PipelineQueryState } from '../../components/state';
+import { toneClass, type Tone } from '../../components/tone/tone';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { isPipelineEventPush, usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
@@ -191,11 +192,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           </Link>
         </div>
         {wall ? null : (
-          <p className="page__subtitle">
-            Every step the pipeline takes, as it happens: todos claimed and finished,
-            gates, reviews, the merge queue, staged releases and deploys. Rows that
-            need a person are red; a failure an agent will pick up is outlined.
-          </p>
+          <>
+            <p className="page__subtitle">Every step the pipeline takes, as it happens.</p>
+            <RowLegend />
+          </>
         )}
       </header>
 
@@ -307,6 +307,28 @@ function wallHref(params: URLSearchParams, wall: boolean): string {
   else next.delete('wall');
   const suffix = next.toString();
   return suffix ? `?${suffix}` : '.';
+}
+
+/** What the edge of a row means, drawn by the rows' own CSS so the key cannot
+ *  drift from what is on the list: each marker is an `activity-row` carrying
+ *  the tone modifier, trimmed to the coloured edge alone. */
+const ROW_KEYS: readonly { tone: Tone; label: string }[] = [
+  { tone: 'human', label: 'needs you' },
+  { tone: 'failed', label: 'an agent will pick it up' },
+  { tone: 'ok', label: 'ok' },
+];
+
+function RowLegend(): JSX.Element {
+  return (
+    <ul className="activity__legend" aria-label="What a row's edge means" data-testid="activity-legend">
+      {ROW_KEYS.map((key) => (
+        <li className="activity__key" key={key.tone}>
+          <span className={`${toneClass('activity-row', key.tone)} activity__marker`} aria-hidden="true" />
+          {key.label}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function Filters({

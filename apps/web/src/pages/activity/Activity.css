@@ -96,6 +96,33 @@
   background-color: var(--color-bg-1);
 }
 
+/* The legend under the subtitle. Each marker is an `.activity-row` so its
+   edge comes from the rules below — the key is drawn by the same CSS as the
+   rows it describes — with the row's box stripped back to that edge. */
+.activity__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.activity__key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.activity__marker.activity-row {
+  width: 0;
+  height: 0.9em;
+  padding: 0;
+  border-bottom: 0;
+}
+
 .activity-row {
   border-bottom: 1px solid var(--color-border-subtle);
   border-left: 3px solid transparent;
