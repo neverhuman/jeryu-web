@@ -64,6 +64,22 @@
   font-size: var(--font-size-sm);
 }
 
+.activity__tail-paused {
+  margin: 0;
+  color: var(--color-accent-warning);
+  font-size: var(--font-size-sm);
+}
+
+.activity__tail-paused button {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent-primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .activity__error {
   margin: 0;
   color: var(--color-accent-danger);

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ActivityPage } from '../activity';
 import { htmlShell, mockPipelineApi } from './pipelinePageHelpers';
 import { EVENTS, pipelineEvent } from './pipelineTestData';
-import { json, renderAt } from './shiftPageHelpers';
+import { errorResponse, json, renderAt } from './shiftPageHelpers';
 
 function renderPage(path = '/activity'): void {
   renderAt(path, '/activity', <ActivityPage />);
@@ -259,6 +259,28 @@ describe('ActivityPage', () => {
     expect(await screen.findByTestId('activity-event-100')).toBeInTheDocument();
     expect(calls.some((c) => c.search.includes('before_seq=101'))).toBe(true);
     expect(screen.getByText('That is every stored event (30-day retention).')).toBeInTheDocument();
+  });
+
+  it('says the live tail is paused when it fails, and resumes on Retry now', async () => {
+    let tailCalls = 0;
+    mockPipelineApi((req) => {
+      if (req.pathname !== '/api/v1/events') return undefined;
+      const qs = new URLSearchParams(req.search);
+      if (!qs.get('after_seq')) return json({ events: [pipelineEvent({ seq: 10, kind: 'todo.claimed' })], latest_seq: 10 });
+      tailCalls += 1;
+      if (tailCalls === 1) return errorResponse(502, 'forge is away');
+      return json({ events: [pipelineEvent({ seq: 11, kind: 'pr.merged' })], latest_seq: 11 });
+    });
+    renderPage();
+    await screen.findByTestId('activity-event-10');
+    const notice = await screen.findByTestId('activity-tail-paused');
+    expect(notice).toHaveTextContent(/Live updates paused — retrying in \d+s/);
+    expect(screen.queryByText(/^Live ·/)).toBeNull();
+
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry now' }));
+    expect(await screen.findByTestId('activity-event-11')).toBeInTheDocument();
+    expect(screen.queryByTestId('activity-tail-paused')).toBeNull();
+    expect(screen.getByText(/^Live ·/)).toBeInTheDocument();
   });
 
   it('wall mode swaps the filters for 24-hour counters', async () => {

@@ -178,9 +178,20 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
         />
       ) : (
         <>
-          <p className="activity__live" role="status">
-            Live · {events.length} event{events.length === 1 ? '' : 's'}
-          </p>
+          {feed.tail.paused ? (
+            // The tail is the page's promise of "Live"; when it stops arriving
+            // the page says so, and says when it will try again.
+            <p className="activity__tail-paused" role="status" data-testid="activity-tail-paused">
+              Live updates paused — retrying in {feed.tail.retryInSeconds}s{' '}
+              <button type="button" onClick={feed.tail.retryNow}>
+                Retry now
+              </button>
+            </p>
+          ) : (
+            <p className="activity__live" role="status">
+              Live · {events.length} event{events.length === 1 ? '' : 's'}
+            </p>
+          )}
           <ol className="activity__list" aria-label="Pipeline events">
             {groupByDay(events).map((group) => (
               <Fragment key={group.day}>
