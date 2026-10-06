@@ -314,6 +314,38 @@ describe('ActivityPage', () => {
     );
   });
 
+  it('refuses a Kind the server would 422, inline, without touching the feed', async () => {
+    const calls = mockPipelineApi();
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+    const kindQueries = (): number => calls.filter((c) => c.search.includes('kind=')).length;
+
+    const kind = screen.getByLabelText('Kind');
+    fireEvent.change(kind, { target: { value: 'todo' } });
+    fireEvent.keyDown(kind, { key: 'Enter' });
+    expect(await screen.findByTestId('activity-filter-error-kind')).toHaveTextContent(
+      'dotted lower-case words'
+    );
+    expect(kind).toHaveAttribute('aria-invalid', 'true');
+    // Nothing was asked of the server, and the typed text is still there to fix.
+    expect(kindQueries()).toBe(0);
+    expect(kind).toHaveValue('todo');
+
+    // A PR that is not a number says so too, instead of being dropped silently.
+    const pr = screen.getByLabelText('PR');
+    fireEvent.change(pr, { target: { value: 'abc' } });
+    fireEvent.keyDown(pr, { key: 'Enter' });
+    expect(await screen.findByTestId('activity-filter-error-pr')).toHaveTextContent('digits only');
+
+    // Finishing the kind clears the hint, and that one is asked for.
+    fireEvent.change(kind, { target: { value: 'todo.claimed' } });
+    expect(screen.queryByTestId('activity-filter-error-kind')).toBeNull();
+    fireEvent.keyDown(kind, { key: 'Enter' });
+    await waitFor(() =>
+      expect(calls.some((c) => c.search.includes('kind=todo.claimed'))).toBe(true)
+    );
+  });
+
   it('puts the family pills at the far left of the chip row, and a pill is the scope', async () => {
     const calls = mockPipelineApi((req) =>
       req.pathname === '/api/v1/shift/families'

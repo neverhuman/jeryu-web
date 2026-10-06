@@ -512,6 +512,24 @@
   margin-top: var(--space-3);
 }
 
+.activity__more-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.activity__more-field > label {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+/* Why the value cannot be used, under the field that holds it. */
+.activity__filter-error {
+  max-width: 22rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-danger);
+}
+
 .activity-row__facts {
   display: flex;
   flex-wrap: wrap;

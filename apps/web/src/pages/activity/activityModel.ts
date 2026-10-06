@@ -30,11 +30,53 @@ export function parseActivityFilters(params: URLSearchParams): ActivityFilters {
     family: text('family'),
     repo: text('repo'),
     source: text('source'),
-    kind: text('kind'),
+    // A kind the server would refuse is dropped rather than sent: it answers
+    // `422 events_invalid_query` and the whole feed would read as broken.
+    kind: isKindFilter(text('kind')) ? text('kind') : '',
     todo_id: text('todo_id'),
-    pr: /^\d+$/.test(text('pr')) ? text('pr') : '',
+    pr: PR_PATTERN.test(text('pr')) ? text('pr') : '',
     needs_human: params.get('needs_human') === '1' || params.get('needs_human') === 'true',
   };
+}
+
+/** Longest kind the server stores, in characters. */
+export const MAX_KIND_CHARS = 64;
+
+const PR_PATTERN = /^\d+$/;
+
+/** One word of a kind: `^[a-z][a-z0-9_]*$`. */
+function isKindWord(word: string): boolean {
+  return /^[a-z][a-z0-9_]*$/.test(word);
+}
+
+/** The server's rule: two or more dotted lower-case words, or such a word
+ *  followed by a dot, which reads as a prefix. */
+export function isKind(kind: string): boolean {
+  const words = kind.split('.');
+  return kind.length <= MAX_KIND_CHARS && words.length >= 2 && words.every(isKindWord);
+}
+
+/** A `kind` filter the server would take: one kind or prefix, or — for the
+ *  chips that span several — a comma-separated list of them, each of which is
+ *  narrowed here instead (see `matchesKind`). */
+export function isKindFilter(kind: string): boolean {
+  const patterns = kindPatterns(kind);
+  return (
+    patterns.length > 0 &&
+    patterns.every((pattern) => (pattern.endsWith('.') ? isKind(`${pattern}x`) : isKind(pattern)))
+  );
+}
+
+/** Why a typed filter value cannot be used, for the field that holds it, or
+ *  null when it can. An empty field is no filter at all, so never an error. */
+export function filterFieldError(key: string, value: string): string | null {
+  const text = value.trim();
+  if (text === '') return null;
+  if (key === 'kind' && !isKindFilter(text)) {
+    return 'A kind is dotted lower-case words (gate.finished), or a prefix ending in a dot (todo.).';
+  }
+  if (key === 'pr' && !PR_PATTERN.test(text)) return 'A pull request is its number: digits only.';
+  return null;
 }
 
 export function isWallMode(params: URLSearchParams): boolean {

@@ -26,6 +26,7 @@ import {
   MORE_FILTER_KEYS,
   activeChip,
   applyChip,
+  filterFieldError,
   filtersToQuery,
   formatDay,
   groupByDay,
@@ -71,6 +72,7 @@ const FILTER_LABEL: Record<(typeof MORE_FILTER_KEYS)[number], string> = {
 const FILTER_HINT: Partial<Record<(typeof MORE_FILTER_KEYS)[number], string>> = {
   repo: 'owner/name',
   kind: 'todo. or gate.finished',
+  pr: 'number',
 };
 
 export interface ActivityPageProps {
@@ -438,16 +440,19 @@ function Filters({
         <summary>More filters</summary>
         <div className="activity__more-fields">
           {MORE_FILTER_KEYS.filter((key) => !(pinnedRepo && key === 'repo')).map((key) => (
-            <label key={key}>
-              {FILTER_LABEL[key]}
+            // The field's own hint sits under it, outside the label, so the
+            // label stays the field's name.
+            <div className="activity__more-field" key={key}>
+              <label htmlFor={`activity-filter-${key}`}>{FILTER_LABEL[key]}</label>
               <FilterInput
                 // Re-mount when the URL value changes from elsewhere (a deep link).
                 key={filters[key]}
                 initial={filters[key]}
+                name={key}
                 placeholder={FILTER_HINT[key]}
                 onCommit={(value) => onChange(key, value)}
               />
-            </label>
+            </div>
           ))}
         </div>
       </details>
@@ -469,28 +474,57 @@ function ChipCount({ value, still }: { value: number; still: boolean }): JSX.Ele
   );
 }
 
-/** Commits on Enter or blur so typing does not refetch per keystroke. */
+/**
+ * Commits on Enter or blur so typing does not refetch per keystroke. A value
+ * the server would refuse (`kind=todo`, `pr=abc`) is never committed: it would
+ * answer `422` and turn the whole feed into an error state, so the field says
+ * what it wants and keeps the text for editing.
+ */
 function FilterInput({
   initial,
+  name,
   placeholder,
   onCommit,
 }: {
   initial: string;
+  /** The filter this field holds: which rule its value is read against. */
+  name: string;
   placeholder?: string;
   onCommit: (value: string) => void;
 }): JSX.Element {
+  const [error, setError] = useState<string | null>(null);
+  const fieldId = `activity-filter-${name}`;
+  const hintId = `${fieldId}-hint`;
+  const commit = (value: string): void => {
+    const text = value.trim();
+    const reason = filterFieldError(name, text);
+    setError(reason);
+    if (reason === null && text !== initial) onCommit(text);
+  };
   return (
-    <input
-      type="text"
-      defaultValue={initial}
-      placeholder={placeholder}
-      onBlur={(event) => {
-        if (event.target.value.trim() !== initial) onCommit(event.target.value.trim());
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') onCommit(event.currentTarget.value.trim());
-      }}
-    />
+    <>
+      <input
+        type="text"
+        id={fieldId}
+        defaultValue={initial}
+        placeholder={placeholder}
+        aria-invalid={error === null ? undefined : true}
+        aria-describedby={error === null ? undefined : hintId}
+        onBlur={(event) => commit(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') commit(event.currentTarget.value);
+        }}
+        onChange={(event) => {
+          // Typing past the mistake clears the hint; it comes back on commit.
+          if (error !== null && filterFieldError(name, event.target.value) === null) setError(null);
+        }}
+      />
+      {error === null ? null : (
+        <span className="activity__filter-error" id={hintId} data-testid={`activity-filter-error-${name}`}>
+          {error}
+        </span>
+      )}
+    </>
   );
 }
 

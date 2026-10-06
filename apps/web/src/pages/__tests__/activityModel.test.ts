@@ -21,7 +21,9 @@ import {
   durationShare,
   exactSecondsText,
   MIN_DURATION_SHARE,
+  filterFieldError,
   hasMoreFilters,
+  isKindFilter,
   isWallMode,
   kindPatterns,
   matchesKind,
@@ -96,6 +98,31 @@ describe('activityModel', () => {
     expect(empty.pr).toBe('');
     expect(hasActiveFilters(empty)).toBe(false);
     expect(filtersToQuery(empty)).toEqual({});
+  });
+
+  it('takes the kinds the server takes and refuses the rest', () => {
+    for (const kind of ['todo.claimed', 'todo.', 'gate.finished', 'pr.review_requested', 'a.b1_c', 'review.,pr.review']) {
+      expect(isKindFilter(kind)).toBe(true);
+    }
+    for (const kind of ['todo', '', '.', '.todo', 'todo..claimed', 'Todo.claimed', 'todo claimed', '1todo.a', `${'a'.repeat(64)}.b`]) {
+      expect(isKindFilter(kind)).toBe(false);
+    }
+  });
+
+  it('says why a typed filter cannot be used, and says nothing about a good one', () => {
+    expect(filterFieldError('kind', 'todo')).toContain('dotted lower-case');
+    expect(filterFieldError('kind', 'todo.')).toBeNull();
+    expect(filterFieldError('kind', '  ')).toBeNull();
+    expect(filterFieldError('pr', 'abc')).toContain('digits only');
+    expect(filterFieldError('pr', '35')).toBeNull();
+    expect(filterFieldError('repo', 'anything at all')).toBeNull();
+  });
+
+  it('drops a URL kind the server would refuse, so a deep link does not 422 the feed', () => {
+    const bare = parseActivityFilters(new URLSearchParams('kind=todo'));
+    expect(bare.kind).toBe('');
+    expect(filtersToQuery(bare)).toEqual({});
+    expect(parseActivityFilters(new URLSearchParams('kind=todo.')).kind).toBe('todo.');
   });
 
   it('builds filtered Activity links', () => {
