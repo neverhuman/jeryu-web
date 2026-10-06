@@ -31,6 +31,8 @@ import {
   windowSummary,
 } from './qualityGateModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { UseThisWhen } from '../../layout/UseThisWhen';
+
 import '../page.css';
 import './QualityGate.css';
 
@@ -68,6 +70,7 @@ export function QualityGatePage(): JSX.Element {
           blocked over the last {QUALITY_GATE_WINDOW_DAYS} days, and how often
           the person reading a finding disagreed with it.
         </p>
+        <UseThisWhen id="nav.quality-gate" />
       </header>
 
       {isPending ? (

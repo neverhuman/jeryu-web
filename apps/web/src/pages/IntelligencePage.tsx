@@ -25,6 +25,7 @@ import {
   ToolBuildDossiers,
   useGraphViewState,
 } from './intelligence';
+import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
 import './IntelligencePage.css';
@@ -134,6 +135,7 @@ function IntelligenceSnapshot({
         <p className="page__roadmap-note intelligence__header-note">
           Operational snapshot of the repository graph and its evidence.
         </p>
+        <UseThisWhen id="nav.intelligence" />
         <div className="intelligence__status-strip">
           <MetricCard
             icon={<GitPullRequest size={18} aria-hidden="true" />}

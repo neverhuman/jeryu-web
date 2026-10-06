@@ -110,8 +110,8 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await expect(jump).toBeFocused();
 
   // Outside a repository the header has no repository control (the left nav
-  // has Repositories); it no longer opens the palette a second way. Inside one
-  // it names the repository and links to its front page: see 05-pr-review.
+  // has Repositories). Inside one it names the repository and opens the
+  // switcher: see 45-account-switcher.
   await page.goto('/needs-you');
   await expect(page.getByRole('banner').getByRole('link', { name: /repositor/i })).toHaveCount(0);
   await expect(page.getByRole('banner').getByRole('button', { name: /repositor/i })).toHaveCount(0);
@@ -139,13 +139,16 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await page.getByRole('button', { name: 'Back to home' }).click();
   await expect(page).toHaveURL(/\/repos$/);
 
-  // Settings is reached from the top-right account control, and Log out is
-  // the last thing on that page; neither is in the left nav or the header.
+  // Settings and Log out are both in the top-right account menu; neither is
+  // in the left nav.
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
-  await page.getByRole('banner').getByRole('link', { name: 'Settings' }).click();
+  const account = page.getByTestId('account-menu-button');
+  await account.click();
+  await page.getByTestId('account-menu-settings').click();
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByTestId('settings-page')).toBeVisible();
-  await page.getByRole('button', { name: 'Log out' }).click();
+  await account.click();
+  await page.getByTestId('account-menu-logout').click();
   await expect(page.getByRole('heading', { name: 'Git for agents.' })).toBeVisible({
     timeout: 10_000,
   });

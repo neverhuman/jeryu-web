@@ -1,8 +1,8 @@
 // GlobalHeader.tsx — top bar (W-FE-01).
 //
-// Owns, left to right: the brand (the way home), where you are (inside a
-// repository only), which family is in scope, one search-or-jump control, the
-// live pill and the account.
+// Owns, left to right: the brand (the way home), the repository switcher
+// (inside a repository only), which family is in scope, one search-or-jump
+// control, the live pill and the account menu.
 // Each child is its own file so the shell layout stays scannable.
 
 import { Menu, Search } from 'lucide-react';
@@ -14,7 +14,7 @@ import { useBootstrap } from '../hooks/useBootstrap';
 import { useRealtimeStore } from '../stores/realtimeStore';
 import { useCommandStore } from '../stores/commandStore';
 import { RepoSwitcher } from './RepoSwitcher';
-import { UserMenu } from './UserMenu';
+import { AccountMenu } from './AccountMenu';
 
 interface GlobalHeaderProps {
   /** Opens the off-canvas navigation. The button that calls it is shown only
@@ -82,7 +82,7 @@ export function GlobalHeader({ onOpenNav }: GlobalHeaderProps = {}): JSX.Element
       <span className="sr-only" role="status" aria-atomic="true" aria-label={liveNameFor(status)}>
         {liveNameFor(status)}
       </span>
-      <UserMenu
+      <AccountMenu
         login={bootstrap.data?.viewer.login ?? 'Loading…'}
         displayName={bootstrap.data?.viewer.display_name ?? null}
       />

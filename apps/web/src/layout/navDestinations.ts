@@ -22,6 +22,7 @@ import {
   FolderGit2,
   GitMerge,
   Layers,
+  LifeBuoy,
   Rocket,
   ServerCog,
   Share2,
@@ -31,6 +32,7 @@ import {
 } from 'lucide-react';
 
 import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
+import { HELP_PATH } from '../pages/helpPath';
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
 import { WIKI_PATH } from '../pages/wiki/wikiModel';
@@ -66,6 +68,13 @@ export interface NavDestination {
   aliases?: string[];
   /** Extra words the palette and `/search` match on. */
   keywords: string[];
+  /**
+   * One line of "use this when…": the question this page answers, said on the
+   * page itself (see `UseThisWhen`) and on Help. Every `system` destination
+   * carries one — those pages are read when something is off, by somebody who
+   * has to pick the right one first.
+   */
+  useWhen?: string;
   /** Hidden from the nav and the palette unless the viewer is an administrator. */
   adminOnly?: boolean;
   group: NavGroup;
@@ -191,6 +200,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     aliases: ['g f'],
     // `runners` is the page's name; the rest is what a reader might type for it.
     keywords: ['runners', 'workers', 'utilization', 'saturation', 'health'],
+    useWhen:
+      'Use this when work is queued and nothing is running: it says which pool has slots left.',
     group: 'system',
   },
   {
@@ -201,6 +212,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     paletteIcon: 'brain',
     shortcut: 'g i',
     keywords: ['jmcp', 'control-plane', 'priority', 'graph'],
+    useWhen:
+      'Use this when you want one snapshot of the whole forge: what it knows, and how fresh.',
     group: 'system',
     // Dependencies lives under /intelligence and is its own destination.
     end: true,
@@ -213,6 +226,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     paletteIcon: 'share-2',
     shortcut: 'g e',
     keywords: ['dependencies', 'dependents', 'graph', 'crates', 'packages', 'split', 'bump'],
+    useWhen:
+      'Use this when a bump has to travel: it shows which repositories a change reaches, and in which order.',
     group: 'system',
   },
   {
@@ -223,6 +238,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     paletteIcon: 'shield-check',
     shortcut: 'g q',
     keywords: ['quality', 'gate', 'jankurai', 'proof', 'score', 'findings', 'dispute'],
+    useWhen:
+      'Use this when a score surprises you: it shows what the gate would have blocked, and who disagreed.',
     group: 'system',
   },
   {
@@ -243,7 +260,21 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
       'approve',
       'adoption',
     ],
+    useWhen:
+      'Use this when the same code keeps being written twice: it names the clusters and who has adopted the shared tool.',
     group: 'system',
+  },
+  {
+    // Reached from the account menu and the palette, like Settings: it is about
+    // using the app rather than about the forge's work.
+    id: 'nav.help',
+    label: 'Help',
+    path: HELP_PATH,
+    icon: LifeBuoy,
+    paletteIcon: 'life-buoy',
+    shortcut: 'g h',
+    keywords: ['help', 'docs', 'documentation', 'how to', 'getting started', 'guide', 'support'],
+    group: 'account',
   },
   {
     // The nav calls this page Settings; the palette says the same name.
@@ -269,6 +300,11 @@ export function visibleDestinations(
   isAdmin: boolean
 ): NavDestination[] {
   return destinations.filter((d) => isAdmin || !d.adminOnly);
+}
+
+/** One destination by id, or null when nothing in the registry has it. */
+export function destinationById(id: string): NavDestination | null {
+  return NAV_DESTINATIONS.find((destination) => destination.id === id) ?? null;
 }
 
 /** What the palette calls this destination, and the overlay with it. */

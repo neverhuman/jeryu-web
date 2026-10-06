@@ -5,7 +5,7 @@
  *   - light CSS reset (border-box, margin 0, line-height, smoothing)
  *   - body typography wired to design tokens
  *   - selection + focus-visible styling
- *   - utility classes: .sr-only, .font-mono, .text-muted
+ *   - utility classes: .sr-only, .font-mono, .text-muted, .form-input
  *   - .markdown-body skeleton consumed by W-B-08 sanitized HTML output
  *   - .skeleton pulse helper for loading states
  *
@@ -187,6 +187,28 @@ body::before {
 /* -------------------------------------------------------------------------
  * Utilities
  * --------------------------------------------------------------------- */
+
+/* One look for every text field in the app: the reset above strips the
+   browser's own box, so a bare input is an invisible line until it says it is
+   a field. Put `.form-input` on any input, select or textarea a page renders
+   itself rather than giving each page its own box. */
+.form-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-fg-primary);
+}
+
+.form-input::placeholder {
+  color: var(--color-fg-muted);
+}
+
+.form-input:hover {
+  border-color: var(--color-border-strong);
+}
 
 /* Visually hidden but accessible to assistive tech. */
 .sr-only {

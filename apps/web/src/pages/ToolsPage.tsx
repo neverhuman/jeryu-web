@@ -21,6 +21,8 @@ import {
   formatCount,
   formatScannedAt,
 } from './tools';
+import { UseThisWhen } from '../layout/UseThisWhen';
+
 import './page.css';
 import './ToolsPage.css';
 import { SharedToolsTabs } from './sharedTools/SharedToolsTabs';
@@ -67,6 +69,7 @@ export function ToolsPage(): JSX.Element {
           shared tool would save. Propose a cluster to send it to Proposals;
           the scan re-runs on its own every day.
         </p>
+        <UseThisWhen id="nav.shared-tools" />
         {scan.startError ? (
           <p className="tools-scan__error">{scan.startError.message}</p>
         ) : null}

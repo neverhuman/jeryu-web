@@ -18,6 +18,8 @@ import { ActivityPage } from '../pages/activity';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { FleetPage } from '../pages/FleetPage';
 import { ForgeLinkRedirect } from '../pages/ForgeLinkRedirect';
+import { HelpPage } from '../pages/HelpPage';
+import { HELP_PATH } from '../pages/helpPath';
 import { ReleasesPage, ReleasesRoute } from '../pages/ReleasesPage';
 import { DependenciesPage, DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { IntelligencePage } from '../pages/IntelligencePage';
@@ -91,6 +93,9 @@ export const router = createBrowserRouter([
       { path: 'shared-tools/adoption', element: <ToolFleetPage /> },
       { path: 'shared-tools/adoption/:tool', element: <ToolFleetToolPage /> },
       { path: 'settings', element: <AdminSettingsPage /> },
+      // How to get around: the keys, which System page answers what, and where
+      // the account controls are.
+      { path: HELP_PATH.slice(1), element: <HelpPage /> },
       // The internal wiki: the repository chosen in Settings, read as pages.
       { path: 'wiki', element: <WikiPage /> },
       { path: 'wiki/*', element: <WikiPage /> },

@@ -2,6 +2,19 @@
 
 ## Unreleased
 - The signed-out story shows the ink dragon and a waitlist for email, name, and what someone wants from JeRyu. A new address and a repeat share one receipt, the fields clear after it, and a short privacy line sits under the form (wording pending). Those colors stay on that screen. Log in is the same session form, and joining the waitlist does not open an account.
+- The account control at the top right is a menu: Settings, the theme, the keyboard shortcuts,
+  Help and — at the bottom — Log out. It opens with Enter, Space or ↓, walks with the arrow keys
+  and closes on Escape, so logging out no longer means a trip to the foot of Settings, and the
+  header names the viewer once instead of saying "Logged in · name" beside a cog.
+- The header repository chip is a real switcher: it names the repository you are in and opens a
+  typeahead over the rest, the repositories of the family in scope first. Typing part of a name
+  and pressing Enter lands on that repository; the list is fetched the first time it is opened.
+- There is a Help page (`/help`, `g h`), in the account menu and the palette: the keys, the daily
+  pages, which System page answers which question, and where the account controls live.
+- Each System page now carries one line of "use this when…" under its title, written once in the
+  nav registry beside the label and the chord, so Help and the page say the same sentence.
+- One `.form-input` style for text fields the app renders itself; the Search page's box uses it
+  rather than the browser's bare line.
 - Every "needs you" count on screen is now one derivation of one list. The nav badge, the live
   activity dock, the Needs you header and each page's "Waiting on you in <area>" strip all count
   `urgentAttention` / `urgentInArea` from `GET /api/v1/attention`: the dock no longer counts

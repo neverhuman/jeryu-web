@@ -548,3 +548,24 @@
   font-size: var(--font-size-sm);
   margin: 0;
 }
+
+/* The one line under a System page's title: when to come here (see
+   layout/UseThisWhen). Quieter than the subtitle beside it — it orients a
+   reader who opened the wrong page, rather than describing the contents. */
+.page__use-when {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+/* The search form: one field wide enough to read a query in, and its button. */
+.search-page__form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.search-page__input {
+  max-width: 480px;
+}

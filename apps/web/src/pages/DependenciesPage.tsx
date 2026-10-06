@@ -11,6 +11,7 @@ import {
   useGraphViewState,
 } from './intelligence';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
 import './IntelligencePage.css';
@@ -44,6 +45,7 @@ export function DependenciesPage(): JSX.Element {
           each edge coloured by the pin behind it: where a re-pin wave has
           landed and where it has not.
         </p>
+        <UseThisWhen id="nav.dependencies" />
       </header>
 
       <section className="page__section" aria-labelledby="dependencies-graph">

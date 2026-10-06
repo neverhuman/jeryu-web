@@ -340,51 +340,99 @@ a.global-header__live:hover {
   min-width: 0;
 }
 
-.global-header__user {
+.account-menu {
+  position: relative;
+}
+
+.account-menu__trigger {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
-  height: 28px;
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg-2);
-  border: 1px solid var(--color-border-subtle);
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-xs);
-  min-width: 0;
-}
-
-.global-header__user-prefix {
-  color: var(--color-fg-muted);
-  white-space: nowrap;
-}
-
-.global-header__user-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
-  color: var(--color-fg-primary);
-}
-
-.global-header__settings {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
   height: 32px;
   border-radius: var(--radius-md);
   background-color: var(--color-bg-2);
   border: 1px solid var(--color-border-subtle);
-  color: var(--color-fg-secondary);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.account-menu__trigger:hover,
+.account-menu__trigger.is-open {
+  border-color: var(--color-border-strong);
+}
+
+.account-menu__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.account-menu__panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 220px;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
+}
+
+.account-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  text-align: left;
   cursor: pointer;
 }
 
-.global-header__settings:hover,
-.global-header__settings.is-active {
-  color: var(--color-fg-primary);
-  border-color: var(--color-border-strong);
+.account-menu__item:hover,
+.account-menu__item:focus-visible {
+  background-color: var(--color-bg-2);
 }
+
+/* The theme rows are one set: a label, then a row per theme. */
+.account-menu__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) 0;
+  margin: var(--space-1) 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.account-menu__group-label {
+  padding: 0 var(--space-3);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.account-menu__item--radio[aria-checked='true'] {
+  color: var(--color-accent-primary);
+}
+
+/* Log out is the one press here nobody makes by accident. */
+.account-menu__item--human {
+  color: var(--color-accent-danger);
+}
+
 
 /* Narrow header: drop words before anything overlaps or clips. Every control
    keeps its accessible name; only decoration goes. */
@@ -393,10 +441,6 @@ a.global-header__live:hover {
 }
 
 @media (max-width: 900px) {
-  .global-header__user-prefix {
-    display: none;
-  }
-
   .global-header__cmdk {
     min-width: 0;
     flex: 0 1 240px;
@@ -432,7 +476,7 @@ a.global-header__live:hover {
     padding: 0 var(--space-2);
   }
 
-  .global-header__user-name {
+  .account-menu__name {
     max-width: 72px;
   }
 
@@ -703,6 +747,12 @@ a.global-header__live:hover {
 /* RepoSwitcher ------------------------------------------------------- */
 
 .repo-switcher {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.repo-switcher__chip {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -715,7 +765,66 @@ a.global-header__live:hover {
   font-size: var(--font-size-sm);
   cursor: pointer;
   min-width: 0;
-  text-decoration: none;
+}
+
+.repo-switcher__chip:hover,
+.repo-switcher__chip.is-open {
+  border-color: var(--color-border-strong);
+}
+
+/* The typeahead hangs under the chip, over the page. */
+.repo-switcher__panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: var(--z-dropdown);
+  width: min(360px, 80vw);
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+}
+
+.repo-switcher__input {
+  width: 100%;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.repo-switcher__list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.repo-switcher__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.repo-switcher__item[data-selected='true'] {
+  background-color: var(--color-accent-primary-bg);
+  color: var(--color-accent-primary);
+}
+
+.repo-switcher__family {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.repo-switcher__note {
+  padding: var(--space-3);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
 }
 
 .repo-switcher__label {

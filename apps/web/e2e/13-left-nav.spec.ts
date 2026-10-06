@@ -268,14 +268,15 @@ test.describe('Primary left navigation', () => {
     await expect(nav.getByRole('button', { name: 'System' })).toBeDisabled();
     await expect(nav.getByRole('link', { name: 'Shared tools', exact: true })).toHaveAttribute('aria-current', 'page');
 
-    // Settings is not a left-nav destination: it opens from the top-right
-    // account control, and ends with the Session section that holds Log out.
+    // Settings is not a left-nav destination: it is the first entry of the
+    // top-right account menu, and ends with the Session section.
     await expect(
       page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Settings', exact: true })
     ).toHaveCount(0);
+    await page.getByTestId('account-menu-button').click();
     await Promise.all([
       page.waitForURL(/\/settings$/),
-      page.getByRole('banner').getByRole('link', { name: 'Settings' }).click(),
+      page.getByTestId('account-menu-settings').click(),
     ]);
     await shell.assertShellLoaded();
     await expect(page.getByTestId('settings-page')).toBeVisible();

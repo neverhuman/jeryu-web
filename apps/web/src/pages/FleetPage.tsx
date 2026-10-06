@@ -64,6 +64,7 @@ import {
 } from './fleet/releaseIndex';
 import { RUNNERS_PARAM } from './releaseBoard/links';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
 import './FleetPage.css';
@@ -180,6 +181,7 @@ export function FleetPage(): JSX.Element {
           The machines that gate pull requests and the agents that review and
           merge them, from their heartbeats.
         </p>
+        <UseThisWhen id="nav.runners" />
         {build ? (
           <p
             className={`fleet__build${build.webMismatch ? ' fleet__tone--warn' : ''}`}

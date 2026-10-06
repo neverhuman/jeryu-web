@@ -8,7 +8,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { router } from '../../app/router';
 import { useCommandStore } from '../../stores/commandStore';
-import { NAV_DESTINATIONS, navGroup, visibleDestinations } from '../navDestinations';
+import {
+  NAV_DESTINATIONS,
+  destinationById,
+  navGroup,
+  visibleDestinations,
+} from '../navDestinations';
 import { useShellCommands } from '../useShellCommands';
 
 function registeredCommands() {
@@ -72,6 +77,18 @@ describe('NAV_DESTINATIONS', () => {
       navGroup(group, true).map((d) => d.id)
     );
     expect(grouped.sort()).toEqual(NAV_DESTINATIONS.map((d) => d.id).sort());
+  });
+
+  it('gives every System destination its one line of "use this when…"', () => {
+    for (const destination of navGroup('system', true)) {
+      expect(destination.useWhen, destination.label).toMatch(/^Use this when /);
+      expect(destination.useWhen, destination.label).toMatch(/[.!?]$/);
+    }
+  });
+
+  it('finds a destination by its id, and nothing by an id nobody has', () => {
+    expect(destinationById('nav.runners')?.label).toBe('Runners');
+    expect(destinationById('nav.nowhere')).toBeNull();
   });
 
   it('keeps an admin-only destination from everyone else', () => {

@@ -27,6 +27,7 @@ describe('useShellCommands', () => {
       'nav.dependencies',
       'nav.quality-gate',
       'nav.shared-tools',
+      'nav.help',
       'nav.settings',
       'nav.work-add',
       'nav.activity-wall',
@@ -58,6 +59,7 @@ describe('useShellCommands', () => {
       'nav.dependencies',
       'nav.quality-gate',
       'nav.shared-tools',
+      'nav.help',
       'nav.settings',
       'help.shortcuts',
       'family.switch',
@@ -122,6 +124,7 @@ describe('useShellCommands', () => {
       'g e': '/intelligence/dependencies',
       'g q': '/quality-gate',
       'g t': '/shared-tools',
+      'g h': '/help',
       'g s': '/settings',
     });
   });

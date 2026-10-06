@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 
+import { ActionButton } from '../../components/action/ActionButton';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { useSearch } from '../../hooks/useSearch';
 import { useCommandStore } from '../../stores/commandStore';
@@ -51,15 +52,18 @@ export function SearchPage(): JSX.Element {
           page is the search: copy it to share the results.
         </p>
       </header>
-      <form role="search" onSubmit={submit}>
+      <form role="search" className="search-page__form" onSubmit={submit}>
         <input
           type="search"
+          className="form-input search-page__input"
           aria-label="Search query"
           placeholder="A repository, a pull request, a todo, or name#12"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-        />{' '}
-        <button type="submit">Search</button>
+        />
+        <ActionButton type="submit" variant="primary">
+          Search
+        </ActionButton>
       </form>
 
       {query === '' ? (

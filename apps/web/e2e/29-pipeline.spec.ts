@@ -293,7 +293,7 @@ test.describe('Pipeline visibility', () => {
       expect(overflow, `header overflows at ${width}px`).toBeLessThanOrEqual(0);
       // Every header control is still there, by name, however small it got.
       await expect(page.getByRole('button', { name: /^Search or jump to/ })).toBeVisible();
-      await expect(page.getByRole('banner').getByRole('link', { name: 'Settings' })).toBeVisible();
+      await expect(page.getByTestId('account-menu-button')).toBeVisible();
       await expect(page.getByRole('banner').getByRole('status')).toHaveAccessibleName(/^Live updates /);
       // The action stacks under the text instead of squeezing the title to a word per line.
       const title = page

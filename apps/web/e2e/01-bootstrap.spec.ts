@@ -4,7 +4,7 @@
 //   1. BFF cold-load: `GET /api/v1/bootstrap` returns a valid WebBootstrap
 //      envelope (Phase 1 contract — always runs).
 //   2. SPA shell paint: navigate to `/`, expect the AppShell layout to
-//      mount, the viewer's login to surface in the GlobalHeader / UserMenu,
+//      mount, the viewer's login to surface in the GlobalHeader's account menu,
 //      the live indicator to leave "Idle" (transition through connecting /
 //      reconnecting / open), and the shipped root destination to render.
 //
@@ -77,8 +77,8 @@ test.describe('Bootstrap + Dashboard (W-T-09)', () => {
     // 1. AppShell layout mounts (`<div class="app-shell">`).
     await shell.assertShellLoaded();
 
-    // 2. GlobalHeader surfaces the viewer's login via the UserMenu.
-    // UserMenu renders `displayName ?? login` so we assert the display
+    // 2. GlobalHeader surfaces the viewer's login via the AccountMenu.
+    // AccountMenu renders `displayName ?? login` so we assert the display
     // name from the bootstrap mock is visible in the header.
     await expect(page.locator('.global-header')).toContainText('E2E Tester', {
       timeout: 5_000,
