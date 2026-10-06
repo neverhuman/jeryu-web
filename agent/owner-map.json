@@ -33,7 +33,8 @@
     "tsconfig.json": "jeryu-web",
     "ux-qa/": "jeryu-web",
     "agent/tool-adoption.toml": "agent",
-    "db/": "jeryu-web"
+    "db/": "jeryu-web",
+    "tools/": "ops"
   },
   "workspace": "jeryu-web"
 }
