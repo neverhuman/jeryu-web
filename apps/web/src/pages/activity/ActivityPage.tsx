@@ -1,5 +1,6 @@
 // ActivityPage.tsx — `/activity`: the pipeline event log, newest first, with a
-// live tail, URL-held filters and "load older". A reader who has scrolled down
+// live tail, URL-held filters and older pages, which arrive as the reader
+// nears the end of the list and are also a button. A reader who has scrolled down
 // or opened a row is not pushed by the tail: rows that land wait above the
 // fold behind a "N new events" pill until they ask for them.
 // The last-24-hour strip is on every Activity page; `?wall=1` is the wall mode, which shows the same five
@@ -48,6 +49,7 @@ import {
   type HistogramRangeId,
 } from './histogramModel';
 import { useAtPageTop, useHeldRows } from './holdModel';
+import { useOlderOnReach } from './olderModel';
 import { ActivityHistogram } from './ActivityHistogram';
 import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
@@ -151,6 +153,22 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     events.map((event) => event.seq),
     filterId,
     still
+  );
+
+  // Under the list: coming into view is the reader asking for the next older
+  // page, so they do not have to reach the bottom and press a button. The
+  // button stays for the keyboard, for a browser without an observer, and for
+  // retrying a page that failed.
+  const endOfList = useRef<HTMLDivElement | null>(null);
+  useOlderOnReach(
+    endOfList,
+    {
+      enabled: !wall,
+      hasOlder: feed.hasOlder,
+      loading: feed.loadingOlder,
+      failed: feed.olderError !== null,
+    },
+    feed.loadOlder
   );
 
   // The top of the page: where wall mode keeps the newest event, and where
@@ -299,7 +317,20 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                 ))}
               </Fragment>
             ))}
+            {/* Where the next page will land, so the list does not look
+                finished while it is still being fetched. */}
+            {!wall && feed.loadingOlder ? (
+              <li
+                className="activity-row activity__older-pending"
+                data-testid="activity-older-pending"
+                aria-hidden="true"
+              >
+                <span className="activity__older-bar skeleton" />
+                <span className="activity__older-bar activity__older-bar--wide skeleton" />
+              </li>
+            ) : null}
           </ol>
+          {wall ? null : <div ref={endOfList} data-testid="activity-older-sentinel" aria-hidden="true" />}
           {wall ? null : feed.hasOlder ? (
             <ActionButton variant="ghost" disabled={feed.loadingOlder} onClick={feed.loadOlder}>
               {feed.loadingOlder ? 'Loading…' : 'Load older'}

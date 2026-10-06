@@ -29,7 +29,9 @@ export function recordHeaders(headers: HeadersInit | undefined): Record<string, 
   return out;
 }
 
-export type Override = (req: Recorded) => Response | undefined;
+/** A page's own answer for one request. A promise lets a test hold a request
+ *  open and assert on what the page shows while it is in flight. */
+export type Override = (req: Recorded) => Response | Promise<Response> | undefined;
 
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

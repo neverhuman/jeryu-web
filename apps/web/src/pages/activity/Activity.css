@@ -979,3 +979,20 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* Where the next older page will land while it is being fetched: one row of
+   the list, drawn as the shapes the events will take. */
+.activity__older-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.activity__older-bar {
+  height: 0.8em;
+  width: 18%;
+}
+
+.activity__older-bar--wide {
+  width: 48%;
+}
