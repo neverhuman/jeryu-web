@@ -69,6 +69,16 @@ textarea {
   border: none;
 }
 
+/* The open list of a native dropdown is painted by the browser with the
+   option's own colors. The reset above leaves the select transparent, so the
+   list fell back to the browser's light default under the theme's light text.
+   Theme tokens repaint it whenever the theme changes. */
+select option,
+select optgroup {
+  background-color: var(--color-bg-1);
+  color: var(--color-fg-primary);
+}
+
 button {
   cursor: pointer;
 }
