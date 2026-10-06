@@ -422,7 +422,10 @@ export const ACTIVITY_CHIPS: readonly ActivityChip[] = [
   // A verdict is `pr.review`; the reviewer's start/finish beats are `review.*`.
   { id: 'reviews', label: 'Reviews', kind: 'review.,pr.review' },
   { id: 'pulls', label: 'Pull requests', kind: 'pr.' },
-  { id: 'merges', label: 'Merges', kind: 'queue.' },
+  // A merge is reported by whichever road it took: `queue.*` through the merge
+  // queue, `pr.merged` from a direct merge. Naming only the queue made the chip
+  // go quiet whenever the queue was not in the way.
+  { id: 'merges', label: 'Merges', kind: 'queue.,pr.merged' },
   { id: 'releases', label: 'Releases', kind: 'release.' },
   { id: 'deploys', label: 'Deploys', kind: 'deploy.' },
 ];

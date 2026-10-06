@@ -19,6 +19,7 @@ import {
   hasActiveFilters,
   hasMoreFilters,
   isWallMode,
+  kindPatterns,
   matchesKind,
   maxSeq,
   mergeEvents,
@@ -331,6 +332,51 @@ describe('matchesKind', () => {
     expect(matchesKind('review.started', 'review.,pr.review')).toBe(true);
     expect(matchesKind('pr.merged', 'review.,pr.review')).toBe(false);
     expect(matchesKind('anything', '')).toBe(true);
+  });
+
+  // Every kind the pipeline emits, from jeryu-deploy's `docs/pipeline-events.md`:
+  // the forge's own emit points, plus what the queue runner, auto-stage,
+  // auto-pin and pr-gate post. A chip naming a kind missing from this list asks
+  // for something nothing produces, and shows an empty or frozen feed.
+  const EMITTED_KINDS = [
+    'todo.filed', 'todo.action', 'todo.claimed', 'todo.attempt_finished', 'todo.merged',
+    'todo.waiting_on_unmerged',
+    'worker.stage', 'worker.error',
+    'shift.pr_opened', 'shift.exhausted',
+    'pr.opened', 'pr.review', 'pr.approved', 'pr.merged', 'pr.ready_for_review', 'pr.draft',
+    'pr.skipped',
+    'queue.enqueued', 'queue.building', 'queue.landed', 'queue.failed', 'queue.dequeued',
+    'queue.refused',
+    'gate.started', 'gate.finished', 'gate.log', 'review.started', 'review.finished',
+    'release.staged', 'release.stage_failed',
+    'pin.bump_opened', 'pin.bump_failed',
+    'deploy.created', 'deploy.status',
+  ];
+
+  it('gives every chip kinds the pipeline emits', () => {
+    for (const chip of ACTIVITY_CHIPS) {
+      if (!chip.kind) continue;
+      for (const pattern of kindPatterns(chip.kind)) {
+        const covered = EMITTED_KINDS.some((kind) => matchesKind(kind, pattern));
+        expect([chip.id, pattern, covered]).toEqual([chip.id, pattern, true]);
+      }
+    }
+  });
+
+  it('catches a merge whichever road it took: the queue, or a merge straight onto the base', () => {
+    const merges = ACTIVITY_CHIPS.find((chip) => chip.id === 'merges');
+    const filters = parseActivityFilters(applyChip(new URLSearchParams(), merges!));
+    expect(activeChip(filters)).toBe('merges');
+    // Several kinds, so the server sends everything and the narrowing happens here.
+    expect(filtersToQuery(filters).kind).toBeUndefined();
+    const events = [
+      pipelineEvent({ seq: 1, kind: 'queue.enqueued' }),
+      pipelineEvent({ seq: 2, kind: 'pr.merged' }),
+      pipelineEvent({ seq: 3, kind: 'pr.opened' }),
+      pipelineEvent({ seq: 4, kind: 'queue.landed' }),
+      pipelineEvent({ seq: 5, kind: 'todo.merged' }),
+    ];
+    expect(visibleEvents(events, filters.kind).map((e) => e.seq)).toEqual([1, 2, 4]);
   });
 
   it('asks the server for everything when a chip spans several kinds, and narrows here', () => {
