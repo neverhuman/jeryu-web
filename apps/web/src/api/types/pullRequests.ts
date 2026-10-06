@@ -76,9 +76,27 @@ export interface PullRequestCheck {
   required?: boolean;
   /** Why a check does not block the merge; absent when it is required. */
   advisory?: CheckAdvisory | null;
-  /** RFC3339 timestamps. */
+  /**
+   * When the newest run started (RFC3339): a check run's own start, or the
+   * `pending` status that opened the run; null when the forge cannot tell.
+   */
   started_at: string | null;
+  /** When the newest run concluded; null while it is pending. */
   completed_at: string | null;
+  /** The gate runner working on this check now; absent when none reports it. */
+  running?: RunningGate | null;
+}
+
+/** A gate runner's pass on a PR head, with what passes of its recipe usually take. */
+export interface RunningGate {
+  runner_id: string;
+  recipe: string;
+  started_at: string;
+  /** Median of the recent complete passes, in seconds; null with fewer than three. */
+  typical_seconds: number | null;
+  /** 90th percentile of the recent complete passes, in seconds. */
+  slow_seconds: number | null;
+  samples: number;
 }
 
 /** Why a check is not required, said on its own row. */
@@ -99,6 +117,8 @@ export interface PullRequestChecks {
   pending: number;
   skipped: number;
   checks: PullRequestCheck[];
+  /** The forge's clock when it answered (RFC3339). Absent from an older forge. */
+  server_time?: string;
 }
 
 /** Wire shape of `GET /pulls/{number}/threads`. */

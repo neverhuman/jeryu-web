@@ -31,5 +31,9 @@ export function usePrChecks(
       typeof prNumber === 'string' &&
       prNumber.length > 0,
     staleTime: 10_000,
+    // While a check is still pending, look again every 30 s: the live nudge
+    // usually gets there first, and this covers a socket that is down.
+    refetchInterval: (query) =>
+      (query.state.data?.pending ?? 0) > 0 ? 30_000 : false,
   });
 }

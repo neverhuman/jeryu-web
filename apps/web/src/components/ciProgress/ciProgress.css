@@ -1,0 +1,132 @@
+/* ciProgress.css — the running-pass bar (CiProgress.tsx). */
+
+.ci-progress {
+  --ci-progress-tone: var(--color-accent-primary);
+  --ci-progress-tone-bg: var(--color-accent-primary-bg);
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ci-progress--over {
+  --ci-progress-tone: var(--color-accent-warning);
+  --ci-progress-tone-bg: var(--color-accent-warning-bg);
+}
+
+.ci-progress--slow {
+  --ci-progress-tone: var(--color-accent-danger);
+  --ci-progress-tone-bg: var(--color-accent-danger-bg);
+}
+
+.ci-progress--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ci-progress--compact {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ci-progress__track {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 96px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: var(--ci-progress-tone-bg);
+}
+
+.ci-progress--inline .ci-progress__track {
+  width: 96px;
+  flex: none;
+}
+
+.ci-progress--compact .ci-progress__track {
+  width: 48px;
+  min-width: 48px;
+  flex: none;
+}
+
+.ci-progress--compact .ci-progress__words {
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.ci-progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: inherit;
+  background-color: var(--ci-progress-tone);
+  transition: width 1s linear, background-color 0.4s ease;
+}
+
+/* Running long: the full bar breathes so the row reads as alive, not done. */
+.ci-progress--over .ci-progress__fill,
+.ci-progress--slow .ci-progress__fill {
+  animation: ci-progress-breathe 2.4s ease-in-out infinite;
+}
+
+/* No estimate yet: a band sweeps the track instead of pretending to fill it. */
+.ci-progress--measuring .ci-progress__fill {
+  width: 35%;
+  animation: ci-progress-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes ci-progress-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(290%);
+  }
+}
+
+@keyframes ci-progress-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.ci-progress__words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: 1.35;
+}
+
+.ci-progress__headline {
+  color: var(--ci-progress-tone);
+  font-weight: 600;
+}
+
+.ci-progress__detail {
+  color: var(--color-fg-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ci-progress__fill {
+    transition: none;
+  }
+  .ci-progress--measuring .ci-progress__fill {
+    width: 100%;
+    opacity: 0.45;
+    transform: none;
+  }
+  .ci-progress--over .ci-progress__fill,
+  .ci-progress--slow .ci-progress__fill {
+    animation: none;
+  }
+}

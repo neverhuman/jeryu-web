@@ -11,6 +11,8 @@
 //   * permission    — 403 from the list endpoint
 //   * success       — the repository table.
 
+import { RunningPassesContext } from '../components/ciProgress/runningPasses';
+import { useRunningPasses } from '../hooks/useRunningPasses';
 import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -90,6 +92,8 @@ export function RepositoriesPage({
     [filter]
   );
   const list = useRepositories(query);
+  // Repositories a gate slot is working on now, for the Status column's bar.
+  const runningPasses = useRunningPasses();
 
   const closeDialog = (): void => {
     setDialogOpen(false);
@@ -210,18 +214,20 @@ export function RepositoriesPage({
         </div>
       </header>
 
-      <RepositoriesBody
-        loading={list.isPending}
-        error={list.error}
-        repos={repos}
-        sort={filter.sort}
-        onSortChange={(sort) => setFilter((prev) => ({ ...prev, sort }))}
-        onClearFilters={() => {
-          setFilter(DEFAULT_FILTER);
-          setSearchInput('');
-          scope.clearFamily();
-        }}
-      />
+      <RunningPassesContext.Provider value={runningPasses}>
+        <RepositoriesBody
+          loading={list.isPending}
+          error={list.error}
+          repos={repos}
+          sort={filter.sort}
+          onSortChange={(sort) => setFilter((prev) => ({ ...prev, sort }))}
+          onClearFilters={() => {
+            setFilter(DEFAULT_FILTER);
+            setSearchInput('');
+            scope.clearFamily();
+          }}
+        />
+      </RunningPassesContext.Provider>
 
       <CreateRepoDialog
         hosts={facets?.hosts ?? []}

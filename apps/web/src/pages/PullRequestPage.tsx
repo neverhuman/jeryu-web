@@ -51,7 +51,8 @@ import { useSetPullState } from '../hooks/useSetPullState';
 import { useSetPullDraft } from '../hooks/useSetPullDraft';
 import { useSubmitReview } from '../hooks/useSubmitReview';
 import { usePullRequest } from '../hooks/usePullRequest';
-import { usePrChecks } from '../hooks/usePrChecks';
+import { prChecksQueryKey, usePrChecks } from '../hooks/usePrChecks';
+import { repoScope, useRunnerChangeNudge } from '../hooks/useRunnerChangeNudge';
 import { usePrDiff } from '../hooks/usePrDiff';
 import { usePrThreads } from '../hooks/usePrThreads';
 import { usePullCommits } from '../hooks/usePullCommits';
@@ -131,6 +132,12 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const detail = usePullRequest(repoId, prNumber);
   const diff = usePrDiff(repoId, prNumber);
   const checks = usePrChecks(repoId, prNumber);
+  // A gate starting or finishing on this repository refetches the checks.
+  useRunnerChangeNudge(
+    repoScope(fullName),
+    prChecksQueryKey(repoId, prNumber),
+    Boolean(checks.data?.server_time)
+  );
   const threads = usePrThreads(repoId, prNumber);
   // The commits come from the GitHub-shaped edge, which addresses the
   // repository by owner/name rather than by the resolved repo id.
@@ -478,6 +485,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           <div data-testid="pr-checks-tab">
             <ChecksPanel
               checks={checks.data ?? null}
+              receivedAtMs={checks.dataUpdatedAt}
               isLoading={checks.isPending}
               failuresBlockMerge={!settled && failingChecksBlockMerge(data)}
               className="pr-page__panel"

@@ -12,6 +12,10 @@
 // The panel header doubles as a summary
 // (e.g. "3 passing · 1 failing · 0 pending").
 //
+// A pending check shows how its run is going (CiProgress): against the
+// forge's estimate when a gate runner reports it, otherwise as elapsed time
+// since its `pending` post. The clock is the forge's, from `server_time`.
+//
 // A check the forge names by UUID ("Attempt 428377c2-6190-…") is shown with
 // the id shortened; the whole id stays in the row's `title` and in the link
 // to the run, so it is still readable and still copyable.
@@ -31,6 +35,9 @@ import {
 } from 'lucide-react';
 
 import type { PullRequestCheck, PullRequestChecks } from '../../api/types';
+import { useServerNow } from '../../hooks/useServerNow';
+import { CiProgress } from '../ciProgress/CiProgress';
+import type { DurationEstimate } from '../ciProgress/ciProgressModel';
 import { fullIdTitle, shortenIds } from '../identifiers/shortId';
 
 import './merge.css';
@@ -138,16 +145,41 @@ export interface ChecksPanelProps {
    * in a neutral tone with a note instead of as red blockers.
    */
   failuresBlockMerge?: boolean;
+  /** When `checks` was fetched, to line the page's clock up with `server_time`. */
+  receivedAtMs?: number;
   className?: string;
+}
+
+/** When a pending check's run started and what it should take, or null. */
+export function pendingRun(
+  check: PullRequestCheck
+): { startedAt: string; estimate: DurationEstimate | null } | null {
+  if (toneFor(check) !== 'pending') return null;
+  const running = check.running;
+  if (running) {
+    const estimate =
+      running.typical_seconds !== null && running.slow_seconds !== null
+        ? {
+            typicalSeconds: running.typical_seconds,
+            slowSeconds: running.slow_seconds,
+            samples: running.samples,
+          }
+        : null;
+    return { startedAt: running.started_at, estimate };
+  }
+  return check.started_at ? { startedAt: check.started_at, estimate: null } : null;
 }
 
 export function ChecksPanel({
   checks,
   isLoading = false,
   failuresBlockMerge = true,
+  receivedAtMs = 0,
   className,
 }: ChecksPanelProps): JSX.Element {
   const [expanded, setExpanded] = useState<readonly string[]>([]);
+  const anyRunning = (checks?.checks ?? []).some((check) => pendingRun(check) !== null);
+  const nowMs = useServerNow(checks?.server_time, receivedAtMs, anyRunning);
 
   if (isLoading) {
     return (
@@ -228,6 +260,7 @@ export function ChecksPanel({
             const isOpen = expanded.includes(check.id);
             const bodyId = `check-detail-${check.id}`;
             const Chevron = isOpen ? ChevronDown : ChevronRight;
+            const run = pendingRun(check);
             return (
               <li
                 key={check.id}
@@ -240,7 +273,13 @@ export function ChecksPanel({
                     className={`checks-panel__badge checks-panel__badge--${tone}`}
                     aria-hidden="true"
                   >
-                    <Icon aria-hidden="true" size={14} />
+                    <Icon
+                      aria-hidden="true"
+                      size={14}
+                      className={
+                        rawTone === 'pending' ? 'checks-panel__spin' : undefined
+                      }
+                    />
                   </span>
                   <button
                     type="button"
@@ -272,6 +311,16 @@ export function ChecksPanel({
                     </span>
                   ) : null}
                 </div>
+                {run ? (
+                  <div className="checks-panel__progress">
+                    <CiProgress
+                      startedAt={run.startedAt}
+                      estimate={run.estimate}
+                      nowMs={nowMs}
+                      testId={`check-progress-${check.name}`}
+                    />
+                  </div>
+                ) : null}
                 <div
                   id={bodyId}
                   className="checks-panel__detail"

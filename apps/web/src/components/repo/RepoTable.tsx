@@ -27,6 +27,8 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 
 import type { RepositorySummary } from '../../api/types';
+import { CiProgress } from '../ciProgress/CiProgress';
+import { RunningPassesContext } from '../ciProgress/runningPasses';
 import type { RepoSort } from '../../hooks/useRepositories';
 import { QUALITY_GATE_PATH } from '../../pages/qualityGate/qualityGateModel';
 import {
@@ -96,6 +98,8 @@ const OpenRows = createContext<{
 
 function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
   const { open, toggle } = useContext(OpenRows);
+  const running = useContext(RunningPassesContext);
+  const pass = running.passes.get(`${repo.id.owner}/${repo.id.name}`);
   const expanded = open.has(repo.id.id);
   return (
     <span className="repo-table__status">
@@ -134,6 +138,15 @@ function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
         >
           mirror failing
         </span>
+      ) : null}
+      {pass ? (
+        <CiProgress
+          startedAt={pass.startedAt}
+          estimate={pass.estimate}
+          nowMs={running.nowMs}
+          variant="compact"
+          testId={`repo-gate-progress-${repo.id.name}`}
+        />
       ) : null}
       {repo.running_jobs > 0 ? (
         <span

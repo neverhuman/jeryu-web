@@ -148,6 +148,8 @@ export interface RunnerFabricResponse {
   mirror: MirrorEvidence;
   /** The forge server's own build. Absent from an older forge. */
   forge?: ForgeBuild;
+  /** The forge's clock when it answered (RFC3339). Absent from an older forge. */
+  serverTime?: string;
 }
 
 /** What code the forge itself runs: its release and the commits it was built from. */
@@ -276,6 +278,19 @@ export interface RunnerTaskSummary {
   startedAt: string | null;
   updatedAt: string | null;
   ttyPreview: RunnerTtyPreview;
+  /**
+   * How long a gate or review of this recipe on this repository usually takes,
+   * from its recent passes. Absent with fewer than three, for workcell runs,
+   * and from an older forge.
+   */
+  estimate?: RunnerTaskEstimate | null;
+}
+
+/** The median and 90th percentile of a recipe's recent complete passes, in seconds. */
+export interface RunnerTaskEstimate {
+  typicalSeconds: number;
+  slowSeconds: number;
+  samples: number;
 }
 
 export interface RunnerTtyPreview {

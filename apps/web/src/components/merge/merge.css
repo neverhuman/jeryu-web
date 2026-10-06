@@ -667,6 +667,31 @@
   background-color: var(--color-accent-danger-bg);
   color: var(--color-accent-danger);
 }
+.checks-panel__spin {
+  animation: checks-panel-spin 1.2s linear infinite;
+}
+
+@keyframes checks-panel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checks-panel__spin {
+    animation: none;
+  }
+}
+
+.checks-panel__progress {
+  padding: 0 0 var(--space-1) var(--space-6);
+}
+
+.checks-panel__progress .ci-progress {
+  display: flex;
+  max-width: 360px;
+}
+
 .checks-panel__badge--pending {
   background-color: var(--color-accent-warning-bg);
   color: var(--color-accent-warning);

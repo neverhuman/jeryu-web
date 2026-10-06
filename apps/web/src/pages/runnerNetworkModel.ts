@@ -15,6 +15,7 @@
 // authoritative local node snapshot first, while still deriving a concise view
 // for active/idle availability, task counts, and last-TTY-line previews.
 
+import { durationWords } from '../format/duration';
 import type { Tone } from '../components/tone/tone';
 import type {
   EvidenceState,
@@ -26,6 +27,7 @@ import type {
   RunnerCode,
   RunnerNodeKind,
   RunnerNodeSummary,
+  RunnerTaskEstimate,
   RunnerTaskSummary,
   RunnerTool,
   RunnerTtyPreview,
@@ -78,6 +80,8 @@ export interface RunnerNetworkTask {
   updatedAt: string | null;
   ttyState: EvidenceState;
   lastTtyLine: string | null;
+  /** How long passes of this recipe usually take; null or absent without enough of them. */
+  estimate?: RunnerTaskEstimate | null;
 }
 
 export interface RunnerNetworkNode {
@@ -141,6 +145,22 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 
 function str(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+/** An estimate with both figures as finite numbers, or null. */
+function estimateFromRaw(value: unknown): RunnerTaskEstimate | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const { typicalSeconds, slowSeconds, samples } = record;
+  if (
+    typeof typicalSeconds !== 'number' ||
+    typeof slowSeconds !== 'number' ||
+    !Number.isFinite(typicalSeconds) ||
+    !Number.isFinite(slowSeconds)
+  ) {
+    return null;
+  }
+  return { typicalSeconds, slowSeconds, samples: num(samples) };
 }
 
 function num(value: unknown): number {
@@ -210,6 +230,7 @@ function taskFromRaw(raw: RunnerTaskSummary): RunnerNetworkTask {
     updatedAt: raw.updatedAt,
     ttyState: raw.ttyPreview.state,
     lastTtyLine: lastTtyLine(raw.ttyPreview),
+    estimate: raw.estimate ?? null,
   };
 }
 
@@ -419,7 +440,7 @@ export function runnerNetworkFromResponse(
         code: codeFromRaw(record.code),
         tools: toolsFromRaw(record.tools),
         activeTasks: tasks
-          .map((task) => {
+          .map((task): RunnerTaskSummary | undefined => {
             const taskRecord = asRecord(task);
             if (!taskRecord) return;
             const ttyRecord = asRecord(taskRecord.ttyPreview);
@@ -445,7 +466,8 @@ export function runnerNetworkFromResponse(
                     : 'unknown',
                 lines: strList(ttyRecord?.lines),
               },
-            } satisfies RunnerTaskSummary;
+              estimate: estimateFromRaw(taskRecord.estimate),
+            };
           })
           .filter((task): task is RunnerTaskSummary => task !== undefined),
       }, capacityKnown &&
@@ -638,19 +660,7 @@ export function forgeBuildLine(
   return { text: parts.join(' · '), title: titles.join('\n'), webMismatch };
 }
 
-/** 14 -> "14s", 127 -> "2m 7s", 3780 -> "1h 3m". */
-export function durationWords(totalSeconds: number): string {
-  const seconds = Math.max(0, Math.round(totalSeconds));
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) {
-    const rest = seconds % 60;
-    return rest === 0 ? `${minutes}m` : `${minutes}m ${rest}s`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const restMinutes = minutes % 60;
-  return restMinutes === 0 ? `${hours}h` : `${hours}h ${restMinutes}m`;
-}
+export { durationWords } from '../format/duration';
 
 export interface RowNow {
   /** "idle", "offline", or the verb: "gating" / "reviewing" / "running". */

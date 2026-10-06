@@ -37,7 +37,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { toneModifier } from '../components/tone/tone';
 import { pageWebCommit } from '../build/webCommit';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
-import { useControlPlaneRunners } from '../hooks/useControlPlaneRunners';
+import {
+  CONTROL_PLANE_RUNNERS_QUERY_KEY,
+  useControlPlaneRunners
+} from '../hooks/useControlPlaneRunners';
+import { RUNNERS_SCOPE, useRunnerChangeNudge } from '../hooks/useRunnerChangeNudge';
+import { useServerNow } from '../hooks/useServerNow';
 import { useRunnerReleaseBoards } from '../hooks/useRunnerReleaseBoards';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import {
@@ -108,6 +113,23 @@ export function FleetPage(): JSX.Element {
   const shown = pickedIds.filter((id) => rendered.includes(id));
   const missing = pickedIds.filter((id) => !rendered.includes(id));
   const reducedMotion = usePrefersReducedMotion();
+  // Running passes tick every second on the forge's clock; with none running
+  // the page holds still between fetches.
+  const anyRunning = [
+    ...runnerNetwork.nodes,
+    ...runnerNetwork.reviewers,
+    ...runnerNetwork.audits
+  ].some((node) => node.tasks.length > 0);
+  useRunnerChangeNudge(
+    RUNNERS_SCOPE,
+    CONTROL_PLANE_RUNNERS_QUERY_KEY,
+    Boolean(runnersQuery.data?.serverTime)
+  );
+  const nowMs = useServerNow(
+    runnersQuery.data?.serverTime,
+    runnersQuery.dataUpdatedAt,
+    anyRunning
+  );
   useScrollToFirst(picked, shown[0] ?? null, reducedMotion);
   // Measured against when we fetched the snapshot, so render stays pure.
   const stale =
@@ -226,7 +248,7 @@ export function FleetPage(): JSX.Element {
           <div className="fleet__network-layout" data-testid="fleet-network">
             <RunnerNodeList
               nodes={runnerNetwork.nodes}
-              nowMs={runnersQuery.dataUpdatedAt}
+              nowMs={nowMs}
               places={places}
             />
           </div>
@@ -254,7 +276,7 @@ export function FleetPage(): JSX.Element {
             {reviewers.listed.length > 0 ? (
               <ReviewerList
                 reviewers={reviewers.listed}
-                nowMs={runnersQuery.dataUpdatedAt}
+                nowMs={nowMs}
                 places={places}
               />
             ) : null}
@@ -281,7 +303,7 @@ export function FleetPage(): JSX.Element {
           </h2>
           <AuditList
             audits={runnerNetwork.audits}
-            nowMs={runnersQuery.dataUpdatedAt}
+            nowMs={nowMs}
             places={places}
           />
         </section>
@@ -298,7 +320,7 @@ export function FleetPage(): JSX.Element {
           </h2>
           <AutomationList
             timers={runnerNetwork.automation}
-            nowMs={runnersQuery.dataUpdatedAt}
+            nowMs={nowMs}
             places={places}
           />
         </section>

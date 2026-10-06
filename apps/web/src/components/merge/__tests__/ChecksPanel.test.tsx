@@ -154,3 +154,53 @@ describe('ChecksPanel identifiers', () => {
     expect(screen.getAllByText(ID, { exact: false })).toEqual([link]);
   });
 });
+
+describe('a pending check', () => {
+  const pendingChecks = (running: unknown): PullRequestChecks =>
+    ({
+      total: 1,
+      passing: 0,
+      failing: 0,
+      pending: 1,
+      skipped: 0,
+      server_time: '2026-10-06T12:05:00Z',
+      checks: [
+        {
+          id: 'gate',
+          name: 'widgets/required',
+          kind: 'status',
+          status: 'pending',
+          required: true,
+          started_at: '2026-10-06T12:00:30Z',
+          completed_at: null,
+          running,
+        },
+      ],
+    }) as unknown as PullRequestChecks;
+
+  it('shows the gate runner\'s progress against the usual time', () => {
+    render(
+      <ChecksPanel
+        checks={pendingChecks({
+          runner_id: 'build-1/slot0',
+          recipe: 'just required',
+          started_at: '2026-10-06T12:00:00Z',
+          typical_seconds: 600,
+          slow_seconds: 900,
+          samples: 8,
+        })}
+        receivedAtMs={Date.now()}
+      />
+    );
+    const progress = screen.getByTestId('check-progress-widgets/required');
+    expect(progress.getAttribute('data-phase')).toBe('on-track');
+    expect(within(progress).getByText('about 5m left')).toBeTruthy();
+  });
+
+  it('shows elapsed time from its pending post when no runner reports it', () => {
+    render(<ChecksPanel checks={pendingChecks(undefined)} receivedAtMs={Date.now()} />);
+    const progress = screen.getByTestId('check-progress-widgets/required');
+    expect(progress.getAttribute('data-phase')).toBe('measuring');
+    expect(within(progress).getByText('4m 30s so far')).toBeTruthy();
+  });
+});

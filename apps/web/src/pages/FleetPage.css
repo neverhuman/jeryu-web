@@ -287,6 +287,14 @@
   font-family: var(--font-mono);
 }
 
+/* A running pass's bar sits on its own line under "gating acme/api#12". */
+.fleet__node-now .ci-progress {
+  display: flex;
+  width: 100%;
+  max-width: 320px;
+  margin-top: var(--space-1);
+}
+
 .fleet__node-last {
   margin: 0;
   display: flex;

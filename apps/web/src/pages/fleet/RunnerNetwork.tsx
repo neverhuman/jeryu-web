@@ -13,6 +13,9 @@
 // Quality audit runners get the same rows in their own list. A runner a release board names gets a second
 // line linking to that lane ("acme · Gate runner · installed v1.2.0"), and a
 // row `?runners=` picked is highlighted; each row's id is `runner-<slug>`.
+//
+// A running pass shows a bar under its subject (CiProgress): how far along it
+// is against the forge's estimate for that recipe, and about how long is left.
 
 import { Link } from 'react-router-dom';
 
@@ -21,6 +24,7 @@ import { pullHref } from '../activity/activityModel';
 import { toneModifier } from '../../components/tone/tone';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
 import { When } from '../../format/When';
+import { CiProgress } from '../../components/ciProgress/CiProgress';
 import {
   codeLabel,
   codeOutliers,
@@ -174,6 +178,7 @@ function RunnerRow({
   const release = places.releases.get(node.runnerId);
   const highlighted = places.highlighted.has(node.runnerId);
   const now = rowNow(node, nowMs);
+  const task = now.subject ? node.tasks[0] : undefined;
   const last = rowLast(node);
   const stale = seenStale(node.lastUpdated, nowMs);
   return (
@@ -235,8 +240,16 @@ function RunnerRow({
             <>
               {now.text}{' '}
               <NowSubject node={node} subject={now.subject} pull={now.pull} />
-              {now.elapsed ? ` for ${now.elapsed}` : ''}
+              {now.elapsed && !task?.startedAt ? ` for ${now.elapsed}` : ''}
               {now.draining ? ' · draining' : ''}
+              {task?.startedAt ? (
+                <CiProgress
+                  startedAt={task.startedAt}
+                  estimate={task.estimate}
+                  nowMs={nowMs}
+                  testId={`${testId}-progress-${nodeId}`}
+                />
+              ) : null}
             </>
           ) : (
             now.text

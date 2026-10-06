@@ -319,8 +319,10 @@ describe('FleetPage render', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Runners' })).toBeInTheDocument();
     // Now and Last job are separate cells: a running gate no longer hides the last one.
     expect(screen.getByTestId('fleet-node-now-xbabe2_slot0')).toHaveTextContent(
-      /^gating veox\/jain-web#13 for /
+      /^gating veox\/jain-web#13/
     );
+    // How long it has run is the progress bar's to say, not a "for 1h 30m".
+    expect(screen.getByTestId('fleet-node-progress-xbabe2_slot0')).toHaveTextContent(/so far/);
     const last = screen.getByTestId('fleet-node-last-xbabe2_slot0');
     expect(last).toHaveTextContent('veox/jain-deploy#31 passed in 46s');
     expect(within(last).getByRole('link')).toHaveAttribute(
@@ -424,7 +426,10 @@ describe('FleetPage render', () => {
     expect(reviewers).toHaveTextContent('Pull request reviewers');
     expect(screen.getByTestId('fleet-reviewer-xbabe0_redteam')).toHaveTextContent('xbabe0 · redteam');
     expect(screen.getByTestId('fleet-reviewer-now-xbabe0_redteam')).toHaveTextContent(
-      /^reviewing jeryu\/jeryu-web#44 for /
+      /^reviewing jeryu\/jeryu-web#44/
+    );
+    expect(screen.getByTestId('fleet-reviewer-progress-xbabe0_redteam')).toHaveTextContent(
+      /so far/
     );
     expect(screen.getByTestId('fleet-reviewer-now-xbabe1_redteam')).toHaveTextContent('idle');
     // The same row shape in review words; the PR it last judged opens that PR.
