@@ -164,6 +164,21 @@ body::before {
 }
 
 /*
+ * A row of a keyboard-operated list (`useListKeys`): `j`/`k` focus the row
+ * itself, and the ring says which row the next `o`, Enter or `x` acts on. The
+ * ring is an outline, not the usual focus shadow, because a row is sometimes a
+ * `tr` and a table row paints no box shadow of its own.
+ */
+[data-list-row] {
+  scroll-margin-block: var(--space-4);
+}
+
+[data-list-row][data-list-focused='true'] {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: -2px;
+}
+
+/*
  * Blinking block caret — TUI accent used by the boot screen prompt and any
  * "type here" affordance. `.tui-caret` renders a solid block that blinks.
  */

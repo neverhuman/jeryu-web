@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { LIST_OPEN_PROP, listRowProps, useListKeys } from '../hooks/useListKeys';
 import { draftBadgeLabel } from './pullDraftModel';
 import {
   cardFacts,
@@ -30,6 +31,7 @@ export function PullRequestCard({
     <article
       className={`pull-card is-${item.checkPosture}`}
       data-testid={`pull-card-${item.repo}-${item.number}`}
+      {...listRowProps}
     >
       <div className="pull-card__top">
         <span className="pull-card__repo">{item.repo}</span>
@@ -41,7 +43,7 @@ export function PullRequestCard({
         </div>
       ) : null}
       <h3 className="pull-card__title">
-        <Link to={item.url} className="pull-card__link">
+        <Link to={item.url} className="pull-card__link" {...LIST_OPEN_PROP}>
           {item.title}
         </Link>
       </h3>
@@ -90,12 +92,14 @@ export function PullRequestListView({
   lanes: PullLane[];
   emptyMessage: string;
 }): JSX.Element {
+  // Every card of every lane is one `j`/`k` list, lane by lane.
+  const rows = useListKeys<HTMLDivElement>();
   const total = lanes.reduce((sum, lane) => sum + lane.items.length, 0);
   if (total === 0) {
     return <p className="pull-list__empty">{emptyMessage}</p>;
   }
   return (
-    <div className="pull-lanes" data-testid="pull-lanes">
+    <div className="pull-lanes" data-testid="pull-lanes" ref={rows}>
       {visibleLanes(lanes).map((lane) => (
         <section
           key={lane.id}

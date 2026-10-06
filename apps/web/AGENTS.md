@@ -48,5 +48,12 @@ nothing was removed. The e2e specs for /repos assert rendered outlet content
 after Link clicks plus a crash-free history back; Storybook covers the
 multi-consumer registry shape (`KeyboardShortcutsOverlay.stories.tsx`).
 
+Lists are keyboard-operated through `useListKeys.ts`: a surface marks its rows
+`listRowProps`, the row's title `LIST_OPEN_PROP` and its one act
+`LIST_ACTION_PROP`, and attaches the hook's ref to whatever holds the rows.
+`j`/`k` move and draw `data-list-focused`, `o`/Enter open, `x` acts; a row's own
+keys fire only while the row itself holds focus, so Enter stays the key of any
+control a reader tabs to inside it.
+
 Owner work-packages: `W-FE-*` (and `W-F-07`, `W-F-09`, `W-F-12` for
 foundation skeleton).

@@ -25,6 +25,7 @@ import { FamilyPill } from '../../components/family/FamilyPills';
 import { toneClass, type Tone } from '../../components/tone/tone';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import { useAttentionAction } from '../../hooks/useAttentionAction';
+import { LIST_ACTION_PROP, LIST_OPEN_PROP, listRowProps } from '../../hooks/useListKeys';
 import { useRepositories } from '../../hooks/useRepositories';
 import { useShiftTodoAction } from '../../hooks/useShift';
 import { untilInputDefault, untilRfc3339 } from '../shift/shiftModel';
@@ -73,12 +74,16 @@ export function AttentionRow({
   // Only an admin ever sees a row: `/api/v1/attention` is admin-only.
   const target = acknowledgeTarget(item);
   return (
-    <li className={toneClass('needs-you__row', tone)} data-testid={`needs-you-item-${item.id}`}>
+    <li
+      className={toneClass('needs-you__row', tone)}
+      data-testid={`needs-you-item-${item.id}`}
+      {...listRowProps}
+    >
       <FamilyPill family={family} picked={picked} onPick={onPick} />
       <div className="needs-you__main">
         <p className="needs-you__title-line">
           {to ? (
-            <Link className="needs-you__title" to={to}>
+            <Link className="needs-you__title" to={to} {...LIST_OPEN_PROP}>
               {item.title}
             </Link>
           ) : (
@@ -126,6 +131,7 @@ export function AttentionRow({
       ) : action?.type === 'link' ? (
         <Link
           className="needs-you__open"
+          {...LIST_ACTION_PROP}
           to={action.to}
           aria-label={`${action.label}: ${item.title}`}
           title={item.reason ?? undefined}
@@ -173,6 +179,7 @@ function RunAction({
     <div className="needs-you__act">
       <ActionButton
         variant="primary"
+        {...LIST_ACTION_PROP}
         disabled={run.isPending}
         aria-label={`${action.label}: ${item.title}`}
         onClick={() => {

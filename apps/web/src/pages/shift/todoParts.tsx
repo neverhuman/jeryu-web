@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 
 import type { ShiftTodo, ShiftTodoActionRequest } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
+import { LIST_ACTION_PROP } from '../../hooks/useListKeys';
 import { useShiftTodoAction } from '../../hooks/useShift';
 import {
   SHIFT_PRIORITIES,
@@ -185,6 +186,7 @@ export function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element | null {
     <span className="shift__actions">
       <ActionButton
         variant={primary.variant}
+        {...LIST_ACTION_PROP}
         disabled={action.isPending}
         onClick={() => run(primary)}
         aria-expanded={

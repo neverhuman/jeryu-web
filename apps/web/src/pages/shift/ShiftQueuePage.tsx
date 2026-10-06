@@ -24,6 +24,7 @@ import { pillClass } from '../../components/tone/tone';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
+import { LIST_OPEN_PROP, listRowProps, useListKeys } from '../../hooks/useListKeys';
 import {
   useOpenShiftPr,
   useShiftFamilies,
@@ -105,9 +106,11 @@ export function ShiftQueuePage(): JSX.Element {
   };
   const todos = useShiftTodos(undefined);
   const all = useMemo(() => todos.data?.todos ?? [], [todos.data]);
+  // Every queue's rows are one `j`/`k` list, family after family.
+  const rows = useListKeys<HTMLDivElement>();
 
   return (
-    <div className="page page--wide" data-testid="shift-queue-page">
+    <div className="page page--wide" data-testid="shift-queue-page" ref={rows}>
       <header className="page__header">
         <h1 className="page__title">Work</h1>
         <p className="page__subtitle">
@@ -440,7 +443,7 @@ function TodoRow({
 
   return (
     <Fragment>
-      <tr data-testid={`shift-todo-${todo.id}`}>
+      <tr data-testid={`shift-todo-${todo.id}`} {...listRowProps}>
         <td className="shift__family-cell">
           <FamilyPill family={todoFamily(todo)} picked={picked} onPick={onPick} />
         </td>
@@ -457,7 +460,7 @@ function TodoRow({
           {/* Why it is stuck is the information; it does not hide behind a click. */}
           {stuck && todo.note ? <WhyStuck id={todo.id} note={todo.note} /> : null}
           <span className="shift__id">
-            <Link to={todoHref(todo.id)} title="Open this todo's page">
+            <Link to={todoHref(todo.id)} title="Open this todo's page" {...LIST_OPEN_PROP}>
               {todo.id}
             </Link>{' '}
             · P{todo.priority} · {todo.mode}

@@ -52,6 +52,8 @@ export function CopyCommand({ command, label, where }: CopyCommandProps): JSX.El
       <button
         type="button"
         className="copy-command__button"
+        // Where a list row's one act is a command, `x` on that row copies it.
+        data-list-action=""
         onClick={() => void copy()}
         aria-label={`Copy ${label}`}
         aria-describedby={where ? whereId : undefined}

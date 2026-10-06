@@ -35,6 +35,7 @@ import {
   type ActivityFilters,
 } from './activityModel';
 import { EventRow } from './EventRow';
+import { useListKeys } from '../../hooks/useListKeys';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
@@ -82,6 +83,8 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   const events = visibleEvents(feed.base.data?.events ?? [], filters.kind);
   const resolved = resolvedSeqs(events);
   const newest = events[0]?.seq ?? 0;
+  // One `j`/`k` list over the whole feed, day headings and all.
+  const rows = useListKeys<HTMLDivElement>();
 
   // Wall mode keeps the newest event in view as the tail grows.
   const top = useRef<HTMLDivElement | null>(null);
@@ -112,6 +115,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     <div
       className={`page page--wide activity${wall ? ' activity--wall' : ''}`}
       data-testid="activity-page"
+      ref={rows}
     >
       <div ref={top} />
       <header className="page__header">

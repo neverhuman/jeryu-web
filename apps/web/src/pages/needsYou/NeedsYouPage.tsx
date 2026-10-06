@@ -38,6 +38,7 @@ import {
   urgentAttention,
   type SubjectGroup,
 } from './needsYouModel';
+import { useListKeys } from '../../hooks/useListKeys';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
@@ -68,9 +69,12 @@ export function NeedsYouPage(): JSX.Element {
   // each page's strip and this header are visibly the same count.
   const waiting = urgent.reduce((total, group) => total + group.subjects.length, 0);
   const now = new Date();
+  // Every row on the page — red groups and the folded `watch` list — is one
+  // `j`/`k` list, in the order it is read.
+  const rows = useListKeys<HTMLDivElement>();
 
   return (
-    <div className="page page--wide" data-testid="needs-you-page">
+    <div className="page page--wide" data-testid="needs-you-page" ref={rows}>
       <header className="page__header">
         <h1 className="page__title">
           Needs you

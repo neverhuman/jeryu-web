@@ -83,6 +83,15 @@ export function useKeyboardRegistry(): KeyboardContextValue {
   return ctx;
 }
 
+/**
+ * The registry when a `KeyboardProvider` is mounted, else null — for a surface
+ * that lists its keys in the overlay but has to work without one (a unit test
+ * or a story rendering one list on its own).
+ */
+export function useOptionalKeyboardRegistry(): KeyboardContextValue | null {
+  return useContext(KeyboardContext);
+}
+
 interface ShortcutOptions {
   /** Human label for the help overlay. */
   label?: string;

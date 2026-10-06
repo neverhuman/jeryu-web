@@ -13,6 +13,7 @@ import type { PipelineEvent } from '../../api/types';
 import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
+import { LIST_ACTION_PROP, LIST_OPEN_PROP, listRowProps } from '../../hooks/useListKeys';
 import { formatCost, shortSha } from '../shift/shiftModel';
 import {
   eventLabel,
@@ -53,6 +54,7 @@ export function EventRow({
     <li
       className={`${toneClass('activity-row', tone)}${needsHuman ? ' is-needs-human' : ''}`}
       data-testid={`activity-event-${event.seq}`}
+      {...listRowProps}
     >
       <div className="activity-row__line">
         <time className="activity-row__time" dateTime={event.ts} title={absoluteText(event.ts)}>
@@ -67,7 +69,7 @@ export function EventRow({
         <span className="activity-row__summary">
           {summary.before}
           {summary.link ? (
-            <Link to={summary.link.to} className="activity-row__link">
+            <Link to={summary.link.to} className="activity-row__link" {...LIST_OPEN_PROP}>
               {summary.link.label}
             </Link>
           ) : null}
@@ -89,6 +91,7 @@ export function EventRow({
           aria-expanded={open}
           aria-controls={detailId}
           aria-label={`${toggleLabel} for event ${event.seq}`}
+          {...LIST_ACTION_PROP}
           onClick={() => setOpen((v) => !v)}
         >
           {toggleLabel}
