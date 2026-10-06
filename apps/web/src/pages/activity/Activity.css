@@ -288,6 +288,41 @@
   grid-column: 1 / -1;
 }
 
+/* On the normal page the strip is a quiet row under the volume band: the same
+   five numbers, sized to be read in passing rather than from across a room. */
+.activity__counters--compact {
+  position: static;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--space-2);
+}
+
+.activity__counters--compact .activity__counter {
+  padding: var(--space-2) var(--space-3);
+}
+
+.activity__counters--compact .activity__counter-value {
+  font-size: var(--font-size-xl);
+}
+
+/* The number moves; so does the tile it sits in, once, when it changes. */
+.activity__counter-value {
+  transition: color var(--duration-fast) var(--ease-standard);
+  font-variant-numeric: tabular-nums;
+}
+
+.activity__counter--link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.activity__counter--link:hover {
+  border-color: var(--color-accent-danger);
+}
+
+.activity__counters--still .activity__counter-value {
+  transition: none;
+}
+
 /* Per-PR panel in the review pane ------------------------------------ */
 
 .pull-events {

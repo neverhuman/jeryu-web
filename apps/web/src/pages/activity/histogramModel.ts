@@ -6,6 +6,7 @@ import type {
   PipelineHistogramBucket,
   PipelineHistogramResponse,
 } from '../../api/types';
+import type { ActivityTotals } from './activityModel';
 import { tickText } from '../../format/when';
 import { ACTIVITY_CHIPS, type ActivityChip } from './activityModel';
 
@@ -229,4 +230,26 @@ export function histogramSummary(geometry: HistogramGeometry, rangeLabel: string
     `in ${geometry.bars.length} bucket${geometry.bars.length === 1 ? '' : 's'}, busiest ${peak.total}` +
     `${failed > 0 ? `, ${failed} failed` : ''}${human > 0 ? `, ${human} needed a person` : ''}.`
   );
+}
+
+/**
+ * The window totals the strip reads, or null on a server that only sends
+ * buckets. A total that is missing or not a number counts as zero, so one
+ * absent field does not drop the strip back to counting loaded rows.
+ */
+export function histogramTotals(response: PipelineHistogramResponse | undefined): ActivityTotals | null {
+  const totals = response?.totals;
+  if (!totals || typeof totals !== 'object') return null;
+  return {
+    todosFinished: count(totals.todos_finished),
+    blocked: count(totals.blocked),
+    prsMerged: count(totals.prs_merged),
+    deploys: count(totals.deploys),
+    spentUsd: money(totals.spent_usd),
+  };
+}
+
+function money(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return 0;
+  return Math.round(value * 100) / 100;
 }

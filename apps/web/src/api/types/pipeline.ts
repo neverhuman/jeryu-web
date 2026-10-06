@@ -135,6 +135,19 @@ export interface PipelineHistogramBucket {
   needs_human?: number | null;
 }
 
+/**
+ * Whole-window totals, counted by the server over every event in the range
+ * rather than over the page the browser holds. Absent on a server that only
+ * sends buckets; the strip then counts the events it has and says so.
+ */
+export interface PipelineHistogramTotals {
+  todos_finished?: number | null;
+  blocked?: number | null;
+  prs_merged?: number | null;
+  deploys?: number | null;
+  spent_usd?: number | null;
+}
+
 export interface PipelineHistogramResponse {
   schema_version?: string | number;
   from?: string;
@@ -142,6 +155,7 @@ export interface PipelineHistogramResponse {
   /** Width of one bucket. Informational: the chart lays bars out by count. */
   bucket_seconds?: number;
   buckets: PipelineHistogramBucket[];
+  totals?: PipelineHistogramTotals | null;
 }
 
 /** Query of `GET /api/v1/events/histogram`. `range` is `6h`, `24h` or `7d`. */

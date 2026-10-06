@@ -316,7 +316,14 @@ export function histogramBody(range = '24h'): Record<string, unknown> {
     failures: i % 3 === 1 ? 2 : 0,
     needs_human: i % 4 === 2 ? 1 : 0,
   }));
-  return { schema_version: 1, bucket_seconds: 3600, buckets };
+  return {
+    schema_version: 1,
+    bucket_seconds: 3600,
+    buckets,
+    // Window totals: what the 24-hour strip reads, counted over the whole
+    // range rather than over the page of events the browser holds.
+    totals: { todos_finished: 42, blocked: 3, prs_merged: 17, deploys: 5, spent_usd: 12.34 },
+  };
 }
 
 export interface PipelineMockLog {

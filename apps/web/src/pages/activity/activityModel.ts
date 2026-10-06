@@ -257,14 +257,37 @@ export function hasDetail(event: Pick<PipelineEvent, 'reason' | 'log_tail'>): bo
   return Boolean(event.reason) || Boolean(event.log_tail);
 }
 
-export interface WallCounters {
+/** The five numbers the 24-hour strip shows, wherever they were counted. */
+export interface ActivityTotals {
   todosFinished: number;
   blocked: number;
   prsMerged: number;
   deploys: number;
   spentUsd: number;
+}
+
+export interface WallCounters extends ActivityTotals {
   /** Events inside the window, so the wall can say what the counters cover. */
   events: number;
+}
+
+export interface ActivityCounters extends ActivityTotals {
+  /** Events the numbers were counted from, or null when the server totalled
+   *  the whole window itself and the count of loaded rows means nothing. */
+  events: number | null;
+}
+
+/**
+ * The strip's numbers: the server's window totals when it sends them, else
+ * what the events this page holds add up to — with their count, so the strip
+ * can say the numbers only cover what is loaded here.
+ */
+export function activityCounters(
+  totals: ActivityTotals | null,
+  events: PipelineEvent[],
+  now: Date
+): ActivityCounters {
+  return totals ? { ...totals, events: null } : wallCounters(events, now);
 }
 
 /**

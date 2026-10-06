@@ -1,7 +1,8 @@
 // ActivityPage.tsx — `/activity`: the pipeline event log, newest first, with a
-// live tail, URL-held filters and "load older". `?wall=1` is the wall mode: a
-// full-height, auto-scrolling, large-type view with 24-hour counters, meant
-// for a screen on the wall or a demo.
+// live tail, URL-held filters and "load older". The last-24-hour strip is on
+// every Activity page; `?wall=1` is the wall mode, which shows the same five
+// numbers in large type above a full-height, auto-scrolling feed, meant for a
+// screen on the wall or a demo.
 
 import { Activity, Maximize2, Minimize2 } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useRef } from 'react';
@@ -15,7 +16,6 @@ import { LoadingState, PipelineQueryState } from '../../components/state';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
-import { formatCost } from '../shift/shiftModel';
 import { useShiftFamilies } from '../../hooks/useShift';
 import {
   ACTIVITY_CHIPS,
@@ -31,10 +31,10 @@ import {
   parseActivityFilters,
   resolvedSeqs,
   visibleEvents,
-  wallCounters,
   type ActivityFilters,
 } from './activityModel';
 import { ActivityHistogram } from './ActivityHistogram';
+import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
 import { useListKeys } from '../../hooks/useListKeys';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -147,15 +147,18 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       {wall ? (
         <>
           <ScopedWallNote />
-          <WallCounters events={events} />
+          <SummaryStrip family={filters.family} repo={repo} events={events} wall />
         </>
       ) : (
-        <Filters
-          filters={filters}
-          pinnedRepo={Boolean(repo)}
-          onChange={update}
-          onChip={(chip) => setParams(applyChip(params, chip), { replace: true })}
-        />
+        <>
+          <SummaryStrip family={filters.family} repo={repo} events={events} />
+          <Filters
+            filters={filters}
+            pinnedRepo={Boolean(repo)}
+            onChange={update}
+            onChip={(chip) => setParams(applyChip(params, chip), { replace: true })}
+          />
+        </>
       )}
 
       {feed.base.isPending ? (
@@ -335,29 +338,5 @@ function ScopedWallNote(): JSX.Element | null {
         Show all families
       </button>
     </p>
-  );
-}
-
-function WallCounters({ events }: { events: Parameters<typeof wallCounters>[0] }): JSX.Element {
-  const counters = wallCounters(events, new Date());
-  const tiles: Array<[string, string, string?]> = [
-    ['Todos finished', String(counters.todosFinished)],
-    ['Blocked', String(counters.blocked), counters.blocked > 0 ? 'human' : undefined],
-    ['Pull requests merged', String(counters.prsMerged)],
-    ['Deploys', String(counters.deploys)],
-    ['Spent', formatCost(counters.spentUsd)],
-  ];
-  return (
-    <section className="activity__counters" aria-label="Last 24 hours">
-      {tiles.map(([label, value, tone]) => (
-        <div key={label} className={`activity__counter${tone ? ` activity__counter--${tone}` : ''}`}>
-          <span className="activity__counter-value">{value}</span>
-          <span className="activity__counter-label">{label}</span>
-        </div>
-      ))}
-      <p className="activity__counter-note">
-        Last 24 h, from the {counters.events} event{counters.events === 1 ? '' : 's'} loaded here.
-      </p>
-    </section>
   );
 }

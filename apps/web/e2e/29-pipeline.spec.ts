@@ -367,6 +367,14 @@ test.describe('Pipeline visibility', () => {
     await page.goto('/activity');
     await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
 
+    // The 24-hour strip is on the normal page too, under the chart, and its
+    // numbers are the server's totals for the window, not the loaded page.
+    const strip = page.getByTestId('activity-counters');
+    await expect(strip).toContainText('42');
+    await expect(strip).toContainText('$12.34');
+    await expect(strip).not.toContainText('loaded here');
+    await expect(strip.getByRole('link', { name: /Blocked/ })).toHaveAttribute('href', '/needs-you');
+
     await page.getByTestId('activity-page').screenshot({ path: 'playwright-report/activity.png' });
 
     // Plain words on the row; the wire kind is not shouted at the reader.
@@ -401,7 +409,11 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('activity-event-9')).toHaveCount(0);
 
     await page.goto('/activity?wall=1');
-    await expect(page.getByRole('region', { name: 'Last 24 hours' })).toContainText('Todos finished');
+    const wallStrip = page.getByRole('region', { name: 'Last 24 hours' });
+    await expect(wallStrip).toContainText('Todos finished');
+    // Wall and desk read the one source: the histogram's window totals.
+    await expect(wallStrip).toContainText('42');
+    await expect(wallStrip).not.toContainText('loaded here');
     await expect(page.getByRole('region', { name: 'Activity filters' })).toHaveCount(0);
     await page.getByRole('link', { name: 'Leave wall mode' }).click();
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();

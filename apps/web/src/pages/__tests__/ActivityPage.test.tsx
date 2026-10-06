@@ -268,8 +268,13 @@ describe('ActivityPage', () => {
       renderPage('/activity?wall=1');
       const counters = await screen.findByRole('region', { name: 'Last 24 hours' });
       await screen.findByTestId('activity-event-12');
-      expect(within(counters).getByText('Todos finished').previousSibling).toHaveTextContent('1');
-      expect(within(counters).getByText('Spent').previousSibling).toHaveTextContent('$0.54');
+      // The numbers travel to their value, so wait for where they land.
+      await waitFor(() =>
+        expect(within(counters).getByText('Todos finished').previousSibling).toHaveTextContent('1')
+      );
+      await waitFor(() =>
+        expect(within(counters).getByText('Spent').previousSibling).toHaveTextContent('$0.54')
+      );
       expect(screen.queryByRole('region', { name: 'Activity filters' })).toBeNull();
       expect(screen.getByRole('link', { name: 'Leave wall mode' })).toBeInTheDocument();
       expect(screen.getByTestId('activity-page')).toHaveClass('activity--wall');
