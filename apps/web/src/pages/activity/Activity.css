@@ -1535,3 +1535,79 @@
 .activity--no-cursor * {
   cursor: none;
 }
+
+/* Work in flight ------------------------------------------------------- */
+
+/* A start with no finish yet: a spinner and a timer where a finished row
+   carries its duration, over a progress bar across the foot of the row. */
+.activity-row__running {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.activity-row__spinner {
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 2px solid var(--color-border-subtle);
+  border-top-color: var(--color-accent-info);
+  border-radius: 50%;
+  animation: activity-spin 900ms linear infinite;
+}
+
+@keyframes activity-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.activity-row__progress {
+  position: relative;
+  height: 2px;
+  margin-top: var(--space-1);
+  overflow: hidden;
+  background-color: var(--color-border-subtle);
+}
+
+.activity-row__progress-fill {
+  display: block;
+  height: 100%;
+  background-color: var(--color-accent-info);
+  transition: width 300ms linear;
+}
+
+/* Nothing is known about how long this kind of work takes, so the bar says
+   only that it is going: a short band travelling across it. */
+.activity-row__progress--waiting .activity-row__progress-fill {
+  width: 30%;
+  animation: activity-progress-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes activity-progress-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(333%);
+  }
+}
+
+/* Values just update: the spinner holds still, the determinate bar jumps to
+   its width, and the indeterminate bar is a quiet full-width rule. */
+@media (prefers-reduced-motion: reduce) {
+  .activity-row__spinner {
+    animation: none;
+  }
+
+  .activity-row__progress-fill {
+    transition: none;
+    animation: none;
+  }
+
+  .activity-row__progress--waiting .activity-row__progress-fill {
+    width: 100%;
+    opacity: 0.5;
+  }
+}

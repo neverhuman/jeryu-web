@@ -12,6 +12,9 @@
 // is red until a later event clears its cause; then it is marked resolved.
 // A row the live tail just brought in slides down with a short wash, so the
 // feed says "this is new" without moving anything else.
+// A start with no finish yet is work happening now: it spins, counts the time
+// it has been going, and carries a progress bar — filled against what its kind
+// usually takes when that is known, indeterminate when it is not.
 // The toggle stays on the rows that have something to say (a reason, a log, a
 // field of its own);
 // on the quiet ones it waits for the pointer or the keyboard.
@@ -32,6 +35,7 @@ import { badLineCount, logLines } from './logModel';
 import { insideRowTabIndex } from './rowKeysModel';
 import { sourceMark } from './sourceModel';
 import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
+import { elapsedSeconds, elapsedText, runningShare, runningTitle } from './runningModel';
 import {
   durationShare,
   eventDetailFields,
@@ -59,6 +63,8 @@ export function EventRow({
   arriving = false,
   longestSeconds,
   now,
+  running = false,
+  medianSeconds,
   onOpenChange,
 }: {
   event: PipelineEvent;
@@ -84,8 +90,14 @@ export function EventRow({
   longestSeconds?: number;
   /** The list's shared clock. Given it, a row from today reads as how long ago
    *  it was and ages with the tick; an older row keeps its clock, because the
-   *  day is said once in its heading and "3 days ago" would hide it. */
+   *  day is said once in its heading and "3 days ago" would hide it. The
+   *  elapsed timer of a running row reads it too. */
   now?: number;
+  /** No finishing event has arrived for this start: show it as in flight. */
+  running?: boolean;
+  /** What this kind of work usually takes, when the loaded rows say: with it
+   *  the progress bar is determinate, without it the bar only says "going". */
+  medianSeconds?: number;
   /** Told when this row opens or closes: a feed holds new rows back while a
    *  reader has one open, so it has to know. */
   onOpenChange?: (seq: number, open: boolean) => void;
@@ -144,6 +156,10 @@ export function EventRow({
     now !== undefined && isSameLocalDay(event.ts, now)
       ? relativeText(event.ts, now)
       : clockText(event.ts);
+  // In flight: the time since the start, and how far that is through a usual
+  // run of its kind. A share of null is a bar that only says "still going".
+  const elapsed = running ? elapsedSeconds(event.ts, now ?? Date.now()) : null;
+  const progress = running ? runningShare(elapsed, medianSeconds) : null;
 
   return (
     <li
@@ -193,6 +209,14 @@ export function EventRow({
             {attemptUsageText(usage)}
           </span>
         ) : null}
+        {running ? (
+          <span className="activity-row__running" title={runningTitle(elapsed, medianSeconds)}>
+            <span className="activity-row__spinner" aria-hidden="true" />
+            <span className="activity-row__meta" data-testid={`activity-elapsed-${event.seq}`}>
+              {elapsedText(elapsed)}
+            </span>
+          </span>
+        ) : null}
         {duration ? (
           <span className="activity-row__duration" title={exactSecondsText(event.seconds)}>
             {share === null ? null : (
@@ -217,6 +241,23 @@ export function EventRow({
           {toggleLabel}
         </button>
       </div>
+      {running ? (
+        <div
+          className={`activity-row__progress${progress === null ? ' activity-row__progress--waiting' : ''}`}
+          role="progressbar"
+          aria-label={`${eventLabel(event)} — ${runningTitle(elapsed, medianSeconds)}`}
+          aria-valuemin={progress === null ? undefined : 0}
+          aria-valuemax={progress === null ? undefined : 100}
+          aria-valuenow={progress === null ? undefined : Math.round(progress * 100)}
+          data-testid={`activity-progress-${event.seq}`}
+        >
+          <span
+            className="activity-row__progress-fill"
+            style={progress === null ? undefined : { width: `${(progress * 100).toFixed(1)}%` }}
+            aria-hidden="true"
+          />
+        </div>
+      ) : null}
       {open ? (
         <div className="activity-row__detail" id={detailId}>
           {event.reason ? (

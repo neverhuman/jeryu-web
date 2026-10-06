@@ -91,6 +91,7 @@ import {
   parseRange,
   type HistogramRangeId,
 } from './histogramModel';
+import { RUNNING_TICK_MS, medianSecondsByStartKind, runningSeqs, unfinishedStarts } from './runningModel';
 import { useAtPageTop, useHeldRows } from './holdModel';
 import { KNOWN_SOURCES } from './sourceModel';
 import { useOlderOnReach } from './olderModel';
@@ -235,9 +236,18 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   // pill was holding are new to the list at the moment it is clicked, so they
   // arrive then, with the same cue.
   const still = usePrefersReducedMotion();
+  // Work in flight: a start with no finish is shown as running, with a timer
+  // that ticks.
+  const inFlight = unfinishedStarts(events);
   // One clock for the whole list: today's rows say how long ago they happened,
-  // and they all age together on this single tick.
-  const now = useTickingNow();
+  // and they all age together on this single tick. It ticks each second only
+  // while something is in flight, so a settled feed re-renders no more than
+  // the ages need.
+  const now = useTickingNow(inFlight.size > 0 ? RUNNING_TICK_MS : undefined);
+  const running = runningSeqs(events, now);
+  // What a kind of work usually takes, read off the finished rows on the page:
+  // with it a running row gets a determinate bar instead of a pulse.
+  const medianSeconds = medianSecondsByStartKind(events);
   const arriving = useArrivingRows(seqs, filterId, still);
   // What the tab says while the reader is elsewhere. The count is read off the
   // raw feed, not the held list: a row waiting behind the pill has still
@@ -559,6 +569,8 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                       arriving={arriving.has(event.seq)}
                       longestSeconds={longestSeconds.get(event.kind)}
                       now={now}
+                      running={running.has(event.seq)}
+                      medianSeconds={medianSeconds.get(event.kind)}
                       onOpenChange={wall ? undefined : onRowOpenChange}
                       open={rowOpen(event.seq)}
                       focused={wall ? undefined : rowKeys.focused === event.seq}
