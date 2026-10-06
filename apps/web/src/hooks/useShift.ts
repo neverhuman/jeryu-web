@@ -23,6 +23,7 @@ import {
 } from '@tanstack/react-query';
 
 import { apiGet, apiSend } from '../api/client';
+import { fetchShiftTodos } from '../api/shiftTodoLists';
 import { newIdempotencyKey } from './useApplySettingsPatch';
 import { PIPELINE_KEY } from './usePipeline';
 import { endpoints } from '../api/endpoints';
@@ -57,8 +58,8 @@ export function useShiftTodos(
 ): UseQueryResult<ShiftTodosResponse, Error> {
   return useQuery({
     queryKey: [...SHIFT_KEY, 'todos', family ?? ''],
-    queryFn: ({ signal }) =>
-      apiGet<ShiftTodosResponse>(endpoints.shiftTodos({ family }), { signal }),
+    // Every page of the list: a todo past the first 100 rows is still a todo.
+    queryFn: ({ signal }) => fetchShiftTodos(family, signal),
     staleTime: 10_000,
     refetchInterval: 30_000,
     retry: false,

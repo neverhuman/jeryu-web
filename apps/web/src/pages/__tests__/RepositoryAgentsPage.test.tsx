@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SHIFT_TODO_PAGE_LIMIT } from '../../api/shiftTodoLists';
 import { RepositoryAgentsPage } from '../RepositoryAgentsPage';
 
 const REPO_ID = 'repo-1';
@@ -80,7 +81,7 @@ describe('RepositoryAgentsPage — empty repository', () => {
     mockFetch({
       'GET /api/v1/repos?host=jeryu': listResponse(),
       'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
-      'GET /api/v1/shift/todos': { generated_at: NOW, todos: [] },
+      [`GET /api/v1/shift/todos?limit=${SHIFT_TODO_PAGE_LIMIT}&page=1`]: { generated_at: NOW, todos: [] },
     });
 
     renderPage();
@@ -94,7 +95,7 @@ describe('RepositoryAgentsPage — empty repository', () => {
     mockFetch({
       'GET /api/v1/repos?host=jeryu': listResponse(),
       'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
-      'GET /api/v1/shift/todos': { generated_at: NOW, todos: [queueTodo()] },
+      [`GET /api/v1/shift/todos?limit=${SHIFT_TODO_PAGE_LIMIT}&page=1`]: { generated_at: NOW, todos: [queueTodo()] },
     });
 
     renderPage();

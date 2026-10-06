@@ -123,8 +123,13 @@ describe('activityModel', () => {
 
   it('links an event to its todo, its PR, or its repo, on the forge it names', () => {
     const todo = EVENTS.find((e) => e.seq === 9)!;
+    // The link carries the event's family: `/work/<id>` resolves the id in the
+    // queue the event names instead of whichever family the tab was scoped to.
     expect(eventLinks(todo, 'forge.example')).toEqual([
-      { label: 'todo 20260919-121041-9d0b27', to: '/work/20260919-121041-9d0b27' },
+      {
+        label: 'todo 20260919-121041-9d0b27',
+        to: '/work/20260919-121041-9d0b27?family=jeryu',
+      },
     ]);
     const merged = EVENTS.find((e) => e.seq === 11)!;
     expect(eventLinks(merged, 'forge.example')).toEqual([
@@ -244,7 +249,12 @@ describe('activityModel', () => {
     expect(summaryParts(deploy, 'forge.example').link?.label).toBe('jeryu/jeryu-deploy');
     const bare = pipelineEvent({ seq: 3, kind: 'worker.error', summary: 'forge 502' });
     expect(summaryParts(bare, 'forge.example')).toEqual({ before: 'forge 502', link: null, after: '' });
-    expect(primaryLink(pipelineEvent({ seq: 4, kind: 'todo.claimed', family: 'jeryu', todo_id: 't1' }), 'forge.example')?.label).toBe('todo t1');
+    const claimed = primaryLink(
+      pipelineEvent({ seq: 4, kind: 'todo.claimed', family: 'jeryu', todo_id: 't1' }),
+      'forge.example'
+    );
+    expect(claimed?.label).toBe('todo t1');
+    expect(claimed?.to).toBe('/work/t1?family=jeryu');
   });
 });
 

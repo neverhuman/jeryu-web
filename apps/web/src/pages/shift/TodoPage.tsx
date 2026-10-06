@@ -60,13 +60,16 @@ export function TodoPage(): JSX.Element {
   const todos = useShiftTodos(undefined);
   const families = useShiftFamilies();
   const forgeHost = useForgeHost();
-  const matches = useMemo(
-    () =>
-      (todos.data?.todos ?? []).filter(
-        (todo) => todo.id === key && (!family || sameFamily(todo.family, family))
-      ),
-    [todos.data, key, family]
-  );
+  // Every family's todo of this id, then the family scope narrowing them. A
+  // scope that matches none of them is a stale filter on an id that does
+  // exist — an Activity row carries the family its event named, which need not
+  // be the family the tab was last scoped to — so the id wins over the scope
+  // rather than the page claiming there is no such todo.
+  const matches = useMemo(() => {
+    const byId = (todos.data?.todos ?? []).filter((todo) => todo.id === key);
+    const scoped = family ? byId.filter((todo) => sameFamily(todo.family, family)) : byId;
+    return scoped.length > 0 ? scoped : byId;
+  }, [todos.data, key, family]);
   const refs = useMemo<RepoRefs>(() => {
     const found = families.data?.families.find((f) => f.name === matches[0]?.family);
     return found ? repoRefs(found, forgeHost(found.queue_repo)) : NO_REFS;

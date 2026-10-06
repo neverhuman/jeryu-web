@@ -95,6 +95,10 @@ export interface ShiftTodo {
 export interface ShiftTodosResponse {
   generated_at: string;
   todos: ShiftTodo[];
+  /** Rows matching the request before paging. */
+  total?: number;
+  /** What the server applied; `has_more` says another page follows. */
+  page?: { limit: number; page: number; total: number; has_more: boolean };
 }
 
 export interface ShiftTodoQuery {

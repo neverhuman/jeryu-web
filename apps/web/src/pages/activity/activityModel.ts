@@ -200,7 +200,10 @@ export function pullHref(host: string, repo: string, pr: number): string {
 export function eventLinks(event: PipelineEvent, host: string): EventLink[] {
   const links: EventLink[] = [];
   if (event.todo_id && event.family) {
-    links.push({ label: `todo ${event.todo_id}`, to: todoHref(event.todo_id) });
+    links.push({
+      label: `todo ${event.todo_id}`,
+      to: todoHref(event.todo_id, event.family),
+    });
   }
   if (event.repo && event.pr) {
     links.push({ label: `${event.repo}#${event.pr}`, to: pullHref(host, event.repo, event.pr) });
@@ -461,7 +464,7 @@ export function primaryLink(event: PipelineEvent, host: string): EventLink | nul
     return { label: `${event.repo}#${event.pr}`, to: pullHref(host, event.repo, event.pr) };
   }
   if (event.todo_id && event.family) {
-    return { label: `todo ${event.todo_id}`, to: todoHref(event.todo_id) };
+    return { label: `todo ${event.todo_id}`, to: todoHref(event.todo_id, event.family) };
   }
   if (event.repo) return { label: event.repo, to: repoHref(host, event.repo) };
   return null;

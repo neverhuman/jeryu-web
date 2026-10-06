@@ -167,6 +167,44 @@ describe('TodoPage', () => {
     );
   });
 
+  it('walks the pages of the queue list: a claimed todo past the first page opens', async () => {
+    // The server pages the list (100 rows unless asked). The todo an Activity
+    // row links to is wherever priority and id put it, not on page one.
+    const claimed = todo({
+      id: '20261006-201244-b2487c',
+      title: 'Being worked right now',
+      status: 'claimed',
+      claim_by: 'alton@xbabe0/w2',
+    });
+    mockShiftApi((req) => {
+      if (req.pathname !== '/api/v1/shift/todos') return undefined;
+      const page = new URLSearchParams(req.search).get('page');
+      return json(
+        page === '1'
+          ? {
+              generated_at: '2026-10-06T20:00:00Z',
+              todos: TODOS,
+              page: { limit: TODOS.length, page: 1, total: TODOS.length + 1, has_more: true },
+            }
+          : {
+              generated_at: '2026-10-06T20:00:00Z',
+              todos: [claimed],
+              page: { limit: TODOS.length, page: 2, total: TODOS.length + 1, has_more: false },
+            }
+      );
+    });
+    renderTodo('/work/20261006-201244-b2487c?family=jeryu');
+    expect(
+      await screen.findByRole('heading', { name: 'Being worked right now' })
+    ).toBeInTheDocument();
+  });
+
+  it('opens a todo the scoped family does not hold rather than calling it missing', async () => {
+    serveTodos([todo({ id: '20261006-201244-b2487c', family: 'jain', title: 'Jain side' })]);
+    renderTodo('/work/20261006-201244-b2487c?family=jeryu');
+    expect(await screen.findByRole('heading', { name: 'Jain side' })).toBeInTheDocument();
+  });
+
   it('opens the one family a ?family= names', async () => {
     serveTodos([
       todo({ id: '20260919-1100-dup', family: 'jeryu', title: 'Jeryu side' }),

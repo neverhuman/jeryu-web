@@ -5,6 +5,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SHIFT_TODO_PAGE_LIMIT } from '../../api/shiftTodoLists';
 import { ShiftQueuePage } from '../shift/ShiftQueuePage';
 import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
 import { TODOS, attempt, todo } from './shiftTestData';
@@ -55,8 +56,15 @@ describe('ShiftQueuePage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Requested by' })).toBeNull();
     expect(within(done).getByText('$1.25')).toBeInTheDocument();
     expect(within(screen.getByTestId('shift-todo-20260918-1832-k3f')).getByText('—', { selector: '.shift__cost' })).toBeInTheDocument();
-    // One request for every family's todos; shift branches carry no family, so one per family.
-    expect(calls.some((c) => c.pathname === '/api/v1/shift/todos' && c.search === '')).toBe(true);
+    // One request for every family's todos, paged so nothing past the first
+    // page is dropped; shift branches carry no family, so one per family.
+    expect(
+      calls.some(
+        (c) =>
+          c.pathname === '/api/v1/shift/todos' &&
+          c.search === `?limit=${SHIFT_TODO_PAGE_LIMIT}&page=1`
+      )
+    ).toBe(true);
     expect(calls.some((c) => c.pathname === '/api/v1/shift/shifts' && c.search === '?family=jeryu')).toBe(true);
   });
 
