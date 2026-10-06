@@ -368,6 +368,15 @@ test.describe('Pipeline visibility', () => {
     await page.goto('/activity');
     await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
 
+    // Each chip says how much is behind it over the band's range, and a chip
+    // with nothing behind it is quieter but still a filter.
+    const chips = page.getByRole('group', { name: 'Show' });
+    await expect(chips.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
+      'title',
+      /in the last 24h/
+    );
+    await expect(chips.locator('.activity__chip-count').first()).toBeVisible();
+
     // The 24-hour strip is on the normal page too, under the chart, and its
     // numbers are the server's totals for the window, not the loaded page.
     const strip = page.getByTestId('activity-counters');

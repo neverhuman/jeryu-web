@@ -17,7 +17,7 @@ import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { LoadingState, PipelineQueryState } from '../../components/state';
 import { toneClass, type Tone } from '../../components/tone/tone';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
-import { isPipelineEventPush, usePipelineNudge } from '../../hooks/usePipeline';
+import { isPipelineEventPush, useEventsHistogram, usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { useShiftFamilies } from '../../hooks/useShift';
 import {
@@ -38,6 +38,13 @@ import {
   type ActivityFilters,
 } from './activityModel';
 import { useArrivingRows } from './arrivalsModel';
+import {
+  HISTOGRAM_RANGES,
+  chipCounts,
+  histogramBuckets,
+  parseRange,
+  type HistogramRangeId,
+} from './histogramModel';
 import { useAtPageTop, useHeldRows } from './holdModel';
 import { ActivityHistogram } from './ActivityHistogram';
 import { SummaryStrip } from './SummaryStrip';
@@ -46,6 +53,7 @@ import { useListKeys } from '../../hooks/useListKeys';
 import { UsagePanel } from './UsagePanel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+import { useCountUp } from '../../hooks/useCountUp';
 
 import '../page.css';
 import './Activity.css';
@@ -217,7 +225,8 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           <SummaryStrip family={filters.family} repo={repo} events={all} />
           <Filters
             filters={filters}
-            pinnedRepo={Boolean(repo)}
+            repo={repo}
+            range={parseRange(params)}
             onChange={update}
             onChip={(chip) => setParams(applyChip(params, chip), { replace: true })}
           />
@@ -333,15 +342,20 @@ function RowLegend(): JSX.Element {
 
 function Filters({
   filters,
-  pinnedRepo,
+  repo,
+  range,
   onChange,
   onChip,
 }: {
   filters: ActivityFilters;
-  pinnedRepo: boolean;
+  /** `owner/name` when the repository shell's Activity tab pins the feed. */
+  repo?: string;
+  /** The range the band above is drawn at: what the chip counts cover. */
+  range: HistogramRangeId;
   onChange: (key: string, value: string) => void;
   onChip: (chip: (typeof ACTIVITY_CHIPS)[number]) => void;
 }): JSX.Element {
+  const pinnedRepo = Boolean(repo);
   const families = useShiftFamilies();
   // One option per family, in the scope's own spelling: `acme` and
   // `acme-split` are one family, and the scope is what this select sets.
@@ -354,20 +368,43 @@ function Filters({
   ];
   const current = activeChip(filters);
   const needsYou = useNeedsYou(filters.family);
+  const still = usePrefersReducedMotion();
+  // The same query the band above asks, so the counts are one request shared
+  // with it and say the same thing the bars do. A server without the route
+  // leaves the badges out rather than showing a chip row of zeros.
+  const histogram = useEventsHistogram({
+    range,
+    ...(repo ? { repo } : filters.family ? { family: filters.family } : {}),
+  });
+  const counts =
+    histogram.isError || histogram.data === undefined
+      ? null
+      : chipCounts(histogramBuckets(histogram.data));
+  const rangeLabel = HISTOGRAM_RANGES.find((candidate) => candidate.id === range)?.label ?? range;
   return (
     <section className="activity__filters" aria-label="Activity filters">
-      <div className="activity__chips" role="group" aria-label="Show">
-        {ACTIVITY_CHIPS.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            className={`activity__chip${current === chip.id ? ' is-active' : ''}`}
-            aria-pressed={current === chip.id}
-            onClick={() => onChip(chip)}
-          >
-            {chip.label}
-          </button>
-        ))}
+      <div className={`activity__chips${still ? ' activity__chips--still' : ''}`} role="group" aria-label="Show">
+        {ACTIVITY_CHIPS.map((chip) => {
+          const count = counts?.[chip.id] ?? null;
+          return (
+            <button
+              key={chip.id}
+              type="button"
+              className={`activity__chip${current === chip.id ? ' is-active' : ''}${
+                count === 0 ? ' activity__chip--empty' : ''
+              }`}
+              aria-pressed={current === chip.id}
+              // The badge is a number that moves, which is noise read aloud,
+              // so the count reaches a screen reader as the chip's
+              // description instead and the chip's name stays its label.
+              title={count === null ? undefined : `${count} in the last ${rangeLabel}`}
+              onClick={() => onChip(chip)}
+            >
+              {chip.label}
+              {count === null ? null : <ChipCount value={count} still={still} />}
+            </button>
+          );
+        })}
       </div>
       {current === 'human' ? (
         // The log says what happened; what is waiting now has one home.
@@ -412,6 +449,20 @@ function Filters({
         </div>
       </details>
     </section>
+  );
+}
+
+/**
+ * How much is behind a chip, as a badge on it. The number travels to its new
+ * value so a chip that just grew says so; asked for less motion, it simply
+ * updates. An empty chip still counts, and is still clickable.
+ */
+function ChipCount({ value, still }: { value: number; still: boolean }): JSX.Element {
+  const shown = useCountUp(value, still);
+  return (
+    <span className="activity__chip-count" aria-hidden="true">
+      {Math.round(shown)}
+    </span>
   );
 }
 
