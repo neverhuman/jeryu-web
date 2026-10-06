@@ -298,6 +298,27 @@ export function pinsBody(
   };
 }
 
+/**
+ * `GET /api/v1/events/histogram`: hourly volume for the band above the feed,
+ * oldest bucket first. The counts are shaped so every group is in the stack.
+ */
+export function histogramBody(range = '24h'): Record<string, unknown> {
+  const hours = range === '6h' ? 6 : range === '7d' ? 24 : 12;
+  const shape = [
+    { todos: 3, gates: 5 },
+    { todos: 6, gates: 9, reviews: 2, pulls: 2, merges: 1 },
+    { gates: 4, pulls: 1, releases: 1, deploys: 1 },
+    { todos: 2, gates: 2, reviews: 1 },
+  ];
+  const buckets = Array.from({ length: hours }, (_, i) => ({
+    at: new Date(Date.now() - (hours - 1 - i) * 3_600_000).toISOString(),
+    groups: shape[i % shape.length],
+    failures: i % 3 === 1 ? 2 : 0,
+    needs_human: i % 4 === 2 ? 1 : 0,
+  }));
+  return { schema_version: 1, bucket_seconds: 3600, buckets };
+}
+
 export interface PipelineMockLog {
   eventQueries: string[];
 }
@@ -317,6 +338,9 @@ export async function mockPipelineApi(
 
   await page.route(/\/api\/v1\/attention(\?.*)?$/, (route) => json(route, options.attention ?? attentionBody()));
   await page.route(/\/api\/v1\/pins(\?.*)?$/, (route) => json(route, options.pins ?? pinsBody()));
+  await page.route(/\/api\/v1\/events\/histogram(\?.*)?$/, (route, request) =>
+    json(route, histogramBody(new URL(request.url()).searchParams.get('range') ?? '24h'))
+  );
   await page.route(/\/api\/v1\/events(\?.*)?$/, (route, request) => {
     const qs = new URL(request.url()).searchParams;
     log.eventQueries.push(qs.toString());

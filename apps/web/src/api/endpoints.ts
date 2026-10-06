@@ -4,7 +4,7 @@
 // typecheck time. All paths are versioned (§35.1.1) under `/api/v1/`.
 
 import type { RepoGraphInclude } from './types/controlPlane';
-import type { PipelineEventsQuery } from './types/pipeline';
+import type { PipelineEventsQuery, PipelineHistogramQuery } from './types/pipeline';
 import type { SearchQuery } from './types/search';
 
 export const endpoints = {
@@ -278,6 +278,17 @@ export const endpoints = {
     }
     const suffix = qs.toString();
     return suffix ? `/api/v1/events?${suffix}` : '/api/v1/events';
+  },
+  /** Event volume per bucket for the Activity band (admin-only; 404 on an
+   *  older server, where the band is left out rather than shown broken). */
+  eventsHistogram: (params?: PipelineHistogramQuery): string => {
+    const qs = new URLSearchParams();
+    for (const [key, value] of Object.entries(params ?? {})) {
+      if (value === undefined || value === '') continue;
+      qs.set(key, String(value));
+    }
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/events/histogram?${suffix}` : '/api/v1/events/histogram';
   },
   /** "Needs you": what is waiting on a human right now (admin-only). */
   attention: (): string => '/api/v1/attention',

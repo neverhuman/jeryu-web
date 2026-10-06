@@ -120,6 +120,37 @@ export interface PipelineEventsResponse {
   latest_seq: number;
 }
 
+// ---- Volume per bucket (`GET /api/v1/events/histogram`, admin-only) -------
+
+/**
+ * One bucket of the event histogram: how many events of each group landed in
+ * it, how many of those failed, and how many flagged a person. `groups` is
+ * open: a key this build does not stack is ignored rather than drawn.
+ */
+export interface PipelineHistogramBucket {
+  /** Start of the bucket, RFC 3339. */
+  at: string;
+  groups?: Record<string, number> | null;
+  failures?: number | null;
+  needs_human?: number | null;
+}
+
+export interface PipelineHistogramResponse {
+  schema_version?: string | number;
+  from?: string;
+  to?: string;
+  /** Width of one bucket. Informational: the chart lays bars out by count. */
+  bucket_seconds?: number;
+  buckets: PipelineHistogramBucket[];
+}
+
+/** Query of `GET /api/v1/events/histogram`. `range` is `6h`, `24h` or `7d`. */
+export interface PipelineHistogramQuery {
+  range?: string;
+  family?: string;
+  repo?: string;
+}
+
 /** Query of `GET /api/v1/events`. `kind` ending in `.` is a prefix match. */
 export interface PipelineEventsQuery {
   after_seq?: number;

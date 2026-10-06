@@ -20,6 +20,8 @@ import type {
   PinsResponse,
   PipelineEventsQuery,
   PipelineEventsResponse,
+  PipelineHistogramQuery,
+  PipelineHistogramResponse,
 } from '../api/types';
 import { useRealtimeStore } from '../stores/realtimeStore';
 import { useRealtime } from './useRealtime';
@@ -90,6 +92,26 @@ export function usePipelineEvents(
     enabled: options?.enabled ?? true,
     staleTime: 2_000,
     refetchInterval: (q) => (q.state.error ? false : (options?.refetchInterval ?? false)),
+    retry: false,
+  });
+}
+
+/**
+ * Event volume per bucket, for the band above the Activity feed. Polls on the
+ * tail's own beat so the newest bucket keeps growing while the page is open.
+ * Nothing retries: on a server without the route the band is simply left out.
+ */
+export function useEventsHistogram(
+  query: PipelineHistogramQuery,
+  options?: { enabled?: boolean; refetchInterval?: number | false }
+): UseQueryResult<PipelineHistogramResponse, Error> {
+  return useQuery({
+    queryKey: [...PIPELINE_KEY, 'events', 'histogram', query],
+    queryFn: ({ signal }) =>
+      apiGet<PipelineHistogramResponse>(endpoints.eventsHistogram(query), { signal }),
+    enabled: options?.enabled ?? true,
+    staleTime: 5_000,
+    refetchInterval: (q) => (q.state.error ? false : (options?.refetchInterval ?? 15_000)),
     retry: false,
   });
 }

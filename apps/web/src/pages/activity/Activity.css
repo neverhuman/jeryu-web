@@ -379,3 +379,211 @@
   color: var(--color-fg-muted);
 }
 
+
+/* ---- The volume band above the feed ------------------------------------ */
+
+.activity-volume {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-1);
+}
+
+.activity-volume__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.activity-volume__title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-fg-secondary);
+}
+
+.activity-volume__count {
+  color: var(--color-fg-muted);
+  font-weight: var(--font-weight-normal);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.activity-volume__ranges {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.activity-volume__range {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  background: none;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.activity-volume__range.is-active {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+}
+
+/* The plot keeps its height from the first paint, before and after the answer
+   is in, so the feed below it never moves. */
+.activity-volume__plot {
+  height: 136px;
+}
+
+.activity-volume__plot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.activity-volume__axis {
+  fill: var(--color-fg-muted);
+  font-size: 10px;
+}
+
+.activity-volume__hit {
+  fill: transparent;
+}
+
+.activity-volume__seg {
+  cursor: pointer;
+  /* A tail event grows the newest bucket: the stack slides rather than jumps. */
+  transition:
+    y 300ms ease-out,
+    height 300ms ease-out,
+    opacity 150ms linear;
+}
+
+.activity-volume__seg.is-dimmed {
+  opacity: 0.25;
+}
+
+.activity-volume__seg.is-todos { fill: var(--color-accent-primary); }
+.activity-volume__seg.is-gates { fill: var(--color-accent-info); }
+.activity-volume__seg.is-reviews { fill: var(--color-accent-secondary); }
+.activity-volume__seg.is-pulls { fill: var(--color-accent-success); }
+.activity-volume__seg.is-merges {
+  fill: color-mix(in srgb, var(--color-accent-success) 50%, var(--color-accent-info));
+}
+.activity-volume__seg.is-releases { fill: var(--color-accent-warning); }
+.activity-volume__seg.is-deploys {
+  fill: color-mix(in srgb, var(--color-accent-secondary) 45%, var(--color-accent-primary));
+}
+
+/* A failure the pipeline owns is the failed tone (amber, outlined), not red:
+   red on this site is kept for what waits on a person — the tick above. */
+.activity-volume__failed {
+  fill: color-mix(in srgb, var(--color-accent-warning) 55%, transparent);
+  stroke: var(--color-accent-warning);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+  pointer-events: none;
+}
+
+.activity-volume__human {
+  fill: var(--color-accent-danger);
+  cursor: pointer;
+}
+
+.activity-volume__bar {
+  animation: activity-volume-grow 400ms ease-out both;
+  transform-origin: center bottom;
+}
+
+.activity-volume__bar.is-current .activity-volume__seg {
+  animation: activity-volume-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes activity-volume-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes activity-volume-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.68;
+  }
+}
+
+.activity-volume__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.activity-volume__key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-1);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.activity-volume__key.is-active {
+  border-color: var(--color-border-strong);
+  color: var(--color-fg-primary);
+}
+
+.activity-volume__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.activity-volume__swatch.is-todos { background: var(--color-accent-primary); }
+.activity-volume__swatch.is-gates { background: var(--color-accent-info); }
+.activity-volume__swatch.is-reviews { background: var(--color-accent-secondary); }
+.activity-volume__swatch.is-pulls { background: var(--color-accent-success); }
+.activity-volume__swatch.is-merges {
+  background: color-mix(in srgb, var(--color-accent-success) 50%, var(--color-accent-info));
+}
+.activity-volume__swatch.is-releases { background: var(--color-accent-warning); }
+.activity-volume__swatch.is-deploys {
+  background: color-mix(in srgb, var(--color-accent-secondary) 45%, var(--color-accent-primary));
+}
+
+/* Values just update: no grow-in, no tween, no pulse. */
+.activity-volume--still .activity-volume__bar,
+.activity-volume--still .activity-volume__bar.is-current .activity-volume__seg {
+  animation: none;
+}
+
+.activity-volume--still .activity-volume__seg {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-volume__bar,
+  .activity-volume__bar.is-current .activity-volume__seg {
+    animation: none;
+  }
+
+  .activity-volume__seg {
+    transition: none;
+  }
+}

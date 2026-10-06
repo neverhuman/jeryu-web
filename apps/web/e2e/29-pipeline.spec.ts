@@ -334,7 +334,7 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('activity-dock')).toHaveCount(0);
   });
 
-  test('Activity lists events with log tails, filters through the URL, and has a wall mode @action:activity.feed @action:activity.filters @action:activity.wall', async ({
+  test('Activity lists events with log tails, filters through the URL, and has a wall mode @action:activity.feed @action:activity.filters @action:activity.volume @action:activity.wall', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
@@ -354,6 +354,18 @@ test.describe('Pipeline visibility', () => {
     // internal sequence number stays out of sight.
     await expect(page.locator('.activity__day').first()).toBeVisible();
     await expect(page.getByTestId('activity-page')).not.toContainText('newest #');
+
+    // The volume band sits above the chips and is a filter of its own: its
+    // range is held in the URL, and a legend key sets the chip below it.
+    const band = page.getByTestId('activity-volume');
+    await expect(band.locator('.activity-volume__bar').first()).toBeVisible();
+    await band.getByRole('button', { name: '6h' }).click();
+    await expect(page).toHaveURL(/range=6h/);
+    await band.getByRole('button', { name: 'Filter to gates' }).click();
+    await expect(page).toHaveURL(/kind=gate\./);
+    await expect(page.getByRole('button', { name: 'Gates', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
 
     await page.getByTestId('activity-page').screenshot({ path: 'playwright-report/activity.png' });
 

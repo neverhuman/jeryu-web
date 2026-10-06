@@ -34,6 +34,7 @@ import {
   wallCounters,
   type ActivityFilters,
 } from './activityModel';
+import { ActivityHistogram } from './ActivityHistogram';
 import { EventRow } from './EventRow';
 import { useListKeys } from '../../hooks/useListKeys';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -138,6 +139,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           </p>
         )}
       </header>
+
+      {/* The band is a filter on the feed, so it sits above the chips it sets.
+          Wall mode has no filters and its own counters, so it has no band. */}
+      {wall ? null : <ActivityHistogram family={filters.family} repo={repo} />}
 
       {wall ? (
         <>

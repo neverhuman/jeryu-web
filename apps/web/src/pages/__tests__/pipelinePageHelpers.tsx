@@ -4,7 +4,7 @@
 import { vi } from 'vitest';
 
 import { errorResponse, json, recordHeaders, type Override, type Recorded } from './shiftPageHelpers';
-import { ATTENTION, EVENTS, PINS } from './pipelineTestData';
+import { ATTENTION, EVENTS, HISTOGRAM, PINS } from './pipelineTestData';
 
 /** The SPA shell an older server returns for an unknown `/api/v1/*` path. */
 export function htmlShell(): Response {
@@ -31,6 +31,7 @@ export function mockPipelineApi(override?: Override): Recorded[] {
     if (custom) return custom;
     if (url.pathname === '/api/v1/attention') return json(ATTENTION);
     if (url.pathname === '/api/v1/pins') return json(PINS);
+    if (url.pathname === '/api/v1/events/histogram') return json(HISTOGRAM);
     if (url.pathname === '/api/v1/events') {
       return json({ events: EVENTS, latest_seq: EVENTS[0]?.seq ?? 0 });
     }

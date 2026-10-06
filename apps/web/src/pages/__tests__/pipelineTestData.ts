@@ -1,7 +1,14 @@
 // pipelineTestData.ts — fixtures in the exact shape of the pipeline
 // visibility contract v1 (attention items and events).
 
-import type { AttentionItem, AttentionResponse, Pin, PinsResponse, PipelineEvent } from '../../api/types';
+import type {
+  AttentionItem,
+  AttentionResponse,
+  Pin,
+  PinsResponse,
+  PipelineEvent,
+  PipelineHistogramResponse,
+} from '../../api/types';
 
 export function attentionItem(partial: Partial<AttentionItem> & Pick<AttentionItem, 'id' | 'kind'>): AttentionItem {
   return {
@@ -298,5 +305,23 @@ export const PINS: PinsResponse = {
       branch: 'main',
       pins: [pin({ dependency: 'veox/jain-web' })],
     },
+  ],
+};
+
+/** `GET /api/v1/events/histogram`: three hourly buckets, newest last. */
+export const HISTOGRAM: PipelineHistogramResponse = {
+  schema_version: 1,
+  from: '2026-10-04T10:00:00Z',
+  to: '2026-10-04T13:00:00Z',
+  bucket_seconds: 3600,
+  buckets: [
+    { at: '2026-10-04T10:00:00Z', groups: { todos: 4, gates: 2 }, failures: 0, needs_human: 0 },
+    {
+      at: '2026-10-04T11:00:00Z',
+      groups: { todos: 2, gates: 6, reviews: 1, pulls: 1, merges: 1, releases: 1, deploys: 1 },
+      failures: 2,
+      needs_human: 1,
+    },
+    { at: '2026-10-04T12:00:00Z', groups: { todos: 1, gates: 1 }, failures: 0, needs_human: 0 },
   ],
 };
