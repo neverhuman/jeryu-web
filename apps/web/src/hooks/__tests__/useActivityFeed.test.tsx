@@ -9,7 +9,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { pipelineEvent } from '../../pages/__tests__/pipelineTestData';
 import { errorResponse, json } from '../../pages/__tests__/shiftPageHelpers';
-import { ACTIVITY_TAIL_BACKOFF_MS, activityTailBackoffMs, useActivityFeed } from '../useActivityFeed';
+import { useRealtimeStore } from '../../stores/realtimeStore';
+import {
+  ACTIVITY_TAIL_BACKOFF_MS,
+  ACTIVITY_TAIL_LIVE_MS,
+  ACTIVITY_TAIL_MS,
+  activityTailBackoffMs,
+  useActivityFeed,
+} from '../useActivityFeed';
 
 function wrapperFor(client: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }): JSX.Element {
@@ -32,6 +39,15 @@ function mockTail(failures: number): { searches: string[] } {
     return json({ events: [pipelineEvent({ seq: 11, kind: 'pr.merged' })], latest_seq: 11 });
   });
   return { searches };
+}
+
+/** Advance the fake clock, then give the request, its render and whatever it
+ *  starts a few turns to settle. */
+async function settle(ms = 0): Promise<void> {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+    for (let turn = 0; turn < 5; turn += 1) await vi.advanceTimersByTimeAsync(10);
+  });
 }
 
 function clientFor(): QueryClient {
@@ -102,5 +118,45 @@ describe('useActivityFeed live tail', () => {
     await waitFor(() => expect(result.current.tail.paused).toBe(false));
     expect(searches.filter((search) => search.includes('after_seq'))).toHaveLength(2);
     expect(result.current.tail.retryInSeconds).toBe(0);
+  });
+});
+
+describe('useActivityFeed tail beat', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    useRealtimeStore.setState({ status: 'idle' });
+  });
+
+  /** Count the tail requests the hook has made so far. */
+  function tails(searches: string[]): number {
+    return searches.filter((search) => search.includes('after_seq')).length;
+  }
+
+  it('polls every 5s while the socket is not open', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    useRealtimeStore.setState({ status: 'closed' });
+    const { searches } = mockTail(0);
+    renderHook(() => useActivityFeed({}), { wrapper: wrapperFor(clientFor()) });
+    await settle();
+    const first = tails(searches);
+    expect(first).toBeGreaterThan(0);
+    await settle(ACTIVITY_TAIL_MS);
+    expect(tails(searches)).toBeGreaterThan(first);
+  });
+
+  it('drops to a 30s backstop while the socket is open, because a push refetches it', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    useRealtimeStore.setState({ status: 'open' });
+    const { searches } = mockTail(0);
+    renderHook(() => useActivityFeed({}), { wrapper: wrapperFor(clientFor()) });
+    await settle();
+    const first = tails(searches);
+    expect(first).toBeGreaterThan(0);
+    // Six beats of the socket-down poll go by without one more request.
+    await settle(ACTIVITY_TAIL_MS * 6 - 1_000);
+    expect(tails(searches)).toBe(first);
+    await settle(ACTIVITY_TAIL_LIVE_MS);
+    expect(tails(searches)).toBeGreaterThan(first);
   });
 });

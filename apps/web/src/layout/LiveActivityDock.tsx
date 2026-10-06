@@ -41,18 +41,21 @@ export function LiveActivityDock(): JSX.Element | null {
   const [collapsed, setCollapsed] = useState(
     () => readBrowserText('durable', EXPANDED_KEY) !== '1'
   );
+  // The Activity page is this feed at full size, so the dock renders nothing
+  // there: asking for its own eight events as well is a read a reader of that
+  // page never sees.
+  const onActivityPage = pathname === ACTIVITY_PATH;
   const feed = usePipelineEvents(DOCK_QUERY, {
-    enabled: isAdmin,
+    enabled: isAdmin && !onActivityPage,
     refetchInterval: 10_000,
   });
-  usePipelineNudge(feed.isSuccess, [...PIPELINE_KEY, 'events', DOCK_QUERY]);
+  usePipelineNudge(feed.isSuccess && !onActivityPage, [...PIPELINE_KEY, 'events', DOCK_QUERY]);
   // What needs a person is Needs you's answer, not "how many of the last eight
   // events were flagged": the dock showed 1 beside a nav badge of 3. It counts
   // and links to the same rows as every other surface, on the same family.
   const attention = useAttention(user?.role === 'admin');
 
-  // The Activity page (and its wall) is this feed at full size.
-  if (pathname === ACTIVITY_PATH) return null;
+  if (onActivityPage) return null;
   // The feed is admin-only: another role is never shown a strip of it, whatever
   // a cached answer in the query client might still hold.
   if (!isAdmin || !feed.isSuccess) return null;

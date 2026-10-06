@@ -44,26 +44,54 @@ export function isPipelineForbidden(error: unknown): boolean {
 }
 
 /**
+ * Frames on the `pipeline` scope that announce another surface's snapshot
+ * rather than a new row in the event log: the release board's stored snapshot
+ * and a slot's usage report. A reader of the event feed learns nothing from
+ * them, so `isPipelineEventPush` lets the feed's nudge pass them by.
+ */
+export const PIPELINE_SNAPSHOT_KINDS: readonly string[] = [
+  'release_board.updated',
+  'usage.changed',
+];
+
+/** True when a pipeline-scope frame means "there are new events to read". */
+export function isPipelineEventPush(kind: string): boolean {
+  return !PIPELINE_SNAPSHOT_KINDS.includes(kind);
+}
+
+export interface PipelineNudgeOptions {
+  /** Which frame kinds count. Default: every frame on the scope. */
+  kinds?: (kind: string) => boolean;
+}
+
+/**
  * Refetch `queryKey` (default: every pipeline query) when the server pushes on
  * the `pipeline` scope. The WebSocket is a nudge only; polling keeps the page
  * right without it. Enable it only once a pipeline read has succeeded, so an
  * older server or a non-admin session never subscribes to an unknown scope.
+ *
+ * Several surfaces share the one scope, so a caller that only cares about some
+ * of its frames passes `kinds`; without it every frame invalidates the key,
+ * which is a fetch per push for a surface the frame does not touch.
  */
 export function usePipelineNudge(
   enabled = true,
-  queryKey: readonly unknown[] = PIPELINE_KEY
+  queryKey: readonly unknown[] = PIPELINE_KEY,
+  options?: PipelineNudgeOptions
 ): void {
   const queryClient = useQueryClient();
   // The caller may build the key inline; a ref keeps the subscription stable.
   const keyRef = useRef(queryKey);
   keyRef.current = queryKey;
+  const kindsRef = useRef(options?.kinds);
+  kindsRef.current = options?.kinds;
   useRealtime(enabled ? [PIPELINE_SCOPE] : []);
   useEffect(() => {
     if (!enabled) return () => {};
     return useRealtimeStore.getState().addInvalidator((event) => {
-      if (event.scope === PIPELINE_SCOPE) {
-        void queryClient.invalidateQueries({ queryKey: keyRef.current });
-      }
+      if (event.scope !== PIPELINE_SCOPE) return;
+      if (kindsRef.current && !kindsRef.current(event.kind)) return;
+      void queryClient.invalidateQueries({ queryKey: keyRef.current });
     });
   }, [enabled, queryClient]);
 }

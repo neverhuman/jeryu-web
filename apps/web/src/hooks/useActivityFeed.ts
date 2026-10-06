@@ -1,6 +1,9 @@
 // useActivityFeed.ts — the Activity page's event list: one newest-first page,
-// a live tail (`after_seq`, polled every 5 s while the tab is visible), and
-// "load older" (`before_seq`).
+// a live tail (`after_seq`) and "load older" (`before_seq`).
+//
+// The tail is pushed when the socket is open: a pipeline event frame nudges
+// its query, so the poll is only there for when nothing is pushing. It beats
+// every 5 s while the socket is not open and once every 30 s while it is.
 //
 // The newest-first page is the single cache entry; the tail and the older
 // loader merge into it with `setQueryData`, so there is no component state to
@@ -18,9 +21,14 @@ import {
   mergeEvents,
   minSeq,
 } from '../pages/activity/activityModel';
+import { useRealtimeStore } from '../stores/realtimeStore';
 import { PIPELINE_KEY } from './usePipeline';
 
+/** The tail's beat when nothing is pushing: the socket is the live path. */
 export const ACTIVITY_TAIL_MS = 5_000;
+
+/** The beat kept behind an open socket, as a backstop for a missed frame. */
+export const ACTIVITY_TAIL_LIVE_MS = 30_000;
 
 /** Waits between tail attempts after consecutive failures, last value held. */
 export const ACTIVITY_TAIL_BACKOFF_MS = [5_000, 10_000, 30_000, 60_000] as const;
@@ -84,6 +92,10 @@ export function useActivityFeed(query: PipelineEventsQuery, pageSize = ACTIVITY_
   // feed holds, so a forge 502 or a network blip costs events, not the tail.
   const [tailFailures, setTailFailures] = useState(0);
   const tailRetryMs = activityTailBackoffMs(tailFailures);
+  // A nudge on the pipeline scope refetches the tail, so an open socket is
+  // the live path and the poll drops back to a backstop.
+  const socketOpen = useRealtimeStore((state) => state.status === 'open');
+  const tailBeatMs = socketOpen ? ACTIVITY_TAIL_LIVE_MS : ACTIVITY_TAIL_MS;
   const tail = useQuery({
     queryKey: activityTailKey(query),
     queryFn: async ({ signal }) => {
@@ -102,7 +114,7 @@ export function useActivityFeed(query: PipelineEventsQuery, pageSize = ACTIVITY_
       return next.latest_seq ?? after;
     },
     enabled: base.isSuccess,
-    refetchInterval: (q) => (q.state.error ? tailRetryMs : ACTIVITY_TAIL_MS),
+    refetchInterval: (q) => (q.state.error ? tailRetryMs : tailBeatMs),
     staleTime: 0,
     retry: false,
   });

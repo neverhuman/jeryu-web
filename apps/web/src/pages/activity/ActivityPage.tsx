@@ -14,7 +14,7 @@ import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { LoadingState, PipelineQueryState } from '../../components/state';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
-import { usePipelineNudge } from '../../hooks/usePipeline';
+import { isPipelineEventPush, usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { useShiftFamilies } from '../../hooks/useShift';
 import {
@@ -80,7 +80,11 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   );
   const query = useMemo(() => filtersToQuery(filters), [filters]);
   const feed = useActivityFeed(query);
-  usePipelineNudge(feed.base.isSuccess, activityTailKey(query));
+  // Only a frame that can become a row is worth a tail fetch: a release board
+  // snapshot or a usage report shares the scope but never reaches this list.
+  usePipelineNudge(feed.base.isSuccess, activityTailKey(query), {
+    kinds: isPipelineEventPush,
+  });
   // Cursors run on the raw feed (`feed`); what is shown and counted is folded.
   const events = visibleEvents(feed.base.data?.events ?? [], filters.kind);
   const resolved = resolvedSeqs(events);

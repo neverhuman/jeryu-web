@@ -1,13 +1,14 @@
 // ActivityPage.test.tsx — feed rows, log tails, URL filters, load older, the
 // live tail, wall mode, and degradation on an older server.
 
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ActivityPage } from '../activity';
 import { htmlShell, mockPipelineApi } from './pipelinePageHelpers';
 import { EVENTS, pipelineEvent } from './pipelineTestData';
 import { errorResponse, json, renderAt } from './shiftPageHelpers';
+import { useRealtimeStore } from '../../stores/realtimeStore';
 
 function renderPage(path = '/activity'): void {
   renderAt(path, '/activity', <ActivityPage />);
@@ -259,6 +260,39 @@ describe('ActivityPage', () => {
     expect(await screen.findByTestId('activity-event-100')).toBeInTheDocument();
     expect(calls.some((c) => c.search.includes('before_seq=101'))).toBe(true);
     expect(screen.getByText('That is every stored event (30-day retention).')).toBeInTheDocument();
+  });
+
+  it('fetches the tail on an event push and not on another surface\'s snapshot', async () => {
+    const listeners: Array<(event: { scope: string; kind: string }) => void> = [];
+    const store = useRealtimeStore.getState();
+    vi.spyOn(useRealtimeStore, 'getState').mockReturnValue({
+      ...store,
+      addInvalidator: (listener) => {
+        listeners.push(listener as (event: { scope: string; kind: string }) => void);
+        return () => {};
+      },
+    });
+    const calls = mockPipelineApi();
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+    await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
+    const tails = (): number =>
+      calls.filter((call) => call.pathname === '/api/v1/events' && call.search.includes('after_seq')).length;
+    const before = tails();
+
+    const fire = (event: { scope: string; kind: string }): void => {
+      act(() => {
+        for (const listener of listeners) listener(event);
+      });
+    };
+    // The release board publishes on the same scope; its snapshot is never a row.
+    fire({ scope: 'pipeline', kind: 'release_board.updated' });
+    fire({ scope: 'pipeline', kind: 'usage.changed' });
+    fire({ scope: 'repo.jeryu/jeryu-web', kind: 'gate.finished' });
+    expect(tails()).toBe(before);
+
+    fire({ scope: 'pipeline', kind: 'gate.finished' });
+    await waitFor(() => expect(tails()).toBeGreaterThan(before));
   });
 
   it('says the live tail is paused when it fails, and resumes on Retry now', async () => {

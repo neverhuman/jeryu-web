@@ -83,6 +83,9 @@ describe('LiveActivityDock', () => {
     renderAt('/activity', '/activity', <LiveActivityDock />);
     await waitFor(() => expect(calls.length).toBeGreaterThan(0));
     expect(screen.queryByTestId('activity-dock')).toBeNull();
+    // Nothing is rendered there, so nothing is read either: the page's own
+    // feed is the only caller of the event log.
+    expect(calls.filter((call) => call.pathname === '/api/v1/events')).toHaveLength(0);
   });
 
   it('renders nothing for non-admins or on a server without the feed', async () => {
