@@ -238,7 +238,9 @@ describe('ActivityPage', () => {
       renderPage();
       // Not "2 events", which read as the pipeline's total: the pill says it is
       // showing what it has loaded, from the oldest row it holds.
-      expect(await screen.findByText('Live · Showing 2 since 08:38')).toBeInTheDocument();
+      expect(await screen.findByTestId('activity-live')).toHaveTextContent(
+        /^Live · Showing 2 since 08:38 · updated \d+s ago$/
+      );
     } finally {
       vi.useRealTimers();
     }
@@ -703,12 +705,84 @@ describe('ActivityPage', () => {
     await screen.findByTestId('activity-event-10');
     const notice = await screen.findByTestId('activity-tail-paused');
     expect(notice).toHaveTextContent(/Live updates paused — retrying in \d+s/);
-    expect(screen.queryByText(/^Live ·/)).toBeNull();
+    expect(screen.getByTestId('activity-live')).toHaveAttribute('data-phase', 'reconnecting');
 
     fireEvent.click(within(notice).getByRole('button', { name: 'Retry now' }));
     expect(await screen.findByTestId('activity-event-11')).toBeInTheDocument();
     expect(screen.queryByTestId('activity-tail-paused')).toBeNull();
-    expect(screen.getByText(/^Live ·/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId('activity-live')).toHaveAttribute('data-phase', 'live')
+    );
+  });
+
+  it('pulses a Live dot with the count and a ticking "updated Xs ago"', async () => {
+    mockPipelineApi();
+    renderPage();
+    const pill = await screen.findByTestId('activity-live');
+    expect(pill).toHaveAttribute('role', 'status');
+    expect(pill).toHaveAttribute('data-phase', 'live');
+    expect(pill.className).toContain('activity__live--live');
+    expect(pill.className).not.toContain('activity__live--still');
+    expect(within(pill).getByText('Live')).toBeInTheDocument();
+    expect(pill).toHaveTextContent(
+      new RegExp(`^Live · Showing ${EVENTS.length} since .+ · updated 0s ago$`)
+    );
+    // Only the state is announced: the count and the clock move on their own.
+    for (const moving of [/Showing/, /updated/]) {
+      expect(within(pill).getByText(moving)).toHaveAttribute('aria-live', 'off');
+    }
+
+    // The clock ticks once a second without the feed fetching anything.
+    const base = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(base + 4_200);
+    await waitFor(() => expect(pill).toHaveTextContent('updated 4s ago'), { timeout: 3_000 });
+  });
+
+  it('says Paused while the tab is hidden, because the tail stops polling then', async () => {
+    mockPipelineApi();
+    renderPage();
+    const pill = await screen.findByTestId('activity-live');
+    const visibility = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState');
+    try {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await waitFor(() => expect(pill).toHaveAttribute('data-phase', 'paused'));
+      expect(within(pill).getByText('Paused')).toBeInTheDocument();
+
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await waitFor(() => expect(pill).toHaveAttribute('data-phase', 'live'));
+    } finally {
+      delete (document as unknown as Record<string, unknown>).visibilityState;
+      if (visibility) Object.defineProperty(Document.prototype, 'visibilityState', visibility);
+    }
+  });
+
+  it('holds the dot still when the reader asked for less motion', async () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+    try {
+      mockPipelineApi();
+      renderPage();
+      const pill = await screen.findByTestId('activity-live');
+      expect(pill.className).toContain('activity__live--still');
+      expect(pill).toHaveTextContent('Live ·');
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   it("keys the row edges with the rows' own classes, and not on the wall", async () => {

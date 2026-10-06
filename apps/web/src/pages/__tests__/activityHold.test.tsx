@@ -175,7 +175,11 @@ describe('ActivityPage held rows', () => {
 
     fireEvent.click(pause);
     expect(pause).toHaveAttribute('aria-pressed', 'true');
-    await screen.findByText(/^Paused ·/);
+    // The pill says the reader's own Pause the way it says a hidden tab.
+    await waitFor(() =>
+      expect(screen.getByTestId('activity-live')).toHaveAttribute('data-phase', 'paused')
+    );
+    expect(screen.getByTestId('activity-live')).toHaveTextContent(/^Paused · Showing /);
 
     // The tail now has a row: paused, it is counted, not inserted.
     mockTailOf(13);
@@ -186,7 +190,9 @@ describe('ActivityPage held rows', () => {
     const fresh = await screen.findByTestId('activity-event-13');
     expect(fresh).toHaveClass('is-arriving');
     expect(pause).toHaveTextContent('Pause');
-    await screen.findByText(/^Live ·/);
+    await waitFor(() =>
+      expect(screen.getByTestId('activity-live')).toHaveAttribute('data-phase', 'live')
+    );
   }, 20_000);
 
   it('has no pause control in wall mode', async () => {

@@ -5,6 +5,7 @@ import { clockText } from '../../format/when';
 
 import {
   ACTIVITY_CHIPS,
+  TAIL_PHASE_LABEL,
   activeChip,
   activityHref,
   applyChip,
@@ -59,6 +60,8 @@ import {
   stageSteps,
   summaryParts,
   summaryText,
+  tailPhase,
+  updatedAgoText,
   visibleEvents,
   wallCounters,
   wantsWorkerSteps,
@@ -936,5 +939,29 @@ describe('foldBursts', () => {
     // A kind this build does not know still reads as a sentence.
     const unknown = merges.map((event) => ({ ...event, kind: 'orbit.aligned', outcome: null }));
     expect(burstTitle(rows(unknown)[0].burst!)).toBe('pragent orbit.aligned on 3 jain pull requests');
+  });
+});
+
+describe('the live tail status', () => {
+  it('reads Live while polling, Paused on a hidden tab, Reconnecting while failing', () => {
+    expect(tailPhase({ failing: false, hidden: false })).toBe('live');
+    expect(tailPhase({ failing: false, hidden: true })).toBe('paused');
+    expect(tailPhase({ failing: true, hidden: false })).toBe('reconnecting');
+    // A failing tail is the news, even if the reader is on another tab.
+    expect(tailPhase({ failing: true, hidden: true })).toBe('reconnecting');
+    expect(TAIL_PHASE_LABEL.reconnecting).toBe('Reconnecting');
+  });
+
+  it('says how fresh the feed is', () => {
+    const now = Date.parse('2026-10-04T12:00:00Z');
+    expect(updatedAgoText(now - 4_000, now)).toBe('updated 4s ago');
+    expect(updatedAgoText(now, now)).toBe('updated 0s ago');
+    expect(updatedAgoText(now - 59_900, now)).toBe('updated 59s ago');
+    expect(updatedAgoText(now - 90_000, now)).toBe('updated 1m ago');
+    expect(updatedAgoText(now - 3 * 3_600_000, now)).toBe('updated 3h ago');
+    // A clock skew ahead of us is not a negative age.
+    expect(updatedAgoText(now + 5_000, now)).toBe('updated 0s ago');
+    // Nothing has arrived yet: the pill says nothing it does not know.
+    expect(updatedAgoText(null, now)).toBe('');
   });
 });

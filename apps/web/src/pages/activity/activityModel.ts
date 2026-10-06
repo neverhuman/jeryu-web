@@ -1303,3 +1303,37 @@ export function dayTotalsText(totals: DayTotals): string {
   if (totals.spentUsd > 0) parts.push(`$${totals.spentUsd.toFixed(2)}`);
   return parts.join(' · ');
 }
+
+/** What the live tail is doing, as the status pill above the list says it. */
+export type TailPhase = 'live' | 'paused' | 'reconnecting';
+
+export const TAIL_PHASE_LABEL: Record<TailPhase, string> = {
+  live: 'Live',
+  paused: 'Paused',
+  reconnecting: 'Reconnecting',
+};
+
+/**
+ * A failing tail is the loudest thing to say, so it wins over a hidden tab or
+ * a reader's own Pause: they come back to "Reconnecting" rather than to a calm
+ * "Paused".
+ */
+export function tailPhase(state: { failing: boolean; hidden: boolean }): TailPhase {
+  if (state.failing) return 'reconnecting';
+  if (state.hidden) return 'paused';
+  return 'live';
+}
+
+/**
+ * How long ago the feed last heard back: `updated 4s ago`, in seconds while
+ * that is the interesting scale, then minutes and hours. Empty until a page
+ * has arrived, so the pill says nothing it does not know.
+ */
+export function updatedAgoText(updatedAt: number | null, now: number): string {
+  if (updatedAt === null || updatedAt <= 0) return '';
+  const seconds = Math.max(0, Math.floor((now - updatedAt) / 1_000));
+  if (seconds < 60) return `updated ${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `updated ${minutes}m ago`;
+  return `updated ${Math.floor(minutes / 60)}h ago`;
+}

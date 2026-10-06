@@ -22,6 +22,7 @@ import {
   mergeEvents,
   minSeq,
 } from '../pages/activity/activityModel';
+import { useDocumentHidden } from './useDocumentHidden';
 import { useRealtimeStore } from '../stores/realtimeStore';
 import { PIPELINE_KEY } from './usePipeline';
 
@@ -44,6 +45,10 @@ export function activityTailBackoffMs(failures: number): number {
 export interface ActivityTailState {
   /** True while the tail is failing: no new events are arriving. */
   paused: boolean;
+  /** True while this tab is hidden, which is when React Query stops polling. */
+  hidden: boolean;
+  /** When the feed last heard back, so a page can say how fresh it is. */
+  updatedAt: number | null;
   error: Error | null;
   /** Whole seconds until the next automatic attempt, 0 once it is due. */
   retryInSeconds: number;
@@ -135,7 +140,10 @@ export function useActivityFeed(query: PipelineEventsQuery, pageSize = ACTIVITY_
     }
   }, [tail.isError, tail.isSuccess, tail.errorUpdatedAt, tailFailures]);
 
-  // Re-render once a second while paused so the countdown in the notice moves.
+  // Re-render once a second while failing so the countdown in the notice moves.
+  // The pill's "updated 4s ago" keeps its own clock, so a healthy tail does not
+  // redraw the whole feed every second.
+  const hidden = useDocumentHidden();
   const [, setTailTick] = useState(0);
   useEffect(() => {
     if (!tail.isError) return () => {};
@@ -145,6 +153,8 @@ export function useActivityFeed(query: PipelineEventsQuery, pageSize = ACTIVITY_
 
   const tailState: ActivityTailState = {
     paused: tail.isError,
+    hidden,
+    updatedAt: Math.max(tail.dataUpdatedAt, base.dataUpdatedAt) || null,
     error: tail.error ?? null,
     retryInSeconds: tail.isError
       ? Math.max(0, Math.ceil((tail.errorUpdatedAt + tailRetryMs - Date.now()) / 1_000))

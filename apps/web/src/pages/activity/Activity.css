@@ -71,7 +71,7 @@
   background-color: var(--color-bg-1);
 }
 
-.activity__live,
+.activity__feed-note,
 .activity__counter-note {
   margin: 0;
   color: var(--color-fg-muted);
@@ -117,6 +117,68 @@
 .activity__pause-count {
   color: var(--color-accent-primary);
   font-variant-numeric: tabular-nums;
+}
+
+/* The live tail's status pill: dot, state, count, how fresh the feed is. */
+.activity__live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-2);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.activity__live-state {
+  color: var(--color-fg-primary);
+  font-weight: 500;
+}
+
+.activity__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-fg-muted);
+}
+
+.activity__live--live .activity__live-dot {
+  background: var(--color-accent-success);
+  animation: activity-live-pulse 2s ease-in-out infinite;
+}
+
+.activity__live--reconnecting .activity__live-state {
+  color: var(--color-accent-warning);
+}
+
+.activity__live--reconnecting .activity__live-dot {
+  background: var(--color-accent-warning);
+}
+
+@keyframes activity-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  50% {
+    opacity: 0.45;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-success) 25%, transparent);
+  }
+}
+
+/* Asked for less motion: the dot is a steady colour, the words still change. */
+.activity__live--still .activity__live-dot {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity__live .activity__live-dot {
+    animation: none;
+  }
 }
 
 .activity__tail-paused {

@@ -45,7 +45,7 @@ import { PipelineQueryState } from '../../components/state';
 import { toneClass, type Tone } from '../../components/tone/tone';
 import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
 import { formatBadgeCount } from '../../format/number';
-import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
+import { activityTailKey, useActivityFeed, type ActivityTailState } from '../../hooks/useActivityFeed';
 import { isPipelineEventPush, useEventsHistogram, usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { useRepositories } from '../../hooks/useRepositories';
@@ -76,6 +76,9 @@ import {
   applyWorkerSteps,
   wantsWorkerSteps,
   workerStepCount,
+  TAIL_PHASE_LABEL,
+  tailPhase,
+  updatedAgoText,
   visibleEvents,
   type ActivityFilters,
 } from './activityModel';
@@ -450,20 +453,11 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       ) : (
         <>
           <div className="activity__live-row">
-            {feed.tail.paused ? (
-              // The tail is the page's promise of "Live"; when it stops arriving
-              // the page says so, and says when it will try again.
-              <p className="activity__tail-paused" role="status" data-testid="activity-tail-paused">
-                Live updates paused — retrying in {feed.tail.retryInSeconds}s{' '}
-                <button type="button" onClick={feed.tail.retryNow}>
-                  Retry now
-                </button>
-              </p>
-            ) : (
-              <p className="activity__live" role="status">
-                {paused ? 'Paused' : 'Live'} · {loadedCountText(events, new Date(now))}
-              </p>
-            )}
+            <TailStatus
+              countText={loadedCountText(events, new Date(now))}
+              held={paused}
+              tail={feed.tail}
+            />
             {wall ? null : (
               // Next to the pill it qualifies: the pill says which of the two
               // the list is, the button is how it changes.
@@ -482,6 +476,16 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
               </button>
             )}
           </div>
+          {feed.tail.paused ? (
+            // The tail is the page's promise of "Live"; when it stops arriving
+            // the pill says "Reconnecting" and this says when it will try again.
+            <p className="activity__tail-paused" data-testid="activity-tail-paused">
+              Live updates paused — retrying in {feed.tail.retryInSeconds}s{' '}
+              <button type="button" onClick={feed.tail.retryNow}>
+                Retry now
+              </button>
+            </p>
+          ) : null}
           {held.heldCount > 0 ? (
             // Sticky, so it stays reachable from wherever they were reading.
             <div className="activity__held" role="status" data-testid="activity-held">
@@ -589,7 +593,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
               {feed.loadingOlder ? 'Loading…' : 'Load older'}
             </ActionButton>
           ) : (
-            <p className="activity__live">That is every stored event (30-day retention).</p>
+            <p className="activity__feed-note">That is every stored event (30-day retention).</p>
           )}
           {feed.olderError ? (
             <p className="activity__error" role="alert">
@@ -599,6 +603,45 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * The status pill above the list: a pulsing dot while the tail is polling, grey
+ * "Paused" while the reader has paused the list or this tab is hidden and React
+ * Query has stopped, amber "Reconnecting" while the tail is failing — with what
+ * the list is showing and how fresh the feed is beside it.
+ *
+ * The pill is the page's one status region, and only the state is worth hearing:
+ * the count and the clock move every few seconds, so they say `aria-live="off"`
+ * and a screen reader is told "Reconnecting", not "4s ago, 5s ago, 6s ago". The
+ * clock is the pill's own tick, so the feed around it is not redrawn each second.
+ */
+function TailStatus({
+  countText,
+  held,
+  tail,
+}: {
+  countText: string;
+  held: boolean;
+  tail: ActivityTailState;
+}): JSX.Element {
+  const reduced = usePrefersReducedMotion();
+  const now = useTickingNow(1_000);
+  const phase = tailPhase({ failing: tail.paused, hidden: tail.hidden || held });
+  const ago = updatedAgoText(tail.updatedAt, now);
+  return (
+    <p
+      className={`activity__live activity__live--${phase}${reduced ? ' activity__live--still' : ''}`}
+      role="status"
+      data-testid="activity-live"
+      data-phase={phase}
+    >
+      <span className="activity__live-dot" aria-hidden="true" />
+      <span className="activity__live-state">{TAIL_PHASE_LABEL[phase]}</span>
+      <span aria-live="off">{` · ${countText}`}</span>
+      {ago ? <span aria-live="off">{` · ${ago}`}</span> : null}
+    </p>
   );
 }
 
