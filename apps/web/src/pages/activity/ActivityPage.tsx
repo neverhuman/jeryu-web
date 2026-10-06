@@ -1,11 +1,13 @@
 // ActivityPage.tsx — `/activity`: the pipeline event log, newest first, with a
-// live tail, URL-held filters and "load older". The last-24-hour strip is on
-// every Activity page; `?wall=1` is the wall mode, which shows the same five
+// live tail, URL-held filters and "load older". A reader who has scrolled down
+// or opened a row is not pushed by the tail: rows that land wait above the
+// fold behind a "N new events" pill until they ask for them.
+// The last-24-hour strip is on every Activity page; `?wall=1` is the wall mode, which shows the same five
 // numbers in large type above a full-height, auto-scrolling feed, meant for a
 // screen on the wall or a demo.
 
 import { Activity, Maximize2, Minimize2 } from 'lucide-react';
-import { Fragment, useEffect, useMemo, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
@@ -34,6 +36,7 @@ import {
   type ActivityFilters,
 } from './activityModel';
 import { useArrivingRows } from './arrivalsModel';
+import { useAtPageTop, useHeldRows } from './holdModel';
 import { ActivityHistogram } from './ActivityHistogram';
 import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
@@ -88,23 +91,59 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     kinds: isPipelineEventPush,
   });
   // Cursors run on the raw feed (`feed`); what is shown and counted is folded.
-  const events = visibleEvents(feed.base.data?.events ?? [], filters.kind);
+  const all = visibleEvents(feed.base.data?.events ?? [], filters.kind);
+  const newest = all[0]?.seq ?? 0;
+  const filterId = useMemo(() => JSON.stringify(query), [query]);
+  // A reader is only safe to insert above when they are at the top of the page
+  // with nothing opened; anywhere else a new row would push what they are
+  // reading, so it waits behind the pill. The wall has no reader to disturb.
+  const atTop = useAtPageTop();
+  const [openRows, setOpenRows] = useState<ReadonlySet<number>>(() => new Set<number>());
+  const onRowOpenChange = useCallback((seq: number, open: boolean): void => {
+    setOpenRows((prev) => {
+      if (open === prev.has(seq)) return prev;
+      const next = new Set(prev);
+      if (open) next.add(seq);
+      else next.delete(seq);
+      return next;
+    });
+  }, []);
+  const held = useHeldRows(
+    all.map((event) => event.seq),
+    filterId,
+    atTop && openRows.size === 0,
+    !wall
+  );
+  const shown = new Set(held.shown);
+  const events = wall ? all : all.filter((event) => shown.has(event.seq));
+  // Resolution is read off the rows the reader has: a held event must not
+  // quietly clear the red on a row above it before they have seen why.
   const resolved = resolvedSeqs(events);
-  const newest = events[0]?.seq ?? 0;
   // One `j`/`k` list over the whole feed, day headings and all.
   const rows = useListKeys<HTMLDivElement>();
   // Rows the tail brought in since the last render, so they can announce
   // themselves. The filter set is the list's identity: changing it starts a
-  // fresh page, which arrives all at once and so animates nothing.
+  // fresh page, which arrives all at once and so animates nothing. Rows the
+  // pill was holding are new to the list at the moment it is clicked, so they
+  // arrive then, with the same cue.
   const still = usePrefersReducedMotion();
   const arriving = useArrivingRows(
     events.map((event) => event.seq),
-    JSON.stringify(query),
+    filterId,
     still
   );
 
-  // Wall mode keeps the newest event in view as the tail grows.
+  // The top of the page: where wall mode keeps the newest event, and where
+  // the pill takes the reader so the rows it reveals land in front of them.
   const top = useRef<HTMLDivElement | null>(null);
+  const showHeld = (): void => {
+    held.release();
+    if (typeof top.current?.scrollIntoView === 'function') {
+      top.current.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' });
+    }
+  };
+
+  // Wall mode keeps the newest event in view as the tail grows.
   useEffect(() => {
     if (wall && typeof top.current?.scrollIntoView === 'function') {
       top.current.scrollIntoView({ block: 'start' });
@@ -167,11 +206,11 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       {wall ? (
         <>
           <ScopedWallNote />
-          <SummaryStrip family={filters.family} repo={repo} events={events} wall />
+          <SummaryStrip family={filters.family} repo={repo} events={all} wall />
         </>
       ) : (
         <>
-          <SummaryStrip family={filters.family} repo={repo} events={events} />
+          <SummaryStrip family={filters.family} repo={repo} events={all} />
           <Filters
             filters={filters}
             pinnedRepo={Boolean(repo)}
@@ -185,7 +224,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
         <LoadingState title="Loading activity…" variant="message" />
       ) : feed.base.isError ? (
         <PipelineQueryState what="the activity feed" error={feed.base.error} />
-      ) : events.length === 0 ? (
+      ) : all.length === 0 ? (
         <ScopedEmptyState
           icon={Activity}
           title={hasActiveFilters(filters) ? 'No events match these filters.' : 'No pipeline events yet.'}
@@ -207,6 +246,19 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
               Live · {events.length} event{events.length === 1 ? '' : 's'}
             </p>
           )}
+          {held.heldCount > 0 ? (
+            // Sticky, so it stays reachable from wherever they were reading.
+            <div className="activity__held" role="status" data-testid="activity-held">
+              <button
+                type="button"
+                className="activity__held-pill"
+                onClick={showHeld}
+                data-testid="activity-held-show"
+              >
+                {held.heldCount} new event{held.heldCount === 1 ? '' : 's'} — show
+              </button>
+            </div>
+          ) : null}
           <ol className="activity__list" aria-label="Pipeline events">
             {groupByDay(events).map((group) => (
               <Fragment key={group.day}>
@@ -220,6 +272,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                     event={event}
                     resolved={resolved.has(event.seq)}
                     arriving={arriving.has(event.seq)}
+                    onOpenChange={wall ? undefined : onRowOpenChange}
                   />
                 ))}
               </Fragment>

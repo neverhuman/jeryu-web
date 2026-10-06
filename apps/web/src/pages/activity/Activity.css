@@ -837,3 +837,35 @@
     animation: none;
   }
 }
+
+/* The pill that holds the tail back ------------------------------------ */
+
+.activity__held {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-base);
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--space-2);
+}
+
+.activity__held-pill {
+  border: 1px solid var(--color-accent-primary);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3);
+  background-color: var(--color-bg-1);
+  color: var(--color-accent-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  box-shadow: var(--glow-soft);
+}
+
+.activity__held-pill:hover {
+  background-color: var(--color-bg-2);
+}
+
+.activity__held-pill:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

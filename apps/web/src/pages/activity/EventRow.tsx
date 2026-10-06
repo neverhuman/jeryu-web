@@ -8,7 +8,7 @@
 // The toggle stays on the rows that have something to say (a reason, a log);
 // on the quiet ones it waits for the pointer or the keyboard.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { PipelineEvent } from '../../api/types';
@@ -34,6 +34,7 @@ export function EventRow({
   defaultOpen = false,
   resolved = false,
   arriving = false,
+  onOpenChange,
 }: {
   event: PipelineEvent;
   defaultOpen?: boolean;
@@ -41,8 +42,19 @@ export function EventRow({
   resolved?: boolean;
   /** The row was not in the previous render: slide in and hold a wash. */
   arriving?: boolean;
+  /** Told when this row opens or closes: a feed holds new rows back while a
+   *  reader has one open, so it has to know. */
+  onOpenChange?: (seq: number, open: boolean) => void;
 }): JSX.Element {
   const [open, setOpen] = useState(defaultOpen);
+  // Reported through an effect, with the close on the way out: a row that
+  // leaves the list while open must not keep the feed waiting for it.
+  const report = useRef(onOpenChange);
+  report.current = onOpenChange;
+  useEffect(() => {
+    report.current?.(event.seq, open);
+    return () => report.current?.(event.seq, false);
+  }, [event.seq, open]);
   const needsHuman = event.needs_human && !resolved;
   // A cleared row keeps its words ("Gate failed") but not its red: what it
   // reports is history, and the colour is for what still wants an answer.
