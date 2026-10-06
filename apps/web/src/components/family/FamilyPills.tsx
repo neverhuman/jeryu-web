@@ -13,7 +13,8 @@ import './FamilyPills.css';
 
 export interface FamilyCountEntry {
   family: string;
-  count: number;
+  /** Left out by a page that has no number to put on the pill. */
+  count?: number;
 }
 
 /** The pill at the far left of a row. `picked` is the active filter ('' = all). */
@@ -93,7 +94,10 @@ export function FamilyPicker({
   );
 }
 
-/** "All" plus one pill per family, each with its count. */
+/**
+ * "All" plus one pill per family, each with its count. A page that knows no
+ * counts leaves them out and gets the same strip with bare names on it.
+ */
 export function FamilyStrip({
   counts,
   family,
@@ -103,7 +107,8 @@ export function FamilyStrip({
   family: string;
   onPick: (family: string) => void;
 }): JSX.Element {
-  const total = counts.reduce((sum, entry) => sum + entry.count, 0);
+  const counted = counts.every((entry) => entry.count !== undefined);
+  const total = counted ? counts.reduce((sum, entry) => sum + (entry.count ?? 0), 0) : null;
   return (
     <div className="family-strip" role="group" aria-label="Filter by family">
       <button
@@ -112,7 +117,7 @@ export function FamilyStrip({
         aria-pressed={family === ''}
         onClick={() => onPick('')}
       >
-        All <span className="family-pill__count">{total}</span>
+        All{total === null ? null : <> <span className="family-pill__count">{total}</span></>}
       </button>
       {counts.map((entry) => (
         <button
@@ -122,7 +127,10 @@ export function FamilyStrip({
           aria-pressed={sameFamily(family, entry.family) && family !== ''}
           onClick={() => onPick(entry.family)}
         >
-          {entry.family} <span className="family-pill__count">{entry.count}</span>
+          {entry.family}
+          {entry.count === undefined ? null : (
+            <> <span className="family-pill__count">{entry.count}</span></>
+          )}
         </button>
       ))}
     </div>

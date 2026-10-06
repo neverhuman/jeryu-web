@@ -321,16 +321,20 @@ test.describe('Family scope, page by page', () => {
       'false'
     );
 
-    // 4. Activity: the Family select shows it, and changing it there is the scope.
+    // 4. Activity: a family pill at the far left of the chip row shows it, and
+    //    pressing another pill there is the scope.
     await Promise.all([
       page.waitForURL('**/activity?family=globex'),
       navTo(NAV_PATH['Activity']).click(),
     ]);
-    const activityFamily = page.getByTestId('activity-family');
-    await expect(activityFamily).toHaveValue('globex');
+    const activityFamilies = page.getByRole('group', { name: 'Filter by family' });
+    await expect(activityFamilies.getByRole('button', { name: 'globex', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
     // Nothing happened for globex, which reads as a quiet family, not an outage.
     await expect(page.getByText('Nothing for globex here')).toBeVisible();
-    await activityFamily.selectOption('acme');
+    await activityFamilies.getByRole('button', { name: 'acme', exact: true }).click();
     await page.waitForURL('**/activity?family=acme');
     await expectScope(page, 'acme');
 

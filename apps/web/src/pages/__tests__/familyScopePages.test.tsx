@@ -134,16 +134,19 @@ describe('the family scope on every family-aware page', () => {
     expect(await screen.findByText('Nothing needs you.')).toBeInTheDocument();
   });
 
-  it('Activity shows the scoped family in its filter, and its own picker moves the scope', async () => {
+  it('Activity shows the scoped family on a pill, and its own pills move the scope', async () => {
     mockPipelineApi();
     renderAt('/activity?family=initech', '/activity', <ActivityPage />);
 
-    const select = await screen.findByLabelText('Family');
-    expect(select).toHaveValue('initech');
+    const strip = await screen.findByRole('group', { name: 'Filter by family' });
+    expect(within(strip).getByRole('button', { name: 'initech' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
     // The feed was asked for that family, not for every family.
     await waitFor(() => expect(screen.getByTestId('activity-page')).toBeInTheDocument());
 
-    fireEvent.change(select, { target: { value: '' } });
+    fireEvent.click(within(strip).getByRole('button', { name: 'All' }));
     await waitFor(() =>
       expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBeNull()
     );

@@ -12,6 +12,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
 import { canonicalFamily } from '../../components/family/familyScope';
+import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { LoadingState, PipelineQueryState } from '../../components/state';
@@ -357,13 +358,16 @@ function Filters({
 }): JSX.Element {
   const pinnedRepo = Boolean(repo);
   const families = useShiftFamilies();
-  // One option per family, in the scope's own spelling: `acme` and
-  // `acme-split` are one family, and the scope is what this select sets.
+  // One pill per family, in the scope's own spelling: `acme` and `acme-split`
+  // are one family, and the scope is what a pill sets. The scoped family keeps
+  // its pill even when the family list does not name it, so a deep link into
+  // one can always be left again.
   const names = [
     ...new Set(
-      (families.data?.families ?? [])
-        .map((family) => canonicalFamily(family.name))
-        .filter(Boolean)
+      [
+        ...(families.data?.families ?? []).map((family) => canonicalFamily(family.name)),
+        canonicalFamily(filters.family),
+      ].filter(Boolean)
     ),
   ];
   const current = activeChip(filters);
@@ -383,28 +387,39 @@ function Filters({
   const rangeLabel = HISTOGRAM_RANGES.find((candidate) => candidate.id === range)?.label ?? range;
   return (
     <section className="activity__filters" aria-label="Activity filters">
-      <div className={`activity__chips${still ? ' activity__chips--still' : ''}`} role="group" aria-label="Show">
-        {ACTIVITY_CHIPS.map((chip) => {
-          const count = counts?.[chip.id] ?? null;
-          return (
-            <button
-              key={chip.id}
-              type="button"
-              className={`activity__chip${current === chip.id ? ' is-active' : ''}${
-                count === 0 ? ' activity__chip--empty' : ''
-              }`}
-              aria-pressed={current === chip.id}
-              // The badge is a number that moves, which is noise read aloud,
-              // so the count reaches a screen reader as the chip's
-              // description instead and the chip's name stays its label.
-              title={count === null ? undefined : `${count} in the last ${rangeLabel}`}
-              onClick={() => onChip(chip)}
-            >
-              {chip.label}
-              {count === null ? null : <ChipCount value={count} still={still} />}
-            </button>
-          );
-        })}
+      <div className="activity__chip-row">
+        {pinnedRepo ? null : names.length > 1 || filters.family ? (
+          // Far left of the chips, as on Needs you and In flight: the page
+          // shows everything and a pill narrows it to one family.
+          <FamilyStrip
+            counts={names.map((name) => ({ family: name }))}
+            family={filters.family}
+            onPick={(name) => onChange('family', name)}
+          />
+        ) : null}
+        <div className={`activity__chips${still ? ' activity__chips--still' : ''}`} role="group" aria-label="Show">
+          {ACTIVITY_CHIPS.map((chip) => {
+            const count = counts?.[chip.id] ?? null;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                className={`activity__chip${current === chip.id ? ' is-active' : ''}${
+                  count === 0 ? ' activity__chip--empty' : ''
+                }`}
+                aria-pressed={current === chip.id}
+                // The badge is a number that moves, which is noise read aloud,
+                // so the count reaches a screen reader as the chip's
+                // description instead and the chip's name stays its label.
+                title={count === null ? undefined : `${count} in the last ${rangeLabel}`}
+                onClick={() => onChip(chip)}
+              >
+                {chip.label}
+                {count === null ? null : <ChipCount value={count} still={still} />}
+              </button>
+            );
+          })}
+        </div>
       </div>
       {current === 'human' ? (
         // The log says what happened; what is waiting now has one home.
@@ -413,23 +428,6 @@ function Filters({
           is on <Link to={needsYou.href}>Needs you</Link>
           {needsYou.count === null ? '' : ` (${needsYou.count})`}.
         </p>
-      ) : null}
-      {pinnedRepo ? null : names.length > 1 || filters.family ? (
-        <label className="activity__family">
-          Family
-          <select
-            data-testid="activity-family"
-            value={filters.family}
-            onChange={(event) => onChange('family', event.target.value)}
-          >
-            <option value="">All</option>
-            {[...new Set([...names, canonicalFamily(filters.family)].filter(Boolean))].map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
       ) : null}
       <details className="activity__more" open={hasMoreFilters(filters) || undefined}>
         <summary>More filters</summary>

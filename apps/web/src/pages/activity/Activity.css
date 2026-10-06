@@ -422,6 +422,19 @@
 }
 
 /* One row of views instead of a form. */
+/* Family pills first, then the chips: the family is the widest filter, so it
+   sits at the far left of the row the narrower ones are on. */
+.activity__chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.activity__chip-row .family-strip {
+  margin-bottom: 0;
+}
+
 .activity__chips {
   display: flex;
   flex-wrap: wrap;

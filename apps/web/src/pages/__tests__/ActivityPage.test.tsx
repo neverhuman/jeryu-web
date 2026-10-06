@@ -247,7 +247,16 @@ describe('ActivityPage', () => {
       'href',
       '/needs-you?family=jeryu'
     );
-    expect(screen.getByLabelText('Family')).toHaveValue('jeryu');
+    // The family is a pill at the far left of the chip row, not a select.
+    const strip = screen.getByRole('group', { name: 'Filter by family' });
+    expect(within(strip).getByRole('button', { name: 'jeryu' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(within(strip).getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
     // A chip is one click and keeps the family.
     fireEvent.click(screen.getByRole('button', { name: 'Gates' }));
     await waitFor(() =>
@@ -260,6 +269,39 @@ describe('ActivityPage', () => {
     fireEvent.keyDown(kind, { key: 'Enter' });
     await waitFor(() =>
       expect(calls.some((c) => c.search.includes('kind=todo.') && c.search.includes('family=jeryu'))).toBe(true)
+    );
+  });
+
+  it('puts the family pills at the far left of the chip row, and a pill is the scope', async () => {
+    const calls = mockPipelineApi((req) =>
+      req.pathname === '/api/v1/shift/families'
+        ? json({
+            families: [
+              { name: 'jeryu', queue_repo: 'jeryu/jeryu-todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
+              { name: 'globex', queue_repo: 'globex/todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
+            ],
+          })
+        : undefined
+    );
+    renderPage('/activity?family=jeryu');
+    await screen.findByTestId('activity-event-12');
+
+    const strip = await screen.findByRole('group', { name: 'Filter by family' });
+    const row = strip.parentElement as HTMLElement;
+    const show = within(row).getByRole('group', { name: 'Show' });
+    // Far left: the pills are the row's first child, the chips follow.
+    expect(row.firstElementChild).toBe(strip);
+    expect(strip.compareDocumentPosition(show) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Names only: Activity has no per-family event count to put on a pill.
+    expect(within(strip).getByRole('button', { name: 'globex' }).textContent).toBe('globex');
+
+    fireEvent.click(within(strip).getByRole('button', { name: 'globex' }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search.includes('family=globex'))).toBe(true)
+    );
+    expect(within(strip).getByRole('button', { name: 'globex' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
     );
   });
 
