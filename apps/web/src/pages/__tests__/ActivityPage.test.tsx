@@ -17,6 +17,30 @@ function renderPage(path = '/activity'): void {
 describe('ActivityPage', () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it('draws a duration bar scaled within the row\'s own kind', async () => {
+    const events = [
+      pipelineEvent({ seq: 4, kind: 'gate.log', seconds: 600, summary: 'slow gate' }),
+      pipelineEvent({ seq: 3, kind: 'gate.log', seconds: 150, summary: 'quick gate' }),
+      pipelineEvent({ seq: 2, kind: 'todo.attempt_finished', seconds: 1800, summary: 'long attempt' }),
+      pipelineEvent({ seq: 1, kind: 'pr.opened', seconds: null, summary: 'no duration' }),
+    ];
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events' ? json({ events, latest_seq: 4 }) : undefined
+    );
+    renderPage();
+    const slow = await screen.findByTestId('activity-event-4');
+    const bar = (row: HTMLElement): HTMLElement | null =>
+      row.querySelector('.activity-row__duration-bar');
+    expect(bar(slow)).toHaveStyle({ width: '100.0%' });
+    // Scaled against the longest gate on the page, not against the attempt.
+    expect(bar(screen.getByTestId('activity-event-3'))).toHaveStyle({ width: '25.0%' });
+    // The attempt is the longest of its own kind, so it fills its bar too.
+    expect(bar(screen.getByTestId('activity-event-2'))).toHaveStyle({ width: '100.0%' });
+    // No duration, no bar — and the exact seconds are on the row that has one.
+    expect(bar(screen.getByTestId('activity-event-1'))).toBeNull();
+    expect(within(slow).getByTitle('600 seconds')).toHaveTextContent('10m 0s');
+  });
+
   it('links a row to the forge the repository list says its repo is on', async () => {
     mockPipelineApi((req) =>
       req.pathname === '/api/v1/repos'

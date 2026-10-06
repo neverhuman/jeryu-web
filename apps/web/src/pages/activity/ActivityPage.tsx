@@ -28,6 +28,7 @@ import {
   formatDay,
   groupByDay,
   hasActiveFilters,
+  longestSecondsByKind,
   hasMoreFilters,
   isWallMode,
   parseActivityFilters,
@@ -121,6 +122,9 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   const resolved = resolvedSeqs(events);
   // One `j`/`k` list over the whole feed, day headings and all.
   const rows = useListKeys<HTMLDivElement>();
+  // The duration bars are scaled within the rows on the page: as a reader
+  // loads older events the scale can only grow, never per-row surprise.
+  const longestSeconds = longestSecondsByKind(events);
   // Rows the tail brought in since the last render, so they can announce
   // themselves. The filter set is the list's identity: changing it starts a
   // fresh page, which arrives all at once and so animates nothing. Rows the
@@ -272,6 +276,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                     event={event}
                     resolved={resolved.has(event.seq)}
                     arriving={arriving.has(event.seq)}
+                    longestSeconds={longestSeconds.get(event.kind)}
                     onOpenChange={wall ? undefined : onRowOpenChange}
                   />
                 ))}

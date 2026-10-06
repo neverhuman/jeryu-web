@@ -17,6 +17,10 @@ import {
   hasDetail,
   formatSeconds,
   hasActiveFilters,
+  longestSecondsByKind,
+  durationShare,
+  exactSecondsText,
+  MIN_DURATION_SHARE,
   hasMoreFilters,
   isWallMode,
   kindPatterns,
@@ -149,6 +153,41 @@ describe('activityModel', () => {
     // The suite's zone is America/New_York: 13:03 UTC is 09:03 for the reader.
     expect(clockText('2026-09-19T13:03:26Z')).toBe('09:03:26');
     expect(clockText('nonsense')).toBe('nonsense');
+  });
+
+  it('scales a duration bar against the longest run of the same kind', () => {
+    const events = [
+      pipelineEvent({ seq: 1, kind: 'gate.log', seconds: 600 }),
+      pipelineEvent({ seq: 2, kind: 'gate.log', seconds: 60 }),
+      pipelineEvent({ seq: 3, kind: 'todo.attempt_finished', seconds: 1800 }),
+      // Neither a missing nor a zero duration sets a scale.
+      pipelineEvent({ seq: 4, kind: 'pr.opened', seconds: null }),
+      pipelineEvent({ seq: 5, kind: 'pr.merged', seconds: 0 }),
+    ];
+    const longest = longestSecondsByKind(events);
+    expect(longest.get('gate.log')).toBe(600);
+    expect(longest.get('todo.attempt_finished')).toBe(1800);
+    expect(longest.has('pr.opened')).toBe(false);
+    expect(longest.has('pr.merged')).toBe(false);
+
+    // The longest of its kind fills the width; a shorter one its own share.
+    expect(durationShare(600, longest.get('gate.log'))).toBe(1);
+    expect(durationShare(300, longest.get('gate.log'))).toBe(0.5);
+    // A long attempt is not measured against the gates, so it is not clipped.
+    expect(durationShare(1800, longest.get('todo.attempt_finished'))).toBe(1);
+    // A sliver stays visible, and a row with nothing to scale draws no bar.
+    expect(durationShare(1, 600)).toBe(MIN_DURATION_SHARE);
+    expect(durationShare(null, 600)).toBeNull();
+    expect(durationShare(0, 600)).toBeNull();
+    expect(durationShare(60, undefined)).toBeNull();
+    expect(durationShare(60, 0)).toBeNull();
+  });
+
+  it('says the exact seconds a rounded duration came from', () => {
+    expect(exactSecondsText(null)).toBe('');
+    expect(exactSecondsText(1)).toBe('1 second');
+    expect(exactSecondsText(114.5)).toBe('114.5 seconds');
+    expect(exactSecondsText(3720)).toBe('3720 seconds');
   });
 
   it('names a day in words and groups the feed into days', () => {

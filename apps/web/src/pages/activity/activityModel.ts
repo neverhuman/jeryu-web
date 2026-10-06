@@ -220,6 +220,48 @@ export function formatSeconds(seconds: number | null | undefined): string {
   return `${Math.floor(seconds / 3600)}h ${Math.round((seconds % 3600) / 60)}m`;
 }
 
+/**
+ * The longest duration each kind reached in the loaded list. A row's bar is
+ * scaled against its own kind: a gate that runs for minutes and an attempt
+ * that runs for an hour say nothing about each other, so they are never put on
+ * one scale.
+ */
+export function longestSecondsByKind(events: Array<Pick<PipelineEvent, 'kind' | 'seconds'>>): Map<string, number> {
+  const longest = new Map<string, number>();
+  for (const event of events) {
+    const seconds = event.seconds;
+    if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) continue;
+    longest.set(event.kind, Math.max(longest.get(event.kind) ?? 0, seconds));
+  }
+  return longest;
+}
+
+/** The shortest bar that still reads as a bar, as a share of the full width. */
+export const MIN_DURATION_SHARE = 0.04;
+
+/**
+ * How much of its row the duration bar fills, 0..1, or null when there is
+ * nothing to draw: no duration, or no longest of this kind to scale against.
+ * The longest row of its kind fills the width; a very quick one keeps a sliver
+ * so the bar is still visible.
+ */
+export function durationShare(
+  seconds: number | null | undefined,
+  longestOfKind: number | null | undefined
+): number | null {
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) return null;
+  if (typeof longestOfKind !== 'number' || !Number.isFinite(longestOfKind) || longestOfKind <= 0) return null;
+  const share = Math.min(seconds, longestOfKind) / longestOfKind;
+  return Math.max(share, MIN_DURATION_SHARE);
+}
+
+/** The duration as it was reported, for the title beside the rounded text. */
+export function exactSecondsText(seconds: number | null | undefined): string {
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds)) return '';
+  const exact = Number(seconds.toFixed(3));
+  return `${exact} second${exact === 1 ? '' : 's'}`;
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**

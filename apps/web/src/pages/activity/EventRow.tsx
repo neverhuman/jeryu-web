@@ -1,6 +1,8 @@
 // EventRow.tsx — one pipeline event, shared by the Activity page, the wall,
 // and the per-PR events panel. One line: when, what happened in plain words,
-// the summary with its subject as the link, how long it took. Everything else
+// the summary with its subject as the link, how long it took — with a thin bar
+// behind the duration, scaled against the longest run of the same kind in the
+// loaded list, so a slow gate or a long attempt shows at a glance. Everything else
 // (who, which commit, why, the log tail) opens below. A row that needs a human
 // is red until a later event clears its cause; then it is marked resolved.
 // A row the live tail just brought in slides down with a short wash, so the
@@ -19,9 +21,11 @@ import { LIST_ACTION_PROP, LIST_OPEN_PROP, listRowProps } from '../../hooks/useL
 import { formatCost, shortSha } from '../shift/shiftModel';
 import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
 import {
+  durationShare,
   eventLabel,
   eventLinks,
   eventTone,
+  exactSecondsText,
   formatSeconds,
   hasDetail,
   summaryParts,
@@ -34,6 +38,7 @@ export function EventRow({
   defaultOpen = false,
   resolved = false,
   arriving = false,
+  longestSeconds,
   onOpenChange,
 }: {
   event: PipelineEvent;
@@ -42,6 +47,9 @@ export function EventRow({
   resolved?: boolean;
   /** The row was not in the previous render: slide in and hold a wash. */
   arriving?: boolean;
+  /** The longest duration this row's kind reached in the loaded list: what the
+   *  bar behind the duration is scaled against. Absent, the duration is text. */
+  longestSeconds?: number;
   /** Told when this row opens or closes: a feed holds new rows back while a
    *  reader has one open, so it has to know. */
   onOpenChange?: (seq: number, open: boolean) => void;
@@ -67,6 +75,9 @@ export function EventRow({
   const toggleLabel = open ? 'Hide' : event.log_tail ? 'Log' : event.reason ? 'Why' : 'More';
   const quiet = !open && !hasDetail(event);
   const duration = formatSeconds(event.seconds);
+  // A bar behind the duration, as long as this row's share of the longest run
+  // of its kind: a slow gate or a long attempt stands out without reading.
+  const share = durationShare(event.seconds, longestSeconds);
   // What the attempt spent, when the producer attached it to the row.
   const usage = attemptUsage(event);
 
@@ -111,7 +122,18 @@ export function EventRow({
             {attemptUsageText(usage)}
           </span>
         ) : null}
-        {duration ? <span className="activity-row__meta">{duration}</span> : null}
+        {duration ? (
+          <span className="activity-row__duration" title={exactSecondsText(event.seconds)}>
+            {share === null ? null : (
+              <span
+                className="activity-row__duration-bar"
+                style={{ width: `${(share * 100).toFixed(1)}%` }}
+                aria-hidden="true"
+              />
+            )}
+            <span className="activity-row__meta">{duration}</span>
+          </span>
+        ) : null}
         <button
           type="button"
           className={`activity-row__toggle${quiet ? ' activity-row__toggle--quiet' : ''}`}

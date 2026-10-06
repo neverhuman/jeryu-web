@@ -155,6 +155,26 @@
   color: var(--color-accent-info);
 }
 
+/* The duration, with how long it ran drawn behind it: the bar is scaled
+   against the longest run of the same kind on the page, sits under the text
+   rather than beside it, and stays a tint so the reading stays legible. */
+.activity-row__duration {
+  position: relative;
+  display: inline-block;
+  min-width: 4.5rem;
+  padding: 0 var(--space-1);
+}
+
+.activity-row__duration-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background-color: var(--color-accent-info);
+  opacity: 0.6;
+}
+
+
 .activity-row__summary {
   color: var(--color-fg-primary);
   overflow-wrap: anywhere;
