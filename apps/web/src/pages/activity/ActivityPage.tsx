@@ -49,6 +49,7 @@ import {
   eventsApiPath,
   filterFieldError,
   filtersToQuery,
+  foldBursts,
   foldStageRuns,
   dayTotals,
   dayTotalsText,
@@ -84,6 +85,7 @@ import { KNOWN_SOURCES } from './sourceModel';
 import { useOlderOnReach } from './olderModel';
 import { useActivityRowKeys } from './rowKeysModel';
 import { useWallIdle, wallClockText, wallDateText } from './wallModel';
+import { BurstRow } from './BurstRow';
 import { StageRunRow } from './StageRunRow';
 import { ActivityHistogram } from './ActivityHistogram';
 import { ActivitySkeleton } from './ActivitySkeleton';
@@ -190,7 +192,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   // A slot sends several stage beats per attempt; folded, they are one row
   // that says the path it walked, and the outcome rows around them stay
   // readable. Everything keyed by row below counts a run as the one row it is.
-  const rows = foldStageRuns(events);
+  // …and one actor filing the same verdict on a family of repositories sends
+  // the same report once per subject; folded, they are one row that counts the
+  // subjects and opens to the reports themselves.
+  const rows = foldBursts(foldStageRuns(events));
   const seqs = rowSeqs(rows);
   // Resolution is read off the rows the reader has: a held event must not
   // quietly clear the red on a row above it before they have seen why.
@@ -450,8 +455,20 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                     {dayTotalsText(dayTotals(group.rows))}
                   </span>
                 </li>
-                {group.rows.map(({ event, run }) =>
-                  run ? (
+                {group.rows.map(({ event, run, burst }) =>
+                  burst ? (
+                    <BurstRow
+                      key={event.seq}
+                      burst={burst}
+                      arriving={arriving.has(event.seq)}
+                      now={now}
+                      open={openRows.has(event.seq)}
+                      onOpenChange={wall ? undefined : onRowOpenChange}
+                      focused={wall ? undefined : rowKeys.focused === event.seq}
+                      tabStop={rowKeys.focused === null && event.seq === seqs[0]}
+                      onRest={rowKeys.rest}
+                    />
+                  ) : run ? (
                     <StageRunRow
                       key={event.seq}
                       run={run}

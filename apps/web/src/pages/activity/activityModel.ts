@@ -960,12 +960,25 @@ export interface StageRun {
   steps: string[];
 }
 
-/** What a list draws: one event, or a run of stage beats folded into one row. */
+/**
+ * What a list draws: one event, a run of stage beats folded into one row, or a
+ * burst of identical reports folded into one row. At most one of `run` and
+ * `burst` is set — a row stands for one kind of fold.
+ */
 export interface ActivityRow {
-  /** The event the row stands for: a lone event, or a run's newest beat. */
+  /** The event the row stands for: a lone event, or a fold's newest event. */
   event: PipelineEvent;
   /** Set when this row stands for several beats, which the row can expand. */
   run: StageRun | null;
+  /** Set when this row stands for a burst of identical reports. */
+  burst: EventBurst | null;
+}
+
+/** Every event a row stands for, newest first: one, or a whole fold. */
+export function rowEvents(row: ActivityRow): PipelineEvent[] {
+  if (row.run) return row.run.events;
+  if (row.burst) return row.burst.events;
+  return [row.event];
 }
 
 function stageRun(slot: string, todoId: string | null, events: PipelineEvent[]): StageRun {
@@ -995,8 +1008,8 @@ export function foldStageRuns(events: PipelineEvent[]): ActivityRow[] {
     const beats = open.events;
     rows.push(
       beats.length === 1
-        ? { event: beats[0], run: null }
-        : { event: beats[0], run: stageRun(open.slot, open.todoId, beats) }
+        ? { event: beats[0], run: null, burst: null }
+        : { event: beats[0], run: stageRun(open.slot, open.todoId, beats), burst: null }
     );
     open = null;
   };
@@ -1004,7 +1017,7 @@ export function foldStageRuns(events: PipelineEvent[]): ActivityRow[] {
     const slot = event.kind === WORKER_STAGE_KIND ? stageSlot(event) : null;
     if (slot === null) {
       close();
-      rows.push({ event, run: null });
+      rows.push({ event, run: null, burst: null });
       continue;
     }
     if (open !== null && open.slot === slot && open.todoId === event.todo_id) {
@@ -1044,6 +1057,188 @@ export function stageSteps(run: StageRun): StageStep[] {
 export function stageRunTitle(run: StageRun): string {
   const beats = `${run.events.length} stage event${run.events.length === 1 ? '' : 's'}`;
   return run.steps.length === 0 ? beats : `${beats}: ${run.steps.join(' → ')}`;
+}
+
+// ---- Bursts of identical reports ------------------------------------------
+
+/**
+ * How far apart the ends of one burst may lie. A reviewer walking a family of
+ * repositories files the same verdict on each of them within a few minutes;
+ * half an hour later it is a second pass, and reading as one row would hide
+ * that the same thing happened twice.
+ */
+export const BURST_MS = 30 * 60 * 1000;
+
+/**
+ * Consecutive reports that say the same thing about different subjects, as the
+ * one row they are drawn as: a reviewer requesting changes on twelve pull
+ * requests filled a screen with twelve rows that differed only in a number.
+ */
+export interface EventBurst {
+  /** The newest report: the row's time, its tone, and its key. */
+  latest: PipelineEvent;
+  /** Every report folded here, newest first, as the feed held them. */
+  events: PipelineEvent[];
+  /** What they share, and what the fold is keyed by. */
+  kind: string;
+  actor: string | null;
+  outcome: string | null;
+  reason: string | null;
+}
+
+/** The repository names a burst touched, each without its owner. */
+function burstSubjects(events: PipelineEvent[]): string[] {
+  const subjects: string[] = [];
+  for (const event of events) {
+    const name = event.repo?.split('/').pop() ?? null;
+    if (name !== null && name !== '') subjects.push(name);
+  }
+  return subjects;
+}
+
+/** The longest start every name shares, with a trailing separator dropped. */
+function sharedStem(names: string[]): string {
+  if (names.length === 0) return '';
+  let stem = names[0];
+  for (const name of names.slice(1)) {
+    let at = 0;
+    while (at < stem.length && at < name.length && stem[at] === name[at]) at += 1;
+    stem = stem.slice(0, at);
+  }
+  return stem.replace(/[-_.]+$/, '');
+}
+
+/**
+ * What a burst happened to, counted: `12 jain pull requests` when the
+ * repositories share a stem, `12 pull requests` when they share nothing,
+ * `12 todos` when the subject is a todo rather than a pull request, and
+ * `12 events` otherwise. A stem of one character is no name, so it is not
+ * printed as one.
+ */
+export function burstSubjectText(events: PipelineEvent[]): string {
+  const count = events.length;
+  if (events.every((event) => event.pr !== null)) {
+    const stem = sharedStem(burstSubjects(events));
+    const subject = `pull request${count === 1 ? '' : 's'}`;
+    return stem.length > 1 ? `${count} ${stem} ${subject}` : `${count} ${subject}`;
+  }
+  if (events.every((event) => event.todo_id !== null)) return `${count} todo${count === 1 ? '' : 's'}`;
+  return `${count} event${count === 1 ? '' : 's'}`;
+}
+
+/**
+ * What the actor did, as a verb the count can follow: `requested changes on`,
+ * `merged`. A kind this table does not know falls back to its own label, so a
+ * burst of a kind this build has never seen still reads as a sentence.
+ */
+function burstVerb(event: Pick<PipelineEvent, 'kind' | 'outcome'>): string {
+  const outcome = (event.outcome ?? '').toLowerCase();
+  switch (event.kind) {
+    case 'review.finished':
+    case 'pr.review':
+      if (outcome === 'approve' || outcome === 'approved') return 'approved';
+      if (outcome === 'request_changes' || outcome === 'hold') return 'requested changes on';
+      return 'reviewed';
+    case 'pr.opened':
+      return 'opened';
+    case 'pr.approved':
+      return 'approved';
+    case 'pr.merged':
+      return 'merged';
+    case 'queue.enqueued':
+      return 'queued';
+    case 'queue.landed':
+      return 'landed';
+    case 'gate.log':
+    case 'gate.finished':
+      return outcome === 'success' ? 'gated' : 'failed the gate on';
+    case 'todo.filed':
+      return 'filed';
+    case 'todo.claimed':
+      return 'claimed';
+    default:
+      return `${eventLabel(event).toLowerCase()} on`;
+  }
+}
+
+/** Who a burst is attributed to: the last part of the actor, else its source. */
+export function burstActor(event: Pick<PipelineEvent, 'actor' | 'source'>): string {
+  const actor = (event.actor ?? '').split('/').pop()?.trim() ?? '';
+  return actor === '' ? event.source : actor;
+}
+
+/** The burst in one line: `pragent requested changes on 12 jain pull requests`. */
+export function burstTitle(burst: EventBurst): string {
+  return `${burstActor(burst.latest)} ${burstVerb(burst.latest)} ${burstSubjectText(burst.events)}`;
+}
+
+/** Whether two reports say the same thing: the fold's key, read off a pair. */
+function sameReport(a: PipelineEvent, b: PipelineEvent): boolean {
+  return a.kind === b.kind && a.actor === b.actor && a.outcome === b.outcome && a.reason === b.reason;
+}
+
+/** How many identical reports in a row are a burst rather than a list. */
+export const MIN_BURST_EVENTS = 3;
+
+/**
+ * The rows with bursts of identical reports folded. Rows already folded as a
+ * stage run are left alone: a row stands for one kind of fold.
+ *
+ * A row joins the open burst when it says the same thing (same kind, actor,
+ * outcome and reason) and happened within `BURST_MS` of the burst's newest
+ * report — the span of the whole burst is bounded, not just the gap to its
+ * neighbour, so a steady trickle never grows into one row covering a day. A
+ * burst also stays within one local day, because the row sits under a day
+ * header and is counted towards that day's totals.
+ *
+ * Anything else between two reports closes the burst, the same way it closes
+ * a stage run: the fold only ever hides rows that were adjacent.
+ */
+export function foldBursts(rows: ActivityRow[]): ActivityRow[] {
+  const folded: ActivityRow[] = [];
+  let open: ActivityRow[] = [];
+  const close = (): void => {
+    if (open.length === 0) return;
+    if (open.length < MIN_BURST_EVENTS) folded.push(...open);
+    else {
+      const events = open.map((row) => row.event);
+      const latest = events[0];
+      folded.push({
+        event: latest,
+        run: null,
+        burst: {
+          latest,
+          events,
+          kind: latest.kind,
+          actor: latest.actor,
+          outcome: latest.outcome,
+          reason: latest.reason,
+        },
+      });
+    }
+    open = [];
+  };
+  for (const row of rows) {
+    if (row.run !== null || row.burst !== null) {
+      close();
+      folded.push(row);
+      continue;
+    }
+    const first = open[0];
+    if (
+      first !== undefined &&
+      sameReport(first.event, row.event) &&
+      Math.abs(Date.parse(first.event.ts) - Date.parse(row.event.ts)) <= BURST_MS &&
+      localDayKey(first.event.ts) === localDayKey(row.event.ts)
+    ) {
+      open.push(row);
+      continue;
+    }
+    close();
+    open = [row];
+  }
+  close();
+  return folded;
 }
 
 /** The rows' seqs, in order: what a keyboard walks and an arrival is keyed by. */
@@ -1086,7 +1281,7 @@ export interface DayTotals {
 export function dayTotals(rows: ActivityRow[]): DayTotals {
   const totals: DayTotals = { events: 0, failed: 0, spentUsd: 0 };
   for (const row of rows) {
-    for (const event of row.run ? row.run.events : [row.event]) {
+    for (const event of rowEvents(row)) {
       totals.events += 1;
       const tone = eventTone(event);
       if (tone === 'failed' || tone === 'human') totals.failed += 1;

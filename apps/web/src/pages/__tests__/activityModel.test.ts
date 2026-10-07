@@ -15,6 +15,7 @@ import {
   eventTone,
   eventsApiPath,
   filtersToQuery,
+  foldBursts,
   foldEchoes,
   foldStageRuns,
   formatDay,
@@ -44,7 +45,13 @@ import {
   parseActivityFilters,
   primaryLink,
   resolvedSeqs,
+  rowEvents,
   rowSeqs,
+  burstActor,
+  burstSubjectText,
+  burstTitle,
+  BURST_MS,
+  MIN_BURST_EVENTS,
   stageFrom,
   stageName,
   stageRunTitle,
@@ -532,7 +539,7 @@ describe('foldStageRuns', () => {
 
   it('keeps a lone beat as the plain row it is', () => {
     const rows = foldStageRuns([run[0]]);
-    expect(rows).toEqual([{ event: run[0], run: null }]);
+    expect(rows).toEqual([{ event: run[0], run: null, burst: null }]);
   });
 
   it('never folds across a slot, a todo, or anything that happened between', () => {
@@ -783,5 +790,151 @@ describe('worker steps', () => {
     expect(off.toString()).toBe('kind=gate.');
     // Not a filter: it narrows nothing the server is asked for.
     expect(hasActiveFilters(parseActivityFilters(new URLSearchParams('steps=1')))).toBe(false);
+  });
+});
+
+describe('foldBursts', () => {
+  // The live walk: one reviewer requesting changes on every repository of a
+  // family, one report per pull request, the whole pass inside twenty minutes.
+  function verdict(seq: number, repo: string, pr: number, minute: number): PipelineEvent {
+    return pipelineEvent({
+      seq,
+      ts: `2026-10-06T14:${String(minute).padStart(2, '0')}:00Z`,
+      kind: 'pr.review',
+      source: 'forge',
+      actor: 'pragent',
+      family: 'veox',
+      repo: `veox/${repo}`,
+      pr,
+      outcome: 'request_changes',
+      reason: 'The gate has not run on this head.',
+      summary: `pragent reviewed veox/${repo}#${pr}`,
+    });
+  }
+
+  const pass = [
+    verdict(72, 'jain-web', 4, 20),
+    verdict(71, 'jain-core', 4, 12),
+    verdict(70, 'jain-api', 4, 4),
+  ];
+  const rows = (events: PipelineEvent[]): ReturnType<typeof foldBursts> => foldBursts(foldStageRuns(events));
+
+  it('folds a burst of identical reports into one row that counts its subjects', () => {
+    const folded = rows(pass);
+    expect(folded).toHaveLength(1);
+    expect(folded[0].event.seq).toBe(72);
+    expect(folded[0].run).toBeNull();
+    expect(folded[0].burst?.events.map((event) => event.seq)).toEqual([72, 71, 70]);
+    expect(folded[0].burst?.kind).toBe('pr.review');
+    expect(folded[0].burst?.reason).toBe('The gate has not run on this head.');
+    expect(burstTitle(folded[0].burst!)).toBe('pragent requested changes on 3 jain pull requests');
+    // The row stands for every report it holds, and a day counts them all.
+    expect(rowEvents(folded[0])).toHaveLength(3);
+    expect(dayTotals(folded).events).toBe(3);
+    expect(rowSeqs(folded)).toEqual([72]);
+  });
+
+  it('leaves too few identical reports as the rows they are', () => {
+    expect(rows(pass.slice(0, MIN_BURST_EVENTS - 1)).map((row) => row.event.seq)).toEqual(
+      pass.slice(0, MIN_BURST_EVENTS - 1).map((event) => event.seq)
+    );
+    expect(rows(pass.slice(0, 1))).toEqual([{ event: pass[0], run: null, burst: null }]);
+  });
+
+  it('never folds across a different report, a different reason, or anything between', () => {
+    const approved = { ...verdict(69, 'jain-tool', 4, 2), outcome: 'approve' };
+    expect(rows([...pass, approved]).map((row) => row.event.seq)).toEqual([72, 69]);
+    const otherReason = { ...verdict(69, 'jain-tool', 4, 2), reason: 'Something else entirely.' };
+    expect(rows([...pass, otherReason]).map((row) => row.event.seq)).toEqual([72, 69]);
+    const otherActor = { ...verdict(69, 'jain-tool', 4, 2), actor: 'alton' };
+    expect(rows([...pass, otherActor]).map((row) => row.event.seq)).toEqual([72, 69]);
+    // A merged pull request between two verdicts is what the fold is for: it
+    // stays a row of its own, and neither side has enough reports left to fold.
+    const merged = pipelineEvent({ seq: 71, kind: 'pr.merged', outcome: 'merged' });
+    const split = rows([verdict(72, 'jain-web', 4, 20), merged, verdict(70, 'jain-api', 4, 4)]);
+    expect(split.map((row) => row.event.seq)).toEqual([72, 71, 70]);
+    expect(split.map((row) => row.burst)).toEqual([null, null, null]);
+  });
+
+  it('bounds the whole burst, not just the gap between neighbours', () => {
+    // Twelve minutes apart each, thirty-six from end to end: a rule that only
+    // looked at the neighbour would draw all four as one row covering more
+    // than half an hour.
+    const trickle = ['15:00', '14:48', '14:36', '14:24'].map((clock, at) => ({
+      ...verdict(83 - at, `jain-${at}`, 4, 0),
+      ts: `2026-10-06T${clock}:00Z`,
+    }));
+    const folded = rows(trickle);
+    expect(folded.map((row) => row.event.seq)).toEqual([83, 80]);
+    expect(folded[0].burst?.events.map((event) => event.seq)).toEqual([83, 82, 81]);
+    expect(folded[1].burst).toBeNull();
+    expect(Date.parse(trickle[0].ts) - Date.parse(trickle[3].ts)).toBeGreaterThan(BURST_MS);
+  });
+
+  it('keeps a burst inside one local day, where its row is counted', () => {
+    // Half an hour from end to end, so only the reader's own midnight keeps
+    // the oldest report out: the row sits under a day header and is counted
+    // towards that day, so it may not hold a report from the day before.
+    const midnight = Date.parse('2026-10-07T00:00:00');
+    const spread = [20, 10, 5, -10].map((minutes, at) => ({
+      ...verdict(93 - at, `jain-${at}`, 4, 0),
+      ts: new Date(midnight + minutes * 60_000).toISOString(),
+    }));
+    const folded = rows(spread);
+    expect(folded.map((row) => row.event.seq)).toEqual([93, 90]);
+    expect(folded[0].burst?.events.map((event) => event.seq)).toEqual([93, 92, 91]);
+    expect(folded[1].burst).toBeNull();
+    expect(groupRowsByDay(folded).map((group) => group.rows.length)).toEqual([1, 1]);
+  });
+
+  it('leaves a stage run folded as the run it is', () => {
+    const beats = [41, 42, 43].map((seq) =>
+      pipelineEvent({ seq, kind: 'worker.stage', actor: 'alton@xbabe0/w1', summary: `w1 jeryu: prepare -> agent on t1`, todo_id: 't1' })
+    ).reverse();
+    const folded = rows(beats);
+    expect(folded).toHaveLength(1);
+    expect(folded[0].run?.events).toHaveLength(3);
+    expect(folded[0].burst).toBeNull();
+  });
+
+  it('leaves every other event where it was', () => {
+    expect(rowSeqs(rows(EVENTS))).toEqual(rowSeqs(foldStageRuns(EVENTS)));
+  });
+
+  it('names what a burst happened to, and who it is attributed to', () => {
+    expect(burstSubjectText(pass)).toBe('3 jain pull requests');
+    // Repositories that share no name read as plain pull requests.
+    const spread = [verdict(72, 'widgets', 4, 20), verdict(71, 'parts', 4, 12), verdict(70, 'bolts', 4, 4)];
+    expect(burstSubjectText(spread)).toBe('3 pull requests');
+    // No pull request, but every report names a todo.
+    const todos = pass.map((event) => ({ ...event, pr: null, repo: null, todo_id: `t${event.seq}` }));
+    expect(burstSubjectText(todos)).toBe('3 todos');
+    const neither = pass.map((event) => ({ ...event, pr: null, repo: null }));
+    expect(burstSubjectText(neither)).toBe('3 events');
+    expect(burstActor(pass[0])).toBe('pragent');
+    // A slot-shaped actor is named by its slot, and a report with no actor by
+    // whatever reported it.
+    expect(burstActor({ actor: 'alton@xbabe0/w1', source: 'todoq' })).toBe('w1');
+    expect(burstActor({ actor: null, source: 'todoq' })).toBe('todoq');
+  });
+
+  it('says what a burst of another kind did, in that kind\'s own words', () => {
+    const merges = [72, 71, 70].map((seq, at) =>
+      pipelineEvent({
+        seq,
+        ts: `2026-10-06T14:0${at}:00Z`,
+        kind: 'pr.merged',
+        actor: 'pragent',
+        repo: `veox/jain-${at}`,
+        pr: 4,
+        outcome: 'merged',
+      })
+    );
+    expect(burstTitle(rows(merges)[0].burst!)).toBe('pragent merged 3 jain pull requests');
+    const gates = merges.map((event) => ({ ...event, kind: 'gate.finished', outcome: 'failure' }));
+    expect(burstTitle(rows(gates)[0].burst!)).toBe('pragent failed the gate on 3 jain pull requests');
+    // A kind this build does not know still reads as a sentence.
+    const unknown = merges.map((event) => ({ ...event, kind: 'orbit.aligned', outcome: null }));
+    expect(burstTitle(rows(unknown)[0].burst!)).toBe('pragent orbit.aligned on 3 jain pull requests');
   });
 });

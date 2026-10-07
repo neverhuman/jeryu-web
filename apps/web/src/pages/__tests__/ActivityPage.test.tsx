@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ActivityPage } from '../activity';
 import { absoluteText, clockText } from '../../format/when';
 import { htmlShell, mockPipelineApi } from './pipelinePageHelpers';
-import { EVENTS, pipelineEvent } from './pipelineTestData';
+import { EVENTS, eventPage, pipelineEvent } from './pipelineTestData';
 import { errorResponse, json, renderAt } from './shiftPageHelpers';
 import { useRealtimeStore } from '../../stores/realtimeStore';
 
@@ -609,7 +609,7 @@ describe('ActivityPage', () => {
   });
 
   it('loads older events with before_seq and tails newer ones with after_seq', async () => {
-    const page = Array.from({ length: 100 }, (_, i) => pipelineEvent({ seq: 200 - i, kind: 'todo.claimed' }));
+    const page = eventPage(200, 100);
     const calls = mockPipelineApi((req) => {
       if (req.pathname !== '/api/v1/events') return undefined;
       const qs = new URLSearchParams(req.search);

@@ -15,7 +15,7 @@ import {
 } from '../activity/arrivalsModel';
 import { mockPipelineApi } from './pipelinePageHelpers';
 import { json, renderAt } from './shiftPageHelpers';
-import { pipelineEvent } from './pipelineTestData';
+import { eventPage, pipelineEvent } from './pipelineTestData';
 
 function renderPage(path = '/activity'): void {
   renderAt(path, '/activity', <ActivityPage />);
@@ -126,7 +126,7 @@ describe('ActivityPage arrivals', () => {
   });
 
   it('leaves an older page and a filter change unanimated', async () => {
-    const page = Array.from({ length: 100 }, (_, i) => pipelineEvent({ seq: 200 - i, kind: 'todo.claimed' }));
+    const page = eventPage(200, 100);
     mockPipelineApi((req) => {
       if (req.pathname !== '/api/v1/events') return undefined;
       const qs = new URLSearchParams(req.search);

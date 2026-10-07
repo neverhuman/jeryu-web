@@ -180,6 +180,17 @@ export function pipelineEvent(partial: Partial<PipelineEvent> & Pick<PipelineEve
   };
 }
 
+/**
+ * A full page of events, newest first, as a test that walks pages needs one.
+ * The kinds alternate so no run of them reads as a burst of identical reports
+ * and folds into one row: a page-walking test is about the page, not the fold.
+ */
+export function eventPage(newestSeq: number, length: number): PipelineEvent[] {
+  return Array.from({ length }, (_, i) =>
+    pipelineEvent({ seq: newestSeq - i, kind: i % 2 === 0 ? 'todo.claimed' : 'gate.started' })
+  );
+}
+
 /** Newest first, like `GET /api/v1/events` without `after_seq`. */
 export const EVENTS: PipelineEvent[] = [
   pipelineEvent({

@@ -1353,6 +1353,25 @@
   }
 }
 
+/* A folded burst: one sentence for a dozen identical reports. The reason they
+   all gave sits beside it, quietly, because it is the same reason every time. */
+.activity-row__burst-reason {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* The reports themselves, handed over as the ordinary rows they would have been. */
+.activity-row__burst-events {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--color-border-subtle);
+}
+
 /* The beats themselves, handed over as the ordinary rows they would have been. */
 .activity-row__stage-events {
   margin: 0;

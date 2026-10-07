@@ -10,7 +10,7 @@ import { ActivityPage } from '../activity';
 import { shouldLoadOlder } from '../activity/olderModel';
 import { mockPipelineApi } from './pipelinePageHelpers';
 import { json, renderAt } from './shiftPageHelpers';
-import { pipelineEvent } from './pipelineTestData';
+import { eventPage, pipelineEvent } from './pipelineTestData';
 
 /** A stand-in observer: jsdom has none, and a test needs to say when the
  *  sentinel came into view. Each instance registers itself so a test can
@@ -77,9 +77,7 @@ describe('Activity: older pages on approach', () => {
   });
 
   /** A full first page, so there is an older page to fetch. */
-  const firstPage = Array.from({ length: 100 }, (_, i) =>
-    pipelineEvent({ seq: 200 - i, kind: 'todo.claimed' })
-  );
+  const firstPage = eventPage(200, 100);
 
   it('loads the next page when the end of the list comes into view', async () => {
     installObserver();
