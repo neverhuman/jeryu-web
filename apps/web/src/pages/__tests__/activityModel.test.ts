@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { PipelineEvent } from '../../api/types';
 import { clockText } from '../../format/when';
 
 import {
@@ -14,8 +15,10 @@ import {
   eventsApiPath,
   filtersToQuery,
   foldEchoes,
+  foldStageRuns,
   formatDay,
   groupByDay,
+  groupRowsByDay,
   hasDetail,
   formatSeconds,
   hasActiveFilters,
@@ -35,6 +38,12 @@ import {
   parseActivityFilters,
   primaryLink,
   resolvedSeqs,
+  rowSeqs,
+  stageFrom,
+  stageName,
+  stageRunTitle,
+  stageSlot,
+  stageSteps,
   summaryParts,
   visibleEvents,
   wallCounters,
@@ -339,6 +348,94 @@ describe('activityModel', () => {
     );
     expect(claimed?.label).toBe('todo t1');
     expect(claimed?.to).toBe('/work/t1?family=jeryu');
+  });
+});
+
+describe('foldStageRuns', () => {
+  function beat(seq: number, from: string, to: string, overrides: Partial<PipelineEvent> = {}): PipelineEvent {
+    return pipelineEvent({
+      seq,
+      kind: 'worker.stage',
+      source: 'todoq',
+      family: 'jeryu',
+      todo_id: '20260919-0800-aaa',
+      actor: 'alton@xbabe0/w1',
+      summary: `w1 jeryu: ${from} -> ${to} on 20260919-0800-aaa`,
+      ...overrides,
+    });
+  }
+
+  // Newest first, the order the feed holds.
+  const run = [beat(43, 'gate', 'land'), beat(42, 'agent', 'gate'), beat(41, 'prepare', 'agent')];
+
+  it('reads the slot and the stage from the detail, the actor, or the words', () => {
+    expect(stageSlot(run[0])).toBe('w1');
+    expect(stageName(run[0])).toBe('land');
+    expect(stageSlot(beat(44, 'agent', 'gate', { actor: null, summary: 'w7 jeryu: agent -> gate on t1' }))).toBe('w7');
+    expect(stageName(beat(44, 'agent', 'gate', { detail: { stage: 'land' } }))).toBe('land');
+    expect(stageName(beat(44, 'agent', 'gate', { outcome: 'prepare' }))).toBe('prepare');
+    const nameless = pipelineEvent({ seq: 45, kind: 'worker.stage', actor: null, summary: 'stage report' });
+    expect(stageSlot(nameless)).toBeNull();
+    expect(stageName(nameless)).toBeNull();
+    expect(stageFrom(run[1])).toBe('agent');
+    expect(stageFrom(nameless)).toBeNull();
+  });
+
+  it('folds a run of beats into one row that keeps the path it walked', () => {
+    const rows = foldStageRuns(run);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].event.seq).toBe(43);
+    expect(rows[0].run?.slot).toBe('w1');
+    expect(rows[0].run?.steps).toEqual(['prepare', 'agent', 'gate', 'land']);
+    expect(rows[0].run?.events.map((e) => e.seq)).toEqual([43, 42, 41]);
+    expect(stageRunTitle(rows[0].run!)).toBe('3 stage events: prepare → agent → gate → land');
+    // The oldest beat's own starting stage opens the path: without it the row
+    // would say the run began at `agent`.
+    expect(rows[0].run?.steps[0]).toBe('prepare');
+  });
+
+  it('keeps a lone beat as the plain row it is', () => {
+    const rows = foldStageRuns([run[0]]);
+    expect(rows).toEqual([{ event: run[0], run: null }]);
+  });
+
+  it('never folds across a slot, a todo, or anything that happened between', () => {
+    const otherSlot = beat(40, 'prepare', 'agent', { actor: 'alton@xbabe0/w2', summary: 'w2 jeryu: prepare -> agent on t2' });
+    expect(foldStageRuns([...run, otherSlot]).map((row) => row.event.seq)).toEqual([43, 40]);
+    const otherTodo = beat(40, 'prepare', 'agent', { todo_id: 't2' });
+    expect(foldStageRuns([...run, otherTodo]).map((row) => row.event.seq)).toEqual([43, 40]);
+    // An outcome row between two beats is what the fold is for: it stays a row
+    // of its own, with a run on either side of it.
+    const finished = pipelineEvent({ seq: 42, kind: 'todo.attempt_finished', outcome: 'done' });
+    const rows = foldStageRuns([beat(43, 'gate', 'land'), finished, beat(41, 'prepare', 'agent')]);
+    expect(rows.map((row) => row.event.seq)).toEqual([43, 42, 41]);
+    expect(rows.map((row) => row.run)).toEqual([null, null, null]);
+  });
+
+  it('leaves every other event where it was', () => {
+    const rows = foldStageRuns(EVENTS);
+    expect(rowSeqs(rows)).toEqual(EVENTS.map((event) => event.seq));
+  });
+
+  it('draws the whole ladder, with the stage the run is on marked', () => {
+    const steps = stageSteps(foldStageRuns(run.slice(1))[0].run!);
+    expect(steps.map((step) => step.stage)).toEqual(['prepare', 'agent', 'gate', 'land']);
+    expect(steps.filter((step) => step.walked).map((step) => step.stage)).toEqual(['prepare', 'agent', 'gate']);
+    expect(steps.filter((step) => step.current).map((step) => step.stage)).toEqual(['gate']);
+  });
+
+  it('keeps a stage this build does not know, after the four it does', () => {
+    const run = [beat(51, 'agent', 'handover'), beat(50, 'prepare', 'agent')];
+    const steps = stageSteps(foldStageRuns(run)[0].run!);
+    expect(steps.map((step) => step.stage)).toEqual(['prepare', 'agent', 'gate', 'land', 'handover']);
+    expect(steps.find((step) => step.current)?.stage).toBe('handover');
+  });
+
+  it('groups rows by day the way the events were grouped', () => {
+    const rows = foldStageRuns(EVENTS);
+    expect(groupRowsByDay(rows).map((group) => [group.day, group.rows.length])).toEqual(
+      groupByDay(EVENTS).map((group) => [group.day, group.events.length])
+    );
   });
 });
 

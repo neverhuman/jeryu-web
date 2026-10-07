@@ -1117,3 +1117,64 @@
 .activity__older-bar--wide {
   width: 48%;
 }
+
+/* A folded run of stage beats: the ladder of an attempt, drawn small. The
+   stages the run has walked are lit, the one it is on holds a slow pulse —
+   the row says where the slot is without the reader opening anything. */
+.activity-row__stages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+/* No box around a stage: the ladder sits on one line beside the pills, and a
+   box per stage read as four more pills competing with them. */
+.activity-row__stage {
+  color: var(--color-fg-muted);
+}
+
+.activity-row__stage + .activity-row__stage::before {
+  content: '→';
+  margin-right: var(--space-1);
+  color: var(--color-fg-muted);
+}
+
+.activity-row__stage.is-walked {
+  color: var(--color-fg-secondary);
+}
+
+.activity-row__stage.is-current {
+  color: var(--color-accent-info);
+  font-weight: var(--font-weight-semibold);
+  animation: activity-stage-pulse 2s ease-in-out infinite;
+}
+
+@keyframes activity-stage-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* The beats themselves, handed over as the ordinary rows they would have been. */
+.activity-row__stage-events {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-row__stage.is-current {
+    animation: none;
+  }
+}

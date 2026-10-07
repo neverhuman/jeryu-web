@@ -655,3 +655,178 @@ export function resolvedSeqs(events: PipelineEvent[]): Set<number> {
   }
   return resolved;
 }
+
+// ---- Runs of worker stage beats -------------------------------------------
+
+/** The kind a working slot reports its progress through an attempt with. */
+export const WORKER_STAGE_KIND = 'worker.stage';
+
+/** The stages a slot walks on one attempt, in the order it walks them. */
+export const WORKER_STAGES = ['prepare', 'agent', 'gate', 'land'] as const;
+
+const STAGE_WORD = /^[a-z][a-z0-9_]*$/;
+
+/** `w1 jeryu: agent -> gate on 20260919-0800-aaa`, the words a beat is written
+ *  in when its producer attached no `detail`: the slot, the stage it left, and
+ *  the stage it reached. */
+const STAGE_SUMMARY = /^(w\d+)\b[^:]*:\s*(?:([a-z][a-z0-9_]*)\s*->\s*)?([a-z][a-z0-9_]*)/;
+
+function isStage(stage: string): boolean {
+  return (WORKER_STAGES as readonly string[]).includes(stage);
+}
+
+function detailText(event: Pick<PipelineEvent, 'detail'>, key: string): string | null {
+  const value = event.detail?.[key];
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+}
+
+/**
+ * Which slot a beat came from: `w1`. The producer's own `detail.slot` first,
+ * then the slot of its actor (`alton@xbabe0/w1`), then the summary. Null when
+ * nothing names one — two slots then cannot be told apart, so their beats are
+ * never folded into one row.
+ */
+export function stageSlot(event: PipelineEvent): string | null {
+  const stated = detailText(event, 'slot');
+  if (stated) return stated;
+  const actor = (event.actor ?? '').split('/').pop() ?? '';
+  if (/^w\d+$/.test(actor)) return actor;
+  return STAGE_SUMMARY.exec(event.summary)?.[1] ?? null;
+}
+
+/** The stage a beat left, when it says so: the first of them opens the path
+ *  a run walked, which otherwise would start where its second beat starts. */
+export function stageFrom(event: PipelineEvent): string | null {
+  const stated = detailText(event, 'from');
+  if (stated !== null && STAGE_WORD.test(stated)) return stated;
+  return STAGE_SUMMARY.exec(event.summary)?.[2] ?? null;
+}
+
+/** The stage a beat reached, from `detail.stage`, its outcome, or its summary. */
+export function stageName(event: PipelineEvent): string | null {
+  const stated = detailText(event, 'stage');
+  if (stated !== null && STAGE_WORD.test(stated)) return stated;
+  const outcome = (event.outcome ?? '').toLowerCase();
+  if (isStage(outcome)) return outcome;
+  return STAGE_SUMMARY.exec(event.summary)?.[3] ?? null;
+}
+
+/** Consecutive beats of one slot on one todo, as the one row they are drawn as. */
+export interface StageRun {
+  /** The newest beat: the row's time, its tone, and its key. */
+  latest: PipelineEvent;
+  /** Every beat folded here, newest first, as the feed held them. */
+  events: PipelineEvent[];
+  slot: string;
+  todoId: string | null;
+  /** The stages the run walked, oldest first; the last is where it is now. */
+  steps: string[];
+}
+
+/** What a list draws: one event, or a run of stage beats folded into one row. */
+export interface ActivityRow {
+  /** The event the row stands for: a lone event, or a run's newest beat. */
+  event: PipelineEvent;
+  /** Set when this row stands for several beats, which the row can expand. */
+  run: StageRun | null;
+}
+
+function stageRun(slot: string, todoId: string | null, events: PipelineEvent[]): StageRun {
+  const steps: string[] = [];
+  const oldest = events[events.length - 1];
+  const opening = stageFrom(oldest);
+  if (opening !== null) steps.push(opening);
+  for (const event of [...events].reverse()) {
+    const stage = stageName(event);
+    if (stage !== null && steps[steps.length - 1] !== stage) steps.push(stage);
+  }
+  return { latest: events[0], events, slot, todoId, steps };
+}
+
+/**
+ * The feed as rows, with runs of stage beats folded. A slot reports several
+ * beats per attempt (`prepare -> agent`, `agent -> gate`, …) and they buried
+ * the outcome rows between them; consecutive beats of one slot on one todo
+ * become one row that says the whole path and opens to the beats themselves.
+ * A lone beat stays a plain row: there is nothing to fold and nothing hidden.
+ */
+export function foldStageRuns(events: PipelineEvent[]): ActivityRow[] {
+  const rows: ActivityRow[] = [];
+  let open: { slot: string; todoId: string | null; events: PipelineEvent[] } | null = null;
+  const close = (): void => {
+    if (open === null) return;
+    const beats = open.events;
+    rows.push(
+      beats.length === 1
+        ? { event: beats[0], run: null }
+        : { event: beats[0], run: stageRun(open.slot, open.todoId, beats) }
+    );
+    open = null;
+  };
+  for (const event of events) {
+    const slot = event.kind === WORKER_STAGE_KIND ? stageSlot(event) : null;
+    if (slot === null) {
+      close();
+      rows.push({ event, run: null });
+      continue;
+    }
+    if (open !== null && open.slot === slot && open.todoId === event.todo_id) {
+      open.events.push(event);
+      continue;
+    }
+    close();
+    open = { slot, todoId: event.todo_id, events: [event] };
+  }
+  close();
+  return rows;
+}
+
+/** One step of the ladder a folded run draws. */
+export interface StageStep {
+  stage: string;
+  /** The run reported this stage. */
+  walked: boolean;
+  /** Where the slot is now: the newest beat's stage. */
+  current: boolean;
+}
+
+/**
+ * The whole ladder, so the row reads the same whichever stage a run is on:
+ * the four stages of an attempt, plus any stage this build does not know in
+ * the order the run walked it — a stage is never dropped for being unknown.
+ */
+export function stageSteps(run: StageRun): StageStep[] {
+  const walked = new Set(run.steps);
+  const extra = run.steps.filter((stage) => !isStage(stage));
+  const ladder = [...WORKER_STAGES, ...new Set(extra)];
+  const current = run.steps[run.steps.length - 1] ?? null;
+  return ladder.map((stage) => ({ stage, walked: walked.has(stage), current: stage === current }));
+}
+
+/** The run in one line, for the row's `title`: how many beats, and the path. */
+export function stageRunTitle(run: StageRun): string {
+  const beats = `${run.events.length} stage event${run.events.length === 1 ? '' : 's'}`;
+  return run.steps.length === 0 ? beats : `${beats}: ${run.steps.join(' → ')}`;
+}
+
+/** The rows' seqs, in order: what a keyboard walks and an arrival is keyed by. */
+export function rowSeqs(rows: ActivityRow[]): number[] {
+  return rows.map((row) => row.event.seq);
+}
+
+export interface RowDayGroup {
+  day: string;
+  rows: ActivityRow[];
+}
+
+/** The rows split into runs of one day, the same way `groupByDay` splits events. */
+export function groupRowsByDay(rows: ActivityRow[]): RowDayGroup[] {
+  const groups: RowDayGroup[] = [];
+  for (const row of rows) {
+    const day = localDayKey(row.event.ts);
+    const last = groups[groups.length - 1];
+    if (last && last.day === day) last.rows.push(row);
+    else groups.push({ day, rows: [row] });
+  }
+  return groups;
+}

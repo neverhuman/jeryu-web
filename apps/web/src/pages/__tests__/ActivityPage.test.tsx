@@ -43,6 +43,42 @@ describe('ActivityPage', () => {
     expect(within(slow).getByTitle('600 seconds')).toHaveTextContent('10m 0s');
   });
 
+  it('folds a run of stage beats into one row that opens to the beats', async () => {
+    const beat = (seq: number, from: string, to: string) =>
+      pipelineEvent({
+        seq,
+        kind: 'worker.stage',
+        source: 'todoq',
+        family: 'jeryu',
+        todo_id: '20260919-0800-aaa',
+        actor: 'alton@xbabe0/w1',
+        summary: `w1 jeryu: ${from} -> ${to} on 20260919-0800-aaa`,
+      });
+    const events = [
+      pipelineEvent({ seq: 24, kind: 'todo.attempt_finished', outcome: 'done', summary: 'w1 finished' }),
+      beat(23, 'gate', 'land'),
+      beat(22, 'agent', 'gate'),
+      beat(21, 'prepare', 'agent'),
+    ];
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events' ? json({ events, latest_seq: 24 }) : undefined
+    );
+    renderPage();
+    // The outcome row is not buried: the three beats are one row under it.
+    const row = await screen.findByTestId('activity-stages-23');
+    expect(screen.getByTestId('activity-event-24')).toBeInTheDocument();
+    for (const seq of [21, 22, 23]) expect(screen.queryByTestId(`activity-event-${seq}`)).toBeNull();
+    expect(within(row).getByText('Worker w1')).toBeInTheDocument();
+    const ladder = within(row).getByRole('list', { name: '3 stage events: prepare → agent → gate → land' });
+    expect(within(ladder).getByText('land')).toHaveAttribute('aria-current', 'step');
+    expect(within(ladder).getByText('prepare').className).toContain('is-walked');
+
+    fireEvent.click(within(row).getByTestId('activity-stages-toggle-23'));
+    for (const seq of [21, 22, 23]) {
+      expect(within(row).getByTestId(`activity-event-${seq}`)).toBeInTheDocument();
+    }
+  });
+
   it('links a row to the forge the repository list says its repo is on', async () => {
     mockPipelineApi((req) =>
       req.pathname === '/api/v1/repos'

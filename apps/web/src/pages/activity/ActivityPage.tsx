@@ -45,14 +45,16 @@ import {
   eventsApiPath,
   filterFieldError,
   filtersToQuery,
+  foldStageRuns,
   formatDay,
-  groupByDay,
+  groupRowsByDay,
   hasActiveFilters,
   longestSecondsByKind,
   hasMoreFilters,
   isWallMode,
   parseActivityFilters,
   resolvedSeqs,
+  rowSeqs,
   visibleEvents,
   type ActivityFilters,
 } from './activityModel';
@@ -68,6 +70,7 @@ import {
 import { useAtPageTop, useHeldRows } from './holdModel';
 import { useOlderOnReach } from './olderModel';
 import { useActivityRowKeys } from './rowKeysModel';
+import { StageRunRow } from './StageRunRow';
 import { ActivityHistogram } from './ActivityHistogram';
 import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
@@ -161,6 +164,11 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   );
   const shown = new Set(held.shown);
   const events = wall ? all : all.filter((event) => shown.has(event.seq));
+  // A slot sends several stage beats per attempt; folded, they are one row
+  // that says the path it walked, and the outcome rows around them stay
+  // readable. Everything keyed by row below counts a run as the one row it is.
+  const rows = foldStageRuns(events);
+  const seqs = rowSeqs(rows);
   // Resolution is read off the rows the reader has: a held event must not
   // quietly clear the red on a row above it before they have seen why.
   const resolved = resolvedSeqs(events);
@@ -176,11 +184,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   // One clock for the whole list: today's rows say how long ago they happened,
   // and they all age together on this single tick.
   const now = useTickingNow();
-  const arriving = useArrivingRows(
-    events.map((event) => event.seq),
-    filterId,
-    still
-  );
+  const arriving = useArrivingRows(seqs, filterId, still);
   // What the tab says while the reader is elsewhere. The count is read off the
   // raw feed, not the held list: a row waiting behind the pill has still
   // arrived, and it is the row that wants a person.
@@ -205,7 +209,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     field?.select();
   }, []);
   const rowKeys = useActivityRowKeys({
-    seqs: events.map((event) => event.seq),
+    seqs,
     list: listRef,
     enabled: !wall,
     onToggle: toggleRow,
@@ -381,27 +385,41 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
             </div>
           ) : null}
           <ol className="activity__list" aria-label="Pipeline events" ref={listRef}>
-            {groupByDay(events).map((group) => (
+            {groupRowsByDay(rows).map((group) => (
               <Fragment key={group.day}>
                 {/* The day is said once, here; a row says its clock, or — for today — its age. */}
                 <li className="activity__day" data-testid={`activity-day-${group.day}`}>
-                  {formatDay(group.events[0].ts, new Date(now))}
+                  {formatDay(group.rows[0].event.ts, new Date(now))}
                 </li>
-                {group.events.map((event) => (
-                  <EventRow
-                    key={event.seq}
-                    event={event}
-                    resolved={resolved.has(event.seq)}
-                    arriving={arriving.has(event.seq)}
-                    longestSeconds={longestSeconds.get(event.kind)}
-                    now={now}
-                    onOpenChange={wall ? undefined : onRowOpenChange}
-                    open={wall ? undefined : openRows.has(event.seq)}
-                    focused={wall ? undefined : rowKeys.focused === event.seq}
-                    tabStop={rowKeys.focused === null && event.seq === events[0]?.seq}
-                    onRest={rowKeys.rest}
-                  />
-                ))}
+                {group.rows.map(({ event, run }) =>
+                  run ? (
+                    <StageRunRow
+                      key={event.seq}
+                      run={run}
+                      arriving={arriving.has(event.seq)}
+                      now={now}
+                      open={openRows.has(event.seq)}
+                      onOpenChange={wall ? undefined : onRowOpenChange}
+                      focused={wall ? undefined : rowKeys.focused === event.seq}
+                      tabStop={rowKeys.focused === null && event.seq === seqs[0]}
+                      onRest={rowKeys.rest}
+                    />
+                  ) : (
+                    <EventRow
+                      key={event.seq}
+                      event={event}
+                      resolved={resolved.has(event.seq)}
+                      arriving={arriving.has(event.seq)}
+                      longestSeconds={longestSeconds.get(event.kind)}
+                      now={now}
+                      onOpenChange={wall ? undefined : onRowOpenChange}
+                      open={wall ? undefined : openRows.has(event.seq)}
+                      focused={wall ? undefined : rowKeys.focused === event.seq}
+                      tabStop={rowKeys.focused === null && event.seq === seqs[0]}
+                      onRest={rowKeys.rest}
+                    />
+                  )
+                )}
               </Fragment>
             ))}
             {/* Where the next page will land, so the list does not look
