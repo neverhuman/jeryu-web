@@ -43,6 +43,25 @@ const bootstrapJson = JSON.parse(
   };
 };
 
+/**
+ * `GET /api/v1/version`, so the shell's footer names a build the way a
+ * deployment does. Every spec that boots the shell gets it.
+ */
+async function mockVersion(page: Page): Promise<void> {
+  await page.route('**/api/v1/version', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        version: '5.0.0',
+        name: 'jeryu-api',
+        commit: '6f22958c0de1f2a3b4c5d6e7f8091a2b3c4d5e6f',
+        webCommit: '2d4a869b1c2d3e4f50617283949a5b6c7d8e9f01',
+      }),
+    });
+  });
+}
+
 async function mockUnhandledApi(page: Page): Promise<void> {
   await page.route('**/api/v1/**', async (route: Route, request) => {
     await route.fulfill({
@@ -56,6 +75,9 @@ async function mockUnhandledApi(page: Page): Promise<void> {
       }),
     });
   });
+  // After the catch-all, so it wins: every spec that boots the shell sees the
+  // footer name a build, and a spec that re-arms the catch-all keeps it.
+  await mockVersion(page);
 }
 
 export interface ViewerOverride {

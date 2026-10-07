@@ -239,6 +239,10 @@ test.describe('Primary left navigation', () => {
     // Six daily destinations; the machinery sits behind one closed disclosure.
     const nav = page.getByRole('navigation', { name: 'Primary' });
     const system = nav.getByRole('button', { name: 'System' });
+
+    // The build that is answering, read from `GET /api/v1/version`.
+    await expect(nav.getByTestId('version-line')).toHaveText('jeryu 5.0.0 · web 2d4a869');
+
     await expect(system).toHaveAttribute('aria-expanded', 'false');
     await expect(nav.getByRole('link', { name: 'Runners', exact: true })).toHaveCount(0);
     await system.click();

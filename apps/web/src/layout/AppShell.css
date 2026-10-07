@@ -586,6 +586,18 @@ a.global-header__live:hover {
   display: none;
 }
 
+/* The build that is answering: read when something looks wrong, so it sits
+   under everything else and never competes with a destination. */
+.left-nav__version {
+  margin: var(--space-4) 0 0;
+  padding: 0 var(--space-3);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* LiveActivityDock --------------------------------------------------- */
 
 .activity-dock {

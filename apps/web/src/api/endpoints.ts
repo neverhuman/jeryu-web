@@ -32,6 +32,9 @@ export const endpoints = {
   /** The same settings as an admin reads and writes them. */
   adminSiteSettings: (): string => '/api/v1/admin/site-settings',
 
+  /** What the running server is: its version and the commits it was built from. */
+  version: (): string => '/api/v1/version',
+
   /** Product-wide search; see `jeryu-deploy/docs/search.md`. */
   search: (query: SearchQuery): string => {
     const params = new URLSearchParams({ q: query.q });

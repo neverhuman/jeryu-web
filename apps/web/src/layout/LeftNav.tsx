@@ -11,6 +11,9 @@
 // closed by default, remembers what the operator chose, and is open whenever
 // the current page is inside it.
 //
+// At the foot, <VersionLine /> says which build is answering, so the version
+// is on every page instead of only in `GET /api/v1/version`.
+//
 // One repository is navigated from its own tab bar, at the top of every one of
 // its pages (components/repo/RepoLayout) — not from here.
 //
@@ -34,6 +37,7 @@ import {
 } from '../pages/needsYou/needsYouModel';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NAV_DESTINATIONS, navGroup, type NavDestination } from './navDestinations';
+import { VersionLine } from './VersionLine';
 
 /** The daily destinations, in the order the work flows. */
 export const PRIMARY_NAV = NAV_DESTINATIONS.filter((d) => d.group === 'primary');
@@ -167,6 +171,7 @@ export function LeftNav(): JSX.Element {
         {systemOpen ? system.map((item) => renderItem(item)) : null}
       </div>
 
+      <VersionLine />
     </nav>
   );
 }

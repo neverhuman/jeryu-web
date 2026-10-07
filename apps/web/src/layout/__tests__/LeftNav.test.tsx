@@ -15,6 +15,12 @@ vi.mock('../../hooks/useSiteSettings', () => ({
   useSiteSettings: () => ({ data: { internal_wiki: siteSettings.wiki } }),
 }));
 
+vi.mock('../../hooks/useServerVersion', () => ({
+  useServerVersion: () => ({
+    data: { version: '5.0.0', name: 'jeryu-api', commit: '6f22958', webCommit: '2d4a869ab' },
+  }),
+}));
+
 // Node 26 defines a global localStorage that is undefined without a backing
 // file and shadows jsdom's, so the test brings its own Storage.
 function makeStorage(): Storage {
@@ -50,6 +56,11 @@ describe('LeftNav', () => {
     auth.role = 'admin';
     siteSettings.wiki = null;
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
+  });
+
+  it('carries the running build at its foot, on every page', () => {
+    renderAt('/activity');
+    expect(screen.getByTestId('version-line')).toHaveTextContent('jeryu 5.0.0 · web 2d4a869');
   });
 
   it('keeps six daily destinations in the order the work flows', () => {
