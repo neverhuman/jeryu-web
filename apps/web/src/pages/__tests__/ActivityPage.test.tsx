@@ -377,6 +377,31 @@ describe('ActivityPage', () => {
     );
   });
 
+  it('keeps More filters open while a field is cleared', async () => {
+    mockPipelineApi();
+    renderPage('/activity?pr=7');
+    await screen.findByTestId('activity-event-12');
+    const panel = (): Element | null => document.querySelector('details.activity__more');
+    // A folded filter came in on the URL, so the panel arrives unfolded.
+    expect(panel()).toHaveAttribute('open');
+    const pr = screen.getByLabelText('PR');
+    fireEvent.change(pr, { target: { value: '' } });
+    fireEvent.keyDown(pr, { key: 'Enter' });
+    // Emptying the last value no longer folds the panel away under the caret.
+    await waitFor(() => expect(screen.getByLabelText('PR')).toHaveValue(''));
+    expect(panel()).toHaveAttribute('open');
+  });
+
+  it('leaves More filters folded on a repository tab, whose repo is the pin', async () => {
+    mockPipelineApi();
+    renderAt('/activity', '/activity', <ActivityPage repo="jeryu/jeryu-web" />);
+    await screen.findByTestId('activity-event-12');
+    // The pinned repository has no field to clear, so it is not a filter the
+    // panel should unfold for.
+    expect(screen.queryByLabelText('Repo')).toBeNull();
+    expect(document.querySelector('details.activity__more')).not.toHaveAttribute('open');
+  });
+
   it('names the request the list is one page of and copies a row as the API returns it', async () => {
     const calls = mockPipelineApi();
     const writeText = vi.fn().mockResolvedValue(undefined);

@@ -558,6 +558,10 @@ function Filters({
   onChip: (chip: (typeof ACTIVITY_CHIPS)[number]) => void;
 }): JSX.Element {
   const pinnedRepo = Boolean(repo);
+  // Unfolded on arrival when a folded filter is already set, and the reader's
+  // own from then on: clearing the last value mid-edit used to fold the panel
+  // away under the caret, so the fold follows the toggle, not the filters.
+  const [moreOpen, setMoreOpen] = useState(() => hasMoreFilters(filters, pinnedRepo));
   const families = useShiftFamilies();
   // What the Repo and Source fields can suggest. The server wants a Repo's
   // exact `owner/name` and names no sources at all, so both fields offer the
@@ -650,7 +654,12 @@ function Filters({
           {needsYou.count === null ? '' : ` (${needsYou.count})`}.
         </p>
       ) : null}
-      <details className="activity__more" ref={moreRef} open={hasMoreFilters(filters) || undefined}>
+      <details
+        className="activity__more"
+        ref={moreRef}
+        open={moreOpen}
+        onToggle={(event) => setMoreOpen(event.currentTarget.open)}
+      >
         <summary>More filters</summary>
         <div className="activity__more-fields">
           {MORE_FILTER_KEYS.filter((key) => !(pinnedRepo && key === 'repo')).map((key) => (

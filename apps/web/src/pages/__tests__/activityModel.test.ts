@@ -426,6 +426,10 @@ describe('activityModel', () => {
     expect(hasMoreFilters(filters('kind=gate.&family=jeryu'))).toBe(false);
     expect(hasMoreFilters(filters('kind=gate.finished'))).toBe(true);
     expect(hasMoreFilters(filters('repo=a%2Fb'))).toBe(true);
+    // A repository tab pins the repo and hides the field, so the pin alone is
+    // no reason to unfold a panel the reader cannot see it in.
+    expect(hasMoreFilters(filters('repo=a%2Fb'), true)).toBe(false);
+    expect(hasMoreFilters(filters('repo=a%2Fb&pr=7'), true)).toBe(true);
   });
 
   it('names an event\'s subject once, as the link inside its summary', () => {

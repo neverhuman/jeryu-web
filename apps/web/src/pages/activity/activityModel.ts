@@ -715,9 +715,18 @@ export function applyChip(params: URLSearchParams, chip: ActivityChip): URLSearc
 /** Filters that live behind "More filters": open it when one of them is set. */
 export const MORE_FILTER_KEYS = ['repo', 'source', 'kind', 'todo_id', 'pr'] as const;
 
-export function hasMoreFilters(filters: ActivityFilters): boolean {
+/**
+ * Whether one of the folded filters is set, which is reason to unfold them on
+ * arrival. A repository's Activity tab pins the repo and hides the Repo field,
+ * so that pin is not one of the filters a reader could see or clear:
+ * `pinnedRepo` leaves it out and the panel stays folded there.
+ */
+export function hasMoreFilters(filters: ActivityFilters, pinnedRepo = false): boolean {
   const chipKind = ACTIVITY_CHIPS.some((chip) => chip.kind === filters.kind);
-  return MORE_FILTER_KEYS.some((key) => filters[key] !== '' && !(key === 'kind' && chipKind));
+  return MORE_FILTER_KEYS.some(
+    (key) =>
+      filters[key] !== '' && !(key === 'kind' && chipKind) && !(key === 'repo' && pinnedRepo)
+  );
 }
 
 /** The event's main subject as one link: its pull request, else its todo, else its repo. */
