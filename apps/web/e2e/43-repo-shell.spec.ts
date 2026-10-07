@@ -148,6 +148,18 @@ test('every repository page carries the same header and tab bar @action:repo.she
     timeout: 15_000,
   });
   await expect(page.getByText('Merged globex/ledger#3')).toHaveCount(0);
+  // One heading for the page: the shell's name. The tab's own is a section
+  // under it, without the sentence the shell already carries or a wall to
+  // enter, which is a page of its own and not a panel of this one.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('widget-api');
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Activity', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByText('Every step the pipeline takes, as it happens.')
+  ).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Enter wall mode' })).toHaveCount(0);
 
   // Agents, opened without naming a run: the live run opens itself instead of
   // an empty "choose a run" pane beside a list with one live run in it.

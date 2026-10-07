@@ -427,6 +427,29 @@ describe('ActivityPage', () => {
     expect(document.querySelector('details.activity__more')).not.toHaveAttribute('open');
   });
 
+  it('is a section of the repository shell when pinned, with no wall and no second sentence', async () => {
+    mockPipelineApi();
+    // `?wall=1` reaches the tab as easily as any other address; the pin wins.
+    renderAt('/activity?wall=1', '/activity', <ActivityPage repo="jeryu/jeryu-web" />);
+    await screen.findByTestId('activity-event-12');
+    // The repository shell above owns the h1, so the panel's heading is an h2.
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Activity' })).toBeInTheDocument();
+    // Neither the page subtitle nor the way into wall mode belongs on a tab.
+    expect(screen.queryByText('Every step the pipeline takes, as it happens.')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Enter wall mode' })).toBeNull();
+    expect(document.querySelector('.activity--wall')).toBeNull();
+  });
+
+  it('keeps its own heading, sentence and wall control on /activity', async () => {
+    mockPipelineApi();
+    renderPage('/activity');
+    await screen.findByTestId('activity-event-12');
+    expect(screen.getByRole('heading', { level: 1, name: 'Activity' })).toBeInTheDocument();
+    expect(screen.getByText('Every step the pipeline takes, as it happens.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Enter wall mode' })).toBeInTheDocument();
+  });
+
   it('names the request the list is one page of and copies a row as the API returns it', async () => {
     const calls = mockPipelineApi();
     const writeText = vi.fn().mockResolvedValue(undefined);

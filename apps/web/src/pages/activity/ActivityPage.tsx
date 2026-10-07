@@ -15,6 +15,9 @@
 // at the width of the screen and the token panel under it, and it looks after
 // itself: the pointer goes after five seconds of quiet and the screen walks
 // back to the newest row after a minute of it.
+// Pinned to a repository (the Activity tab of `/repos/...`) the page is a panel
+// of that repository's shell: the shell's name is the heading, so this one is an
+// h2 under it, the subtitle is left to the shell and the wall is not offered.
 // Under the filters is the request the list is one page of, so the screen and
 // `/api/v1/events` are visibly the same thing; a row's detail copies that row
 // as the API returns it.
@@ -130,7 +133,11 @@ export interface ActivityPageProps {
 export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const wall = isWallMode(params);
+  // A repository tab is one panel of that repository's shell, which already
+  // carries its name: the wall is a page of its own and does not belong inside
+  // another page's furniture, so the pin takes it away even on `?wall=1`.
+  const pinned = Boolean(repo);
+  const wall = !pinned && isWallMode(params);
   // The wall is the screen, not a page inside the shell: the furniture goes
   // away while it is up, and comes back when the mode or the page is left.
   usePageTakesScreen(wall);
@@ -342,27 +349,31 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           back: its scroll margin keeps the title clear of a sticky header
           instead of under it. */}
       <div className="activity__top" ref={top} />
+      {/* On a repository tab the shell's name is the page's heading and says
+          what the feed is about, so this one goes under it as a section and
+          repeats neither the sentence nor the h1. */}
       <header className="page__header">
-        <div className="page__title-row">
-          <h1 className="page__title">Activity</h1>
-          <Link
-            className="activity__wall-toggle"
-            to={wall ? exitWall : wallHref(params, true)}
-            aria-label={wall ? 'Leave wall mode' : 'Enter wall mode'}
-            title={wall ? 'Leave wall mode (Esc)' : 'Enter wall mode'}
-          >
-            {wall ? <Minimize2 aria-hidden="true" size={14} /> : <Maximize2 aria-hidden="true" size={14} />}
-            {wall ? 'Exit wall' : 'Wall mode'}
-          </Link>
-        </div>
-        {wall ? (
-          <WallClock />
+        {pinned ? (
+          <h2 className="page__title">Activity</h2>
         ) : (
-          <>
-            <p className="page__subtitle">Every step the pipeline takes, as it happens.</p>
-            <RowLegend />
-          </>
+          <div className="page__title-row">
+            <h1 className="page__title">Activity</h1>
+            <Link
+              className="activity__wall-toggle"
+              to={wall ? exitWall : wallHref(params, true)}
+              aria-label={wall ? 'Leave wall mode' : 'Enter wall mode'}
+              title={wall ? 'Leave wall mode (Esc)' : 'Enter wall mode'}
+            >
+              {wall ? <Minimize2 aria-hidden="true" size={14} /> : <Maximize2 aria-hidden="true" size={14} />}
+              {wall ? 'Exit wall' : 'Wall mode'}
+            </Link>
+          </div>
         )}
+        {wall ? <WallClock /> : null}
+        {wall || pinned ? null : (
+          <p className="page__subtitle">Every step the pipeline takes, as it happens.</p>
+        )}
+        {wall ? null : <RowLegend />}
       </header>
 
       {/* The band is a filter on the feed, so it sits above the chips it sets.
