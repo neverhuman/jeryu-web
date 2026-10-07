@@ -34,6 +34,20 @@ interface KeyboardContextValue {
 
 const KeyboardContext = createContext<KeyboardContextValue | null>(null);
 
+/**
+ * One entry, for the overlay's purposes: the same key can be answered by the
+ * shell and by a page that is spending it on something of its own (`/` is the
+ * command palette, and the event list's More filters), and the overlay has to
+ * be able to say both. What it must not print twice is one shortcut whose
+ * component mounted twice.
+ */
+function sameShortcut(
+  a: KeyboardShortcutDescriptor,
+  b: KeyboardShortcutDescriptor
+): boolean {
+  return a.combo === b.combo && a.label === b.label && a.group === b.group;
+}
+
 export function KeyboardProvider({
   children,
 }: {
@@ -46,7 +60,7 @@ export function KeyboardProvider({
   const registerShortcut = useCallback(
     (descriptor: KeyboardShortcutDescriptor) => {
       setShortcuts((prev) => {
-        if (prev.some((s) => s.combo === descriptor.combo)) return prev;
+        if (prev.some((s) => sameShortcut(s, descriptor))) return prev;
         return [...prev, descriptor];
       });
       return () => {
@@ -57,7 +71,7 @@ export function KeyboardProvider({
         // #185 on back-navigation, and enough churn to keep interrupting
         // router transitions so Link navigations never committed).
         setShortcuts((prev) => {
-          const next = prev.filter((s) => s.combo !== descriptor.combo);
+          const next = prev.filter((s) => !sameShortcut(s, descriptor));
           return next.length === prev.length ? prev : next;
         });
       };
@@ -216,6 +230,51 @@ export function isTypingInTextField(target: EventTarget | null): boolean {
   return false;
 }
 
+/**
+ * A key a page read for itself, in the capture phase. The registry's own
+ * bindings for the same key stand aside: `/` is the command palette
+ * everywhere, and the one page that spends it on its own field says so here
+ * rather than the shell having to know which pages those are.
+ */
+const claimedKeys = new WeakSet<KeyboardEvent>();
+
+/** Claim this key event: registry bindings for it will not fire. */
+export function claimKey(event: KeyboardEvent): void {
+  claimedKeys.add(event);
+}
+
+/** True when a page already answered this key event itself. */
+export function isKeyClaimed(event: KeyboardEvent): boolean {
+  return claimedKeys.has(event);
+}
+
+/**
+ * Print keys a surface reads itself in the help overlay, binding nothing. A
+ * list that handles its own `keydown` — to leave Enter to the button under the
+ * reader, or the arrows to the page's scrolling — still belongs in the list of
+ * what the page answers.
+ */
+export function useShortcutHelp(
+  descriptors: readonly KeyboardShortcutDescriptor[]
+): void {
+  const ctx = useContext(KeyboardContext);
+  const registerShortcut = ctx?.registerShortcut ?? null;
+  const latest = useRef(descriptors);
+  latest.current = descriptors;
+  // The descriptors are written inline at the call site, so a new array every
+  // render: what they say is the dependency, not which array says it.
+  const key = JSON.stringify(descriptors);
+  useEffect(() => {
+    if (!registerShortcut) return () => {};
+    const unregister = latest.current.map((descriptor) =>
+      registerShortcut(descriptor)
+    );
+    return () => {
+      for (const off of unregister) off();
+    };
+  }, [key, registerShortcut]);
+}
+
 const CHORD_TIMEOUT_MS = 1200;
 
 export function useKeyboardShortcut(
@@ -265,6 +324,13 @@ export function useKeyboardShortcut(
 
     const onKey = (event: KeyboardEvent): void => {
       if (!options.allowInInputs && isTypingInTextField(event.target)) {
+        return;
+      }
+      // A page that read this key in the capture phase has answered it.
+      if (isKeyClaimed(event)) {
+        chordIndex = 0;
+        if (chordTimer) clearTimeout(chordTimer);
+        chordTimer = null;
         return;
       }
       const expected = atoms[chordIndex];

@@ -507,6 +507,54 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('activity-pause')).toHaveCount(0);
   });
 
+  test('Activity is walkable from the keyboard: j/k, the arrows, Enter and / @action:activity.row_keys', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
+
+    // j takes the focus to the newest row and down the list from there; the
+    // focused row is the one the browser has, so it is visibly where the
+    // reader is and a screen reader reads it.
+    await page.keyboard.press('j');
+    await expect(page.getByTestId('activity-event-12')).toBeFocused();
+    await page.keyboard.press('j');
+    await expect(page.getByTestId('activity-event-11')).toBeFocused();
+    await page.keyboard.press('k');
+    await expect(page.getByTestId('activity-event-12')).toBeFocused();
+    // With the list focused the arrows move along it too.
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByTestId('activity-event-11')).toBeFocused();
+
+    // Enter on the row opens it, and closes it again.
+    await page.keyboard.press('ArrowDown');
+    const gate = page.getByTestId('activity-event-10');
+    await expect(gate).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(gate.getByLabel('Log tail of event 10')).toContainText('gate: FAILED');
+    await page.keyboard.press('Enter');
+    await expect(gate.getByLabel('Log tail of event 10')).toHaveCount(0);
+
+    // `/` is More filters here, open at its first field, and what is typed
+    // there is typed, not read as a shortcut.
+    await page.keyboard.press('/');
+    const repo = page.getByLabel('Repo');
+    await expect(repo).toBeFocused();
+    await repo.fill('jeryu/jeryu-web');
+    await expect(repo).toHaveValue('jeryu/jeryu-web');
+    await expect(page.getByTestId('activity-event-12')).not.toBeFocused();
+
+    // The keys are the page's list, where a reader looks for them.
+    await page.getByRole('heading', { name: 'Activity' }).click();
+    await page.keyboard.press('Shift+/');
+    const overlay = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+    await expect(overlay).toContainText('Next event');
+    await expect(overlay).toContainText('Open More filters');
+  });
+
   test('Activity says what the pipeline is spending, live, and names a silent producer @action:activity.usage', async ({
     page,
     realtime,

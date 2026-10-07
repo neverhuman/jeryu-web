@@ -192,6 +192,15 @@
   border-left-color: var(--color-accent-success);
 }
 
+/* Where the keyboard is. The row takes the focus itself, so the ring is the
+   page's own focus ring; it stays on while the reader walks with j/k, which is
+   the point — the list has to say which row Enter will open. */
+.activity-row:focus-visible,
+.activity-row.is-focused {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 /* A wash, not the pill's own tint: at full strength the row's tint stacked
    under the danger pills on it, and "Deploy failed" — the words that have to
    be read — dropped below AA contrast. */

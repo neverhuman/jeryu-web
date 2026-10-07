@@ -13,7 +13,15 @@
 // as the API returns it.
 
 import { Activity, Maximize2, Minimize2, Pause, Play } from 'lucide-react';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
@@ -59,10 +67,10 @@ import {
 } from './histogramModel';
 import { useAtPageTop, useHeldRows } from './holdModel';
 import { useOlderOnReach } from './olderModel';
+import { useActivityRowKeys } from './rowKeysModel';
 import { ActivityHistogram } from './ActivityHistogram';
 import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
-import { useListKeys } from '../../hooks/useListKeys';
 import { UsagePanel } from './UsagePanel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
@@ -132,6 +140,15 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       return next;
     });
   }, []);
+  const toggleRow = useCallback(
+    (seq: number): void =>
+      setOpenRows((prev) => {
+        const next = new Set(prev);
+        if (!next.delete(seq)) next.add(seq);
+        return next;
+      }),
+    []
+  );
   // Paused is the reader asking the list to stand still while they read or
   // copy from it: it holds the tail back from wherever they are, the same way
   // scrolling down does, and counts what lands.
@@ -147,8 +164,6 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   // Resolution is read off the rows the reader has: a held event must not
   // quietly clear the red on a row above it before they have seen why.
   const resolved = resolvedSeqs(events);
-  // One `j`/`k` list over the whole feed, day headings and all.
-  const rows = useListKeys<HTMLDivElement>();
   // The duration bars are scaled within the rows on the page: as a reader
   // loads older events the scale can only grow, never per-row surprise.
   const longestSeconds = longestSecondsByKind(events);
@@ -175,6 +190,27 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     filterId
   );
   usePageTitle(badgedTitle(repo ? `${repo} · Activity` : 'Activity', away));
+
+  // The keyboard's own way down the list: j/k and the arrows move a focus from
+  // row to row, Enter or `o` opens the one it rests on, `/` goes to the
+  // filters. The wall has no reader at a keyboard.
+  const listRef = useRef<HTMLOListElement | null>(null);
+  const moreFilters = useRef<HTMLDetailsElement | null>(null);
+  const openMoreFilters = useCallback((): void => {
+    const details = moreFilters.current;
+    if (!details) return;
+    details.open = true;
+    const field = details.querySelector<HTMLInputElement>('input');
+    field?.focus();
+    field?.select();
+  }, []);
+  const rowKeys = useActivityRowKeys({
+    seqs: events.map((event) => event.seq),
+    list: listRef,
+    enabled: !wall,
+    onToggle: toggleRow,
+    onOpenFilters: openMoreFilters,
+  });
 
   // Under the list: coming into view is the reader asking for the next older
   // page, so they do not have to reach the bottom and press a button. The
@@ -236,7 +272,6 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     <div
       className={`page page--wide activity${wall ? ' activity--wall' : ''}`}
       data-testid="activity-page"
-      ref={rows}
     >
       <div ref={top} />
       <header className="page__header">
@@ -279,6 +314,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
             filters={filters}
             query={query}
             repo={repo}
+            moreRef={moreFilters}
             range={parseRange(params)}
             onChange={update}
             onChip={(chip) => setParams(applyChip(params, chip), { replace: true })}
@@ -344,7 +380,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
               </button>
             </div>
           ) : null}
-          <ol className="activity__list" aria-label="Pipeline events">
+          <ol className="activity__list" aria-label="Pipeline events" ref={listRef}>
             {groupByDay(events).map((group) => (
               <Fragment key={group.day}>
                 {/* The day is said once, here; a row says its clock, or — for today — its age. */}
@@ -360,6 +396,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                     longestSeconds={longestSeconds.get(event.kind)}
                     now={now}
                     onOpenChange={wall ? undefined : onRowOpenChange}
+                    open={wall ? undefined : openRows.has(event.seq)}
+                    focused={wall ? undefined : rowKeys.focused === event.seq}
+                    tabStop={rowKeys.focused === null && event.seq === events[0]?.seq}
+                    onRest={rowKeys.rest}
                   />
                 ))}
               </Fragment>
@@ -430,6 +470,7 @@ function Filters({
   filters,
   query,
   repo,
+  moreRef,
   range,
   onChange,
   onChip,
@@ -439,6 +480,9 @@ function Filters({
   query: PipelineEventsQuery;
   /** `owner/name` when the repository shell's Activity tab pins the feed. */
   repo?: string;
+  /** The page's handle on More filters: `/` opens it and takes the caret to
+   *  its first field. */
+  moreRef?: RefObject<HTMLDetailsElement | null>;
   /** The range the band above is drawn at: what the chip counts cover. */
   range: HistogramRangeId;
   onChange: (key: string, value: string) => void;
@@ -518,7 +562,7 @@ function Filters({
           {needsYou.count === null ? '' : ` (${needsYou.count})`}.
         </p>
       ) : null}
-      <details className="activity__more" open={hasMoreFilters(filters) || undefined}>
+      <details className="activity__more" ref={moreRef} open={hasMoreFilters(filters) || undefined}>
         <summary>More filters</summary>
         <div className="activity__more-fields">
           {MORE_FILTER_KEYS.filter((key) => !(pinnedRepo && key === 'repo')).map((key) => (

@@ -53,7 +53,9 @@ Lists are keyboard-operated through `useListKeys.ts`: a surface marks its rows
 `LIST_ACTION_PROP`, and attaches the hook's ref to whatever holds the rows.
 `j`/`k` move and draw `data-list-focused`, `o`/Enter open, `x` acts; a row's own
 keys fire only while the row itself holds focus, so Enter stays the key of any
-control a reader tabs to inside it.
+control a reader tabs to inside it. Activity is the exception: its rows expand
+in place, so it walks them with its own `activity/rowKeysModel.ts` and does not
+also attach `useListKeys` (two window handlers would move twice per key).
 
 Owner work-packages: `W-FE-*` (and `W-F-07`, `W-F-09`, `W-F-12` for
 foundation skeleton).

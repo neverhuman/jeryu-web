@@ -19,7 +19,6 @@ import { CopyButton } from '../../components/copy/CopyButton';
 import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
-import { LIST_ACTION_PROP, LIST_OPEN_PROP, listRowProps } from '../../hooks/useListKeys';
 import { formatCost, shortSha } from '../shift/shiftModel';
 import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
 import {
@@ -39,6 +38,10 @@ import './Activity.css';
 export function EventRow({
   event,
   defaultOpen = false,
+  open: controlledOpen,
+  focused,
+  tabStop = false,
+  onRest,
   resolved = false,
   arriving = false,
   longestSeconds,
@@ -47,6 +50,18 @@ export function EventRow({
 }: {
   event: PipelineEvent;
   defaultOpen?: boolean;
+  /** Open from outside: a list whose keyboard expands the focused row holds
+   *  the state for every row, so the row follows it instead of its own. */
+  open?: boolean;
+  /** Given at all, this row is one step of a keyboard-walked list: it takes
+   *  the focus itself, and shows where the keyboard is when it has it. */
+  focused?: boolean;
+  /** Nothing in the list is focused yet and this is where Tab should land:
+   *  the keyboard has to be able to reach the list in the first place. */
+  tabStop?: boolean;
+  /** The row was reached some other way (a click, Tab): where the keyboard
+   *  should carry on from. */
+  onRest?: (seq: number) => void;
   /** A later event cleared this row's cause: no attention pill. */
   resolved?: boolean;
   /** The row was not in the previous render: slide in and hold a wash. */
@@ -62,7 +77,12 @@ export function EventRow({
    *  reader has one open, so it has to know. */
   onOpenChange?: (seq: number, open: boolean) => void;
 }): JSX.Element {
-  const [open, setOpen] = useState(defaultOpen);
+  const [selfOpen, setSelfOpen] = useState(defaultOpen);
+  const open = controlledOpen ?? selfOpen;
+  const toggle = (): void => {
+    setSelfOpen(!open);
+    onOpenChange?.(event.seq, !open);
+  };
   // Reported through an effect, with the close on the way out: a row that
   // leaves the list while open must not keep the feed waiting for it.
   const report = useRef(onOpenChange);
@@ -98,9 +118,12 @@ export function EventRow({
     <li
       className={`${toneClass('activity-row', tone)}${needsHuman ? ' is-needs-human' : ''}${
         arriving ? ' is-arriving' : ''
-      }`}
+      }${focused ? ' is-focused' : ''}`}
       data-testid={`activity-event-${event.seq}`}
-      {...listRowProps}
+      // A row of a keyboard-walked list is the focus stop, with the roving
+      // tabindex: Tab reaches the list once, and j/k move within it.
+      tabIndex={focused === undefined ? undefined : focused || tabStop ? 0 : -1}
+      onFocus={focused === undefined ? undefined : () => onRest?.(event.seq)}
     >
       <div className="activity-row__line">
         <time className="activity-row__time" dateTime={event.ts} title={absoluteText(event.ts)}>
@@ -115,7 +138,7 @@ export function EventRow({
         <span className="activity-row__summary">
           {summary.before}
           {summary.link ? (
-            <Link to={summary.link.to} className="activity-row__link" {...LIST_OPEN_PROP}>
+            <Link to={summary.link.to} className="activity-row__link">
               {summary.link.label}
             </Link>
           ) : null}
@@ -153,8 +176,7 @@ export function EventRow({
           aria-expanded={open}
           aria-controls={detailId}
           aria-label={`${toggleLabel} for event ${event.seq}`}
-          {...LIST_ACTION_PROP}
-          onClick={() => setOpen((v) => !v)}
+          onClick={toggle}
         >
           {toggleLabel}
         </button>

@@ -7,11 +7,23 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { GLOSSARY } from '../../words/glossary';
 import { KeyboardShortcutsOverlay } from '../KeyboardShortcutsOverlay';
-import { KeyboardProvider, formatCombo, useKeyboardShortcut } from '../../hooks/useKeyboard';
+import {
+  KeyboardProvider,
+  claimKey,
+  formatCombo,
+  useKeyboardShortcut,
+  useShortcutHelp,
+} from '../../hooks/useKeyboard';
 import { useShortcutsStore } from '../../stores/shortcutsStore';
 
 function Shortcut({ combo, label }: { combo: string; label: string }): null {
   useKeyboardShortcut(combo, () => {}, { label, group: 'Navigation' });
+  return null;
+}
+
+/** A page that reads a key itself and prints it without binding it. */
+function SelfRead({ combo, label }: { combo: string; label: string }): null {
+  useShortcutHelp([{ combo, label, group: 'Activity' }]);
   return null;
 }
 
@@ -74,6 +86,31 @@ describe('KeyboardShortcutsOverlay', () => {
     expect(screen.getByText('Ctrl+K')).toBeTruthy();
     expect(screen.getByText('G N')).toBeTruthy();
     expect(screen.queryByText('mod+k')).toBeNull();
+  });
+
+  it('lists a key a page reads itself, and lets that page have it', () => {
+    const pressed: string[] = [];
+    render(
+      <KeyboardProvider>
+        <Shortcut combo="/" label="Open command palette" />
+        <SelfRead combo="/" label="Open More filters" />
+        <KeyboardShortcutsOverlay />
+      </KeyboardProvider>
+    );
+    // The page claims the key in the capture phase; the registry's own
+    // binding for it stands aside, so `/` does one thing, not two.
+    window.addEventListener(
+      'keydown',
+      (event) => {
+        claimKey(event);
+        pressed.push('page');
+      },
+      { capture: true }
+    );
+    fireEvent.keyDown(window, { key: '/' });
+    expect(pressed).toEqual(['page']);
+    act(() => useShortcutsStore.getState().open());
+    expect(screen.getByText('Open More filters')).toBeTruthy();
   });
 
   it('closes on its close button', () => {
