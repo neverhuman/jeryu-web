@@ -10,7 +10,7 @@ import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../for
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { EventRow } from './EventRow';
 import { InlineProse } from './InlineProse';
-import { type StageRun, stageRunTitle, stageSteps, summaryParts } from './activityModel';
+import { type StageRun, stageRunTitle, stageSteps, summaryParts, summaryText } from './activityModel';
 
 import './Activity.css';
 
@@ -72,7 +72,7 @@ export function StageRunRow({
           ))}
         </ol>
         <span className="activity-row__summary">
-          <InlineProse text={latest.summary} link={summary.link} />
+          <InlineProse text={summaryText(latest)} link={summary.link} />
         </span>
         <span className="activity-row__meta">{run.events.length} steps</span>
         <button

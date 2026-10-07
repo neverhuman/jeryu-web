@@ -1,7 +1,8 @@
 // EventRow.tsx — one pipeline event, shared by the Activity page, the wall,
 // and the per-PR events panel. One line: when, which tool reported it as a
 // small icon, what happened in plain words,
-// the summary with its subject as the link, how long it took — with a thin bar
+// the summary with its subject as the link (minus a duration the
+// column beside it already says), how long it took — with a thin bar
 // behind the duration, scaled against the longest run of the same kind in the
 // loaded list, so a slow gate or a long attempt shows at a glance. Everything else
 // (who, which commit, why, the few fields its kind is asked about — the gate's
@@ -41,6 +42,7 @@ import {
   formatSeconds,
   hasDetail,
   summaryParts,
+  summaryText,
 } from './activityModel';
 
 import './Activity.css';
@@ -171,7 +173,7 @@ export function EventRow({
           {eventLabel(event)}
         </span>
         <span className="activity-row__summary">
-          <InlineProse text={event.summary} link={summary.link} />
+          <InlineProse text={summaryText(event)} link={summary.link} />
         </span>
         {needsHuman ? <span className={pillClass('human')}>needs you</span> : null}
         {event.needs_human && resolved ? (

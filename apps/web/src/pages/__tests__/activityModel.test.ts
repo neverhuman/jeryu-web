@@ -51,6 +51,7 @@ import {
   stageSlot,
   stageSteps,
   summaryParts,
+  summaryText,
   visibleEvents,
   wallCounters,
   wantsWorkerSteps,
@@ -245,6 +246,29 @@ describe('activityModel', () => {
     expect(durationShare(0, 600)).toBeNull();
     expect(durationShare(60, undefined)).toBeNull();
     expect(durationShare(60, 0)).toBeNull();
+  });
+
+  it('says a duration once: the summary drops what the column repeats', () => {
+    const gate = (summary: string, seconds: number | null) =>
+      summaryText(pipelineEvent({ seq: 1, kind: 'gate.finished', summary, seconds }));
+    // 'success in 91s' beside a column reading '1m 31s' said it twice.
+    expect(gate('runner-1 gate of jeryu/jeryu-web#35: success in 91s', 91)).toBe(
+      'runner-1 gate of jeryu/jeryu-web#35: success'
+    );
+    expect(gate('gate: success in 1m 31s', 91)).toBe('gate: success');
+    expect(gate('gate: success in 2h 5m', 7500)).toBe('gate: success');
+    // Rounding is the column's, not the summary's: 91.4s and 91s are one run.
+    expect(gate('gate: success in 91.4s', 91.4)).toBe('gate: success');
+    // A number that is not this row's duration, or not a duration at all,
+    // stays: the column cannot be the one saying it.
+    expect(gate('gate: success in 12s', 91)).toBe('gate: success in 12s');
+    expect(gate('deploy of jeryu/jeryu-web: success in production', 91)).toBe(
+      'deploy of jeryu/jeryu-web: success in production'
+    );
+    // No duration column at all, so the summary is the only place it is said.
+    expect(gate('gate: success in 91s', null)).toBe('gate: success in 91s');
+    // A duration mid-sentence is the writer's sentence, not a repeat.
+    expect(gate('gate: success in 91s after a retry', 91)).toBe('gate: success in 91s after a retry');
   });
 
   it('says the exact seconds a rounded duration came from', () => {

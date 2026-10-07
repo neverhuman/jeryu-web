@@ -806,6 +806,35 @@ export function summaryParts(event: PipelineEvent, host: string): SummaryParts {
 }
 
 
+/**
+ * How long a `in …` clause says something took, in seconds, or null when the
+ * clause is not one: `in production` reads as a place, not a duration.
+ */
+function clauseSeconds(hours?: string, minutes?: string, seconds?: string): number | null {
+  if (hours === undefined && minutes === undefined && seconds === undefined) return null;
+  return Number(hours ?? 0) * 3600 + Number(minutes ?? 0) * 60 + Number(seconds ?? 0);
+}
+
+/** A duration at the end of a summary: `in 91s`, `in 1m 31s`, `in 2h 5m`. */
+const TRAILING_DURATION = /\s+in\s+(?:(\d+)\s*h\s*)?(?:(\d+)\s*m\s*)?(?:(\d+(?:\.\d+)?)\s*s)?\s*$/;
+
+/**
+ * The summary a row shows: the one the producer wrote, minus a closing
+ * duration the row's own duration column already says. A gate reports
+ * `success in 91s` and the column reads `1m 31s` beside it — the same number
+ * twice, spelled two ways. Only a trailing `in …` that agrees with `seconds`
+ * goes, so a summary whose number means something else keeps every word.
+ */
+export function summaryText(event: Pick<PipelineEvent, 'summary' | 'seconds'>): string {
+  const seconds = event.seconds;
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds)) return event.summary;
+  const said = TRAILING_DURATION.exec(event.summary);
+  if (!said) return event.summary;
+  const clause = clauseSeconds(said[1], said[2], said[3]);
+  if (clause === null || Math.abs(clause - seconds) > 0.5) return event.summary;
+  return event.summary.slice(0, said.index);
+}
+
 function sameSubject(a: PipelineEvent, b: PipelineEvent): boolean {
   if (a.kind.split('.')[0] !== b.kind.split('.')[0]) return false;
   if (a.repo !== b.repo) return false;

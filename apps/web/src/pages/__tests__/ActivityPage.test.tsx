@@ -43,6 +43,30 @@ describe('ActivityPage', () => {
     expect(within(slow).getByTitle('600 seconds')).toHaveTextContent('10m 0s');
   });
 
+  it('says a gate row\'s duration once, in the column', async () => {
+    const events = [
+      pipelineEvent({
+        seq: 2,
+        kind: 'gate.finished',
+        repo: 'jeryu/jeryu-web',
+        pr: 35,
+        seconds: 91,
+        summary: 'runner-1 gate of jeryu/jeryu-web#35: success in 91s',
+      }),
+      // A sentence of its own keeps its words: the column did not say this.
+      pipelineEvent({ seq: 1, kind: 'deploy.status', seconds: 91, summary: 'rollout in production' }),
+    ];
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events' ? json({ events, latest_seq: 2 }) : undefined
+    );
+    renderPage();
+    const gate = await screen.findByTestId('activity-event-2');
+    expect(gate).toHaveTextContent('gate of jeryu/jeryu-web#35: success');
+    expect(gate).not.toHaveTextContent('in 91s');
+    expect(within(gate).getByTitle('91 seconds')).toHaveTextContent('1m 31s');
+    expect(screen.getByTestId('activity-event-1')).toHaveTextContent('rollout in production');
+  });
+
   it('folds a run of stage beats into one row that opens to the beats', async () => {
     const beat = (seq: number, from: string, to: string) =>
       pipelineEvent({
