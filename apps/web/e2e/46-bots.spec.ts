@@ -7,6 +7,7 @@
 
 import { expect, test, type Page, type Route } from './fixtures/test';
 
+import { persistRenderedEvidence } from './fixtures/accessibility';
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap, mockRepoAgentRuns, mockRepoList } from './fixtures/mocks';
 import { mockShiftTodos } from './fixtures/releaseChannelMocks';
@@ -209,6 +210,12 @@ test('adding one shows the enrollment key and setup script once @action:bots.enr
   await expect(setup).toContainText('enroll-once-key');
   await expect(setup).toContainText('setup-script-body');
   await expect(page.getByTestId('bot-list')).toContainText('North');
+  // Record geometry and the design tokens this account page already paints.
+  const rendered = await persistRenderedEvidence(page, 'bots');
+  expect(rendered.geometry.width).toBeGreaterThan(0);
+  expect(rendered.geometry.height).toBeGreaterThan(0);
+  expect(rendered.design_tokens.color_bg_0.length).toBeGreaterThan(0);
+  expect(rendered.design_tokens.space_4.length).toBeGreaterThan(0);
 
   await page.getByRole('button', { name: 'Hide this key' }).click();
   await expect(page.getByTestId('bot-setup')).toHaveCount(0);
