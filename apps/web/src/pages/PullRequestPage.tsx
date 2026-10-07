@@ -481,6 +481,8 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           </div>
         ) : tab === 'commits' ? (
           <PullRequestCommits
+            provider={provider}
+            fullName={fullName}
             commits={commits.data}
             isPending={commits.isPending}
             error={commits.error}

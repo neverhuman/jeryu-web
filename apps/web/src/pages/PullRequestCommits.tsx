@@ -5,9 +5,14 @@
 // full message body and its trailers one click away. On a shift PR each commit
 // is one todo's change, so the trailers (`Todo:`, `Worked-by:`, `Shift:`) are
 // shown as key/value pairs rather than buried in prose.
+//
+// The sha opens the commit page inside the app (`commitPath`), the same page
+// the repository's history links to. The API's `html_url` is not used: a
+// plain link to it reloaded the whole app to get there.
 
 import { ChevronDown, ChevronRight, GitCommitHorizontal } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { ErrorState, LoadingState } from '../components/state';
 import { When } from '../format/When';
@@ -20,16 +25,22 @@ import {
   shortSha,
   type PullCommit,
 } from './pullCommitsModel';
+import { commitPath } from './repoCommitsModel';
 
 import './page.css';
 
 export interface PullRequestCommitsProps {
+  /** The repository the pull request belongs to, as the router names it. */
+  provider: string;
+  fullName: string;
   commits: PullCommit[] | undefined;
   isPending: boolean;
   error?: Error | null;
 }
 
 export function PullRequestCommits({
+  provider,
+  fullName,
   commits,
   isPending,
   error,
@@ -76,6 +87,7 @@ export function PullRequestCommits({
                 <CommitRow
                   key={commit.sha}
                   commit={commit}
+                  href={commitPath(provider, fullName, commit.sha)}
                   isOpen={expanded.has(commit.sha)}
                   onToggle={toggle}
                 />
@@ -90,10 +102,12 @@ export function PullRequestCommits({
 
 function CommitRow({
   commit,
+  href,
   isOpen,
   onToggle,
 }: {
   commit: PullCommit;
+  href: string;
   isOpen: boolean;
   onToggle: (sha: string) => void;
 }): JSX.Element {
@@ -124,15 +138,9 @@ function CommitRow({
         ) : (
           <span className="pr-commits__subject">{message.subject}</span>
         )}
-        {commit.html_url ? (
-          <a className="pr-commits__sha" href={commit.html_url} title={commit.sha}>
-            <code>{sha}</code>
-          </a>
-        ) : (
-          <code className="pr-commits__sha" title={commit.sha}>
-            {sha}
-          </code>
-        )}
+        <Link className="pr-commits__sha" to={href} title={commit.sha}>
+          <code>{sha}</code>
+        </Link>
         <span className="pr-commits__meta">
           {commitAuthorName(commit)}
           {at ? (

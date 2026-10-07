@@ -1,5 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ComponentProps } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import { PullRequestCommits } from '../PullRequestCommits';
@@ -25,9 +27,20 @@ const commits: PullCommit[] = [
   },
 ];
 
+/** The tab as the PR page mounts it, inside a router for its commit links. */
+function Commits(
+  props: Omit<ComponentProps<typeof PullRequestCommits>, 'provider' | 'fullName'>
+): JSX.Element {
+  return (
+    <MemoryRouter>
+      <PullRequestCommits provider="jeryu" fullName="jeryu/jeryu-deploy" {...props} />
+    </MemoryRouter>
+  );
+}
+
 describe('PullRequestCommits', () => {
   it('lists every commit with its short sha and the count in the heading', () => {
-    render(<PullRequestCommits commits={commits} isPending={false} />);
+    render(<Commits commits={commits} isPending={false} />);
     expect(screen.getByTestId('pr-commits-count').textContent).toBe('2');
     const rows = screen.getAllByTestId('pr-commit');
     expect(rows).toHaveLength(2);
@@ -38,12 +51,12 @@ describe('PullRequestCommits', () => {
       (within(rows[0] as HTMLElement).getByRole('link') as HTMLAnchorElement).getAttribute(
         'href'
       )
-    ).toBe('/repos/jeryu/jeryu/jeryu-deploy/commit/aaaaaaa');
+    ).toBe(`/repos/jeryu/jeryu/jeryu-deploy/commit/${'a'.repeat(40)}`);
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(2);
   });
 
   it('expands the full message with its trailers as key/value pairs', async () => {
-    render(<PullRequestCommits commits={commits} isPending={false} />);
+    render(<Commits commits={commits} isPending={false} />);
     expect(screen.queryByTestId('pr-commit-trailers')).toBeNull();
 
     const toggle = screen.getByRole('button', { name: /Add the commits endpoint/ });
@@ -65,18 +78,18 @@ describe('PullRequestCommits', () => {
 
   it('shows a loading state, an empty state and an error state', () => {
     const loading = render(
-      <PullRequestCommits commits={undefined} isPending={true} />
+      <Commits commits={undefined} isPending={true} />
     );
     expect(screen.queryByTestId('pr-commits-count')).toBeNull();
     loading.unmount();
 
-    const empty = render(<PullRequestCommits commits={[]} isPending={false} />);
+    const empty = render(<Commits commits={[]} isPending={false} />);
     expect(screen.getByTestId('pr-commits-empty')).toBeTruthy();
     expect(screen.getByTestId('pr-commits-count').textContent).toBe('0');
     empty.unmount();
 
     render(
-      <PullRequestCommits
+      <Commits
         commits={undefined}
         isPending={false}
         error={new Error('forge unreachable')}
