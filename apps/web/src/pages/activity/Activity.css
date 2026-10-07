@@ -232,6 +232,42 @@
   color: var(--color-accent-info);
 }
 
+/* Which tool reported the row, in front of the label pill. The icon is
+   coloured by what the source does, not by which one it is: agent work, the
+   gates judging it, the steps that ship it. Three tints, so the eye sorts the
+   feed without reading it. */
+.activity-row__source-icon {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  color: var(--color-fg-muted);
+  /* The mark belongs to the pill behind it, so it sits closer to it than the
+     line's own gap would put it. */
+  margin-right: calc(var(--space-2) - var(--space-3));
+}
+
+.activity-row__source-icon[data-source-group='agent'] {
+  color: var(--color-accent-primary);
+}
+
+.activity-row__source-icon[data-source-group='gate'] {
+  color: var(--color-accent-warning);
+}
+
+.activity-row__source-icon[data-source-group='release'] {
+  color: var(--color-accent-secondary);
+}
+
+.activity-row__source-icon[data-source-group='forge'] {
+  color: var(--color-accent-info);
+}
+
+/* On the wall the row grows; the mark grows with it. */
+.activity--wall .activity-row__source-icon svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+
 /* The duration, with how long it ran drawn behind it: the bar is scaled
    against the longest run of the same kind on the page, sits under the text
    rather than beside it, and stays a tint so the reading stays legible. */

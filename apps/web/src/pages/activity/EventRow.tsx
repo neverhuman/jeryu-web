@@ -1,5 +1,6 @@
 // EventRow.tsx — one pipeline event, shared by the Activity page, the wall,
-// and the per-PR events panel. One line: when, what happened in plain words,
+// and the per-PR events panel. One line: when, which tool reported it as a
+// small icon, what happened in plain words,
 // the summary with its subject as the link, how long it took — with a thin bar
 // behind the duration, scaled against the longest run of the same kind in the
 // loaded list, so a slow gate or a long attempt shows at a glance. Everything else
@@ -20,6 +21,7 @@ import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { formatCost, shortSha } from '../shift/shiftModel';
+import { sourceMark } from './sourceModel';
 import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
 import {
   durationShare,
@@ -95,6 +97,9 @@ export function EventRow({
   // A cleared row keeps its words ("Gate failed") but not its red: what it
   // reports is history, and the colour is for what still wants an answer.
   const tone = resolved ? 'unknown' : eventTone(event);
+  // Which tool reported the row, as one icon in front of the label pill: the
+  // name itself stays in the facts below, and in this mark's title.
+  const { Icon: SourceIcon, ...mark } = sourceMark(event.source);
   const forgeHost = useForgeHost();
   const host = forgeHost(event.repo ?? undefined);
   const summary = summaryParts(event, host);
@@ -129,6 +134,16 @@ export function EventRow({
         <time className="activity-row__time" dateTime={event.ts} title={absoluteText(event.ts)}>
           {whenText}
         </time>
+        <span
+          className="activity-row__source-icon"
+          data-source-group={mark.group}
+          data-testid={`activity-event-source-${event.seq}`}
+          role="img"
+          title={mark.title}
+          aria-label={mark.title}
+        >
+          <SourceIcon size={13} aria-hidden="true" />
+        </span>
         <span
           className={pillClass(tone)}
           title={event.kind}
