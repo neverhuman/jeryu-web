@@ -20,6 +20,12 @@
   the page, where on a long page it was off screen below everything else. Each row is now a link
   to what the event is about — the subject link the Activity page gives it — and the feed is read
   on the page's family, the one the "need you" count beside it already applied.
+- Grokbot and Musebot enrollment is covered in the browser. An empty repository
+  roster links to add one with that repository already selected. The account
+  page shows the enrollment key and setup script only when one is added or
+  rotated, and a reload does not invent the key again. Rotate, suspend, and
+  revoke update that row. The account page and the roster stay inside a
+  390px-wide viewport.
 - Every "needs you" count on screen is now one derivation of one list. The nav badge, the live
   activity dock, the Needs you header and each page's "Waiting on you in <area>" strip all count
   `urgentAttention` / `urgentInArea` from `GET /api/v1/attention`: the dock no longer counts
