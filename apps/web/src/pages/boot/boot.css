@@ -656,6 +656,12 @@
   font-size: var(--font-size-sm);
 }
 
+.waitlist__privacy {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
 @media (max-width: 920px) {
   .boot__hero {
     grid-template-columns: 1fr;

@@ -2,21 +2,18 @@
 //
 // Joining stores an email, an optional name, and an optional note. It does
 // not create an account, call signup, or keep the address in the browser
-// when the request fails.
+// after a receipt. New and repeat addresses share one message.
 
 import { useState, type FormEvent } from 'react';
 
 import { ApiError, apiSend } from '../../api/client';
 import { endpoints } from '../../api/endpoints';
 
-type Phase = 'idle' | 'submitting' | 'created' | 'already_listed' | 'invalid' | 'failed';
+type Phase = 'idle' | 'submitting' | 'received' | 'invalid' | 'limited' | 'failed';
 
-interface WaitlistJoinResponse {
-  result: 'created' | 'already_listed';
-  email: string;
-  created_at: string;
-  request_count: number;
-}
+const RECEIVED = "Thanks, you're on the list.";
+const LIMITED = 'Too many attempts. Try again later.';
+const FAILED = 'The waitlist could not be reached. Try again.';
 
 function optionalText(value: string): string | null {
   const trimmed = value.trim();
@@ -24,10 +21,10 @@ function optionalText(value: string): string | null {
 }
 
 function statusText(phase: Phase, detail: string): string | null {
-  if (phase === 'created') return "You're on the waitlist.";
-  if (phase === 'already_listed') return 'This email is already on the waitlist.';
+  if (phase === 'received') return RECEIVED;
+  if (phase === 'limited') return LIMITED;
   if (phase === 'invalid') return detail || 'Enter an email address.';
-  if (phase === 'failed') return 'The waitlist could not be reached. Try again.';
+  if (phase === 'failed') return FAILED;
   return null;
 }
 
@@ -54,12 +51,19 @@ export function WaitlistForm(): JSX.Element {
         name: optionalText(name),
         note: optionalText(note),
       };
-      const saved = await apiSend<WaitlistJoinResponse>(endpoints.waitlistJoin(), body);
-      setPhase(saved.result === 'already_listed' ? 'already_listed' : 'created');
+      await apiSend(endpoints.waitlistJoin(), body);
+      setEmail('');
+      setName('');
+      setNote('');
+      setPhase('received');
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
         setDetail('That email address cannot be saved.');
         setPhase('invalid');
+        return;
+      }
+      if (error instanceof ApiError && error.status === 429) {
+        setPhase('limited');
         return;
       }
       setPhase('failed');
@@ -67,6 +71,7 @@ export function WaitlistForm(): JSX.Element {
   };
 
   const message = statusText(phase, detail);
+  const emailInvalid = phase === 'invalid' || phase === 'limited' || phase === 'failed';
 
   return (
     <form className="waitlist" onSubmit={(event) => void submit(event)}>
@@ -74,12 +79,15 @@ export function WaitlistForm(): JSX.Element {
       <label className="waitlist__field">
         Email
         <input
+          id="waitlist-email"
           type="email"
           name="email"
           autoComplete="email"
           required
           maxLength={254}
           value={email}
+          aria-invalid={emailInvalid || undefined}
+          aria-describedby={message ? 'waitlist-status' : undefined}
           onChange={(event) => setEmail(event.target.value)}
         />
       </label>
@@ -108,10 +116,13 @@ export function WaitlistForm(): JSX.Element {
         {phase === 'submitting' ? 'Joining…' : 'Join the waitlist'}
       </button>
       {message ? (
-        <p className="waitlist__status" role="status">
+        <p className="waitlist__status" id="waitlist-status" role="status">
           {message}
         </p>
       ) : null}
+      <p className="waitlist__privacy">
+        We store this address to send an invitation. We do not open an account.
+      </p>
     </form>
   );
 }

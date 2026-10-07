@@ -58,7 +58,7 @@ async function openStory(page: Page): Promise<void> {
 }
 
 test.describe('Signed-out landing', () => {
-  test('waitlist join posts the form and a repeat is already listed @action:landing.waitlist_join', async ({
+  test('waitlist join posts the form and a repeat shows the same receipt @action:landing.waitlist_join', async ({
     page,
   }) => {
     await mockBootstrap(page, { login: 'jordanh', auth: null });
@@ -75,18 +75,11 @@ test.describe('Signed-out landing', () => {
         posts.push({ path, body: request.postDataJSON() });
       }
     });
-    let joins = 0;
     await page.route('**/api/v1/waitlist', async (route) => {
-      joins += 1;
       await route.fulfill({
-        status: 200,
+        status: 202,
         contentType: 'application/json',
-        body: JSON.stringify({
-          result: joins === 1 ? 'created' : 'already_listed',
-          email: 'ada@example.com',
-          created_at: '2026-10-07T00:00:00Z',
-          request_count: joins,
-        }),
+        body: JSON.stringify({ result: 'received' }),
       });
     });
 
@@ -95,11 +88,11 @@ test.describe('Signed-out landing', () => {
     await page.getByLabel('Name').fill('Ada');
     await page.getByLabel('What do you want from JeRyu?').fill('agents');
     await page.getByRole('button', { name: 'Join the waitlist' }).click();
-    await expect(page.getByRole('status')).toContainText("You're on the waitlist.");
+    await expect(page.getByRole('status')).toContainText("Thanks, you're on the list.");
+    await expect(page.getByLabel('Email')).toHaveValue('');
+    await page.getByLabel('Email').fill('ada@example.com');
     await page.getByRole('button', { name: 'Join the waitlist' }).click();
-    await expect(page.getByRole('status')).toContainText(
-      'This email is already on the waitlist.'
-    );
+    await expect(page.getByRole('status')).toContainText("Thanks, you're on the list.");
     expect(posts.map((post) => post.path)).toEqual(['/api/v1/waitlist', '/api/v1/waitlist']);
     expect(posts[0]?.body).toEqual({
       email: 'ada@example.com',
