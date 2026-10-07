@@ -118,6 +118,16 @@ export interface PipelineEventsResponse {
   schema_version?: string | number;
   events: PipelineEvent[];
   latest_seq: number;
+  /** The row limit this page was read with. */
+  limit?: number;
+  /**
+   * Whether the log holds another row behind this page. A page as long as the
+   * limit is not the same thing as a page with more behind it, so the walk
+   * reads this rather than counting rows. Absent on an older server.
+   */
+  has_more?: boolean;
+  /** The `seq` the next page starts from, or null for an empty page. */
+  next_cursor?: number | null;
 }
 
 // ---- Volume per bucket (`GET /api/v1/events/histogram`, admin-only) -------

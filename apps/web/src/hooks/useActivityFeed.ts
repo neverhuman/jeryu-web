@@ -17,6 +17,7 @@ import { endpoints } from '../api/endpoints';
 import type { PipelineEventsQuery, PipelineEventsResponse } from '../api/types';
 import {
   ACTIVITY_PAGE_SIZE,
+  hasOlderEvents,
   maxSeq,
   mergeEvents,
   minSeq,
@@ -51,7 +52,7 @@ export interface ActivityTailState {
 
 export interface ActivityFeed {
   base: UseQueryResult<PipelineEventsResponse, Error>;
-  /** False once a "load older" page came back short. */
+  /** What the newest-first page's `has_more` says is still behind it. */
   hasOlder: boolean;
   loadingOlder: boolean;
   olderError: Error | null;
@@ -106,7 +107,10 @@ export function useActivityFeed(query: PipelineEventsQuery, pageSize = ACTIVITY_
         { signal }
       );
       if (next.events.length > 0) {
+        // The tail reads forward, so its `has_more` is about newer events:
+        // what is behind the newest-first page is left as it was.
         queryClient.setQueryData<PipelineEventsResponse>(feedKey, (prev) => ({
+          ...prev,
           events: mergeEvents(prev?.events, next.events),
           latest_seq: Math.max(prev?.latest_seq ?? 0, next.latest_seq ?? 0),
         }));
@@ -157,11 +161,21 @@ export function useActivityFeed(query: PipelineEventsQuery, pageSize = ACTIVITY_
     setOlder({ filterId, exhausted: false, loading: true, error: null });
     apiGet<PipelineEventsResponse>(endpoints.events({ ...query, before_seq: before, limit: pageSize }))
       .then((page) => {
+        // This page is the newest-first walk's new end, so its paging answer
+        // replaces the first page's: `hasOlder` follows the last page read.
         queryClient.setQueryData<PipelineEventsResponse>(feedKey, (prev) => ({
+          ...prev,
           events: mergeEvents(prev?.events, page.events),
           latest_seq: prev?.latest_seq ?? page.latest_seq ?? 0,
+          has_more: page.has_more,
+          next_cursor: page.next_cursor,
         }));
-        setOlder({ filterId, exhausted: page.events.length < pageSize, loading: false, error: null });
+        setOlder({
+          filterId,
+          exhausted: !hasOlderEvents(page, pageSize),
+          loading: false,
+          error: null,
+        });
       })
       .catch((error: unknown) => {
         setOlder({
@@ -175,7 +189,7 @@ export function useActivityFeed(query: PipelineEventsQuery, pageSize = ACTIVITY_
 
   return {
     base,
-    hasOlder: !olderNow.exhausted && (base.data?.events.length ?? 0) >= pageSize,
+    hasOlder: !olderNow.exhausted && hasOlderEvents(base.data, pageSize),
     loadingOlder: olderNow.loading,
     olderError: olderNow.error,
     loadOlder,

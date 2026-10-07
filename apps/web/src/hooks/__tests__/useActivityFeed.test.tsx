@@ -1,6 +1,7 @@
 // useActivityFeed.test.tsx — the live tail survives a failing attempt: it
 // backs off, says how long until the next try, and resumes from the newest
-// seq the feed already holds once the server answers again.
+// seq the feed already holds once the server answers again. And "load older"
+// follows the server's `has_more`, never the number of rows it got.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -118,6 +119,106 @@ describe('useActivityFeed live tail', () => {
     await waitFor(() => expect(result.current.tail.paused).toBe(false));
     expect(searches.filter((search) => search.includes('after_seq'))).toHaveLength(2);
     expect(result.current.tail.retryInSeconds).toBe(0);
+  });
+});
+
+describe('useActivityFeed older pages', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  interface Page {
+    seqs: number[];
+    has_more?: boolean;
+  }
+
+  /** Serve `first`, then one page per `older` call, and an empty live tail. */
+  function mockPages(first: Page, ...older: Page[]): { searches: string[] } {
+    const searches: string[] = [];
+    const queue = [...older];
+    const body = (page: Page) =>
+      json({
+        events: page.seqs.map((seq) => pipelineEvent({ seq, kind: 'todo.claimed' })),
+        latest_seq: Math.max(...first.seqs),
+        ...(page.has_more === undefined ? {} : { has_more: page.has_more, next_cursor: page.seqs.at(-1) ?? null }),
+      });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(input instanceof Request ? input.url : String(input), 'http://localhost');
+      searches.push(url.search);
+      if (url.searchParams.get('after_seq')) return json({ events: [], latest_seq: Math.max(...first.seqs) });
+      if (url.searchParams.get('before_seq')) return body(queue.shift() ?? { seqs: [], has_more: false });
+      return body(first);
+    });
+    return { searches };
+  }
+
+  function feedFor(pages: Parameters<typeof mockPages>) {
+    mockPages(...pages);
+    return renderHook(() => useActivityFeed({}, 2), { wrapper: wrapperFor(clientFor()) });
+  }
+
+  it('trusts has_more over a full page, so a page that happens to fill is the end', async () => {
+    const { result } = feedFor([{ seqs: [11, 10], has_more: false }]);
+    await waitFor(() => expect(result.current.base.isSuccess).toBe(true));
+    expect(result.current.hasOlder).toBe(false);
+  });
+
+  it('trusts has_more over a short page, which folding and filters can leave behind', async () => {
+    const { result } = feedFor([{ seqs: [10], has_more: true }]);
+    await waitFor(() => expect(result.current.base.isSuccess).toBe(true));
+    expect(result.current.hasOlder).toBe(true);
+  });
+
+  it('follows the last older page: a short one with more behind it keeps the button', async () => {
+    const { result } = feedFor([
+      { seqs: [11, 10], has_more: true },
+      { seqs: [9], has_more: true },
+      { seqs: [8], has_more: false },
+    ]);
+    await waitFor(() => expect(result.current.base.isSuccess).toBe(true));
+
+    act(() => result.current.loadOlder());
+    await waitFor(() => expect(result.current.base.data?.events).toHaveLength(3));
+    expect(result.current.hasOlder).toBe(true);
+
+    act(() => result.current.loadOlder());
+    await waitFor(() => expect(result.current.base.data?.events).toHaveLength(4));
+    expect(result.current.hasOlder).toBe(false);
+  });
+
+  it('keeps counting rows when the server does not send has_more', async () => {
+    const full = feedFor([{ seqs: [11, 10] }]);
+    await waitFor(() => expect(full.result.current.base.isSuccess).toBe(true));
+    expect(full.result.current.hasOlder).toBe(true);
+    vi.restoreAllMocks();
+
+    const short = feedFor([{ seqs: [10] }]);
+    await waitFor(() => expect(short.result.current.base.isSuccess).toBe(true));
+    expect(short.result.current.hasOlder).toBe(false);
+  });
+
+  it('leaves the end of the log where it is when the live tail brings newer events', async () => {
+    const searches: string[] = [];
+    let newer = false;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(input instanceof Request ? input.url : String(input), 'http://localhost');
+      searches.push(url.search);
+      if (url.searchParams.get('after_seq')) {
+        const events = newer ? [pipelineEvent({ seq: 12, kind: 'pr.merged' })] : [];
+        newer = false;
+        // A forward read's `has_more` is about newer events, not older ones.
+        return json({ events, latest_seq: 12, has_more: true, next_cursor: 12 });
+      }
+      return json({ events: [pipelineEvent({ seq: 10, kind: 'todo.claimed' })], latest_seq: 10, has_more: false, next_cursor: 10 });
+    });
+    const { result } = renderHook(() => useActivityFeed({}, 2), { wrapper: wrapperFor(clientFor()) });
+    await waitFor(() => expect(result.current.base.isSuccess).toBe(true));
+    expect(result.current.hasOlder).toBe(false);
+
+    newer = true;
+    act(() => result.current.tail.retryNow());
+    await waitFor(() => expect(result.current.base.data?.events).toHaveLength(2));
+    expect(result.current.hasOlder).toBe(false);
   });
 });
 

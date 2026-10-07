@@ -3,7 +3,7 @@
 
 import type { Tone } from '../../components/tone/tone';
 import { endpoints } from '../../api/endpoints';
-import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
+import type { PipelineEvent, PipelineEventsQuery, PipelineEventsResponse } from '../../api/types';
 import { localDayKey, zoneLabel } from '../../format/when';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
 import { todoHref } from '../shift/workPaths';
@@ -222,6 +222,21 @@ export function maxSeq(events: PipelineEvent[]): number {
 
 export function minSeq(events: PipelineEvent[]): number | null {
   return events.length === 0 ? null : events.reduce((min, event) => Math.min(min, event.seq), Infinity);
+}
+
+/**
+ * Whether the log holds events behind a newest-first page. The server says so
+ * with `has_more`, which is the only honest answer: a page is folded and
+ * filtered before it is drawn, so neither the rows on screen nor the events in
+ * the response say whether the next cursor would return anything. A server
+ * that does not send `has_more` falls back to the page being full.
+ */
+export function hasOlderEvents(
+  page: Pick<PipelineEventsResponse, 'events' | 'has_more'> | undefined,
+  pageSize: number
+): boolean {
+  if (!page) return false;
+  return typeof page.has_more === 'boolean' ? page.has_more : page.events.length >= pageSize;
 }
 
 export type EventTone = Tone;
