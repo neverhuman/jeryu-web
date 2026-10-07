@@ -5,6 +5,7 @@
 
 import { expect, test, type Page, type Route } from './fixtures/test';
 
+import { persistRenderedEvidence } from './fixtures/accessibility';
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
@@ -99,6 +100,12 @@ test.describe('Signed-out landing', () => {
       name: 'Ada',
       note: 'agents',
     });
+    // Record geometry and the design tokens this landing already paints.
+    const rendered = await persistRenderedEvidence(page, 'landing');
+    expect(rendered.geometry.width).toBeGreaterThan(0);
+    expect(rendered.geometry.height).toBeGreaterThan(0);
+    expect(rendered.design_tokens.color_bg_0.length).toBeGreaterThan(0);
+    expect(rendered.design_tokens.space_4.length).toBeGreaterThan(0);
   });
 
   test('an empty waitlist email does not post @action:landing.waitlist_invalid', async ({

@@ -88,6 +88,7 @@ under `apps/web/e2e/fixtures/`, and a Playwright screenshot from the route spec.
 
 | Surface | Scope | Mocks | Route spec |
 |---|---|---|---|
+| Signed-out landing: the ink dragon, the waitlist receipt, and the existing login | `landing` | `mocks.ts` (`mockBootstrap`) | `45-landing.spec.ts` |
 | `/runners` (one sentence for the gate network; rows say Runner, Now, Last job, Seen; pull request reviewers share the shape, and a missing reviewer is said; each row says what code the runner runs and what evaluates the pull request there, in a keyboard disclosure; quality audit runners and the background timers each get a section only when one reports) | `fleet` | `mocks.ts` (`mockFleetBootstrap`) | `11-fleet.spec.ts` |
 | `/repos` Status column: a red chip opens the failing checks and what to do, in place; Mirror, Unshipped and Failing CI columns removed | `repositories`, `repositories-status` | `mocks.ts` (`mockRepoList`) | `27-repos-status.spec.ts`, `02-repos.spec.ts` |
 | Repository Settings, read-only: branch protection and the GitHub mirror | `repo-settings` | `mocks.ts` (`mockRepoList`) | `31-repo-settings-readonly.spec.ts` |
