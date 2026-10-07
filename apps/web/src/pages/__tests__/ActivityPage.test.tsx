@@ -769,4 +769,32 @@ describe('ActivityPage', () => {
     renderPage('/activity?family=x');
     expect(await screen.findByText('Not available on this server version.')).toBeInTheDocument();
   });
+
+  it('retries a failed feed read in place, and names an unreachable forge plainly', async () => {
+    let attempt = 0;
+    mockPipelineApi((req) => {
+      if (req.pathname !== '/api/v1/events') return undefined;
+      attempt += 1;
+      return attempt === 1
+        ? errorResponse(500, 'boom internal')
+        : json({ events: [pipelineEvent({ seq: 7, kind: 'pr.opened', summary: 'back again' })], latest_seq: 7 });
+    });
+    renderPage();
+    expect(await screen.findByText('Could not load the activity feed.')).toBeInTheDocument();
+    // The failure is recoverable without a reload: the button asks again.
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByTestId('activity-event-7')).toHaveTextContent('back again');
+    vi.restoreAllMocks();
+
+    mockPipelineApi((req) => {
+      if (req.pathname === '/api/v1/events') throw new TypeError('Failed to fetch');
+      return undefined;
+    });
+    renderPage();
+    expect(await screen.findByText('Cannot reach the forge.')).toBeInTheDocument();
+    // The browser's own words say nothing a reader can act on.
+    expect(screen.queryByText(/Failed to fetch/)).toBeNull();
+    expect(screen.queryByText(/network_error/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
 });

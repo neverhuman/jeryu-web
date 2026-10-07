@@ -427,7 +427,11 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
         // pop in under them.
         <ActivitySkeleton />
       ) : feed.base.isError ? (
-        <PipelineQueryState what="the activity feed" error={feed.base.error} />
+        <PipelineQueryState
+          what="the activity feed"
+          error={feed.base.error}
+          onRetry={() => void feed.base.refetch()}
+        />
       ) : all.length === 0 ? (
         <ScopedEmptyState
           icon={Activity}

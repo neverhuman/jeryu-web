@@ -39,6 +39,16 @@ export function isPipelineUnavailable(error: unknown): boolean {
   );
 }
 
+/**
+ * True when the request never reached the forge (`fetch` itself threw): the
+ * browser is offline, the server is restarting, a proxy dropped it. The cause
+ * is outside the API, so the surface says so in plain words rather than
+ * repeating the browser's "Failed to fetch".
+ */
+export function isPipelineUnreachable(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'network_error';
+}
+
 export function isPipelineForbidden(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 401 || error.status === 403);
 }
