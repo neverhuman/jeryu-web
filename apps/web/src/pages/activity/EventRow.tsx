@@ -26,6 +26,7 @@ import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { formatCost, shortSha } from '../shift/shiftModel';
+import { InlineProse } from './InlineProse';
 import { badLineCount, logLines } from './logModel';
 import { sourceMark } from './sourceModel';
 import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
@@ -170,13 +171,7 @@ export function EventRow({
           {eventLabel(event)}
         </span>
         <span className="activity-row__summary">
-          {summary.before}
-          {summary.link ? (
-            <Link to={summary.link.to} className="activity-row__link">
-              {summary.link.label}
-            </Link>
-          ) : null}
-          {summary.after}
+          <InlineProse text={event.summary} link={summary.link} />
         </span>
         {needsHuman ? <span className={pillClass('human')}>needs you</span> : null}
         {event.needs_human && resolved ? (
@@ -217,7 +212,11 @@ export function EventRow({
       </div>
       {open ? (
         <div className="activity-row__detail" id={detailId}>
-          {event.reason ? <p className="activity-row__reason">{event.reason}</p> : null}
+          {event.reason ? (
+            <p className="activity-row__reason">
+              <InlineProse text={event.reason} />
+            </p>
+          ) : null}
           {/* What the producer attached, for the question this kind raises:
               which runner ran the gate, which model took the attempt, the
               command that would deploy what was just staged. */}

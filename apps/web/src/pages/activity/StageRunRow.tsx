@@ -5,12 +5,11 @@
 // one it is on, so the outcome rows around it stay readable. Opened, it hands
 // over the beats themselves, each as the ordinary event row it would have been.
 
-import { Link } from 'react-router-dom';
-
 import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { EventRow } from './EventRow';
+import { InlineProse } from './InlineProse';
 import { type StageRun, stageRunTitle, stageSteps, summaryParts } from './activityModel';
 
 import './Activity.css';
@@ -73,13 +72,7 @@ export function StageRunRow({
           ))}
         </ol>
         <span className="activity-row__summary">
-          {summary.before}
-          {summary.link ? (
-            <Link to={summary.link.to} className="activity-row__link">
-              {summary.link.label}
-            </Link>
-          ) : null}
-          {summary.after}
+          <InlineProse text={latest.summary} link={summary.link} />
         </span>
         <span className="activity-row__meta">{run.events.length} steps</span>
         <button

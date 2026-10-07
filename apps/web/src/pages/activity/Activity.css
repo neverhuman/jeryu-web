@@ -377,6 +377,18 @@
   overflow-wrap: anywhere;
 }
 
+/* A producer writes its reasons and summaries for a Markdown reader, so a
+   backticked command inside one is shown as one: the same small mono chip the
+   rest of the app uses, sized so a row keeps its line height. */
+.activity-row__reason code,
+.activity-row__summary code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0.1em 0.3em;
+  background-color: var(--color-bg-3);
+  border-radius: var(--radius-sm);
+}
+
 .activity-row__log {
   margin: 0;
   max-height: 24rem;
