@@ -87,9 +87,8 @@ export interface PullRequestCheck {
   running?: RunningGate | null;
 }
 
-/** A gate runner's pass on a PR head, with what passes of its recipe usually take. */
+/** A gate pass on a PR head (no runner named), with what passes of its recipe usually take. */
 export interface RunningGate {
-  runner_id: string;
   recipe: string;
   started_at: string;
   /** Median of the recent complete passes, in seconds; null with fewer than three. */

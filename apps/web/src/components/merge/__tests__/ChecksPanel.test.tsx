@@ -182,7 +182,6 @@ describe('a pending check', () => {
     render(
       <ChecksPanel
         checks={pendingChecks({
-          runner_id: 'build-1/slot0',
           recipe: 'just required',
           started_at: '2026-10-06T12:00:00Z',
           typical_seconds: 600,
