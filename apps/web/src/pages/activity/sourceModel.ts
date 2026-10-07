@@ -46,6 +46,10 @@ const MARKS: Record<string, { Icon: LucideIcon; group: SourceGroup }> = {
   forge: { Icon: Hammer, group: 'forge' },
 };
 
+/** Every source this table knows, in one list: what the Source filter can
+ *  suggest, so a reader does not have to guess the reporter's name. */
+export const KNOWN_SOURCES: readonly string[] = Object.keys(MARKS).sort();
+
 /**
  * The mark for one `event.source`. The name is said in the title exactly as
  * the event gave it: the icon is the shortcut, the name is the answer. The

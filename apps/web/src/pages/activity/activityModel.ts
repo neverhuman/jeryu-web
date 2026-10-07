@@ -80,6 +80,23 @@ export function filterFieldError(key: string, value: string): string | null {
   return null;
 }
 
+/**
+ * The repository a typed Repo filter means. The server matches `owner/name`
+ * exactly, so a bare name finds nothing; when the repositories the reader can
+ * see name exactly one `.../<name>`, that is what they meant, and the field
+ * commits the full name. Ambiguous or unknown, the text is left as typed: the
+ * feed comes back empty rather than silently pinned to the wrong repository.
+ */
+export function resolveRepoFilter(value: string, repos: readonly string[]): string {
+  const text = value.trim();
+  if (text === '' || text.includes('/')) return text;
+  const wanted = text.toLowerCase();
+  const full = [
+    ...new Set(repos.filter((name) => name.slice(name.indexOf('/') + 1).toLowerCase() === wanted)),
+  ];
+  return full.length === 1 ? full[0] : text;
+}
+
 export function isWallMode(params: URLSearchParams): boolean {
   return params.get('wall') === '1';
 }

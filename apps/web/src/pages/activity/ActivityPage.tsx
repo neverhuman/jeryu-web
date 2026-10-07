@@ -39,6 +39,7 @@ import type { PipelineEventsQuery } from '../../api/types';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { isPipelineEventPush, useEventsHistogram, usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
+import { useRepositories } from '../../hooks/useRepositories';
 import { useShiftFamilies } from '../../hooks/useShift';
 import {
   ACTIVITY_CHIPS,
@@ -59,6 +60,7 @@ import {
   isWallMode,
   loadedCountText,
   parseActivityFilters,
+  resolveRepoFilter,
   resolvedSeqs,
   rowSeqs,
   visibleEvents,
@@ -74,6 +76,7 @@ import {
   type HistogramRangeId,
 } from './histogramModel';
 import { useAtPageTop, useHeldRows } from './holdModel';
+import { KNOWN_SOURCES } from './sourceModel';
 import { useOlderOnReach } from './olderModel';
 import { useActivityRowKeys } from './rowKeysModel';
 import { useWallIdle, wallClockText, wallDateText } from './wallModel';
@@ -101,6 +104,7 @@ const FILTER_LABEL: Record<(typeof MORE_FILTER_KEYS)[number], string> = {
 
 const FILTER_HINT: Partial<Record<(typeof MORE_FILTER_KEYS)[number], string>> = {
   repo: 'owner/name',
+  source: 'forge or todoq',
   kind: 'todo. or gate.finished',
   pr: 'number',
 };
@@ -555,6 +559,25 @@ function Filters({
 }): JSX.Element {
   const pinnedRepo = Boolean(repo);
   const families = useShiftFamilies();
+  // What the Repo and Source fields can suggest. The server wants a Repo's
+  // exact `owner/name` and names no sources at all, so both fields offer the
+  // names that exist: the repositories this reader can see, and the reporters
+  // the feed knows. A server that cannot answer the repository list simply
+  // offers no repository names; the field still takes a typed one.
+  const repoList = useRepositories({}, { enabled: !pinnedRepo });
+  const repoNames = useMemo(
+    () =>
+      [
+        ...new Set(
+          (repoList.data?.repositories ?? []).map((summary) => `${summary.id.owner}/${summary.id.name}`)
+        ),
+      ].sort(),
+    [repoList.data]
+  );
+  const suggestions: Partial<Record<(typeof MORE_FILTER_KEYS)[number], readonly string[]>> = {
+    repo: repoNames,
+    source: KNOWN_SOURCES,
+  };
   // One pill per family, in the scope's own spelling: `acme` and `acme-split`
   // are one family, and the scope is what a pill sets. The scoped family keeps
   // its pill even when the family list does not name it, so a deep link into
@@ -641,6 +664,11 @@ function Filters({
                 initial={filters[key]}
                 name={key}
                 placeholder={FILTER_HINT[key]}
+                suggestions={suggestions[key]}
+                // A Repo typed as a bare name is the repository of that name
+                // when only one is called that: the field commits what the
+                // server can match.
+                resolve={key === 'repo' ? (value) => resolveRepoFilter(value, repoNames) : undefined}
                 onCommit={(value) => onChange(key, value)}
               />
             </div>
@@ -695,19 +723,27 @@ function FilterInput({
   initial,
   name,
   placeholder,
+  suggestions,
+  resolve,
   onCommit,
 }: {
   initial: string;
   /** The filter this field holds: which rule its value is read against. */
   name: string;
   placeholder?: string;
+  /** Values that exist, offered as the field's own list. */
+  suggestions?: readonly string[];
+  /** What a typed value means to the server, when the two can differ. */
+  resolve?: (value: string) => string;
   onCommit: (value: string) => void;
 }): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const fieldId = `activity-filter-${name}`;
   const hintId = `${fieldId}-hint`;
+  const listId = `${fieldId}-options`;
+  const offered = suggestions ?? [];
   const commit = (value: string): void => {
-    const text = value.trim();
+    const text = resolve ? resolve(value) : value.trim();
     const reason = filterFieldError(name, text);
     setError(reason);
     if (reason === null && text !== initial) onCommit(text);
@@ -719,6 +755,7 @@ function FilterInput({
         id={fieldId}
         defaultValue={initial}
         placeholder={placeholder}
+        list={offered.length > 0 ? listId : undefined}
         aria-invalid={error === null ? undefined : true}
         aria-describedby={error === null ? undefined : hintId}
         onBlur={(event) => commit(event.target.value)}
@@ -730,6 +767,13 @@ function FilterInput({
           if (error !== null && filterFieldError(name, event.target.value) === null) setError(null);
         }}
       />
+      {offered.length === 0 ? null : (
+        <datalist id={listId} data-testid={`activity-filter-options-${name}`}>
+          {offered.map((value) => (
+            <option key={value} value={value} />
+          ))}
+        </datalist>
+      )}
       {error === null ? null : (
         <span className="activity__filter-error" id={hintId} data-testid={`activity-filter-error-${name}`}>
           {error}
