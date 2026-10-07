@@ -19,6 +19,8 @@ import {
   formatDay,
   groupByDay,
   groupRowsByDay,
+  dayTotals,
+  dayTotalsText,
   hasDetail,
   formatSeconds,
   hasActiveFilters,
@@ -436,6 +438,30 @@ describe('foldStageRuns', () => {
     expect(groupRowsByDay(rows).map((group) => [group.day, group.rows.length])).toEqual(
       groupByDay(EVENTS).map((group) => [group.day, group.events.length])
     );
+  });
+
+  it('totals a day from its rows, counting every beat a folded run holds', () => {
+    const spend = pipelineEvent({ seq: 60, kind: 'todo.attempt_finished', outcome: 'done', cost_usd: 2.5 });
+    const broke = pipelineEvent({ seq: 61, kind: 'gate.finished', outcome: 'failure', cost_usd: 1.605 });
+    const wants = pipelineEvent({ seq: 62, kind: 'deploy.status', outcome: 'success', needs_human: true });
+    const rows = foldStageRuns([...run, spend, broke, wants]);
+    // Three beats folded into one row still count as three events.
+    expect(rows).toHaveLength(4);
+    expect(dayTotals(rows)).toEqual({ events: 6, failed: 2, spentUsd: 4.11 });
+    expect(dayTotalsText(dayTotals(rows))).toBe('6 events · 2 failed · $4.11');
+  });
+
+  it('says only what a day has to say, and says one event in the singular', () => {
+    expect(dayTotalsText(dayTotals(foldStageRuns([run[0]])))).toBe('1 event');
+    const day = dayTotals(foldStageRuns([pipelineEvent({ seq: 63, kind: 'pr.merged', outcome: 'merged', cost_usd: 0.4 }), run[0]]));
+    expect(day).toEqual({ events: 2, failed: 0, spentUsd: 0.4 });
+    expect(dayTotalsText(day)).toBe('2 events · $0.40');
+  });
+
+  it('totals each day on its own', () => {
+    const rows = foldStageRuns(EVENTS);
+    const totals = groupRowsByDay(rows).map((group) => dayTotals(group.rows).events);
+    expect(totals.reduce((sum, events) => sum + events, 0)).toBe(EVENTS.length);
   });
 });
 

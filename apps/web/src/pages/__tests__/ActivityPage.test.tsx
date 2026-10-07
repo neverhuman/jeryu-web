@@ -216,6 +216,9 @@ describe('ActivityPage', () => {
       expect(screen.getByTestId('activity-day-2026-09-18')).toHaveTextContent('Yesterday · 18 Sep 2026');
       expect(screen.getByTestId('activity-day-2026-09-16')).toHaveTextContent('16 Sep 2026');
       expect(screen.getAllByTestId(/^activity-day-/)).toHaveLength(3);
+      // Each header also counts what is loaded of its own day.
+      expect(screen.getByTestId('activity-counts-2026-09-19')).toHaveTextContent('1 event');
+      expect(screen.getByTestId('activity-counts-2026-09-18')).toHaveTextContent('1 event');
     } finally {
       vi.useRealTimers();
     }

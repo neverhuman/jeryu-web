@@ -49,6 +49,8 @@ import {
   filterFieldError,
   filtersToQuery,
   foldStageRuns,
+  dayTotals,
+  dayTotalsText,
   formatDay,
   groupRowsByDay,
   hasActiveFilters,
@@ -408,6 +410,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                 {/* The day is said once, here; a row says its clock, or — for today — its age. */}
                 <li className="activity__day" data-testid={`activity-day-${group.day}`}>
                   {formatDay(group.rows[0].event.ts, new Date(now))}
+                  {/* …and what is loaded of it, so a scroll keeps a sense of volume. */}
+                  <span className="activity__day-totals" data-testid={`activity-counts-${group.day}`}>
+                    {dayTotalsText(dayTotals(group.rows))}
+                  </span>
                 </li>
                 {group.rows.map(({ event, run }) =>
                   run ? (

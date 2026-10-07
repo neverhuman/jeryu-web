@@ -364,7 +364,11 @@ test.describe('Pipeline visibility', () => {
     );
     // Row times are a clock; a separator says which day they belong to, and the
     // internal sequence number stays out of sight.
-    await expect(page.locator('.activity__day').first()).toBeVisible();
+    const day = page.locator('.activity__day').first();
+    await expect(day).toBeVisible();
+    // The header also says how much of that day is loaded, so a scroll keeps a
+    // sense of volume without reading every row.
+    await expect(day).toContainText(/\d+ events?/);
     await expect(page.getByTestId('activity-page')).not.toContainText('newest #');
 
     // The volume band sits above the chips and is a filter of its own: its

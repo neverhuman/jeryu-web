@@ -830,3 +830,44 @@ export function groupRowsByDay(rows: ActivityRow[]): RowDayGroup[] {
   }
   return groups;
 }
+
+/** What a day header says about the rows under it, counted from those rows. */
+export interface DayTotals {
+  /** Events in the group, counting every beat a folded run holds. */
+  events: number;
+  /** Events that failed or want a human: what a scroll should not miss. */
+  failed: number;
+  /** Dollars the day's loaded events report, to the cent. */
+  spentUsd: number;
+}
+
+/**
+ * A day's loaded volume, from the rows the group draws. A folded run counts
+ * its beats, not the one line it is drawn as, so the number agrees with the
+ * feed's own event count rather than with how the rows happen to be grouped.
+ */
+export function dayTotals(rows: ActivityRow[]): DayTotals {
+  const totals: DayTotals = { events: 0, failed: 0, spentUsd: 0 };
+  for (const row of rows) {
+    for (const event of row.run ? row.run.events : [row.event]) {
+      totals.events += 1;
+      const tone = eventTone(event);
+      if (tone === 'failed' || tone === 'human') totals.failed += 1;
+      if (typeof event.cost_usd === 'number') totals.spentUsd += event.cost_usd;
+    }
+  }
+  totals.spentUsd = Math.round(totals.spentUsd * 100) / 100;
+  return totals;
+}
+
+/**
+ * The day's numbers in one line, for the header the rows sit under: the count
+ * always, the other two only when there is something to say — a day with no
+ * failures and no spend should not read as a row of zeroes.
+ */
+export function dayTotalsText(totals: DayTotals): string {
+  const parts = [`${totals.events} event${totals.events === 1 ? '' : 's'}`];
+  if (totals.failed > 0) parts.push(`${totals.failed} failed`);
+  if (totals.spentUsd > 0) parts.push(`$${totals.spentUsd.toFixed(2)}`);
+  return parts.join(' · ');
+}

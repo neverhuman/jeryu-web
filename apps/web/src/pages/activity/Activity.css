@@ -341,6 +341,17 @@
   font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+/* The counts read as the quieter half of the header: the date leads. */
+.activity__day-totals {
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .activity-row__toggle:focus-visible {
