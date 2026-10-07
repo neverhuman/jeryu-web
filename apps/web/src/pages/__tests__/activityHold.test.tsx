@@ -1,6 +1,6 @@
 // activityHold.test.tsx — the tail not pushing the reader: which seqs wait
-// above the cutoff, when the cutoff follows the feed, and the pill that hands
-// the waiting rows over.
+// above the cutoff, when the cutoff follows the feed, the pill that hands
+// the waiting rows over, and the pause control that freezes the list.
 
 import { act, fireEvent, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -164,6 +164,37 @@ describe('ActivityPage held rows', () => {
     await waitFor(() => expect(screen.queryByTestId('activity-held')).toBeNull());
     // The tail polls every five seconds, so this one waits for a beat.
   }, 20_000);
+
+  it('freezes the list while paused, counts arrivals and hands them over on resume', async () => {
+    mockTailOf(13, false);
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+    const pause = screen.getByTestId('activity-pause');
+    expect(pause).toHaveTextContent('Pause');
+    expect(pause).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(pause);
+    expect(pause).toHaveAttribute('aria-pressed', 'true');
+    await screen.findByText(/^Paused ·/);
+
+    // The tail now has a row: paused, it is counted, not inserted.
+    mockTailOf(13);
+    await waitFor(() => expect(pause).toHaveTextContent('1 new'), { timeout: 10_000 });
+    expect(screen.queryByTestId('activity-event-13')).toBeNull();
+
+    fireEvent.click(pause);
+    const fresh = await screen.findByTestId('activity-event-13');
+    expect(fresh).toHaveClass('is-arriving');
+    expect(pause).toHaveTextContent('Pause');
+    await screen.findByText(/^Live ·/);
+  }, 20_000);
+
+  it('has no pause control in wall mode', async () => {
+    mockTailOf(13, false);
+    renderPage('/activity?wall=1');
+    await screen.findByTestId('activity-event-12');
+    expect(screen.queryByTestId('activity-pause')).toBeNull();
+  });
 
   it('keeps wall mode on auto-insert however far down it is', async () => {
     scrollTo(600);

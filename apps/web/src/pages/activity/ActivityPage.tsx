@@ -2,12 +2,14 @@
 // live tail, URL-held filters and older pages, which arrive as the reader
 // nears the end of the list and are also a button. A reader who has scrolled down
 // or opened a row is not pushed by the tail: rows that land wait above the
-// fold behind a "N new events" pill until they ask for them.
+// fold behind a "N new events" pill until they ask for them. Pause freezes the
+// list wherever they are reading — arrivals are counted and handed over on
+// resume.
 // The last-24-hour strip is on every Activity page; `?wall=1` is the wall mode, which shows the same five
 // numbers in large type above a full-height, auto-scrolling feed, meant for a
 // screen on the wall or a demo.
 
-import { Activity, Maximize2, Minimize2 } from 'lucide-react';
+import { Activity, Maximize2, Minimize2, Pause, Play } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -124,10 +126,14 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       return next;
     });
   }, []);
+  // Paused is the reader asking the list to stand still while they read or
+  // copy from it: it holds the tail back from wherever they are, the same way
+  // scrolling down does, and counts what lands.
+  const [paused, setPaused] = useState(false);
   const held = useHeldRows(
     all.map((event) => event.seq),
     filterId,
-    atTop && openRows.size === 0,
+    !paused && atTop && openRows.size === 0,
     !wall
   );
   const shown = new Set(held.shown);
@@ -174,6 +180,12 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   // The top of the page: where wall mode keeps the newest event, and where
   // the pill takes the reader so the rows it reveals land in front of them.
   const top = useRef<HTMLDivElement | null>(null);
+  // Resume hands over what waited, in place: the reader stays where they were
+  // reading, with the rows they missed above them, each with its arrival cue.
+  const togglePause = (): void => {
+    if (paused) held.release();
+    setPaused(!paused);
+  };
   const showHeld = (): void => {
     held.release();
     if (typeof top.current?.scrollIntoView === 'function') {
@@ -270,20 +282,39 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
         />
       ) : (
         <>
-          {feed.tail.paused ? (
-            // The tail is the page's promise of "Live"; when it stops arriving
-            // the page says so, and says when it will try again.
-            <p className="activity__tail-paused" role="status" data-testid="activity-tail-paused">
-              Live updates paused — retrying in {feed.tail.retryInSeconds}s{' '}
-              <button type="button" onClick={feed.tail.retryNow}>
-                Retry now
+          <div className="activity__live-row">
+            {feed.tail.paused ? (
+              // The tail is the page's promise of "Live"; when it stops arriving
+              // the page says so, and says when it will try again.
+              <p className="activity__tail-paused" role="status" data-testid="activity-tail-paused">
+                Live updates paused — retrying in {feed.tail.retryInSeconds}s{' '}
+                <button type="button" onClick={feed.tail.retryNow}>
+                  Retry now
+                </button>
+              </p>
+            ) : (
+              <p className="activity__live" role="status">
+                {paused ? 'Paused' : 'Live'} · {events.length} event{events.length === 1 ? '' : 's'}
+              </p>
+            )}
+            {wall ? null : (
+              // Next to the pill it qualifies: the pill says which of the two
+              // the list is, the button is how it changes.
+              <button
+                type="button"
+                className={`activity__pause${paused ? ' is-paused' : ''}`}
+                aria-pressed={paused}
+                onClick={togglePause}
+                data-testid="activity-pause"
+              >
+                {paused ? <Play aria-hidden="true" size={12} /> : <Pause aria-hidden="true" size={12} />}
+                {paused ? 'Resume' : 'Pause'}
+                {paused && held.heldCount > 0 ? (
+                  <span className="activity__pause-count">{held.heldCount} new</span>
+                ) : null}
               </button>
-            </p>
-          ) : (
-            <p className="activity__live" role="status">
-              Live · {events.length} event{events.length === 1 ? '' : 's'}
-            </p>
-          )}
+            )}
+          </div>
           {held.heldCount > 0 ? (
             // Sticky, so it stays reachable from wherever they were reading.
             <div className="activity__held" role="status" data-testid="activity-held">

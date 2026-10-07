@@ -429,6 +429,36 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
   });
 
+  test('Activity freezes the list on Pause and picks the tail back up on Resume @action:activity.pause', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
+    // The pill next to the button says which of the two the list is.
+    const pause = page.getByTestId('activity-pause');
+    await expect(pause).toHaveText(/Pause/);
+    await expect(page.getByTestId('activity-page')).toContainText('Live ·');
+
+    await pause.click();
+    await expect(pause).toHaveAttribute('aria-pressed', 'true');
+    await expect(pause).toHaveText(/Resume/);
+    await expect(page.getByTestId('activity-page')).toContainText('Paused ·');
+    // Frozen is still the list the reader had: nothing is taken away from them.
+    await expect(page.getByTestId('activity-event-12')).toBeVisible();
+
+    await pause.click();
+    await expect(pause).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByTestId('activity-page')).toContainText('Live ·');
+
+    // Wall mode has no reader to freeze for.
+    await page.goto('/activity?wall=1');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('activity-pause')).toHaveCount(0);
+  });
+
   test('Activity says what the pipeline is spending, live, and names a silent producer @action:activity.usage', async ({
     page,
     realtime,

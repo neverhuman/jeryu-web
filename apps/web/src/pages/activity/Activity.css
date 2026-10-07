@@ -64,6 +64,47 @@
   font-size: var(--font-size-sm);
 }
 
+.activity__live-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Next to the Live pill, quiet until it is the thing holding the list back. */
+.activity__pause {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  color: var(--color-fg-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.activity__pause:hover {
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-primary);
+}
+
+.activity__pause:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.activity__pause.is-paused {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+}
+
+.activity__pause-count {
+  color: var(--color-accent-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 .activity__tail-paused {
   margin: 0;
   color: var(--color-accent-warning);
