@@ -7,7 +7,10 @@
 // resume.
 // The last-24-hour strip is on every Activity page; `?wall=1` is the wall mode, which shows the same five
 // numbers in large type above a full-height, auto-scrolling feed, meant for a
-// screen on the wall or a demo.
+// screen on the wall or a demo. The wall carries the clock, the volume band at
+// the width of the screen and the token panel under it, and it looks after
+// itself: the pointer goes after five seconds of quiet and the screen walks
+// back to the newest row after a minute of it.
 // Under the filters is the request the list is one page of, so the screen and
 // `/api/v1/events` are visibly the same thing; a row's detail copies that row
 // as the API returns it.
@@ -70,6 +73,7 @@ import {
 import { useAtPageTop, useHeldRows } from './holdModel';
 import { useOlderOnReach } from './olderModel';
 import { useActivityRowKeys } from './rowKeysModel';
+import { useWallIdle, wallClockText, wallDateText } from './wallModel';
 import { StageRunRow } from './StageRunRow';
 import { ActivityHistogram } from './ActivityHistogram';
 import { SummaryStrip } from './SummaryStrip';
@@ -255,6 +259,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     }
   }, [wall, newest]);
 
+  // Left alone, the wall takes the pointer away and finds its way back to the
+  // newest row. A person at it keeps both.
+  const cursorHidden = useWallIdle({ enabled: wall, still, top });
+
   const update = (key: string, value: string): void => {
     // The family is the shell's scope, not one more filter in this URL.
     if (key === 'family') {
@@ -274,7 +282,9 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
 
   return (
     <div
-      className={`page page--wide activity${wall ? ' activity--wall' : ''}`}
+      className={`page page--wide activity${wall ? ' activity--wall' : ''}${
+        cursorHidden ? ' activity--no-cursor' : ''
+      }`}
       data-testid="activity-page"
     >
       <div ref={top} />
@@ -290,7 +300,9 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
             {wall ? 'Exit wall' : 'Wall mode'}
           </Link>
         </div>
-        {wall ? null : (
+        {wall ? (
+          <WallClock />
+        ) : (
           <>
             <p className="page__subtitle">Every step the pipeline takes, as it happens.</p>
             <RowLegend />
@@ -299,17 +311,23 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       </header>
 
       {/* The band is a filter on the feed, so it sits above the chips it sets.
-          Wall mode has no filters and its own counters, so it has no band. */}
+          On the wall it has no chips to set and goes under the counters, at the
+          width of the screen. */}
       {wall ? null : <ActivityHistogram family={filters.family} repo={repo} />}
 
       {/* What the pipeline is spending, under the chart: live per working
-          slot, with today's totals. Wall mode has its own counters. */}
+          slot, with today's totals. */}
       {wall ? null : <UsagePanel family={filters.family} />}
 
       {wall ? (
         <>
           <ScopedWallNote />
           <SummaryStrip family={filters.family} repo={repo} events={all} wall />
+          {/* The five numbers say how much; the band says when it happened, and
+              the panel what it cost. Both leave themselves out on a server that
+              does not answer their path. */}
+          <ActivityHistogram family={filters.family} repo={repo} />
+          <UsagePanel family={filters.family} />
         </>
       ) : (
         <>
@@ -460,6 +478,24 @@ function wallHref(params: URLSearchParams, wall: boolean): string {
   else next.delete('wall');
   const suffix = next.toString();
   return suffix ? `?${suffix}` : '.';
+}
+
+/**
+ * The wall's clock: the hour and the minute in wall type, with the weekday and
+ * the zone they are told in under them. Its own tick, so the minute turns over
+ * on time without re-rendering the feed around it; a clock is a value that
+ * updates, not a motion, so there is nothing here to ask less of.
+ */
+function WallClock(): JSX.Element {
+  const now = useTickingNow(1_000);
+  return (
+    <p className="activity__wall-clock" data-testid="activity-wall-clock">
+      <time className="activity__wall-time" dateTime={new Date(now).toISOString()}>
+        {wallClockText(now)}
+      </time>
+      <span className="activity__wall-date">{wallDateText(now)}</span>
+    </p>
+  );
 }
 
 /** What the edge of a row means, drawn by the rows' own CSS so the key cannot

@@ -385,14 +385,14 @@
 }
 
 .activity--wall .activity-row {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-xl);
   padding: var(--space-3) var(--space-4);
 }
 
 .activity--wall .activity-row__time,
 .activity--wall .activity-row__source,
 .activity--wall .activity-row__meta {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
 }
 
 .activity__counters {
@@ -1177,4 +1177,68 @@
   .activity-row__stage.is-current {
     animation: none;
   }
+}
+
+/* The wall is read from across a room: everything on it is at least a step
+   larger than on the desk page, and the band and the panel take the width of
+   the screen rather than sitting in a column. */
+.activity--wall .activity-volume,
+.activity--wall .activity-usage {
+  width: 100%;
+  max-width: none;
+}
+
+.activity--wall .activity-volume__plot svg {
+  height: 18vh;
+  min-height: 9rem;
+}
+
+.activity--wall .activity-volume__title,
+.activity--wall .activity-usage__title {
+  font-size: var(--font-size-xl);
+}
+
+.activity--wall .activity-usage__table {
+  font-size: var(--font-size-lg);
+}
+
+.activity--wall .activity-usage__totals dt {
+  font-size: var(--font-size-sm);
+}
+
+.activity--wall .activity-usage__totals dd {
+  font-size: var(--font-size-2xl);
+}
+
+/* The clock sits where the subtitle is on the desk page: the hour and the
+   minute in the largest type on the screen, the day and the zone under them. */
+.activity__wall-clock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.activity__wall-time {
+  /* Bigger than any token on the desk page: the clock scales with the screen
+     so it still reads from across a room at 1080p. */
+  font-size: clamp(var(--font-size-3xl), 6vw, 5rem);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-primary);
+}
+
+.activity__wall-date {
+  font-size: var(--font-size-md);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Quiet for five seconds: the pointer is the only thing on the wall that is
+   not news, so it goes until someone moves it again. */
+.activity--no-cursor,
+.activity--no-cursor * {
+  cursor: none;
 }

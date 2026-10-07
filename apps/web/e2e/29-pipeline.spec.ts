@@ -425,6 +425,11 @@ test.describe('Pipeline visibility', () => {
     await expect(wallStrip).toContainText('42');
     await expect(wallStrip).not.toContainText('loaded here');
     await expect(page.getByRole('region', { name: 'Activity filters' })).toHaveCount(0);
+    // The wall also carries the clock, and the band and the token panel at the
+    // width of the screen, under the counters.
+    await expect(page.getByTestId('activity-wall-clock')).toContainText(/\d\d:\d\d/);
+    await expect(page.getByTestId('activity-volume')).toBeVisible();
+    await expect(page.getByTestId('activity-usage')).toBeVisible();
     await page.getByRole('link', { name: 'Leave wall mode' }).click();
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
   });
