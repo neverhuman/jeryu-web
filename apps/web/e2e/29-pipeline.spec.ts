@@ -201,8 +201,10 @@ test.describe('Pipeline visibility', () => {
     await page.goto('/needs-you');
     const row = page.getByTestId('needs-you-item-queue_failed:acme/web:7');
     await expect(row).toBeVisible({ timeout: 15_000 });
-    // The next step is the row's second line.
-    await expect(row).toContainText('Queue again: open /repos/jeryu/acme/web/pulls/7');
+    // The next step only repeats the button and the title link, so the second
+    // line is the reason, and no bare path is shown.
+    await expect(row).toContainText('The queue gate failed twice on the same commit.');
+    await expect(row).not.toContainText('open /repos/jeryu/acme/web/pulls/7');
     await expect(row.getByRole('link', { name: 'acme/web#7 failed in the merge queue' })).toHaveAttribute(
       'href',
       '/repos/jeryu/acme/web/pulls/7'
@@ -263,9 +265,10 @@ test.describe('Pipeline visibility', () => {
     // The other two are context on the same row, each with where to go.
     const changes = row.getByTestId('needs-you-also-pr_changes_requested:acme/widgets:7');
     await expect(changes).toContainText('Push a fix, or dismiss the review');
+    // It leads to the review that asks for changes, not just the pull request.
     await expect(changes.getByRole('link', { name: 'Changes requested' })).toHaveAttribute(
       'href',
-      '/repos/jeryu/acme/widgets/pulls/7'
+      '/repos/jeryu/acme/widgets/pulls/7#changes-requested'
     );
     await expect(row.getByTestId('needs-you-also-queue_failed:acme/widgets:7')).toContainText(
       'Merge queue failed'
