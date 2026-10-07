@@ -594,6 +594,12 @@ function Filters({
       ].filter(Boolean)
     ),
   ];
+  // The pills only exist for a page that can narrow to one family, which the
+  // family list answers a second after the first paint. Hold the strip's place
+  // from the first frame so the chips beside it are drawn once, where they
+  // stay: the slot is kept while the answer is on its way, and after it only
+  // while there are pills to put in it.
+  const familySlot = !pinnedRepo && (families.isPending || names.length > 1 || Boolean(filters.family));
   const current = activeChip(filters);
   const needsYou = useNeedsYou(filters.family);
   const still = usePrefersReducedMotion();
@@ -613,14 +619,18 @@ function Filters({
   return (
     <section className="activity__filters" aria-label="Activity filters">
       <div className="activity__chip-row">
-        {pinnedRepo ? null : names.length > 1 || filters.family ? (
+        {familySlot ? (
           // Far left of the chips, as on Needs you and In flight: the page
           // shows everything and a pill narrows it to one family.
-          <FamilyStrip
-            counts={names.map((name) => ({ family: name }))}
-            family={filters.family}
-            onPick={(name) => onChange('family', name)}
-          />
+          <div className="activity__family-slot">
+            {names.length > 1 || filters.family ? (
+              <FamilyStrip
+                counts={names.map((name) => ({ family: name }))}
+                family={filters.family}
+                onPick={(name) => onChange('family', name)}
+              />
+            ) : null}
+          </div>
         ) : null}
         <div className={`activity__chips${still ? ' activity__chips--still' : ''}`} role="group" aria-label="Show">
           {ACTIVITY_CHIPS.map((chip) => {
@@ -647,7 +657,9 @@ function Filters({
         </div>
       </div>
       {current === 'human' ? (
-        // The log says what happened; what is waiting now has one home.
+        // The log says what happened; what is waiting now has one home. The
+        // note is a line of its own under the controls, so saying it moves no
+        // chip and no field.
         <p className="activity__needs-you" data-testid="activity-needs-you">
           These are events that were flagged. What is waiting on a person right now
           is on <Link to={needsYou.href}>Needs you</Link>

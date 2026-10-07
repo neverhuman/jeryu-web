@@ -449,6 +449,75 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
   });
 
+  test('Activity draws its controls once: a late family list and a chip’s note move nothing @action:activity.steady_controls', async ({
+    page,
+  }) => {
+    // The family list is a second request: it used to arrive after the first
+    // paint, put the pills beside the chips and push the row’s neighbours onto
+    // a new line, moving the feed under them. Hold the answer, measure, let it
+    // land, measure again: the controls must be where they were drawn.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    let answer = (): void => {};
+    const held = new Promise<void>((resolve) => {
+      answer = () => resolve();
+    });
+    await page.route(/\/api\/v1\/shift\/families(\?.*)?$/, async (route) => {
+      await held;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          families: [
+            { name: 'jeryu', queue_repo: 'jeryu/jeryu-todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
+            { name: 'globex', queue_repo: 'globex/todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
+          ],
+        }),
+      });
+    });
+
+    await page.goto('/activity');
+    const chips = page.getByRole('group', { name: 'Show' });
+    const more = page.locator('.activity__more > summary');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
+    const slot = page.locator('.activity__family-slot');
+    const before = {
+      slot: await slot.boundingBox(),
+      chips: await chips.boundingBox(),
+      more: await more.boundingBox(),
+      feed: await page.getByTestId('activity-event-12').boundingBox(),
+    };
+
+    answer();
+    const strip = page.getByRole('group', { name: 'Filter by family' });
+    await expect(strip.getByRole('button', { name: 'globex' })).toBeVisible();
+    expect(await chips.boundingBox()).toMatchObject({ x: before.chips?.x, y: before.chips?.y });
+    expect(await more.boundingBox()).toMatchObject({ y: before.more?.y });
+    expect(await page.getByTestId('activity-event-12').boundingBox()).toMatchObject({
+      y: before.feed?.y,
+    });
+    // The pills landed in the box that was held for them, which neither moved
+    // nor changed size to take them.
+    expect(await slot.boundingBox()).toEqual(before.slot);
+    const stripBox = await strip.boundingBox();
+    expect(stripBox).toMatchObject({ x: before.slot?.x, y: before.slot?.y });
+
+    // The note a chip adds is a line of its own under the controls: it moves
+    // no chip and no family pill.
+    const steady = { chips: await chips.boundingBox(), strip: stripBox };
+    await page.getByRole('button', { name: 'Needed a human' }).click();
+    const note = page.getByTestId('activity-needs-you');
+    await expect(note).toContainText('waiting on a person right now');
+    expect(await chips.boundingBox()).toMatchObject({ x: steady.chips?.x, y: steady.chips?.y });
+    expect(await strip.boundingBox()).toMatchObject({ x: steady.strip?.x, y: steady.strip?.y });
+    // Its own line: below the chip row, above More filters.
+    const noteBox = await note.boundingBox();
+    expect(noteBox?.y ?? 0).toBeGreaterThanOrEqual((steady.chips?.y ?? 0) + (steady.chips?.height ?? 0));
+    expect((await more.boundingBox())?.y ?? 0).toBeGreaterThanOrEqual(
+      (noteBox?.y ?? 0) + (noteBox?.height ?? 0)
+    );
+  });
+
   test('Activity hands over the raw event and the query behind the screen @action:activity.api', async ({
     page,
   }) => {

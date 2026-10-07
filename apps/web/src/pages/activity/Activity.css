@@ -1,9 +1,13 @@
 /* Activity.css — the pipeline event feed, its wall mode, and event rows. */
 
+/* One block per line: the chips, the note a chip may add, More filters and
+   the API line. Side by side they shared a wrapping row, where anything that
+   arrived late pushed the next block onto a new line and moved the page under
+   it; stacked, each one appears where it belongs. */
 .activity__filters {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--space-3);
 }
 
@@ -555,8 +559,23 @@
   gap: var(--space-3);
 }
 
+/* The family pills' place, held from the first paint: their names arrive with
+   the family list, and the chips to their right are drawn where they stay. */
+.activity__family-slot {
+  flex: 0 0 var(--activity-family-slot, 12rem);
+  min-height: 1.5rem;
+}
+
 .activity__chip-row .family-strip {
   margin-bottom: 0;
+}
+
+/* Too narrow for a column of its own: the pills take the line above the chips,
+   which is still a place held before they arrive. */
+@media (max-width: 720px) {
+  .activity__chip-row {
+    --activity-family-slot: 100%;
+  }
 }
 
 .activity__chips {

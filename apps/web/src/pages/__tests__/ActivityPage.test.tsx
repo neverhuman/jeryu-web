@@ -487,10 +487,12 @@ describe('ActivityPage', () => {
     await screen.findByTestId('activity-event-12');
 
     const strip = await screen.findByRole('group', { name: 'Filter by family' });
-    const row = strip.parentElement as HTMLElement;
+    const slot = strip.parentElement as HTMLElement;
+    const row = slot.parentElement as HTMLElement;
     const show = within(row).getByRole('group', { name: 'Show' });
-    // Far left: the pills are the row's first child, the chips follow.
-    expect(row.firstElementChild).toBe(strip);
+    // Far left: the pills' slot is the row's first child, the chips follow.
+    expect(slot).toHaveClass('activity__family-slot');
+    expect(row.firstElementChild).toBe(slot);
     expect(strip.compareDocumentPosition(show) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Names only: Activity has no per-family event count to put on a pill.
     expect(within(strip).getByRole('button', { name: 'globex' }).textContent).toBe('globex');
@@ -503,6 +505,54 @@ describe('ActivityPage', () => {
       'aria-pressed',
       'true'
     );
+  });
+
+  it('holds the family pills’ place and keeps a chip’s note off the control line', async () => {
+    let answerFamilies = (): void => {};
+    const families = new Promise<void>((resolve) => {
+      answerFamilies = () => resolve();
+    });
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/shift/families'
+        ? families.then(() =>
+            json({
+              families: [
+                { name: 'jeryu', queue_repo: 'jeryu/jeryu-todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
+                { name: 'globex', queue_repo: 'globex/todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
+              ],
+            })
+          )
+        : undefined
+    );
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+
+    // Before the family list answers there are no pills, but their slot is
+    // already there, so the chips beside it are not moved when it fills.
+    const filters = screen.getByRole('region', { name: 'Activity filters' });
+    const row = filters.querySelector('.activity__chip-row') as HTMLElement;
+    const slot = row.firstElementChild as HTMLElement;
+    expect(slot).toHaveClass('activity__family-slot');
+    expect(within(slot).queryByRole('group', { name: 'Filter by family' })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Show' }).previousElementSibling).toBe(slot);
+
+    await act(async () => {
+      answerFamilies();
+      await families;
+    });
+    const strip = await screen.findByRole('group', { name: 'Filter by family' });
+    // The names landed in the slot that was waiting for them: same element,
+    // same place in the row.
+    expect(strip.parentElement).toBe(slot);
+    expect(row.firstElementChild).toBe(slot);
+
+    // A chip's note is the next line under the controls, not a block beside
+    // them that pushes More filters onto a line of its own.
+    fireEvent.click(screen.getByRole('button', { name: 'Needed a human' }));
+    const note = await screen.findByTestId('activity-needs-you');
+    expect(note.parentElement).toBe(filters);
+    expect(note.previousElementSibling).toBe(row);
+    expect(row.contains(note)).toBe(false);
   });
 
   it('loads older events with before_seq and tails newer ones with after_seq', async () => {
