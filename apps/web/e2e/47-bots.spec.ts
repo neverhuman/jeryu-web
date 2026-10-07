@@ -18,6 +18,15 @@ const PHONE = { width: 390, height: 844 } as const;
 const REPO = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
 const REPO_PATH = `/repos/${REPO.host}/${REPO.owner}/${REPO.name}`;
 const NOW = '2026-09-21T00:21:16Z';
+/** Fixed ids. The API parses a bot path with `Uuid::parse_str`. */
+const BOT_ID = '11111111-1111-4111-8111-111111111111';
+const CREATED_BOT_ID = '22222222-2222-4222-8222-222222222222';
+/**
+ * `require_login` rejects this slug. `map_bot_error` serves it as 422
+ * `invalid_input`.
+ */
+const INVALID_SLUG_MESSAGE =
+  'login must be canonical lowercase ASCII using letters, numbers, hyphen, or underscore';
 
 interface Summary {
   id: string;
@@ -40,7 +49,7 @@ interface Summary {
 
 function summary(overrides: Partial<Summary> = {}): Summary {
   return {
-    id: 'bot-1',
+    id: BOT_ID,
     owner: 'ada',
     slug: 'north',
     display_name: 'Northwind',
@@ -68,6 +77,34 @@ async function fulfillJson(route: Route, status: number, body: unknown): Promise
   });
 }
 
+/**
+ * Body `normalize` serves after `api_error`: top-level `code` and `message`,
+ * then the envelope fields. `reason` repeats the handler message. The other
+ * fields are the defaults for a code with no repair hint of its own.
+ */
+function apiEnvelope(code: string, message: string): {
+  code: string;
+  message: string;
+  reason: string;
+  purpose: string;
+  common_fixes: string[];
+  repair_hint: string;
+  docs_url: string;
+} {
+  return {
+    code,
+    message,
+    reason: message,
+    purpose: 'complete a jeryu API request',
+    common_fixes: [
+      'look the code up at GET /api/v1/errors',
+      'check the request against the route index at GET /api/v1',
+    ],
+    repair_hint: 'look the code up at GET /api/v1/errors, fix the request it names, and retry',
+    docs_url: '/api/v1/docs/errors.md',
+  };
+}
+
 /** Account list plus create, rotate, suspend, and revoke. State lives in this call. */
 async function mockAccountBots(page: Page, initial: Summary[]): Promise<Summary[]> {
   const bots = initial.map((row) => ({ ...row }));
@@ -87,7 +124,7 @@ async function mockAccountBots(page: Page, initial: Summary[]): Promise<Summary[
       reach: { mode: 'general' };
     };
     const created = summary({
-      id: 'bot-created',
+      id: CREATED_BOT_ID,
       slug: body.slug,
       display_name: body.display_name,
       kind: body.kind,
@@ -111,7 +148,7 @@ async function mockAccountBots(page: Page, initial: Summary[]): Promise<Summary[
     const id = new URL(request.url()).pathname.split('/')[4];
     const row = bots.find((bot) => bot.id === id);
     if (!row) {
-      await fulfillJson(route, 404, { error: { code: 'not_found', message: 'Missing.' } });
+      await fulfillJson(route, 404, apiEnvelope('not_found', `bot ${id}`));
       return;
     }
     row.credential_generation += 1;
@@ -132,7 +169,7 @@ async function mockAccountBots(page: Page, initial: Summary[]): Promise<Summary[
     const action = parts[5];
     const row = bots.find((bot) => bot.id === id);
     if (!row) {
-      await fulfillJson(route, 404, { error: { code: 'not_found', message: 'Missing.' } });
+      await fulfillJson(route, 404, apiEnvelope('not_found', `bot ${id}`));
       return;
     }
     row.status = action === 'suspend' ? 'suspended' : 'revoked';
@@ -296,4 +333,33 @@ test('the account page and repository roster stay inside a phone viewport @actio
       message: `repository roster scrolls sideways at ${PHONE.width}px`,
     })
     .toBeLessThanOrEqual(0);
+});
+
+test('a rejected slug shows the invalid_input error and no key @action:bots.invalid_input', async ({
+  page,
+}) => {
+  await mockBootstrap(page);
+  await mockAccountBots(page, []);
+  await page.route(/\/api\/v1\/bots(?:\?.*)?$/, async (route, request) => {
+    if (request.method() !== 'POST') {
+      await route.fallback();
+      return;
+    }
+    await fulfillJson(route, 422, apiEnvelope('invalid_input', INVALID_SLUG_MESSAGE));
+  });
+
+  const shell = new AppShellPage(page);
+  await shell.goto('/bots');
+  await shell.assertShellLoaded(15_000);
+
+  await page.getByLabel('Display name').fill('Bad slug');
+  await page.getByLabel('Slug').fill('Bad');
+  await page.getByRole('button', { name: 'Add' }).click();
+
+  const error = page.getByTestId('bot-form-error');
+  await expect(error).toBeVisible();
+  await expect(error).toContainText('Could not add it.');
+  await expect(error).toContainText(INVALID_SLUG_MESSAGE);
+  await expect(error).toContainText('invalid_input');
+  await expect(page.getByTestId('bot-setup')).toHaveCount(0);
 });
