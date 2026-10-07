@@ -50,7 +50,7 @@ export interface MovedRoute {
    * The one-word `kind=` values the moved page took, each named by the Activity
    * chip that shows the same events now. The chip's kinds replace the word, so
    * `?kind=merge` arrives as the merge filter instead of a value the events
-   * endpoint refuses (`422 events_invalid_query`, read as a broken feed). A
+   * endpoint refuses (`422 events_invalid_query`, which looks like a broken feed). A
    * word with no entry here is dropped: the whole feed beats no feed.
    */
   kinds?: Readonly<Record<string, string>>;

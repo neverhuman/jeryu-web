@@ -32,7 +32,7 @@ export function parseActivityFilters(params: URLSearchParams): ActivityFilters {
     repo: text('repo'),
     source: text('source'),
     // A kind the server would refuse is dropped rather than sent: it answers
-    // `422 events_invalid_query` and the whole feed would read as broken.
+    // `422 events_invalid_query` and the whole feed would look broken.
     kind: isKindFilter(text('kind')) ? text('kind') : '',
     todo_id: text('todo_id'),
     pr: PR_PATTERN.test(text('pr')) ? text('pr') : '',

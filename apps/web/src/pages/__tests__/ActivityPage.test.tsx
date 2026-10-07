@@ -438,7 +438,7 @@ describe('ActivityPage', () => {
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
     expect(screen.getByRole('heading', { level: 2, name: 'Activity' })).toBeInTheDocument();
     // Neither the page subtitle nor the way into wall mode belongs on a tab.
-    expect(screen.queryByText('Every step the pipeline takes, as it happens.')).toBeNull();
+    expect(screen.queryByText(/^Every step the pipeline takes/)).toBeNull();
     expect(screen.queryByRole('link', { name: 'Enter wall mode' })).toBeNull();
     expect(document.querySelector('.activity--wall')).toBeNull();
   });
@@ -608,8 +608,9 @@ describe('ActivityPage', () => {
     // Before the family list answers there are no pills, but their slot is
     // already there, so the chips beside it are not moved when it fills.
     const filters = screen.getByRole('region', { name: 'Activity filters' });
-    const row = filters.querySelector('.activity__chip-row') as HTMLElement;
-    const slot = row.firstElementChild as HTMLElement;
+    const row = filters.querySelector<HTMLElement>('.activity__chip-row');
+    const slot = row?.firstElementChild;
+    if (!(row instanceof HTMLElement) || !(slot instanceof HTMLElement)) throw new Error('no family slot');
     expect(slot).toHaveClass('activity__family-slot');
     expect(within(slot).queryByRole('group', { name: 'Filter by family' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Show' }).previousElementSibling).toBe(slot);

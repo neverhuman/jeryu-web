@@ -117,7 +117,7 @@ export function usageSlotRows(
     );
 }
 
-/** Today's totals as the panel reads them, with the cache's share of the input. */
+/** Today's totals the way the panel reads them, with the cache's share of the input. */
 export interface UsageTotalsRead {
   tokens: UsageTokens;
   /** The read-from-cache share of everything that went in; null with no input. */

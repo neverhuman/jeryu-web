@@ -144,7 +144,8 @@ describe('ActivityHistogram', () => {
       expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
     );
 
-    const todos = band.querySelector('.activity-volume__seg.is-todos') as Element;
+    const todos = band.querySelector('.activity-volume__seg.is-todos');
+    if (!todos) throw new Error('no todos segment');
     fireEvent.click(todos);
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Todos' })).toHaveAttribute('aria-pressed', 'true')

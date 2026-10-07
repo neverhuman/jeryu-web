@@ -54,7 +54,8 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   // An older forge answers this path with a 404: leave the band out rather
   // than explain it above the feed. Until the answer is in, the band keeps its
   // height, so the list below it does not jump once the bars arrive.
-  if (histogram.isError) return null;
+  const unanswered = histogram.isError;
+  if (unanswered) return null;
 
   const buckets = histogramBuckets(histogram.data);
   const geometry = histogramGeometry(buckets, {

@@ -57,7 +57,8 @@ export function UsagePanel({ family }: UsagePanelProps): JSX.Element | null {
 
   // An older forge answers this path with a 404: leave the panel out rather
   // than explain it above the feed, exactly as the volume band does.
-  if (usage.isError) return null;
+  const unanswered = usage.isError;
+  if (unanswered) return null;
 
   const rows = usageSlotRows(usage.data, workers.data?.workers ?? [], family);
   const totals = usageTotals(usage.data);

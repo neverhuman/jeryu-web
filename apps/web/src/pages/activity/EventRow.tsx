@@ -25,7 +25,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { PipelineEvent } from '../../api/types';
-import { CopyButton } from '../../components/copy/CopyButton';
+import { CopyButton } from '../../components/clipboard/CopyButton';
 import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';

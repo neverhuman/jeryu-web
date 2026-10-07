@@ -35,7 +35,7 @@ import {
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
-import { CopyButton } from '../../components/copy/CopyButton';
+import { CopyButton } from '../../components/clipboard/CopyButton';
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { usePageTakesScreen } from '../../layout/fullScreen';
