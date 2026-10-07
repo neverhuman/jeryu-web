@@ -89,6 +89,32 @@ describe('LiveActivityDock', () => {
     expect(window.localStorage.getItem('jeryu.activityDock.expanded.v1')).toBe('1');
   });
 
+  it('opens each row to what the event is about', async () => {
+    window.localStorage.setItem('jeryu.activityDock.expanded.v1', '1');
+    mockPipelineApi();
+    renderAt('/needs-you', '/needs-you', <LiveActivityDock />);
+    // The pull request the merge is about, through the same subject link the
+    // Activity page gives the row.
+    const merged = await screen.findByRole('link', { name: /Merged jeryu\/jeryu-web#35/ });
+    expect(merged).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-web/pulls/35');
+  });
+
+  it('reads the feed on the page\'s family, like the count beside it', async () => {
+    // The count applied the scope and the list did not: one family on the
+    // chip, every family in the rows under it.
+    const calls = mockPipelineApi();
+    renderAt('/needs-you?family=acme', '/needs-you', <LiveActivityDock />);
+    await screen.findByRole('button', { name: 'Live activity' });
+    await waitFor(() =>
+      expect(
+        calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?limit=16&family=acme')
+      ).toBe(true)
+    );
+    expect(
+      calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?limit=16')
+    ).toBe(false);
+  });
+
   it('starts open when the reader left it open', async () => {
     window.localStorage.setItem('jeryu.activityDock.expanded.v1', '1');
     mockPipelineApi();

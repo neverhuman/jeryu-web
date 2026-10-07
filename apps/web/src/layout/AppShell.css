@@ -5,17 +5,25 @@
   grid-template-areas:
     'header header'
     'leftnav main'
-    'leftnav dock'
     'status status';
-  grid-template-rows: var(--app-header-height) 1fr auto auto;
+  grid-template-rows: var(--app-header-height) 1fr auto;
   grid-template-columns: var(--app-leftnav-width) minmax(0, 1fr);
   min-height: 100vh;
   padding-bottom: var(--app-status-height);
 }
 
+/* The dock is pinned over the content (see LiveActivityDock.tsx), so the shell
+   reserves the height of its collapsed line as well — only on the pages that
+   have one, which is every page an admin opens but the Activity page. */
+.app-shell:has(.activity-dock) {
+  padding-bottom: calc(var(--app-status-height) + var(--app-dock-height));
+}
+
 :root {
   --app-header-height: 48px;
   --app-status-height: 28px;
+  /* One collapsed line of the live activity dock. */
+  --app-dock-height: 26px;
   --app-leftnav-width: 240px;
 }
 
@@ -578,11 +586,18 @@ a.global-header__live:hover {
 /* LiveActivityDock --------------------------------------------------- */
 
 .activity-dock {
-  grid-area: dock;
+  /* Docked at the foot of the viewport, above the status bar and beside the
+     rail: opened, it grows upward from there over the page. */
+  position: fixed;
+  bottom: var(--app-status-height);
+  left: var(--app-leftnav-width);
+  right: 0;
+  z-index: var(--z-sticky);
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--color-border-strong);
   background-color: var(--color-bg-1);
+  box-shadow: var(--shadow-2);
   min-width: 0;
 }
 
@@ -681,6 +696,25 @@ a.global-header__live:hover {
 
 .activity-dock__item--ok {
   border-left-color: var(--color-accent-success);
+}
+
+.activity-dock__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1 1 auto;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.activity-dock__row:hover .activity-dock__summary {
+  text-decoration: underline;
+}
+
+a.activity-dock__row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .activity-dock__scope {

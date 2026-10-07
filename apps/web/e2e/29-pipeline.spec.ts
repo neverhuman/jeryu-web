@@ -866,9 +866,21 @@ test.describe('Pipeline visibility', () => {
       'href',
       '/needs-you'
     );
+    // Docked: it is at the foot of the viewport whatever the page below it
+    // does, not at the end of a page the reader would have to scroll to.
+    await page.mouse.wheel(0, 2_000);
+    const box = (await dock.boundingBox())!;
+    const viewport = page.viewportSize()!;
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+    expect(box.y).toBeGreaterThan(viewport.height / 2);
+
     await dock.getByRole('button', { name: 'Live activity' }).click();
     await expect(dock.getByRole('log')).toContainText('Merged neverhuman/jeryu#99');
     await expect(dock.getByRole('log')).toContainText('Pull request merged');
+    // Each row opens its subject, the link the Activity page gives it.
+    await expect(
+      dock.getByRole('link', { name: /Merged neverhuman\/jeryu#99/ })
+    ).toHaveAttribute('href', '/repos/jeryu/neverhuman/jeryu/pulls/99');
 
     // Opening it is remembered.
     await page.reload();

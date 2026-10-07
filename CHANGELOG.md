@@ -15,6 +15,11 @@
   nav registry beside the label and the chord, so Help and the page say the same sentence.
 - One `.form-input` style for text fields the app renders itself; the Search page's box uses it
   rather than the browser's bare line.
+- The live activity dock is docked. It is pinned to the foot of the viewport above the status bar
+  (collapsed to one line by default, growing upward when opened) instead of sitting at the end of
+  the page, where on a long page it was off screen below everything else. Each row is now a link
+  to what the event is about — the subject link the Activity page gives it — and the feed is read
+  on the page's family, the one the "need you" count beside it already applied.
 - Every "needs you" count on screen is now one derivation of one list. The nav badge, the live
   activity dock, the Needs you header and each page's "Waiting on you in <area>" strip all count
   `urgentAttention` / `urgentInArea` from `GET /api/v1/attention`: the dock no longer counts

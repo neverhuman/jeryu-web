@@ -4,11 +4,16 @@
 //   │ <GlobalHeader />                                    │
 //   ├──────────┬─────────────────────────────────────────┤
 //   │ <LeftNav  │ <Outlet />                              │
-//   │   />      ├─────────────────────────────────────────┤
-//   │           │ <LiveActivityDock /> (collapsible)      │
+//   │   />      │                                         │
+//   │           ├─────────────────────────────────────────┤
+//   │           │ <LiveActivityDock /> (docked, collapsed)│
 //   ├──────────┴─────────────────────────────────────────┤
 //   │ <StatusBar />                                       │
 //   └────────────────────────────────────────────────────┘
+//
+// The dock and the status bar are pinned to the foot of the viewport rather
+// than laid out at the end of the page; the shell reserves both their heights,
+// so the last row of content is never underneath them.
 //
 // Below 720px there is no room beside the content: the LeftNav column leaves
 // the layout and the header's menu button slides the same nav in over the page

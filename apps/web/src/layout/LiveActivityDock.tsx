@@ -1,5 +1,15 @@
-// LiveActivityDock.tsx — a collapsible strip above the status bar showing the
-// last few pipeline events from `GET /api/v1/events`, on every page.
+// LiveActivityDock.tsx — a collapsible strip docked above the status bar
+// showing the last few pipeline events from `GET /api/v1/events`, on every
+// page.
+//
+// It is pinned to the foot of the viewport, not left at the end of the page:
+// a strip that says what the pipeline is doing right now is no use at y=7058
+// of a 7295px page. Collapsed it is one line, and the shell reserves its
+// height; opened it grows upward over the content it belongs to.
+//
+// Each row is a link to what the event is about — the same subject link the
+// Activity page gives it (`primaryLink`) — and the feed is read on the page's
+// family, the one its 'need you' count already used.
 //
 // It renders nothing unless the feed is readable: the read is admin-only, and
 // a server that predates the pipeline visibility API has no feed. The
@@ -7,7 +17,7 @@
 // storage adapter (which swallows storage failures).
 
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { pillClass, toneClass } from '../components/tone/tone';
@@ -22,8 +32,10 @@ import {
   eventLabel,
   eventTone,
   foldEchoes,
+  primaryLink,
 } from '../pages/activity/activityModel';
-import type { PipelineEventsQuery } from '../api/types/pipeline';
+import { useForgeHost } from '../hooks/useForgeHost';
+import type { PipelineEvent, PipelineEventsQuery } from '../api/types/pipeline';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 
 // Collapsed unless the reader opened it: one line that says the pipeline is
@@ -32,13 +44,19 @@ import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 const EXPANDED_KEY = 'jeryu.activityDock.expanded.v1';
 const DOCK_EVENTS = 8;
 // Twice what is shown: a finished gate arrives as two events that fold into one row.
-const DOCK_QUERY: PipelineEventsQuery = { limit: DOCK_EVENTS * 2 };
+const DOCK_LIMIT = DOCK_EVENTS * 2;
 
 export function LiveActivityDock(): JSX.Element | null {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { pathname } = useLocation();
   const scope = useFamilyScope();
+  // The page's family, so the rows and the count beside them are about the
+  // same work. 'All families' asks for every family, as it does everywhere.
+  const query: PipelineEventsQuery = useMemo(
+    () => (scope.family ? { limit: DOCK_LIMIT, family: scope.family } : { limit: DOCK_LIMIT }),
+    [scope.family]
+  );
   const [collapsed, setCollapsed] = useState(
     () => readBrowserText('durable', EXPANDED_KEY) !== '1'
   );
@@ -46,11 +64,11 @@ export function LiveActivityDock(): JSX.Element | null {
   // there: asking for its own eight events as well is a read a reader of that
   // page never sees.
   const onActivityPage = pathname === ACTIVITY_PATH;
-  const feed = usePipelineEvents(DOCK_QUERY, {
+  const feed = usePipelineEvents(query, {
     enabled: isAdmin && !onActivityPage,
     refetchInterval: 10_000,
   });
-  usePipelineNudge(feed.isSuccess && !onActivityPage, [...PIPELINE_KEY, 'events', DOCK_QUERY]);
+  usePipelineNudge(feed.isSuccess && !onActivityPage, [...PIPELINE_KEY, 'events', query]);
   // What needs a person is Needs you's answer, not "how many of the last eight
   // events were flagged": the dock showed 1 beside a nav badge of 3. It counts
   // and links to the same rows as every other surface, on the same family.
@@ -104,30 +122,59 @@ export function LiveActivityDock(): JSX.Element | null {
           All activity
         </Link>
       </header>
-      {collapsed ? null : (
-        <div id="activity-dock-body" role="log" aria-live="off" aria-label="Newest pipeline events">
-          <ol className="activity-dock__body">
-            {events.length === 0 ? (
-              <li className="activity-dock__empty">No pipeline events yet.</li>
-            ) : (
-              events.map((event) => (
-                <li
-                  key={event.seq}
-                  className={toneClass('activity-dock__item', eventTone(event))}
-                >
-                  <time className="activity-dock__meta" dateTime={event.ts} title={absoluteText(event.ts)}>
-                    {clockText(event.ts)}
-                  </time>
-                  <span className="activity-dock__scope" title={event.kind}>
-                    {eventLabel(event)}
-                  </span>
-                  <span className="activity-dock__summary">{event.summary}</span>
-                </li>
-              ))
-            )}
-          </ol>
-        </div>
-      )}
+      {collapsed ? null : <DockEvents events={events} />}
     </section>
+  );
+}
+
+/** The opened list. Its own component: the subject links need the repository
+ *  list for the forge each row is on, and only an opened dock asks for it. */
+function DockEvents({ events }: { events: PipelineEvent[] }): JSX.Element {
+  const forgeHost = useForgeHost();
+  return (
+    <div id="activity-dock-body" role="log" aria-live="off" aria-label="Newest pipeline events">
+      <ol className="activity-dock__body">
+        {events.length === 0 ? (
+          <li className="activity-dock__empty">No pipeline events yet.</li>
+        ) : (
+          events.map((event) => {
+            const link = primaryLink(event, forgeHost(event.repo ?? undefined));
+            const line = (
+              <>
+                <time
+                  className="activity-dock__meta"
+                  dateTime={event.ts}
+                  title={absoluteText(event.ts)}
+                >
+                  {clockText(event.ts)}
+                </time>
+                <span className="activity-dock__scope" title={event.kind}>
+                  {eventLabel(event)}
+                </span>
+                <span className="activity-dock__summary">{event.summary}</span>
+              </>
+            );
+            return (
+              <li
+                key={event.seq}
+                className={toneClass('activity-dock__item', eventTone(event))}
+              >
+                {/* The whole row opens what the event is about: a reader who
+                    sees a gate fail here goes to the pull request from here,
+                    instead of finding it again on Activity. A row with no
+                    subject of its own stays plain text. */}
+                {link ? (
+                  <Link className="activity-dock__row" to={link.to} title={link.label}>
+                    {line}
+                  </Link>
+                ) : (
+                  <span className="activity-dock__row">{line}</span>
+                )}
+              </li>
+            );
+          })
+        )}
+      </ol>
+    </div>
   );
 }
