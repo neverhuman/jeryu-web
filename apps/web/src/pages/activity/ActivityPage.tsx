@@ -63,6 +63,10 @@ import {
   resolveRepoFilter,
   resolvedSeqs,
   rowSeqs,
+  showsWorkerSteps,
+  applyWorkerSteps,
+  wantsWorkerSteps,
+  workerStepCount,
   visibleEvents,
   type ActivityFilters,
 } from './activityModel';
@@ -138,7 +142,14 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     kinds: isPipelineEventPush,
   });
   // Cursors run on the raw feed (`feed`); what is shown and counted is folded.
-  const all = visibleEvents(feed.base.data?.events ?? [], filters.kind);
+  // A slot's step beats are more than a quarter of what the feed carries, and
+  // the wall and the Workers chip are the two places they belong. Elsewhere
+  // All leaves them out until the toggle under the chips asks for them.
+  const workerSteps = showsWorkerSteps(params) || wall;
+  const raw = feed.base.data?.events ?? [];
+  const all = visibleEvents(raw, filters.kind, workerSteps);
+  // What the toggle would add, counted on the page the reader has.
+  const hiddenSteps = workerSteps ? 0 : workerStepCount(visibleEvents(raw, filters.kind, true));
   const newest = all[0]?.seq ?? 0;
   const filterId = useMemo(() => JSON.stringify(query), [query]);
   // A reader is only safe to insert above when they are at the top of the page
@@ -348,6 +359,11 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
             range={parseRange(params)}
             onChange={update}
             onChip={(chip) => setParams(applyChip(params, chip), { replace: true })}
+            workerSteps={workerSteps}
+            hiddenSteps={hiddenSteps}
+            onWorkerSteps={(show) =>
+              setParams(applyWorkerSteps(params, show), { replace: true })
+            }
           />
         </>
       )}
@@ -363,7 +379,16 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
         <ScopedEmptyState
           icon={Activity}
           title={hasActiveFilters(filters) ? 'No events match these filters.' : 'No pipeline events yet.'}
-          description="Events appear as workers, gates, reviewers and releases report in."
+          // An empty list with step beats held back is not an empty feed, and
+          // saying so is the difference between nothing happened and nothing
+          // happened that this view shows.
+          description={
+            hiddenSteps > 0
+              ? `Everything on this page is a worker step. Turn on Worker steps to see ${
+                  hiddenSteps === 1 ? 'it' : 'them'
+                }.`
+              : 'Events appear as workers, gates, reviewers and releases report in.'
+          }
         />
       ) : (
         <>
@@ -543,6 +568,9 @@ function Filters({
   range,
   onChange,
   onChip,
+  workerSteps,
+  hiddenSteps,
+  onWorkerSteps,
 }: {
   filters: ActivityFilters;
   /** The filters as the server reads them: what the API line says. */
@@ -556,6 +584,11 @@ function Filters({
   range: HistogramRangeId;
   onChange: (key: string, value: string) => void;
   onChip: (chip: (typeof ACTIVITY_CHIPS)[number]) => void;
+  /** Whether the slots' step beats are in the list. */
+  workerSteps: boolean;
+  /** How many of them the loaded page is holding back, to offer on the toggle. */
+  hiddenSteps: number;
+  onWorkerSteps: (show: boolean) => void;
 }): JSX.Element {
   const pinnedRepo = Boolean(repo);
   // Unfolded on arrival when a folded filter is already set, and the reader's
@@ -655,6 +688,30 @@ function Filters({
             );
           })}
         </div>
+        {wantsWorkerSteps(filters.kind) ? null : (
+          // Beside the chips rather than in them: it does not narrow the feed
+          // to one kind, it says whether one noisy kind is in whichever view
+          // the chips are showing.
+          <button
+            type="button"
+            className={`activity__chip activity__steps${workerSteps ? ' is-active' : ''}`}
+            aria-pressed={workerSteps}
+            title={
+              workerSteps
+                ? 'Hide the stage beats the working slots report'
+                : `${hiddenSteps} worker step${hiddenSteps === 1 ? '' : 's'} left out of this page`
+            }
+            onClick={() => onWorkerSteps(!workerSteps)}
+            data-testid="activity-worker-steps"
+          >
+            Worker steps
+            {workerSteps || hiddenSteps === 0 ? null : (
+              <span className="activity__chip-count" aria-hidden="true">
+                {hiddenSteps}
+              </span>
+            )}
+          </button>
+        )}
       </div>
       {current === 'human' ? (
         // The log says what happened; what is waiting now has one home. The

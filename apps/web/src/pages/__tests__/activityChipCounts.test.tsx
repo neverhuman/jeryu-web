@@ -55,6 +55,13 @@ describe('chipCounts', () => {
     expect(counts.deploys).toBe(1);
   });
 
+  it('leaves out a chip the band stacks no group for', () => {
+    const counts = chipCounts(histogramBuckets(HISTOGRAM));
+    // Workers is not one of the band's groups, so it has no number to show:
+    // a zero there would read as "no worker events", which it is not.
+    expect(counts.workers).toBeUndefined();
+  });
+
   it('counts zero for a chip no bucket mentions, and for no buckets at all', () => {
     const quiet = chipCounts(
       histogramBuckets({ buckets: [{ at: '2026-10-04T10:00:00Z', groups: { todos: 2 } }] })
@@ -76,6 +83,9 @@ describe('Activity chip counts', () => {
     await waitFor(() => expect(badge('All')).toHaveTextContent('21'));
     expect(badge('Gates')).toHaveTextContent('9');
     expect(badge('Needed a human')).toHaveTextContent('1');
+    // No group behind it: no badge, and not drawn as an empty chip either.
+    expect(badge('Workers')).toBeNull();
+    expect(chip('Workers')).not.toHaveClass('activity__chip--empty');
     // The number moves, so it is not read aloud twice: the chip's name stays
     // its label and the count is its description.
     expect(badge('Gates')).toHaveAttribute('aria-hidden', 'true');

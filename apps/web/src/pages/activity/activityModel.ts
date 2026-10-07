@@ -218,10 +218,46 @@ export function foldEchoes(events: PipelineEvent[]): PipelineEvent[] {
   });
 }
 
-/** What a list shows: echoes folded, a multi-kind chip applied. */
-export function visibleEvents(events: PipelineEvent[], kind = ''): PipelineEvent[] {
+/** Whether a `kind` filter asks for the slots' own step beats, in which case
+ *  they are what the reader came for and are never folded away. */
+export function wantsWorkerSteps(kind: string): boolean {
+  return kindPatterns(kind).some((pattern) => matchesKind(WORKER_STAGE_KIND, pattern));
+}
+
+/**
+ * What a list shows: echoes folded, a multi-kind chip applied, and — unless
+ * asked for — the slots' step beats left out. `worker.stage` is more than a
+ * quarter of the feed and says nothing about an outcome, so on All it buried
+ * the gates and the merges under a slot narrating itself. The beats are one
+ * toggle away, and the Workers chip asks for them by name.
+ */
+export function visibleEvents(
+  events: PipelineEvent[],
+  kind = '',
+  workerSteps = false
+): PipelineEvent[] {
   const folded = foldEchoes(events);
-  return kind.includes(',') ? folded.filter((event) => matchesKind(event.kind, kind)) : folded;
+  const narrowed = kind.includes(',') ? folded.filter((event) => matchesKind(event.kind, kind)) : folded;
+  if (workerSteps || wantsWorkerSteps(kind)) return narrowed;
+  return narrowed.filter((event) => event.kind !== WORKER_STAGE_KIND);
+}
+
+/** How many step beats a page is holding back: what the toggle offers. */
+export function workerStepCount(events: PipelineEvent[]): number {
+  return events.filter((event) => event.kind === WORKER_STAGE_KIND).length;
+}
+
+/** `?steps=1`: the reader asked to see the slots' step beats on every view. */
+export function showsWorkerSteps(params: URLSearchParams): boolean {
+  return params.get('steps') === '1';
+}
+
+/** The URL params the worker-steps toggle sets, keeping every other filter. */
+export function applyWorkerSteps(params: URLSearchParams, show: boolean): URLSearchParams {
+  const next = new URLSearchParams(params);
+  if (show) next.set('steps', '1');
+  else next.delete('steps');
+  return next;
 }
 
 /** Union by `seq`, newest first. Later arguments win on a duplicate seq. */
@@ -683,6 +719,11 @@ export const ACTIVITY_CHIPS: readonly ActivityChip[] = [
   // what waits on someone now — that is Needs you, linked beside the chips.
   { id: 'human', label: 'Needed a human', needsHuman: true },
   { id: 'todos', label: 'Todos', kind: 'todo.' },
+  // The slots themselves: the stage beats of an attempt (`worker.stage`), what
+  // went wrong in one (`worker.error`) and what a shift did with it
+  // (`shift.*`). Together they are the loudest thing in the feed, which is why
+  // All leaves the step beats out and this chip is where they are read.
+  { id: 'workers', label: 'Workers', kind: 'worker.,shift.' },
   { id: 'gates', label: 'Gates', kind: 'gate.' },
   // A verdict is `pr.review`; the reviewer's start/finish beats are `review.*`.
   { id: 'reviews', label: 'Reviews', kind: 'review.,pr.review' },

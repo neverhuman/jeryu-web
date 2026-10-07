@@ -53,6 +53,10 @@ import {
   summaryParts,
   visibleEvents,
   wallCounters,
+  wantsWorkerSteps,
+  workerStepCount,
+  showsWorkerSteps,
+  applyWorkerSteps,
 } from '../activity/activityModel';
 import { EVENTS, pipelineEvent } from './pipelineTestData';
 
@@ -716,3 +720,44 @@ describe('matchesKind', () => {
   });
 });
 
+describe('worker steps', () => {
+  const page = [
+    pipelineEvent({ seq: 5, kind: 'gate.finished', outcome: 'success' }),
+    pipelineEvent({ seq: 4, kind: 'worker.stage', outcome: 'gate', summary: 'w1 jeryu: agent -> gate' }),
+    pipelineEvent({ seq: 3, kind: 'worker.stage', outcome: 'agent', summary: 'w1 jeryu: prepare -> agent' }),
+    pipelineEvent({ seq: 2, kind: 'worker.error', summary: 'w1 fell over' }),
+    pipelineEvent({ seq: 1, kind: 'todo.filed' }),
+  ];
+
+  it('leaves the step beats out of All and says how many that was', () => {
+    expect(visibleEvents(page).map((event) => event.seq)).toEqual([5, 2, 1]);
+    expect(workerStepCount(page)).toBe(2);
+    // What went wrong in a slot is not a step: it stays on every view.
+    expect(visibleEvents(page).some((event) => event.kind === 'worker.error')).toBe(true);
+  });
+
+  it('shows them when the reader asks, by the toggle or by the filter', () => {
+    expect(visibleEvents(page, '', true).map((event) => event.seq)).toEqual([5, 4, 3, 2, 1]);
+    const workers = ACTIVITY_CHIPS.find((chip) => chip.id === 'workers');
+    const filters = parseActivityFilters(applyChip(new URLSearchParams(), workers!));
+    expect(activeChip(filters)).toBe('workers');
+    expect(wantsWorkerSteps(filters.kind)).toBe(true);
+    expect(visibleEvents(page, filters.kind).map((event) => event.seq)).toEqual([4, 3, 2]);
+    // One kind is the server's own filter, so nothing is narrowed here — but
+    // the beats it asked for are still not folded away.
+    expect(visibleEvents(page, 'worker.stage').map((event) => event.seq)).toEqual([5, 4, 3, 2, 1]);
+    expect(wantsWorkerSteps('')).toBe(false);
+    expect(wantsWorkerSteps('gate.')).toBe(false);
+  });
+
+  it('holds the toggle in the URL, and nowhere else', () => {
+    expect(showsWorkerSteps(new URLSearchParams())).toBe(false);
+    const on = applyWorkerSteps(new URLSearchParams('kind=gate.'), true);
+    expect(on.toString()).toBe('kind=gate.&steps=1');
+    expect(showsWorkerSteps(on)).toBe(true);
+    const off = applyWorkerSteps(on, false);
+    expect(off.toString()).toBe('kind=gate.');
+    // Not a filter: it narrows nothing the server is asked for.
+    expect(hasActiveFilters(parseActivityFilters(new URLSearchParams('steps=1')))).toBe(false);
+  });
+});

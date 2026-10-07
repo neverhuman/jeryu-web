@@ -63,7 +63,8 @@ describe('ActivityPage', () => {
     mockPipelineApi((req) =>
       req.pathname === '/api/v1/events' ? json({ events, latest_seq: 24 }) : undefined
     );
-    renderPage();
+    // The beats are out of All by default; this is the view that shows them.
+    renderPage('/activity?steps=1');
     // The outcome row is not buried: the three beats are one row under it.
     const row = await screen.findByTestId('activity-stages-23');
     expect(screen.getByTestId('activity-event-24')).toBeInTheDocument();

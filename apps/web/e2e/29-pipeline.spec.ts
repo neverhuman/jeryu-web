@@ -392,6 +392,20 @@ test.describe('Pipeline visibility', () => {
     );
     await expect(chips.locator('.activity__chip-count').first()).toBeVisible();
 
+    // Beside the chips: the slots' step beats are out of All, and this is how a
+    // reader puts them back. Workers asks for them by name, so there the
+    // toggle has nothing to say and is not drawn.
+    const steps = page.getByTestId('activity-worker-steps');
+    await expect(steps).toHaveAttribute('aria-pressed', 'false');
+    await steps.click();
+    await expect(page).toHaveURL(/steps=1/);
+    await expect(steps).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Workers', exact: true }).click();
+    await expect(page).toHaveURL(/kind=worker\.%2Cshift\./);
+    await expect(page.getByTestId('activity-worker-steps')).toHaveCount(0);
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
+
     // The 24-hour strip is on the normal page too, under the chart, and its
     // numbers are the server's totals for the window, not the loaded page.
     const strip = page.getByTestId('activity-counters');

@@ -117,11 +117,16 @@ export function histogramBuckets(response: PipelineHistogramResponse | undefined
  * Events per chip over the drawn range, read off the band's own by-group
  * counts so a chip and the bar above it can never disagree. `all` is the
  * window's events and `human` the ones that flagged somebody; every other
- * chip is the group it filters to. A chip with no group counts zero.
+ * chip is the group it filters to. A chip the band stacks no group for is
+ * left out rather than counted zero: a zero would say the feed is empty of
+ * what the chip shows, when all it means is that the server does not count
+ * that group yet.
  */
 export function chipCounts(buckets: readonly HistogramBucket[]): Record<string, number> {
   const counts: Record<string, number> = { all: 0, human: 0 };
-  for (const chip of ACTIVITY_CHIPS) counts[chip.id] = 0;
+  for (const chip of ACTIVITY_CHIPS) {
+    if (HISTOGRAM_GROUPS.some((group) => group.chipId === chip.id)) counts[chip.id] = 0;
+  }
   for (const bucket of buckets) {
     counts.all += bucket.total;
     counts.human += bucket.needsHuman;
