@@ -217,11 +217,26 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* One row of parts, and the summary is the only one that takes a second line.
+   A flex line is broken up by the items' content widths, before any of them is
+   allowed to shrink, so a wrapping line used to push the parts behind a long
+   summary onto a line of their own: on a claimed todo that is the toggle
+   alone, and a row with nothing to open keeps its toggle invisible, which left
+   an empty band under the words. Holding the parts on one line hands the wrap
+   to the summary, which breaks its words instead. */
 .activity-row__line {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   gap: var(--space-2) var(--space-3);
+}
+
+/* Too narrow to hold them: below the desk widths the parts do need lines of
+   their own, and a wrap is better than a row that runs off the screen. */
+@media (max-width: 720px) {
+  .activity-row__line {
+    flex-wrap: wrap;
+  }
 }
 
 .activity-row__time,
@@ -292,7 +307,11 @@
 }
 
 
+/* It gives way to the parts around it rather than pushing them: `min-width`
+   lets the shrink reach past the words' own width, and `overflow-wrap` lets a
+   long token (a release name, a branch) break inside itself. */
 .activity-row__summary {
+  min-width: 0;
   color: var(--color-fg-primary);
   overflow-wrap: anywhere;
 }

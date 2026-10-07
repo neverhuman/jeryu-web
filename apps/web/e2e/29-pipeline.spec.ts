@@ -10,6 +10,7 @@ import {
   DEPLOY_COMMAND,
   DEPLOY_RUN_IN,
   mockPipelineApi,
+  pipelineEvent,
   pinsBody,
   usageBody,
   queueFailedBody,
@@ -461,6 +462,61 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('activity-usage')).toBeVisible();
     await page.getByRole('link', { name: 'Leave wall mode' }).click();
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
+  });
+
+  test('Activity keeps a wrapped row tight: nothing below the summary’s last line @action:activity.tight_rows', async ({
+    page,
+  }) => {
+    // A summary long enough to wrap used to push the rest of the line onto a
+    // flex line of its own. On a "Todo claimed" row the rest is the toggle
+    // alone, and a row with nothing to open keeps its toggle invisible until
+    // it is asked for: the reader got a blank band under the words. The line
+    // wraps the summary's words, not the row's parts.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page, {
+      events: [
+        pipelineEvent({
+          seq: 12,
+          source: 'todoq',
+          kind: 'todo.claimed',
+          family: 'jeryu',
+          todo_id: '20260919-0800-aaa',
+          actor: 'alton@xbabe0/w2',
+          summary: `w2 claimed 20260919-0800-aaa: ${'a title long enough that this one line has to wrap at a desk width '.repeat(3)}`,
+        }),
+      ],
+    });
+
+    await page.goto('/activity');
+    const row = page.getByTestId('activity-event-12');
+    await expect(row).toBeVisible({ timeout: 15_000 });
+
+    const line = row.locator('.activity-row__line');
+    const summary = row.locator('.activity-row__summary');
+    const toggle = row.getByRole('button', { name: 'More for event 12' });
+    const [lineBox, summaryBox, toggleBox, timeBox] = await Promise.all([
+      line.boundingBox(),
+      summary.boundingBox(),
+      toggle.boundingBox(),
+      row.locator('.activity-row__time').boundingBox(),
+    ]);
+    if (!lineBox || !summaryBox || !toggleBox || !timeBox) throw new Error('row not laid out');
+
+    // It did wrap: this is the two-line case, not a row that happened to fit.
+    expect(summaryBox.height).toBeGreaterThan(timeBox.height * 1.5);
+    // The toggle is still on the summary's first line, at the right.
+    expect(toggleBox.y).toBeLessThan(timeBox.y + timeBox.height);
+    expect(toggleBox.x + toggleBox.width).toBeGreaterThan(lineBox.x + lineBox.width * 0.8);
+    // And the line ends where the words do: no empty band under them.
+    expect(lineBox.y + lineBox.height - (summaryBox.y + summaryBox.height)).toBeLessThan(4);
+
+    // The narrowest desk width still holds the parts on one line without
+    // running the row off the side of the list.
+    await page.setViewportSize({ width: 760, height: 900 });
+    const [narrowLine, narrowRow] = await Promise.all([line.boundingBox(), row.boundingBox()]);
+    if (!narrowLine || !narrowRow) throw new Error('row not laid out');
+    expect(narrowLine.x + narrowLine.width).toBeLessThanOrEqual(narrowRow.x + narrowRow.width + 1);
   });
 
   test('Activity draws its controls once: a late family list and a chip’s note move nothing @action:activity.steady_controls', async ({
