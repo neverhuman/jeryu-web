@@ -23,9 +23,7 @@ describe('DiffFileTree', () => {
       <DiffFileTree
         files={files}
         activePath={null}
-        viewedPaths={new Set()}
         onSelect={vi.fn()}
-        onToggleViewed={vi.fn()}
       />,
     );
     const base = screen.getByText('b.rs');
@@ -42,9 +40,7 @@ describe('DiffFileTree', () => {
       <DiffFileTree
         files={files}
         activePath={null}
-        viewedPaths={new Set()}
         onSelect={vi.fn()}
-        onToggleViewed={vi.fn()}
       />,
     );
     // The status is part of the row button's name, not an `aria-label` on a
@@ -76,9 +72,7 @@ describe('DiffFileTree rows', () => {
       <DiffFileTree
         files={[file({})]}
         activePath={null}
-        viewedPaths={new Set()}
         onSelect={vi.fn()}
-        onToggleViewed={vi.fn()}
       />,
     );
     expect(screen.getByRole('button', { name: /src\/login\.rs/ })).toBeInTheDocument();
@@ -89,9 +83,7 @@ describe('DiffFileTree rows', () => {
       <DiffFileTree
         files={[file({ risk: 'critical' })]}
         activePath={null}
-        viewedPaths={new Set()}
         onSelect={vi.fn()}
-        onToggleViewed={vi.fn()}
       />,
     );
     const dot = screen.getByTestId('diff-risk-critical');

@@ -44,10 +44,8 @@ function show(diff: PullDiffState, activePath: string | null = FILE.path): {
       diff={diff}
       activePath={activePath}
       activeFile={diff.data?.files.find((file) => file.path === activePath)}
-      viewedPaths={new Set()}
       diffMode="unified"
       onSelectFile={onSelectFile}
-      onToggleViewed={vi.fn()}
       onDiffModeChange={vi.fn()}
     />
   );

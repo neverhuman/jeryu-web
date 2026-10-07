@@ -303,6 +303,44 @@ test('the Files tab shows a whole path at 1440px, and resizes @action:pr.files_t
   await expect(page.getByTestId('pr-files-tree')).toHaveCount(0);
 });
 
+test('Split shows the base and the head side by side @action:pr.diff_split', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seed(page);
+  await page.goto(`${BASE}/files?path=src%2Flogin.rs`);
+
+  const viewer = page.getByRole('region', { name: 'Diff for src/login.rs' });
+  await expect(viewer).toBeVisible({ timeout: 15_000 });
+  // Each row's counts sit at the right edge of the tree, nothing after them.
+  const row = page.getByTestId('pr-files-tree').getByRole('button', {
+    name: /src\/session\.rs/,
+  });
+  const gap = await row.evaluate((node) => {
+    const counts = node.querySelector('.diff-file-tree__counts');
+    return node.getBoundingClientRect().right - (counts?.getBoundingClientRect().right ?? 0);
+  });
+  expect(gap).toBeLessThan(2);
+
+  const split = viewer.getByRole('button', { name: 'Split' });
+  await split.click();
+  await expect(split).toHaveAttribute('aria-pressed', 'true');
+  // The deletion is on the left, the addition on the right.
+  const removed = viewer.locator('.diff-viewer__side--del');
+  const added = viewer.locator('.diff-viewer__side--add');
+  await expect(removed).toContainText('stay silent');
+  await expect(added).toContainText('say why');
+  const [left, right] = await Promise.all([
+    removed.first().boundingBox(),
+    added.first().boundingBox(),
+  ]);
+  expect(left!.x).toBeLessThan(right!.x);
+
+  await viewer.getByRole('button', { name: 'Unified' }).click();
+  await expect(viewer.locator('.diff-viewer__side')).toHaveCount(0);
+  await expect(viewer.locator('.diff-viewer__row--del')).toContainText('stay silent');
+});
+
 test('a diff that cannot be read is an alert, not an empty pull request @action:pr.diff_error', async ({
   page,
 }) => {

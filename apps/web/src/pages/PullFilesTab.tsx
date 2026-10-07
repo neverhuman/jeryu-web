@@ -53,10 +53,8 @@ export interface PullFilesTabProps {
   diff: PullDiffState;
   activePath: string | null;
   activeFile: PullRequestDiffFile | undefined;
-  viewedPaths: Set<string>;
   diffMode: string;
   onSelectFile: (path: string) => void;
-  onToggleViewed: (path: string, viewed: boolean) => void;
   onDiffModeChange: (mode: DiffViewerMode) => void;
 }
 
@@ -64,10 +62,8 @@ export function PullFilesTab({
   diff,
   activePath,
   activeFile,
-  viewedPaths,
   diffMode,
   onSelectFile,
-  onToggleViewed,
   onDiffModeChange,
 }: PullFilesTabProps): JSX.Element {
   const narrow = useMediaQuery(NARROW);
@@ -143,9 +139,7 @@ export function PullFilesTab({
     <DiffFileTree
       files={files}
       activePath={activePath}
-      viewedPaths={viewedPaths}
       onSelect={onSelectFile}
-      onToggleViewed={onToggleViewed}
     />
   );
 

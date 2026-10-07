@@ -5,10 +5,10 @@
 //   * Risk dot — when the backend tags a file with low / medium / high /
 //     critical risk, one coloured dot carries it, named in its tooltip and to
 //     a screen reader. A full word per row cost the path its room.
-//   * Viewed checkbox — appears when the row is hovered or focused, and stays
-//     once ticked. Local state only; remembered across navigation but not yet
-//     persisted server-side (the §35.2.4 spec carries it client-side for now).
-//   * Additions / deletions counters.
+//   * Additions / deletions counters, pinned to the right edge.
+//
+// There is no "Viewed" checkbox: it was browser-only state the server never
+// saw, and its hidden slot kept the counters off the right edge.
 //
 // The path is shown whole: `src/login.rs` reading as `login` or `ca` told the
 // reviewer nothing, so a long path wraps rather than being cut.
@@ -21,8 +21,6 @@ import {
   Pencil,
   type LucideIcon,
 } from 'lucide-react';
-import type { ChangeEvent } from 'react';
-
 import type {
   PullRequestDiffFile,
   PullRequestFileStatus,
@@ -83,19 +81,14 @@ export interface DiffFileTreeProps {
   files: PullRequestDiffFile[];
   /** Currently selected file path. */
   activePath: string | null;
-  /** Set of file paths the user has marked as viewed. */
-  viewedPaths: Set<string>;
   onSelect: (path: string) => void;
-  onToggleViewed: (path: string, viewed: boolean) => void;
   className?: string;
 }
 
 export function DiffFileTree({
   files,
   activePath,
-  viewedPaths,
   onSelect,
-  onToggleViewed,
   className,
 }: DiffFileTreeProps): JSX.Element {
   if (files.length === 0) {
@@ -115,16 +108,10 @@ export function DiffFileTree({
         {files.map((file) => {
           const Icon = STATUS_ICONS[file.status] ?? CircleDot;
           const isActive = file.path === activePath;
-          const isViewed = viewedPaths.has(file.path);
-          const checkboxId = `diff-viewed-${file.path.replace(/[^a-z0-9]/gi, '-')}`;
-          const handleCheckbox = (event: ChangeEvent<HTMLInputElement>): void => {
-            event.stopPropagation();
-            onToggleViewed(file.path, event.target.checked);
-          };
           return (
             <li key={file.path}>
               <div
-                className={`diff-file-tree__row ${isActive ? 'diff-file-tree__row--active' : ''} ${isViewed ? 'diff-file-tree__row--viewed' : ''}`.trim()}
+                className={`diff-file-tree__row ${isActive ? 'diff-file-tree__row--active' : ''}`.trim()}
                 data-status={file.status}
               >
                 <button
@@ -136,7 +123,7 @@ export function DiffFileTree({
                   <span
                     className={`diff-file-tree__status diff-file-tree__status--${file.status}`}
                   >
-                    <Icon aria-hidden="true" size={12} />
+                    <Icon aria-hidden="true" size={16} />
                     {/* `aria-label` on a span with no role is dropped, which
                         left the status announced as nothing: say it in text. */}
                     <span className="sr-only">{STATUS_LABELS[file.status]} </span>
@@ -167,21 +154,6 @@ export function DiffFileTree({
                   </span>
                   {file.risk ? <RiskDot risk={file.risk} /> : null}
                 </button>
-                <label
-                  className="diff-file-tree__viewed"
-                  htmlFor={checkboxId}
-                  title="Mark as viewed"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <input
-                    id={checkboxId}
-                    type="checkbox"
-                    checked={isViewed}
-                    onChange={handleCheckbox}
-                    aria-label={`Mark ${file.path} as viewed`}
-                  />
-                  <span className="diff-file-tree__viewed-label">Viewed</span>
-                </label>
               </div>
             </li>
           );

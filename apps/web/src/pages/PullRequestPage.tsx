@@ -31,7 +31,7 @@
 // `concurrency_conflict` so reviewers see all known drift cases.
 
 import { GitBranch, RefreshCcw, ShieldAlert } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
@@ -168,7 +168,6 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   // Which file of the diff is open is a property of the URL, so a thread, a
   // review comment or a bookmark can point at one file.
   const [search, setSearch] = useSearchParams();
-  const [viewedPaths, setViewedPaths] = useState<Set<string>>(() => new Set());
   const diffMode = usePreferencesStore((s) => s.diffMode);
   const setDiffMode = usePreferencesStore((s) => s.setDiffMode);
 
@@ -190,15 +189,6 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     if (!diff.data || !activeFilePath) return;
     return diff.data.files.find((f) => f.path === activeFilePath);
   }, [diff.data, activeFilePath]);
-
-  const handleToggleViewed = useCallback((path: string, viewed: boolean) => {
-    setViewedPaths((prev) => {
-      const next = new Set(prev);
-      if (viewed) next.add(path);
-      else next.delete(path);
-      return next;
-    });
-  }, []);
 
   const handleApprove = useCallback(
     async (expectedHeadSha: string) => {
@@ -475,10 +465,8 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
             diff={diff}
             activePath={activeFilePath}
             activeFile={activeFile}
-            viewedPaths={viewedPaths}
             diffMode={diffMode}
             onSelectFile={setActiveFilePath}
-            onToggleViewed={handleToggleViewed}
             onDiffModeChange={(mode: DiffViewerMode) => setDiffMode(mode)}
           />
         ) : tab === 'checks' ? (

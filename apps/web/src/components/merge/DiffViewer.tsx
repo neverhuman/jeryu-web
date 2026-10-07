@@ -6,89 +6,27 @@
 // colour it; clicking the line number opens an inline-comment composer
 // anchored to that line.
 //
-// `mode` is a viewer preference (unified vs split). Phase 3 ships the
-// unified renderer; the split variant lays out left/right gutters but
-// reuses the same row data. Toggle is wired here so the cockpit page can
-// keep the preference in the preferences store.
+// `mode` is a viewer preference kept in the preferences store. Unified is
+// one row per line at a fixed height; split puts base and head side by side
+// (see `diffRowsModel.ts`) and wraps long lines, so its rows are measured.
 
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { MessageSquarePlus } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
-import type {
-  PullRequestDiffFile,
-  PullRequestDiffHunk,
-} from '../../api/types';
+import type { PullRequestDiffFile } from '../../api/types';
 import { ActionButton } from '../action/ActionButton';
 
+import {
+  flattenHunks,
+  splitRows,
+  type SplitRow,
+  type SplitSide,
+} from './diffRowsModel';
 import { InlineComment } from './InlineComment';
 import './merge.css';
 
 export type DiffViewerMode = 'unified' | 'split';
-
-interface DiffRow {
-  /** Flattened key for React. */
-  key: string;
-  /** Hunk header (purely informational) or a normal diff line. */
-  kind: 'hunk' | 'context' | 'add' | 'del';
-  /** Base (left) line number. */
-  baseLine: number | null;
-  /** Head (right) line number. */
-  headLine: number | null;
-  /** Raw line text without the leading prefix. */
-  text: string;
-}
-
-function flatten(hunks: PullRequestDiffHunk[]): DiffRow[] {
-  const rows: DiffRow[] = [];
-  for (let h = 0; h < hunks.length; h += 1) {
-    const hunk = hunks[h]!;
-    rows.push({
-      key: `h${h}:${hunk.header}`,
-      kind: 'hunk',
-      baseLine: null,
-      headLine: null,
-      text: hunk.header,
-    });
-    let baseLine = hunk.old_start;
-    let headLine = hunk.new_start;
-    for (let i = 0; i < hunk.lines.length; i += 1) {
-      const line = hunk.lines[i]!;
-      const prefix = line[0] ?? ' ';
-      const text = line.slice(1);
-      if (prefix === '+') {
-        rows.push({
-          key: `${h}:+${headLine}:${i}`,
-          kind: 'add',
-          baseLine: null,
-          headLine,
-          text,
-        });
-        headLine += 1;
-      } else if (prefix === '-') {
-        rows.push({
-          key: `${h}:-${baseLine}:${i}`,
-          kind: 'del',
-          baseLine,
-          headLine: null,
-          text,
-        });
-        baseLine += 1;
-      } else {
-        rows.push({
-          key: `${h}: ${headLine}:${i}`,
-          kind: 'context',
-          baseLine,
-          headLine,
-          text,
-        });
-        baseLine += 1;
-        headLine += 1;
-      }
-    }
-  }
-  return rows;
-}
 
 const ROW_HEIGHT_PX = 20;
 
@@ -108,13 +46,15 @@ export function DiffViewer({
   onAddComment,
   className,
 }: DiffViewerProps): JSX.Element {
-  const rows = useMemo(() => flatten(file.hunks), [file.hunks]);
+  const rows = useMemo(() => flattenHunks(file.hunks), [file.hunks]);
+  const split = mode === 'split';
+  const pairs = useMemo(() => (split ? splitRows(rows) : []), [split, rows]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [composerLine, setComposerLine] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const virtualizer = useVirtualizer({
-    count: rows.length,
+    count: split ? pairs.length : rows.length,
     getScrollElement: () => containerRef.current,
     estimateSize: () => ROW_HEIGHT_PX,
     overscan: 12,
@@ -129,6 +69,68 @@ export function DiffViewer({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const renderSide = (
+    side: SplitSide | null,
+    which: 'left' | 'right',
+  ): JSX.Element => {
+    // A deletion is commented on by its base line and everything on the right
+    // by its head line: the anchors the unified view uses.
+    const commentable =
+      onAddComment && side && (which === 'right' || side.kind === 'del');
+    return (
+      <div
+        className={`diff-viewer__side diff-viewer__side--${side?.kind ?? 'empty'}`}
+      >
+        <span className="diff-viewer__gutter">{side?.line ?? ''}</span>
+        <span className="diff-viewer__prefix">
+          {side?.kind === 'add' ? '+' : side?.kind === 'del' ? '−' : ' '}
+        </span>
+        <span className="diff-viewer__text">{side?.text ?? ''}</span>
+        {commentable ? (
+          <button
+            type="button"
+            className="diff-viewer__add-comment"
+            aria-label={`Comment on line ${side.line}`}
+            onClick={() => setComposerLine(side.line)}
+          >
+            <MessageSquarePlus aria-hidden="true" size={10} />
+          </button>
+        ) : null}
+      </div>
+    );
+  };
+
+  // Split rows wrap long lines, so each is measured rather than fixed.
+  const renderPair = (
+    pair: SplitRow | undefined,
+    virtualRow: VirtualItem,
+  ): JSX.Element | undefined => {
+    if (!pair) return;
+    return (
+      <div
+        key={pair.key}
+        ref={virtualizer.measureElement}
+        data-index={virtualRow.index}
+        className={`diff-viewer__row diff-viewer__row--split ${pair.kind === 'hunk' ? 'diff-viewer__row--hunk' : ''}`.trim()}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          transform: `translateY(${virtualRow.start}px)`,
+        }}
+      >
+        {pair.kind === 'hunk' ? (
+          <span className="diff-viewer__hunk-header">{pair.text}</span>
+        ) : (
+          <>
+            {renderSide(pair.left, 'left')}
+            {renderSide(pair.right, 'right')}
+          </>
+        )}
+      </div>
+    );
   };
 
   if (file.is_binary) {
@@ -193,6 +195,7 @@ export function DiffViewer({
           }}
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
+            if (split) return renderPair(pairs[virtualRow.index], virtualRow);
             const row = rows[virtualRow.index];
             if (!row) return;
             const line = row.headLine ?? row.baseLine;

@@ -208,10 +208,6 @@
   background-color: var(--color-accent-primary-bg);
 }
 
-.diff-file-tree__row--viewed {
-  opacity: 0.55;
-}
-
 .diff-file-tree__button {
   flex: 1 1 auto;
   display: flex;
@@ -233,29 +229,17 @@
 
 .diff-file-tree__status {
   display: inline-flex;
-  width: 18px;
-  height: 18px;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
 }
 
-.diff-file-tree__status--added {
-  color: var(--color-accent-success);
-  background-color: var(--color-accent-success-bg);
-}
-.diff-file-tree__status--modified {
-  color: var(--color-accent-info);
-  background-color: var(--color-accent-info-bg);
-}
-.diff-file-tree__status--removed {
-  color: var(--color-accent-danger);
-  background-color: var(--color-accent-danger-bg);
-}
-.diff-file-tree__status--renamed {
-  color: var(--color-accent-warning);
-  background-color: var(--color-accent-warning-bg);
-}
+.diff-file-tree__status--added { color: var(--color-accent-success); }
+.diff-file-tree__status--modified { color: var(--color-accent-info); }
+.diff-file-tree__status--removed { color: var(--color-accent-danger); }
+.diff-file-tree__status--renamed { color: var(--color-accent-warning); }
 
 /* The whole path, wrapped if it has to be: never cut to `ca` or `login`. */
 .diff-file-tree__path {
@@ -281,6 +265,8 @@
 }
 
 .diff-file-tree__counts {
+  flex: 0 0 auto;
+  margin-left: auto;
   display: inline-flex;
   gap: 4px;
   font-size: var(--font-size-xs);
@@ -293,25 +279,6 @@
 
 .diff-file-tree__deletions {
   color: var(--color-accent-danger);
-}
-
-/* Viewed is offered when the row is pointed at or focused, and stays once
- * ticked: a checkbox per row, always on, was half the width of the column. */
-.diff-file-tree__viewed {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  opacity: 0;
-}
-
-.diff-file-tree__row:hover .diff-file-tree__viewed,
-.diff-file-tree__row:focus-within .diff-file-tree__viewed,
-.diff-file-tree__row--viewed .diff-file-tree__viewed {
-  opacity: 1;
 }
 
 /* One dot for the risk tier; the tooltip and the screen reader say which. */
@@ -327,10 +294,6 @@
 .diff-file-tree__risk--medium { background-color: var(--color-accent-info); }
 .diff-file-tree__risk--high { background-color: var(--color-accent-warning); }
 .diff-file-tree__risk--critical { background-color: var(--color-accent-danger); }
-
-.diff-file-tree__viewed input {
-  margin: 0;
-}
 
 /* ─── DiffViewer ─────────────────────────────────────────────────── */
 
@@ -436,6 +399,53 @@
 
 .diff-viewer__text {
   flex: 0 0 auto;
+}
+
+/* Split: base on the left, head on the right, each half the width. Long
+ * lines wrap inside their half instead of widening the row. */
+.diff-viewer__row--split {
+  width: 100%;
+  height: auto;
+  min-height: 20px;
+  align-items: stretch;
+  white-space: normal;
+  padding-left: 0;
+}
+
+.diff-viewer__side {
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+.diff-viewer__side + .diff-viewer__side {
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+.diff-viewer__side--add {
+  background-color: var(--color-accent-success-bg);
+}
+.diff-viewer__side--del {
+  background-color: var(--color-accent-danger-bg);
+}
+.diff-viewer__side--empty {
+  background-color: var(--color-bg-2);
+}
+
+.diff-viewer__side .diff-viewer__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff-viewer__row--split:hover .diff-viewer__add-comment {
+  opacity: 0;
+}
+.diff-viewer__side:hover .diff-viewer__add-comment {
+  opacity: 1;
+  border-color: var(--color-border-subtle);
 }
 
 .diff-viewer__add-comment {

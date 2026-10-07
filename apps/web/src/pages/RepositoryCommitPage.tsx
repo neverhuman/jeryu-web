@@ -32,9 +32,6 @@ import { commitPath, commitsPath } from './repoCommitsModel';
 
 import './page.css';
 
-/** No file is marked viewed outside review; the tree still wants the set. */
-const NONE_VIEWED: Set<string> = new Set();
-
 export interface RepositoryCommitPageProps {
   provider: string;
   fullName: string;
@@ -169,9 +166,7 @@ export function RepositoryCommitPage({
                 <DiffFileTree
                   files={files}
                   activePath={activeFile?.path ?? null}
-                  viewedPaths={NONE_VIEWED}
                   onSelect={setSelected}
-                  onToggleViewed={() => undefined}
                 />
               </div>
               {activeFile ? (
