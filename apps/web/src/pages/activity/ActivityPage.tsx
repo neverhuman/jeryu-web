@@ -43,6 +43,7 @@ import {
   type ActivityFilters,
 } from './activityModel';
 import { useArrivingRows } from './arrivalsModel';
+import { badgedTitle, useAwayCount } from './badgeModel';
 import {
   HISTOGRAM_RANGES,
   chipCounts,
@@ -87,7 +88,6 @@ export interface ActivityPageProps {
 }
 
 export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
-  usePageTitle(repo ? `${repo} · Activity` : 'Activity');
   const [params, setParams] = useSearchParams();
   const wall = isWallMode(params);
   // The family comes from the shell's scope: `?family=` when this address
@@ -160,6 +160,15 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
     filterId,
     still
   );
+  // What the tab says while the reader is elsewhere. The count is read off the
+  // raw feed, not the held list: a row waiting behind the pill has still
+  // arrived, and it is the row that wants a person.
+  const away = useAwayCount(
+    all.map((event) => event.seq),
+    all.filter((event) => event.needs_human).map((event) => event.seq),
+    filterId
+  );
+  usePageTitle(badgedTitle(repo ? `${repo} · Activity` : 'Activity', away));
 
   // Under the list: coming into view is the reader asking for the next older
   // page, so they do not have to reach the bottom and press a button. The
