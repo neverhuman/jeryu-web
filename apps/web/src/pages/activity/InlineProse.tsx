@@ -20,10 +20,15 @@ import { proseSpans, type ProseSpan } from './proseModel';
 export function InlineProse({
   text,
   link = null,
+  linkTabIndex,
 }: {
   text: string;
   /** The subject of a summary, placed where the text names it. */
   link?: EventLink | null;
+  /** Where the prose sits on a keyboard-walked row, -1 keeps its links out of
+   *  Tab's way until the reader has walked to that row (see
+   *  `insideRowTabIndex`). */
+  linkTabIndex?: number;
 }): JSX.Element {
   const spans = proseSpans(text);
   const at = link ? spans.findIndex((span) => span.kind !== 'link' && span.text.includes(link.label)) : -1;
@@ -31,15 +36,15 @@ export function InlineProse({
     <>
       {spans.map((span, index) =>
         link && index === at ? (
-          <Fragment key={index}>{split(span, link)}</Fragment>
+          <Fragment key={index}>{split(span, link, linkTabIndex)}</Fragment>
         ) : (
-          <Fragment key={index}>{element(span)}</Fragment>
+          <Fragment key={index}>{element(span, linkTabIndex)}</Fragment>
         ),
       )}
       {link && at < 0 ? (
         <>
           {spans.length > 0 ? ' ' : null}
-          <Link to={link.to} className="activity-row__link">
+          <Link to={link.to} className="activity-row__link" tabIndex={linkTabIndex}>
             {link.label}
           </Link>
         </>
@@ -49,12 +54,12 @@ export function InlineProse({
 }
 
 /** The span with the subject's words handed to the link, emphasis kept. */
-function split(span: ProseSpan, link: EventLink): JSX.Element {
+function split(span: ProseSpan, link: EventLink, linkTabIndex?: number): JSX.Element {
   const cut = span.text.indexOf(link.label);
   return (
     <>
       {element({ ...span, text: span.text.slice(0, cut) } as ProseSpan)}
-      <Link to={link.to} className="activity-row__link">
+      <Link to={link.to} className="activity-row__link" tabIndex={linkTabIndex}>
         {link.label}
       </Link>
       {element({ ...span, text: span.text.slice(cut + link.label.length) } as ProseSpan)}
@@ -62,18 +67,18 @@ function split(span: ProseSpan, link: EventLink): JSX.Element {
   );
 }
 
-function element(span: ProseSpan): JSX.Element | null {
+function element(span: ProseSpan, linkTabIndex?: number): JSX.Element | null {
   if (span.text === '') return null;
   if (span.kind === 'strong') return <strong>{span.text}</strong>;
   if (span.kind === 'em') return <em>{span.text}</em>;
   if (span.kind === 'code') return <code>{span.text}</code>;
   if (span.kind === 'link') {
     return span.href.startsWith('/') ? (
-      <Link to={span.href} className="activity-row__link">
+      <Link to={span.href} className="activity-row__link" tabIndex={linkTabIndex}>
         {span.text}
       </Link>
     ) : (
-      <a href={span.href} target="_blank" rel="noreferrer">
+      <a href={span.href} target="_blank" rel="noreferrer" tabIndex={linkTabIndex}>
         {span.text}
       </a>
     );

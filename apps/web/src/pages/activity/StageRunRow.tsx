@@ -10,6 +10,7 @@ import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../for
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { EventRow } from './EventRow';
 import { InlineProse } from './InlineProse';
+import { insideRowTabIndex } from './rowKeysModel';
 import { type StageRun, stageRunTitle, stageSteps, summaryParts, summaryText } from './activityModel';
 
 import './Activity.css';
@@ -39,6 +40,7 @@ export function StageRunRow({
   const summary = summaryParts(latest, forgeHost(latest.repo ?? undefined));
   const steps = stageSteps(run);
   const detailId = `activity-stages-detail-${latest.seq}`;
+  const insideTab = insideRowTabIndex(focused, tabStop);
   const whenText =
     now !== undefined && isSameLocalDay(latest.ts, now) ? relativeText(latest.ts, now) : clockText(latest.ts);
 
@@ -72,7 +74,7 @@ export function StageRunRow({
           ))}
         </ol>
         <span className="activity-row__summary">
-          <InlineProse text={summaryText(latest)} link={summary.link} />
+          <InlineProse text={summaryText(latest)} link={summary.link} linkTabIndex={insideTab} />
         </span>
         <span className="activity-row__meta">{run.events.length} steps</span>
         <button
@@ -81,6 +83,7 @@ export function StageRunRow({
           aria-expanded={open}
           aria-controls={detailId}
           aria-label={`${open ? 'Hide' : 'Show'} the ${run.events.length} stage events of slot ${run.slot}`}
+          tabIndex={insideTab}
           onClick={() => onOpenChange?.(latest.seq, !open)}
           data-testid={`activity-stages-toggle-${latest.seq}`}
         >

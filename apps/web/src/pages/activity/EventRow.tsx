@@ -29,6 +29,7 @@ import { useForgeHost } from '../../hooks/useForgeHost';
 import { formatCost, shortSha } from '../shift/shiftModel';
 import { InlineProse } from './InlineProse';
 import { badLineCount, logLines } from './logModel';
+import { insideRowTabIndex } from './rowKeysModel';
 import { sourceMark } from './sourceModel';
 import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
 import {
@@ -117,6 +118,9 @@ export function EventRow({
   const detailId = `activity-event-detail-${event.seq}`;
   const toggleLabel = open ? 'Hide' : event.log_tail ? 'Log' : event.reason ? 'Why' : 'More';
   const quiet = !open && !hasDetail(event);
+  // One stop per row, not three: on a row the keyboard has not walked to, the
+  // controls on its line stand aside for Tab.
+  const insideTab = insideRowTabIndex(focused, tabStop);
   const duration = formatSeconds(event.seconds);
   // A bar behind the duration, as long as this row's share of the longest run
   // of its kind: a slow gate or a long attempt stands out without reading.
@@ -173,7 +177,7 @@ export function EventRow({
           {eventLabel(event)}
         </span>
         <span className="activity-row__summary">
-          <InlineProse text={summaryText(event)} link={summary.link} />
+          <InlineProse text={summaryText(event)} link={summary.link} linkTabIndex={insideTab} />
         </span>
         {needsHuman ? <span className={pillClass('human')}>needs you</span> : null}
         {event.needs_human && resolved ? (
@@ -207,6 +211,7 @@ export function EventRow({
           aria-expanded={open}
           aria-controls={detailId}
           aria-label={`${toggleLabel} for event ${event.seq}`}
+          tabIndex={insideTab}
           onClick={toggle}
         >
           {toggleLabel}

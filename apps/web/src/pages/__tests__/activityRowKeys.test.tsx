@@ -1,15 +1,17 @@
 // activityRowKeys.test.tsx — the keyboard's way down the Activity list: j/k
 // and the arrows moving a visible focus, Enter and `o` opening the row it
 // rests on, `/` going to More filters, and all of them standing aside while
-// the reader is typing in a field.
+// the reader is typing in a field. Also the one tab stop a row costs: Tab
+// reaches the list once, and the skip link past it reaches "Load older".
 
 import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ActivityPage } from '../activity';
-import { stepSeq } from '../activity/rowKeysModel';
+import { insideRowTabIndex, stepSeq } from '../activity/rowKeysModel';
 import { mockPipelineApi } from './pipelinePageHelpers';
-import { renderAt } from './shiftPageHelpers';
+import { eventPage } from './pipelineTestData';
+import { json, renderAt } from './shiftPageHelpers';
 
 function renderPage(path = '/activity'): void {
   renderAt(path, '/activity', <ActivityPage />);
@@ -36,6 +38,18 @@ describe('stepSeq', () => {
 
   it('comes back onto the list when the row it left is gone', () => {
     expect(stepSeq([12, 11], 99, 1)).toBe(12);
+  });
+});
+
+describe('insideRowTabIndex', () => {
+  it('offers the row the keyboard rests on, and nothing else', () => {
+    expect(insideRowTabIndex(true, false)).toBeUndefined();
+    expect(insideRowTabIndex(false, true)).toBeUndefined();
+    expect(insideRowTabIndex(false, false)).toBe(-1);
+  });
+
+  it('takes nothing away from a row outside a walked list', () => {
+    expect(insideRowTabIndex(undefined, false)).toBeUndefined();
   });
 });
 
@@ -130,3 +144,51 @@ describe('Activity keyboard rows', () => {
     expect(screen.queryByText('release.staged')).toBeNull();
   });
 });
+
+describe('Activity list tab stops', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('keeps the controls on a row the keyboard has not walked to out of Tab', async () => {
+    mockPipelineApi();
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+
+    // Before any key the newest row is where Tab lands, so its own controls
+    // are ordinary stops behind it; every other row offers none.
+    for (const control of focusable(row(12))) expect(control).not.toHaveAttribute('tabindex', '-1');
+    for (const control of focusable(row(11))) expect(control).toHaveAttribute('tabindex', '-1');
+
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j' });
+    expect(row(11)).toHaveClass('is-focused');
+    for (const control of focusable(row(11))) expect(control).not.toHaveAttribute('tabindex', '-1');
+    for (const control of focusable(row(12))) expect(control).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('skips the list to Load older', async () => {
+    mockPipelineApi((req) => {
+      if (req.pathname !== '/api/v1/events') return undefined;
+      const qs = new URLSearchParams(req.search);
+      if (qs.get('after_seq')) return json({ events: [], latest_seq: 200 });
+      return json({ events: eventPage(200, 8), latest_seq: 200, has_more: true });
+    });
+    renderPage();
+    await screen.findByTestId('activity-event-200');
+
+    fireEvent.click(screen.getByTestId('activity-skip-older'));
+    expect(screen.getByRole('button', { name: 'Load older' })).toHaveFocus();
+  });
+
+  it('offers no skip link when there is no older page', async () => {
+    mockPipelineApi();
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+    expect(screen.queryByTestId('activity-skip-older')).toBeNull();
+  });
+});
+
+/** Every control on a row's own line, detail aside. */
+function focusable(element: HTMLElement): HTMLElement[] {
+  const line = element.querySelector('.activity-row__line');
+  return [...(line?.querySelectorAll<HTMLElement>('a, button') ?? [])];
+}

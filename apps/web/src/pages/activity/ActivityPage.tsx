@@ -108,6 +108,9 @@ import { useCountUp } from '../../hooks/useCountUp';
 import '../page.css';
 import './Activity.css';
 
+/** The "Load older" button, so the skip link above the list can reach it. */
+const LOAD_OLDER_ID = 'activity-load-older';
+
 const FILTER_LABEL: Record<(typeof MORE_FILTER_KEYS)[number], string> = {
   repo: 'Repo',
   source: 'Source',
@@ -245,7 +248,9 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
 
   // The keyboard's own way down the list: j/k and the arrows move a focus from
   // row to row, Enter or `o` opens the one it rests on, `/` goes to the
-  // filters. The wall has no reader at a keyboard.
+  // filters. Tab reaches the list once and leaves it again (the roving
+  // tabindex, in `rowKeysModel`), and the skip link above it goes straight to
+  // the next older page. The wall has no reader at a keyboard.
   const listRef = useRef<HTMLOListElement | null>(null);
   const moreFilters = useRef<HTMLDetailsElement | null>(null);
   const openMoreFilters = useCallback((): void => {
@@ -486,6 +491,22 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
               </button>
             </div>
           ) : null}
+          {/* Past the list in one press: the rows are one tab stop between them
+              (the roving tabindex), but reaching the next older page still
+              means stepping over whatever is open on the way down. */}
+          {!wall && feed.hasOlder ? (
+            <a
+              className="skip-link"
+              href={`#${LOAD_OLDER_ID}`}
+              data-testid="activity-skip-older"
+              onClick={(event) => {
+                event.preventDefault();
+                document.getElementById(LOAD_OLDER_ID)?.focus();
+              }}
+            >
+              Skip to Load older
+            </a>
+          ) : null}
           <ol className="activity__list" aria-label="Pipeline events" ref={listRef}>
             {groupRowsByDay(rows).map((group) => (
               <Fragment key={group.day}>
@@ -555,7 +576,12 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           </ol>
           {wall ? null : <div ref={endOfList} data-testid="activity-older-sentinel" aria-hidden="true" />}
           {wall ? null : feed.hasOlder ? (
-            <ActionButton variant="ghost" disabled={feed.loadingOlder} onClick={feed.loadOlder}>
+            <ActionButton
+              id={LOAD_OLDER_ID}
+              variant="ghost"
+              disabled={feed.loadingOlder}
+              onClick={feed.loadOlder}
+            >
               {feed.loadingOlder ? 'Loading…' : 'Load older'}
             </ActionButton>
           ) : (

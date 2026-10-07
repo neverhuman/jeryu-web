@@ -116,7 +116,18 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await expect(page.getByRole('banner').getByRole('link', { name: /repositor/i })).toHaveCount(0);
   await expect(page.getByRole('banner').getByRole('button', { name: /repositor/i })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Collapse sidebar' }).click();
+  // The rail's collapse control is transparent until the pointer is near it,
+  // but Tab reaches it either way: focus has to bring it back, or the keyboard
+  // lands on something invisible.
+  const collapse = page.getByRole('button', { name: 'Collapse sidebar' });
+  await expect(collapse).toHaveCSS('opacity', '0');
+  // From the last thing in the nav itself: the control is the next stop after it.
+  await page.locator('.left-nav a, .left-nav button').last().focus();
+  await page.keyboard.press('Tab');
+  await expect(collapse).toBeFocused();
+  await expect(collapse).toHaveCSS('opacity', '1');
+
+  await collapse.click();
   await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
   await page.getByRole('button', { name: 'Expand sidebar' }).click();
 

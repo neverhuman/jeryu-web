@@ -71,6 +71,9 @@
 }
 
 .app-shell__leftnav:hover .app-shell__sidebar-toggle,
+/* Tab reaches this button whether or not the pointer is near the rail, so a
+   keyboard reader has to be able to see where they are: focus shows it. */
+.app-shell__sidebar-toggle:focus-visible,
 .app-shell--sidebar-collapsed .app-shell__sidebar-toggle {
   opacity: 1;
 }

@@ -10,6 +10,7 @@ import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { EventRow } from './EventRow';
 import { burstTitle, type EventBurst, eventLabel, eventTone } from './activityModel';
+import { insideRowTabIndex } from './rowKeysModel';
 
 import './Activity.css';
 
@@ -37,6 +38,7 @@ export function BurstRow({
   const tone = eventTone(latest);
   const count = burst.events.length;
   const detailId = `activity-burst-detail-${latest.seq}`;
+  const insideTab = insideRowTabIndex(focused, tabStop);
   const whenText =
     now !== undefined && isSameLocalDay(latest.ts, now) ? relativeText(latest.ts, now) : clockText(latest.ts);
 
@@ -66,6 +68,7 @@ export function BurstRow({
           aria-expanded={open}
           aria-controls={detailId}
           aria-label={`${open ? 'Hide' : 'Show'} the ${count} events of ${burstTitle(burst)}`}
+          tabIndex={insideTab}
           onClick={() => onOpenChange?.(latest.seq, !open)}
           data-testid={`activity-burst-toggle-${latest.seq}`}
         >

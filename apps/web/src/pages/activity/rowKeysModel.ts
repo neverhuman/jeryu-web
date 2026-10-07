@@ -32,6 +32,24 @@ export function stepSeq(
   return seqs[next];
 }
 
+/**
+ * The tabindex for a control on a row's own line — its toggle, the link in its
+ * summary. A hundred rows with two stops each is two hundred presses of Tab to
+ * cross the list, so only the row the keyboard rests on offers its controls to
+ * Tab; the others are reached by walking to them with `j`/`k` first. Outside a
+ * keyboard-walked list (`focused` not given at all) nothing is taken away.
+ *
+ * What a row opens is not covered: a reader who asked for the detail asked for
+ * its copy buttons and links too, and there are only ever a few open rows.
+ */
+export function insideRowTabIndex(
+  focused: boolean | undefined,
+  tabStop: boolean
+): number | undefined {
+  if (focused === undefined) return undefined;
+  return focused || tabStop ? undefined : -1;
+}
+
 /** The keys this list answers, as the help overlay prints them. */
 const ROW_KEY_HELP = [
   { combo: 'j', label: 'Next event (Down with the list focused)', group: 'Activity' },
