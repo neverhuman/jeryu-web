@@ -7,8 +7,12 @@
 // resume.
 // The last-24-hour strip is on every Activity page; `?wall=1` is the wall mode, which shows the same five
 // numbers in large type above a full-height, auto-scrolling feed, meant for a
-// screen on the wall or a demo. The wall carries the clock, the volume band at
-// the width of the screen and the token panel under it, and it looks after
+// screen on the wall or a demo. The wall takes the whole screen: the shell's
+// header, rail, dock and status bar are the furniture of a desk, and it asks for
+// the screen without them (usePageTakesScreen) — Esc, or the control in the
+// corner, gives them back. Its rows are shut, whatever the reader had open at
+// the desk: a wall is read, not operated. It carries the clock, the volume band
+// at the width of the screen and the token panel under it, and it looks after
 // itself: the pointer goes after five seconds of quiet and the screen walks
 // back to the newest row after a minute of it.
 // Under the filters is the request the list is one page of, so the screen and
@@ -25,12 +29,13 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
 import { CopyButton } from '../../components/copy/CopyButton';
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
+import { usePageTakesScreen } from '../../layout/fullScreen';
 import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { PipelineQueryState } from '../../components/state';
@@ -124,7 +129,11 @@ export interface ActivityPageProps {
 
 export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const wall = isWallMode(params);
+  // The wall is the screen, not a page inside the shell: the furniture goes
+  // away while it is up, and comes back when the mode or the page is left.
+  usePageTakesScreen(wall);
   // The family comes from the shell's scope: `?family=` when this address
   // states one, else the family this tab last chose anywhere.
   const scope = useFamilyScope();
@@ -196,6 +205,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   // the same report once per subject; folded, they are one row that counts the
   // subjects and opens to the reports themselves.
   const rows = foldBursts(foldStageRuns(events));
+  // The wall shows the feed, not a reader's place in it: a row they had opened
+  // at the desk is shut again the moment the wall goes up, so the newest events
+  // are not pushed off the screen by one row's detail.
+  const rowOpen = (seq: number): boolean => !wall && openRows.has(seq);
   const seqs = rowSeqs(rows);
   // Resolution is read off the rows the reader has: a held event must not
   // quietly clear the red on a row above it before they have seen why.
@@ -287,6 +300,20 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   // newest row. A person at it keeps both.
   const cursorHidden = useWallIdle({ enabled: wall, still, top });
 
+  // With the shell's chrome gone, Esc is the way out that needs no pointer —
+  // the same key that leaves any other full screen. The corner control is the
+  // visible one.
+  const exitWall = wallHref(params, false);
+  useEffect(() => {
+    if (!wall) return undefined;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      navigate(exitWall, { replace: true });
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [wall, exitWall, navigate]);
+
   const update = (key: string, value: string): void => {
     // The family is the shell's scope, not one more filter in this URL.
     if (key === 'family') {
@@ -311,14 +338,18 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       }`}
       data-testid="activity-page"
     >
-      <div ref={top} />
+      {/* Where the top of the list is, for the pill and for the wall's walk
+          back: its scroll margin keeps the title clear of a sticky header
+          instead of under it. */}
+      <div className="activity__top" ref={top} />
       <header className="page__header">
         <div className="page__title-row">
           <h1 className="page__title">Activity</h1>
           <Link
             className="activity__wall-toggle"
-            to={wallHref(params, !wall)}
+            to={wall ? exitWall : wallHref(params, true)}
             aria-label={wall ? 'Leave wall mode' : 'Enter wall mode'}
+            title={wall ? 'Leave wall mode (Esc)' : 'Enter wall mode'}
           >
             {wall ? <Minimize2 aria-hidden="true" size={14} /> : <Maximize2 aria-hidden="true" size={14} />}
             {wall ? 'Exit wall' : 'Wall mode'}
@@ -462,7 +493,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                       burst={burst}
                       arriving={arriving.has(event.seq)}
                       now={now}
-                      open={openRows.has(event.seq)}
+                      open={rowOpen(event.seq)}
                       onOpenChange={wall ? undefined : onRowOpenChange}
                       focused={wall ? undefined : rowKeys.focused === event.seq}
                       tabStop={rowKeys.focused === null && event.seq === seqs[0]}
@@ -474,7 +505,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                       run={run}
                       arriving={arriving.has(event.seq)}
                       now={now}
-                      open={openRows.has(event.seq)}
+                      open={rowOpen(event.seq)}
                       onOpenChange={wall ? undefined : onRowOpenChange}
                       focused={wall ? undefined : rowKeys.focused === event.seq}
                       tabStop={rowKeys.focused === null && event.seq === seqs[0]}
@@ -489,7 +520,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
                       longestSeconds={longestSeconds.get(event.kind)}
                       now={now}
                       onOpenChange={wall ? undefined : onRowOpenChange}
-                      open={wall ? undefined : openRows.has(event.seq)}
+                      open={rowOpen(event.seq)}
                       focused={wall ? undefined : rowKeys.focused === event.seq}
                       tabStop={rowKeys.focused === null && event.seq === seqs[0]}
                       onRest={rowKeys.rest}

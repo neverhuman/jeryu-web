@@ -40,6 +40,7 @@ import { homePathFor } from './HomeRedirect';
 import { PublicRepoShell } from './PublicRepoShell';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { FamilyScopeProvider } from '../components/family/FamilyScopeProvider';
+import { FullScreenProvider, useFullScreenShell } from './fullScreen';
 
 import './AppShell.css';
 
@@ -120,7 +121,9 @@ export function AppShell(): JSX.Element {
   // `g x` chords and the palette all read the one scope.
   return (
     <FamilyScopeProvider>
-      <Shell />
+      <FullScreenProvider>
+        <Shell />
+      </FullScreenProvider>
     </FamilyScopeProvider>
   );
 }
@@ -130,6 +133,9 @@ function Shell(): JSX.Element {
   const location = useLocation();
   const auth = useAuth();
   const openPalette = useCommandStore((s) => s.open);
+  // A page can ask for the screen (Activity's wall): the furniture goes away,
+  // the content gets the viewport, and nothing sticky is left over the feed.
+  const fullScreen = useFullScreenShell();
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
     () => readBrowserText('durable', SIDEBAR_COLLAPSED_KEY) === '1'
   );
@@ -198,49 +204,61 @@ function Shell(): JSX.Element {
   });
 
   return (
-    <div className={`app-shell${sidebarCollapsed ? ' app-shell--sidebar-collapsed' : ''}`}>
-      {/* First tab stop: thirteen controls precede the content otherwise. */}
-      <a
-        className="skip-link"
-        href={`#${MAIN_CONTENT_ID}`}
-        onClick={(event) => {
-          event.preventDefault();
-          document.getElementById(MAIN_CONTENT_ID)?.focus();
-        }}
-      >
-        Skip to content
-      </a>
-      <header className="app-shell__header">
-        <GlobalHeader onOpenNav={() => setNavDrawerOpen(true)} />
-      </header>
-      {/* The nav inside names the landmark; a second label announced it twice. */}
-      <div className="app-shell__leftnav">
-        <LeftNav />
-        <button
-          type="button"
-          className="app-shell__sidebar-toggle"
-          onClick={toggleSidebar}
-          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={`${sidebarCollapsed ? 'Expand' : 'Collapse'} sidebar (⌘B)`}
+    <div
+      className={`app-shell${sidebarCollapsed ? ' app-shell--sidebar-collapsed' : ''}${
+        fullScreen ? ' app-shell--full-screen' : ''
+      }`}
+      data-full-screen={fullScreen ? 'true' : undefined}
+    >
+      {/* First tab stop: thirteen controls precede the content otherwise. With
+          the screen given away there are none, and nothing to skip. */}
+      {fullScreen ? null : (
+        <a
+          className="skip-link"
+          href={`#${MAIN_CONTENT_ID}`}
+          onClick={(event) => {
+            event.preventDefault();
+            document.getElementById(MAIN_CONTENT_ID)?.focus();
+          }}
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="app-shell__sidebar-toggle-icon"
+          Skip to content
+        </a>
+      )}
+      {fullScreen ? null : (
+        <header className="app-shell__header">
+          <GlobalHeader onOpenNav={() => setNavDrawerOpen(true)} />
+        </header>
+      )}
+      {/* The nav inside names the landmark; a second label announced it twice. */}
+      {fullScreen ? null : (
+        <div className="app-shell__leftnav">
+          <LeftNav />
+          <button
+            type="button"
+            className="app-shell__sidebar-toggle"
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={`${sidebarCollapsed ? 'Expand' : 'Collapse'} sidebar (⌘B)`}
           >
-            <path
-              d="M10 4L6 8L10 12"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-      </div>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="app-shell__sidebar-toggle-icon"
+            >
+              <path
+                d="M10 4L6 8L10 12"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
       {navDrawerOpen ? (
         <div className="app-shell__drawer-layer">
           <button
@@ -266,8 +284,8 @@ function Shell(): JSX.Element {
       <main className="app-shell__main" id={MAIN_CONTENT_ID} tabIndex={-1}>
         <Outlet />
       </main>
-      <LiveActivityDock />
-      <StatusBar />
+      {fullScreen ? null : <LiveActivityDock />}
+      {fullScreen ? null : <StatusBar />}
       <CommandPalette />
       <KeyboardShortcutsOverlay />
       {/* The document is what scrolls: a push starts at the top, Back and

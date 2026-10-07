@@ -1,9 +1,10 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { RouterProvider, createMemoryRouter, useLocation } from 'react-router-dom';
+import { Link, RouterProvider, createMemoryRouter, useLocation, useSearchParams } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCommandStore } from '../../stores/commandStore';
 import { AppShell, isPublicRepoPath, returnPathFrom } from '../AppShell';
+import { usePageTakesScreen } from '../fullScreen';
 import { NAV_DESTINATIONS } from '../navDestinations';
 
 interface AuthStub {
@@ -83,11 +84,32 @@ function Where(): JSX.Element {
   return <p data-testid="where">{`${pathname}${search}${hash}`}</p>;
 }
 
+/** A page that asks the shell for the screen while `?wall=1` is on the URL. */
+function ScreenTaker(): JSX.Element {
+  const [params] = useSearchParams();
+  usePageTakesScreen(params.get('wall') === '1');
+  return (
+    <>
+      <Where />
+      <Link to=".">Give it back</Link>
+    </>
+  );
+}
+
 // The shell renders <ScrollRestoration />, which only a data router answers,
 // so the test drives the same createMemoryRouter the app's own router is.
 function renderAt(path: string): void {
   const router = createMemoryRouter(
     [{ element: <AppShell />, children: [{ path: '*', element: <Where /> }] }],
+    { initialEntries: [path] }
+  );
+  render(<RouterProvider router={router} />);
+}
+
+/** The same shell, around a page that can ask for the whole screen. */
+function renderTakerAt(path: string): void {
+  const router = createMemoryRouter(
+    [{ element: <AppShell />, children: [{ path: '*', element: <ScreenTaker /> }] }],
     { initialEntries: [path] }
   );
   render(<RouterProvider router={router} />);
@@ -212,6 +234,38 @@ describe('AppShell', () => {
     expect(screen.getByTestId('status-bar')).toBeTruthy();
     expect(screen.getByRole('main').contains(screen.getByTestId('where'))).toBe(true);
     expect(useCommandStore.getState().commands.length).toBeGreaterThan(0);
+  });
+
+  it('gives the whole screen to a page that asks for it', () => {
+    renderTakerAt('/activity?wall=1');
+    const shell = document.querySelector('.app-shell');
+    expect(shell?.classList.contains('app-shell--full-screen')).toBe(true);
+    // None of the furniture of a desk is left over the page.
+    expect(screen.queryByTestId('global-header')).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Primary' })).toBeNull();
+    expect(screen.queryByTestId('dock')).toBeNull();
+    expect(screen.queryByTestId('status-bar')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Skip to content' })).toBeNull();
+    // The page itself is still the shell's main content.
+    expect(screen.getByRole('main').contains(screen.getByTestId('where'))).toBe(true);
+  });
+
+  it('takes the chrome back out when the page stops asking', () => {
+    renderTakerAt('/activity?wall=1');
+    fireEvent.click(screen.getByRole('link', { name: 'Give it back' }));
+    expect(document.querySelector('.app-shell')?.classList.contains('app-shell--full-screen')).toBe(
+      false
+    );
+    expect(screen.getByTestId('global-header')).toBeTruthy();
+    expect(screen.getByTestId('status-bar')).toBeTruthy();
+  });
+
+  it('keeps the chrome for a page that never asks', () => {
+    renderTakerAt('/activity');
+    expect(document.querySelector('.app-shell')?.classList.contains('app-shell--full-screen')).toBe(
+      false
+    );
+    expect(screen.getByTestId('global-header')).toBeTruthy();
   });
 
   it('skip link moves focus to the main content', () => {

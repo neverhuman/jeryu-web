@@ -125,6 +125,19 @@
   bottom: 0;
 }
 
+/* ── A page with the whole screen ─────────────────────────────────────── */
+/* Activity's wall asks for the screen (see fullScreen.tsx): the header, the
+   rail, the dock and the status bar are not rendered at all, so the grid is one
+   cell and the content starts at the top edge of the viewport. Nothing is
+   sticky over the feed any more — the wall scrolls itself, and a pinned header
+   would sit on the newest row. */
+.app-shell--full-screen {
+  grid-template-areas: 'main';
+  grid-template-rows: minmax(100vh, auto);
+  grid-template-columns: minmax(0, 1fr);
+  padding-bottom: 0;
+}
+
 @media (max-width: 1024px) {
   :root {
     --app-leftnav-width: 200px;

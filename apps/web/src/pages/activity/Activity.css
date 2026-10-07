@@ -61,6 +61,16 @@
   font-size: var(--font-size-sm);
 }
 
+/* On the wall it is the way back to the shell, so it says so at a size that can
+   be read and hit from a step away — and Esc does the same without a pointer. */
+.activity--wall .activity__wall-toggle {
+  font-size: var(--font-size-md);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-1);
+}
+
 .activity__live,
 .activity__counter-note {
   margin: 0;
@@ -450,11 +460,25 @@
   color: var(--color-accent-danger);
 }
 
+/* The marker the pill and the wall's walk back scroll to. It sits above the
+   title, and the shell's header is pinned over the first 48px of the viewport:
+   without a scroll margin the title lands underneath it. The wall has no header
+   left to clear. */
+.activity__top {
+  scroll-margin-top: calc(var(--app-header-height) + var(--space-2));
+}
+
 /* Wall mode ----------------------------------------------------------- */
 
 .activity--wall {
-  min-height: 100%;
+  min-height: 100vh;
   gap: var(--space-4);
+}
+
+/* The wall is the screen: the shell's furniture is gone (app-shell--full-screen),
+   so the feed takes the viewport edge to edge instead of a page's margins. */
+.activity--wall .activity__top {
+  scroll-margin-top: 0;
 }
 
 .activity--wall .activity-row {

@@ -1,8 +1,10 @@
-// activityWall.test.tsx — wall mode's polish: the clock, the volume band and
-// the token panel under the counters, the pointer that goes after five seconds
-// of quiet, and the walk back to the newest row after a minute of it.
+// activityWall.test.tsx — wall mode: the screen it asks the shell for and the
+// ways back out of it, the rows it shuts, the clock, the volume band and the
+// token panel under the counters, the pointer that goes after five seconds of
+// quiet, and the walk back to the newest row after a minute of it.
 
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ActivityPage } from '../activity';
@@ -13,11 +15,37 @@ import {
   wallDateText,
   wallIdleState,
 } from '../activity/wallModel';
+import { FullScreenProvider, useFullScreenShell } from '../../layout/fullScreen';
 import { mockPipelineApi } from './pipelinePageHelpers';
 import { renderAt } from './shiftPageHelpers';
 
+/** What the page has asked the shell for, newest last. */
+const takenScreens: boolean[] = [];
+
+/** Stands in for the shell's layout: it only records what the page asked for. */
+function ScreenProbe(): null {
+  const taken = useFullScreenShell();
+  useEffect(() => {
+    if (takenScreens[takenScreens.length - 1] !== taken) takenScreens.push(taken);
+  }, [taken]);
+  return null;
+}
+
+/** Whether the page is asking for the whole screen right now. */
+function screenTaken(): boolean {
+  return takenScreens[takenScreens.length - 1] ?? false;
+}
+
 function renderPage(path = '/activity?wall=1'): void {
-  renderAt(path, '/activity', <ActivityPage />);
+  takenScreens.length = 0;
+  renderAt(
+    path,
+    '/activity',
+    <FullScreenProvider>
+      <ActivityPage />
+      <ScreenProbe />
+    </FullScreenProvider>
+  );
 }
 
 /** A reader who asked the OS to minimize motion, for one test. */
@@ -69,6 +97,72 @@ describe('the wall clock', () => {
 
   it('has nothing to say about an instant it cannot read', () => {
     expect(wallDateText(new Date(NaN))).toBe('');
+  });
+});
+
+
+describe('the wall and the shell around it', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('asks the shell for the whole screen, and only while the wall is up', async () => {
+    mockPipelineApi();
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+    expect(screenTaken()).toBe(true);
+  });
+
+  it('leaves the shell its furniture at the desk', async () => {
+    mockPipelineApi();
+    renderPage('/activity');
+    await screen.findByTestId('activity-event-12');
+    expect(screenTaken()).toBe(false);
+    // Never asked and then taken back: the desk page simply does not ask.
+    expect(takenScreens.filter((taken) => taken)).toEqual([]);
+  });
+
+  it('shuts a row the reader had open before the wall went up', async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    mockPipelineApi();
+    renderPage('/activity');
+    await screen.findByTestId('activity-event-12');
+    fireEvent.click(screen.getByRole('button', { name: 'Log for event 10' }));
+    expect(screen.getByTestId('activity-event-log-10')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Enter wall mode' }));
+    await waitFor(() => expect(screen.getByTestId('activity-wall-clock')).toBeInTheDocument());
+    // The detail is gone: a wall shows the feed, not where a reader was.
+    expect(screen.queryByTestId('activity-event-log-10')).not.toBeInTheDocument();
+
+    // …and leaving the wall gives the reader their row back.
+    fireEvent.click(screen.getByRole('link', { name: 'Leave wall mode' }));
+    await waitFor(() => expect(screen.getByTestId('activity-event-log-10')).toBeInTheDocument());
+  });
+
+  it('leaves the wall on Esc, which needs no pointer', async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    mockPipelineApi();
+    renderPage();
+    await screen.findByTestId('activity-event-12');
+    expect(screen.getByTestId('activity-wall-clock')).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' });
+    });
+    await waitFor(() => expect(screen.queryByTestId('activity-wall-clock')).not.toBeInTheDocument());
+    expect(screen.getByRole('region', { name: 'Activity filters' })).toBeInTheDocument();
+    expect(screenTaken()).toBe(false);
+  });
+
+  it('ignores Esc at the desk, where the key belongs to the page', async () => {
+    mockPipelineApi();
+    renderPage('/activity?kind=gate.');
+    await screen.findByTestId('activity-event-10');
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' });
+    });
+    expect(screen.getByRole('region', { name: 'Activity filters' })).toBeInTheDocument();
   });
 });
 

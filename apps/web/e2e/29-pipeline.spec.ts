@@ -460,6 +460,27 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('activity-wall-clock')).toContainText(/\d\d:\d\d/);
     await expect(page.getByTestId('activity-volume')).toBeVisible();
     await expect(page.getByTestId('activity-usage')).toBeVisible();
+    // A wall is the screen, not a page in the shell: none of the desk's
+    // furniture is left, and the title is at the top of the viewport rather
+    // than under a header pinned over it.
+    await expect(page.locator('.app-shell__header')).toHaveCount(0);
+    await expect(page.locator('.app-shell__leftnav')).toHaveCount(0);
+    await expect(page.getByTestId('activity-dock')).toHaveCount(0);
+    await expect(page.locator('.app-shell__status')).toHaveCount(0);
+    const titleTop = await page.getByRole('heading', { name: 'Activity', level: 1 }).boundingBox();
+    expect(titleTop!.y).toBeGreaterThanOrEqual(0);
+    expect(titleTop!.y).toBeLessThan(48);
+    // Esc is the way out that needs no pointer, and it brings the shell back.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
+    await expect(page.locator('.app-shell__header')).toBeVisible();
+
+    // A row the reader opened at the desk is shut again on the wall.
+    await page.getByTestId('activity-event-10').getByRole('button', { name: 'Log for event 10' }).click();
+    await expect(page.getByTestId('activity-event-log-10')).toBeVisible();
+    await page.getByRole('link', { name: 'Enter wall mode' }).click();
+    await expect(page.getByTestId('activity-wall-clock')).toBeVisible();
+    await expect(page.getByTestId('activity-event-log-10')).toHaveCount(0);
     await page.getByRole('link', { name: 'Leave wall mode' }).click();
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
   });
