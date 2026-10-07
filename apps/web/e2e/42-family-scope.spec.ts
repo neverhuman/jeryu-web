@@ -271,18 +271,20 @@ test.describe('Family scope, page by page', () => {
     await expectScope(page, '');
 
     // 1. Repositories: the family facet is the scope, and it reaches the URL,
-    //    so a reload or Back keeps the list where the operator left it.
+    //    so a reload or Back keeps the list where the operator left it. The
+    //    facet offers the one key every family control offers (`acme`), even
+    //    though this list files the rows under `acme-split`.
     const facets = page.getByRole('group', { name: 'Filter by family' });
-    await facets.getByRole('button', { name: 'Family: acme-split' }).click();
+    await facets.getByRole('button', { name: 'Family: acme', exact: true }).click();
     await page.waitForURL(/\/repos\?family=acme$/);
-    await expect(facets.getByRole('button', { name: 'Family: acme-split' })).toHaveAttribute(
+    await expect(facets.getByRole('button', { name: 'Family: acme', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
     await expectScope(page, 'acme');
     await expect(page.getByText('globex/globex-api')).toHaveCount(0);
     await page.reload();
-    await expect(facets.getByRole('button', { name: 'Family: acme-split' })).toHaveAttribute(
+    await expect(facets.getByRole('button', { name: 'Family: acme', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     );

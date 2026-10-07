@@ -23,6 +23,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { formatBadgeCount } from '../format/number';
 import { useAttention } from '../hooks/usePipeline';
 import { useAuth } from '../hooks/useAuth';
 import { useSiteSettings } from '../hooks/useSiteSettings';
@@ -52,7 +53,10 @@ function NavBadge({
   area: NavDestination['badge'];
 }): JSX.Element | null {
   if (!area || count <= 0) return null;
-  const things = `${count} item${count === 1 ? '' : 's'}`;
+  // The same text the dock and Activity's note say, so three places that
+  // show one number never disagree about it.
+  const shown = formatBadgeCount(count);
+  const things = `${shown} item${count === 1 ? '' : 's'}`;
   return (
     <span
       className="left-nav__badge"
@@ -61,7 +65,7 @@ function NavBadge({
         area === 'attention' ? `${things} need you` : `${things} need you in ${AREA_LABEL[area]}`
       }
     >
-      {count > 99 ? '99+' : count}
+      {shown}
     </span>
   );
 }

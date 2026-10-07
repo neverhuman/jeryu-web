@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LiveActivityDock } from '../LiveActivityDock';
 import { htmlShell, mockPipelineApi } from '../../pages/__tests__/pipelinePageHelpers';
-import { renderAt } from '../../pages/__tests__/shiftPageHelpers';
+import { attentionItem } from '../../pages/__tests__/pipelineTestData';
+import { json, renderAt } from '../../pages/__tests__/shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
 vi.mock('../../hooks/useAuth', () => ({
@@ -45,6 +46,24 @@ describe('LiveActivityDock', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     role = 'admin';
+  });
+
+  it('caps the count the way the nav badge and Activity do', async () => {
+    // One helper formats this number everywhere it is shown, so the dock
+    // cannot say "100" while the badge beside it says "99+".
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/attention'
+        ? json({
+            generated_at: '2026-09-19T13:15:00Z',
+            counts: { critical: 0, action: 100, watch: 0 },
+            items: Array.from({ length: 100 }, (_, index) =>
+              attentionItem({ id: `todo-blocked:acme:${index}`, kind: 'todo_blocked' })
+            ),
+          })
+        : undefined
+    );
+    renderAt('/needs-you', '/needs-you', <LiveActivityDock />);
+    expect(await screen.findByText('99+ need you')).toBeInTheDocument();
   });
 
   it('is one quiet line until opened, then lists the newest events in plain words, and remembers', async () => {

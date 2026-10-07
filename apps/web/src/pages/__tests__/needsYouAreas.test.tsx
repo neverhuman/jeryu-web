@@ -9,12 +9,13 @@
 //
 // Invented families only (acme, globex, initech): jeryu is public.
 
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AttentionItem, AttentionResponse } from '../../api/types';
 import { LeftNav, PRIMARY_NAV, SYSTEM_NAV } from '../../layout/LeftNav';
 import { LiveActivityDock } from '../../layout/LiveActivityDock';
+import { ActivityPage } from '../activity';
 import { FleetPage } from '../FleetPage';
 import { NeedsYouPage } from '../needsYou';
 import { AREA_LABEL, type AttentionArea } from '../needsYou/needsYouModel';
@@ -226,6 +227,41 @@ describe('every needs-you count', () => {
     mockAttention(THREE_IN_WORK);
     renderAt('/needs-you', '/needs-you', <NeedsYouPage />);
     expect(await screen.findByTestId('needs-you-count')).toHaveTextContent('3');
+  });
+
+  it('is capped the same way everywhere once it passes two digits', async () => {
+    // The badge has room for two digits, so a longer count reads as "99+" —
+    // and the dock and Activity's note say the same, from one helper, instead
+    // of the badge saying "99+" beside a note saying "(100)".
+    const hundred = attention(
+      Array.from({ length: 100 }, (_, index) =>
+        attentionItem({
+          id: `todo_blocked:acme:${index}`,
+          kind: 'todo_blocked',
+          severity: 'action',
+          title: `Blocked acme todo ${index}`,
+          family: 'acme',
+        })
+      )
+    );
+
+    mockAttention(hundred);
+    renderAt('/needs-you', '/needs-you', <LeftNav />);
+    const badge = await screen.findByTestId('needs-you-badge');
+    expect(badge).toHaveTextContent('99+');
+    expect(badge).toHaveAttribute('aria-label', '99+ items need you');
+
+    vi.restoreAllMocks();
+    mockAttention(hundred);
+    renderAt('/needs-you', '/needs-you', <LiveActivityDock />);
+    expect(await screen.findByText('99+ need you')).toBeInTheDocument();
+
+    vi.restoreAllMocks();
+    mockAttention(hundred);
+    renderAt('/activity?needs_human=1', '/activity', <ActivityPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId('activity-needs-you')).toHaveTextContent('Needs you (99+).')
+    );
   });
 
   it('leads from every badge to a page showing the rows it counted', async () => {

@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { pillClass, toneClass } from '../components/tone/tone';
+import { formatBadgeCount } from '../format/number';
 import { absoluteText, clockText, zoneLabel } from '../format/when';
 import { useAuth } from '../hooks/useAuth';
 import { PIPELINE_KEY, useAttention, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
@@ -96,7 +97,7 @@ export function LiveActivityDock(): JSX.Element | null {
             className="activity-dock__needs-you"
             data-testid="activity-dock-needs-you"
           >
-            <span className={pillClass('human')}>{waiting} need you</span>
+            <span className={pillClass('human')}>{formatBadgeCount(waiting)} need you</span>
           </Link>
         ) : null}
         <Link to={ACTIVITY_PATH} className="activity-dock__all">

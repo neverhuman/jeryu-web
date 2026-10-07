@@ -29,18 +29,18 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
 import { CopyButton } from '../../components/copy/CopyButton';
-import { canonicalFamily } from '../../components/family/familyScope';
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
+import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { PipelineQueryState } from '../../components/state';
 import { toneClass, type Tone } from '../../components/tone/tone';
-import type { PipelineEventsQuery } from '../../api/types';
+import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
+import { formatBadgeCount } from '../../format/number';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { isPipelineEventPush, useEventsHistogram, usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
 import { useRepositories } from '../../hooks/useRepositories';
-import { useShiftFamilies } from '../../hooks/useShift';
 import {
   ACTIVITY_CHIPS,
   MORE_FILTER_KEYS,
@@ -354,6 +354,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           <Filters
             filters={filters}
             query={query}
+            events={all}
             repo={repo}
             moreRef={moreFilters}
             range={parseRange(params)}
@@ -563,6 +564,7 @@ function RowLegend(): JSX.Element {
 function Filters({
   filters,
   query,
+  events,
   repo,
   moreRef,
   range,
@@ -575,6 +577,8 @@ function Filters({
   filters: ActivityFilters;
   /** The filters as the server reads them: what the API line says. */
   query: PipelineEventsQuery;
+  /** The rows the feed has, so a family only they name still gets a pill. */
+  events: readonly PipelineEvent[];
   /** `owner/name` when the repository shell's Activity tab pins the feed. */
   repo?: string;
   /** The page's handle on More filters: `/` opens it and takes the caret to
@@ -595,7 +599,6 @@ function Filters({
   // own from then on: clearing the last value mid-edit used to fold the panel
   // away under the caret, so the fold follows the toggle, not the filters.
   const [moreOpen, setMoreOpen] = useState(() => hasMoreFilters(filters, pinnedRepo));
-  const families = useShiftFamilies();
   // What the Repo and Source fields can suggest. The server wants a Repo's
   // exact `owner/name` and names no sources at all, so both fields offer the
   // names that exist: the repositories this reader can see, and the reporters
@@ -615,18 +618,14 @@ function Filters({
     repo: repoNames,
     source: KNOWN_SOURCES,
   };
-  // One pill per family, in the scope's own spelling: `acme` and `acme-split`
-  // are one family, and the scope is what a pill sets. The scoped family keeps
-  // its pill even when the family list does not name it, so a deep link into
-  // one can always be left again.
-  const names = [
-    ...new Set(
-      [
-        ...(families.data?.families ?? []).map((family) => canonicalFamily(family.name)),
-        canonicalFamily(filters.family),
-      ].filter(Boolean)
-    ),
-  ];
+  // One pill per family, from the list the header select and Repositories
+  // offer: `acme` and `acme-split` are one family, and the scope is what a
+  // pill sets. A family only this feed has named — a live event from one the
+  // lists have not caught up with — gets a pill too, so what is on the page
+  // can always be narrowed to.
+  const eventFamilies = useMemo(() => events.map((event) => event.family), [events]);
+  const families = useFamilyNames(eventFamilies);
+  const names = families.names;
   // The pills only exist for a page that can narrow to one family, which the
   // family list answers a second after the first paint. Hold the strip's place
   // from the first frame so the chips beside it are drawn once, where they
@@ -720,7 +719,7 @@ function Filters({
         <p className="activity__needs-you" data-testid="activity-needs-you">
           These are events that were flagged. What is waiting on a person right now
           is on <Link to={needsYou.href}>Needs you</Link>
-          {needsYou.count === null ? '' : ` (${needsYou.count})`}.
+          {needsYou.count === null ? '' : ` (${formatBadgeCount(needsYou.count)})`}.
         </p>
       ) : null}
       <details

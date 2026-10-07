@@ -30,7 +30,12 @@
   font: inherit;
   font-size: var(--font-size-xs);
   cursor: pointer;
-  max-width: 14ch;
+  /* Sized by its own text: a fixed width cut "All families" to "All familie"
+     in the header. The chip may still shrink inside a crowded header, so the
+     text is clipped rather than pushing the rest of the row off screen. */
+  max-width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
 .family-scope__clear {
@@ -70,7 +75,6 @@
     white-space: nowrap;
   }
 
-  .family-scope__select {
-    max-width: 8ch;
-  }
+  /* The phone keeps the same rule: "All" fits, and a long family name is
+     clipped by the header rather than by a width guessed here. */
 }

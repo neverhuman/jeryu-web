@@ -532,6 +532,34 @@ describe('ActivityPage', () => {
     );
   });
 
+  it('offers a pill for a family only the feed has named', async () => {
+    // The pushes arrive before the family lists catch up with a new family:
+    // the rows on the page can always be narrowed to the family they name.
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events'
+        ? json({
+            events: [
+              pipelineEvent({ seq: 12, kind: 'todo.claimed', family: 'jailgun', summary: 'Claimed' }),
+            ],
+            latest_seq: 12,
+          })
+        : req.pathname === '/api/v1/shift/families'
+          ? json({
+              families: [
+                { name: 'acme-split', queue_repo: 'acme/acme-todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
+              ],
+            })
+          : undefined
+    );
+    renderPage();
+    const strip = await screen.findByRole('group', { name: 'Filter by family' });
+    expect(
+      within(strip)
+        .getAllByRole('button')
+        .map((button) => button.textContent)
+    ).toEqual(['All', 'acme', 'jailgun']);
+  });
+
   it('holds the family pills’ place and keeps a chip’s note off the control line', async () => {
     let answerFamilies = (): void => {};
     const families = new Promise<void>((resolve) => {

@@ -61,12 +61,42 @@ describe('FamilyScopeChip', () => {
     await waitFor(() =>
       expect(
         Array.from(select.querySelectorAll('option')).map((option) => option.textContent)
-      ).toEqual(['All families', 'acme', 'globex'])
+      ).toEqual(['All', 'acme', 'globex'])
     );
 
     fireEvent.click(screen.getByTestId('family-scope-clear'));
     expect(screen.getByTestId('where').textContent).toBe('/work');
     expect(screen.queryByTestId('family-scope-clear')).toBeNull();
+  });
+
+  it('offers the families only the repository list names', async () => {
+    // The header used to offer the shift queues alone, so a family with
+    // repositories but no queue could not be chosen from it.
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(input instanceof Request ? input.url : String(input), 'http://localhost');
+      const body =
+        url.pathname === '/api/v1/repos'
+          ? {
+              generated_at: '2026-10-06T09:00:00Z',
+              total: 2,
+              repositories: [
+                { id: { host: 'jeryu', owner: 'initech', name: 'initech-web' }, family: 'initech-split' },
+              ],
+              facets: { hosts: ['jeryu'], owners: [], families: ['hooli-split'], languages: [] },
+            }
+          : FAMILIES;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    renderAt('/work');
+    const select = screen.getByTestId('family-scope-select');
+    await waitFor(() =>
+      expect(
+        Array.from(select.querySelectorAll('option')).map((option) => option.textContent)
+      ).toEqual(['All', 'acme', 'globex', 'hooli', 'initech'])
+    );
   });
 
   it('shows every family when nothing is in scope, and picking one scopes the page', async () => {

@@ -24,6 +24,7 @@ import {
 import { ActionButton } from '../components/action/ActionButton';
 import { sameFamily } from '../components/family/familyScope';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { useFamilyNames } from '../components/family/useFamilyNames';
 import { CreateRepoDialog } from '../components/repo';
 import {
   useRepositories,
@@ -57,7 +58,7 @@ export function RepositoriesPage({
     mode ?? (params.get('new') === '1' ? 'create' : 'list');
 
   // The family is the shell's scope, not a filter of this page's own: the
-  // facets say how this list spells it (`acme-split`), the scope which family.
+  // rows say how this list spells it (`acme-split`), the scope which family.
   const scope = useFamilyScope();
   const [filter, setFilter] = useState<FilterState>(DEFAULT_FILTER);
   const [searchInput, setSearchInput] = useState('');
@@ -108,6 +109,7 @@ export function RepositoriesPage({
   const all = list.data?.repositories ?? [];
   const repos = scope.active ? all.filter((repo) => sameFamily(repo.family, scope.family)) : all;
   const facets = list.data?.facets;
+  const { names: familyNames } = useFamilyNames();
 
   return (
     <div className="page page--wide" data-testid="repositories-page">
@@ -167,11 +169,14 @@ export function RepositoriesPage({
             ariaLabel="Filter by visibility"
           />
 
-          {facets && facets.families.length > 0 ? (
+          {/* The families the whole shell knows, not only the ones this list
+              spells: one key per family, the same options the header select
+              and Activity's pills offer. */}
+          {familyNames.length > 0 ? (
             <FilterChips
               label="Family"
-              value={facets.families.find((name) => sameFamily(name, scope.family))}
-              options={facets.families}
+              value={familyNames.find((name) => sameFamily(name, scope.family))}
+              options={familyNames}
               onChange={(family) => scope.setFamily(family ?? '')}
               ariaLabel="Filter by family"
             />

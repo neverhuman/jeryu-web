@@ -9,6 +9,7 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
+import { formatBadgeCount } from '../../format/number';
 import { rovingIndex } from '../../pages/repoShellModel';
 
 import './repoShell.css';
@@ -84,7 +85,7 @@ export function TabBar({
                 className="repo-tabs__count"
                 data-testid={`${idPrefix}-count-${item.key}`}
               >
-                {item.count > 99 ? '99+' : item.count}
+                {formatBadgeCount(item.count)}
               </span>
             ) : null}
             {item.marker}

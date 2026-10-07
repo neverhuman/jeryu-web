@@ -11,33 +11,18 @@
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
-import { useShiftFamilies } from '../../hooks/useShift';
 import { familyLabel } from '../../pages/pullRoomModel';
-import { canonicalFamily } from './familyScope';
 import { useFamilyScope } from './FamilyScopeProvider';
+import { useFamilyNames } from './useFamilyNames';
 
 import './FamilyScopeChip.css';
 
-/** Every family a reader can choose, canonical and in one order. */
-function familyOptions(names: readonly string[], scope: string): string[] {
-  const keys = new Set<string>();
-  for (const name of names) {
-    const key = canonicalFamily(name);
-    if (key) keys.add(key);
-  }
-  // The scope is always choosable, even when the families call did not answer.
-  if (scope) keys.add(scope);
-  return [...keys].sort((a, b) => a.localeCompare(b));
-}
-
 export function FamilyScopeChip(): JSX.Element {
   const scope = useFamilyScope();
-  const families = useShiftFamilies();
   const select = useRef<HTMLSelectElement | null>(null);
-  const options = familyOptions(
-    families.data?.families.map((family) => family.name) ?? [],
-    scope.carried
-  );
+  // The same list every other family control offers, so the header never
+  // knows fewer families than the page under it.
+  const { names: options } = useFamilyNames();
 
   // "Switch family…" in the palette is this control, reached from the keyboard.
   useEffect(() => {
@@ -63,7 +48,9 @@ export function FamilyScopeChip(): JSX.Element {
         value={scope.carried}
         onChange={(event) => scope.setFamily(event.target.value)}
       >
-        <option value="">All families</option>
+        {/* "All", not "All families": the chip is sized by its widest option,
+            and the longer wording was cut to "All familie" in the header. */}
+        <option value="">All</option>
         {options.map((key) => (
           <option key={key} value={key}>
             {familyLabel(key)}
