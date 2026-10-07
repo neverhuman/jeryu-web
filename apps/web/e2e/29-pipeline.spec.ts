@@ -345,6 +345,10 @@ test.describe('Pipeline visibility', () => {
     await page.goto('/activity');
     await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('activity-event-12')).toContainText('needs you');
+    // The Live pill is the way to this page, so here it is plain state.
+    const pill = page.getByTestId('live-pill');
+    await expect(pill).not.toHaveAttribute('href');
+    await expect(pill.locator('xpath=self::a')).toHaveCount(0);
     const gate = page.getByTestId('activity-event-10');
     await gate.getByRole('button', { name: 'Log for event 10' }).click();
     const tail = gate.getByTestId('activity-event-log-10');

@@ -6,7 +6,7 @@
 // Each child is its own file so the shell layout stays scannable.
 
 import { Menu, Search } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { JeryuLogo } from '../components/brand/JeryuLogo';
 import { FamilyScopeChip } from '../components/family/FamilyScopeChip';
@@ -26,8 +26,11 @@ export function GlobalHeader({ onOpenNav }: GlobalHeaderProps = {}): JSX.Element
   const openPalette = useCommandStore((s) => s.open);
   const status = useRealtimeStore((s) => s.status);
   const bootstrap = useBootstrap();
+  const { pathname } = useLocation();
 
   const liveLabel = liveLabelFor(status);
+  const onActivity = pathname === '/activity' || pathname.startsWith('/activity/');
+  const liveName = liveNameFor(status);
   const platformHint = navigator.userAgent.includes('Mac') ? '⌘ K' : 'Ctrl K';
 
   return (
@@ -66,21 +69,35 @@ export function GlobalHeader({ onOpenNav }: GlobalHeaderProps = {}): JSX.Element
         </span>
       </button>
       {/* The pill is the way to the live feed. The connection state is announced
-          by a separate status region: a status nested in a link is not exposed. */}
-      <Link
-        to="/activity"
-        className={`global-header__live global-header__live--${status}`}
-        aria-label={`${liveNameFor(status)}. Open Activity`}
-        title={`${liveNameFor(status)}. Open Activity`}
-        data-testid="live-pill"
-      >
-        <span className="global-header__live-dot" aria-hidden="true" />
-        <span className="global-header__live-text" aria-hidden="true">
-          {liveLabel}
+          by a separate status region: a status nested in a link is not exposed.
+          On Activity there is nowhere to go, so the pill is plain state. */}
+      {onActivity ? (
+        <span
+          className={`global-header__live global-header__live--${status}`}
+          title={liveName}
+          data-testid="live-pill"
+        >
+          <span className="global-header__live-dot" aria-hidden="true" />
+          <span className="global-header__live-text" aria-hidden="true">
+            {liveLabel}
+          </span>
         </span>
-      </Link>
-      <span className="sr-only" role="status" aria-atomic="true" aria-label={liveNameFor(status)}>
-        {liveNameFor(status)}
+      ) : (
+        <Link
+          to="/activity"
+          className={`global-header__live global-header__live--${status}`}
+          aria-label={`${liveName}. Open Activity`}
+          title={`${liveName}. Open Activity`}
+          data-testid="live-pill"
+        >
+          <span className="global-header__live-dot" aria-hidden="true" />
+          <span className="global-header__live-text" aria-hidden="true">
+            {liveLabel}
+          </span>
+        </Link>
+      )}
+      <span className="sr-only" role="status" aria-atomic="true" aria-label={liveName}>
+        {liveName}
       </span>
       <AccountMenu
         login={bootstrap.data?.viewer.login ?? 'Loading…'}
