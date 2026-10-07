@@ -9,6 +9,7 @@ import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
+import { ACTIVITY_CHIPS, isKindFilter } from '../../pages/activity/activityModel';
 import { MOVED_ROUTES } from '../movedRoutes';
 import { router } from '../router';
 
@@ -62,7 +63,10 @@ const CASES: Record<string, { from: string; to: string }> = {
     from: '/tool-fleet/acme-widget-lint?family=acme#repos',
     to: '/shared-tools/adoption/acme-widget-lint?family=acme#repos',
   },
-  notifications: { from: '/notifications?kind=merge#latest', to: '/activity?kind=merge#latest' },
+  notifications: {
+    from: '/notifications?kind=merge#latest',
+    to: '/activity?kind=queue.,pr.merged#latest',
+  },
   'shared-tools': { from: '/shared-tools?q=parse#tools', to: '/shared-tools/findings?q=parse#tools' },
   // `/audit` says where the record went instead of redirecting; see below.
   audit: { from: '/audit', to: '/audit' },
@@ -110,6 +114,30 @@ describe('the moved-path table', () => {
     expect(follow('work/shift', '/work/shift?todo=20260919-0930-acme,20260919-0931-acme')).toBe(
       '/work?todo=20260919-0930-acme,20260919-0931-acme'
     );
+  });
+
+  it('turns a one-word kind of the inbox into the Activity filter that shows it', () => {
+    expect(follow('notifications', '/notifications?kind=review&repo=acme%2Fwidgets')).toBe(
+      '/activity?kind=review.,pr.review&repo=acme%2Fwidgets'
+    );
+    // A word no chip answers for is dropped: the unfiltered feed beats the
+    // events endpoint refusing the query.
+    expect(follow('notifications', '/notifications?kind=mention&family=acme')).toBe(
+      '/activity?family=acme'
+    );
+    expect(follow('notifications', '/notifications?kind=mention')).toBe('/activity');
+    // A value Activity already takes is its own: it is passed through.
+    expect(follow('notifications', '/notifications?kind=todo.')).toBe('/activity?kind=todo.');
+  });
+
+  it('names a chip that exists for every kind the table maps', () => {
+    for (const moved of MOVED_ROUTES) {
+      for (const [word, chipId] of Object.entries(moved.kinds ?? {})) {
+        const chip = ACTIVITY_CHIPS.find((entry) => entry.id === chipId);
+        expect(chip?.kind, `${moved.path} ?kind=${word}`).toBeTruthy();
+        expect(isKindFilter(chip?.kind ?? ''), `${moved.path} ?kind=${word}`).toBe(true);
+      }
+    }
   });
 
   it('tells where the audit record went instead of redirecting', () => {

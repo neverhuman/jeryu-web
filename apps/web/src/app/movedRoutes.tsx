@@ -16,6 +16,7 @@
 
 import { Navigate, useLocation, useParams } from 'react-router-dom';
 
+import { ACTIVITY_CHIPS, isKindFilter } from '../pages/activity/activityModel';
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { ADOPTION_PATH, FINDINGS_PATH } from '../pages/sharedTools/SharedToolsTabs';
@@ -45,6 +46,14 @@ export interface MovedRoute {
    * todo's own page rather than the queue it sits in.
    */
   keepTodoLink?: boolean;
+  /**
+   * The one-word `kind=` values the moved page took, each named by the Activity
+   * chip that shows the same events now. The chip's kinds replace the word, so
+   * `?kind=merge` arrives as the merge filter instead of a value the events
+   * endpoint refuses (`422 events_invalid_query`, read as a broken feed). A
+   * word with no entry here is dropped: the whole feed beats no feed.
+   */
+  kinds?: Readonly<Record<string, string>>;
 }
 
 export const MOVED_ROUTES: readonly MovedRoute[] = [
@@ -125,6 +134,15 @@ export const MOVED_ROUTES: readonly MovedRoute[] = [
     why: 'The in-memory inbox is gone: Needs you says what waits on a person, Activity is the feed.',
     added: '2026-09-19',
     removeAfter: '2027-03-19',
+    kinds: {
+      merge: 'merges',
+      pull: 'pulls',
+      review: 'reviews',
+      todo: 'todos',
+      gate: 'gates',
+      release: 'releases',
+      deploy: 'deploys',
+    },
   },
   {
     path: 'audit',
@@ -164,12 +182,34 @@ function fillParams(path: string, params: Readonly<Record<string, string | undef
     .join('/');
 }
 
-export type MovedRouteProps = Pick<MovedRoute, 'to' | 'keepTodoLink'>;
+/**
+ * The query string with its `kind=` turned into one Activity takes: the chip
+ * the word names, or nothing when no chip does. A value that already reads as
+ * a kind (`pr.merged`, `todo.`) is left alone — it was written for Activity.
+ */
+export function mapKindParam(search: string, kinds: Readonly<Record<string, string>>): string {
+  const params = new URLSearchParams(search);
+  const kind = (params.get('kind') ?? '').trim();
+  if (kind === '' || isKindFilter(kind)) return search;
+  const chip = ACTIVITY_CHIPS.find((entry) => entry.id === kinds[kind]);
+  if (chip?.kind) {
+    params.set('kind', chip.kind);
+  } else {
+    params.delete('kind');
+  }
+  // A chip's kinds are comma-separated; the comma is left readable, as every
+  // other link to Activity writes it.
+  const next = params.toString().replace(/%2C/g, ',');
+  return next === '' ? '' : `?${next}`;
+}
+
+export type MovedRouteProps = Pick<MovedRoute, 'to' | 'keepTodoLink' | 'kinds'>;
 
 /** One moved path -> where it goes now, keeping its query string and fragment. */
-export function MovedRouteRedirect({ to, keepTodoLink }: MovedRouteProps): JSX.Element {
+export function MovedRouteRedirect({ to, keepTodoLink, kinds }: MovedRouteProps): JSX.Element {
   const params = useParams();
-  const { search, hash: current } = useLocation();
+  const { search: asked, hash: current } = useLocation();
+  const search = kinds ? mapKindParam(asked, kinds) : asked;
   const { path, place } = splitPlace(to);
   if (keepTodoLink && !place) {
     const ids = (new URLSearchParams(search).get('todo') ?? '').split(',').filter(Boolean);
@@ -188,5 +228,7 @@ export function movedRouteElement(moved: MovedRoute): JSX.Element {
   if (moved.tell) {
     return <NotFoundPage movedTo={{ ...moved.tell, to: moved.to }} />;
   }
-  return <MovedRouteRedirect to={moved.to} keepTodoLink={moved.keepTodoLink} />;
+  return (
+    <MovedRouteRedirect to={moved.to} keepTodoLink={moved.keepTodoLink} kinds={moved.kinds} />
+  );
 }
