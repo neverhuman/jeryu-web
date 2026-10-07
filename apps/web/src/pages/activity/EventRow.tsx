@@ -11,6 +11,8 @@
 // feed says "this is new" without moving anything else.
 // The toggle stays on the rows that have something to say (a reason, a log);
 // on the quiet ones it waits for the pointer or the keyboard.
+// A log tail opens at its end, where the failure is, with the lines that
+// report one in the danger tone, and a button that hands the whole tail over.
 
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -21,6 +23,7 @@ import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { formatCost, shortSha } from '../shift/shiftModel';
+import { badLineCount, logLines } from './logModel';
 import { sourceMark } from './sourceModel';
 import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
 import {
@@ -113,6 +116,16 @@ export function EventRow({
   const share = durationShare(event.seconds, longestSeconds);
   // What the attempt spent, when the producer attached it to the row.
   const usage = attemptUsage(event);
+  // The tail as lines, so the ones reporting a failure can carry the tone.
+  const lines = event.log_tail ? logLines(event.log_tail) : [];
+  const badLines = badLineCount(lines);
+  // An opened tail starts at its end: a gate writes what went wrong last, and
+  // a reader who has to scroll 24rem to reach it has been handed the wrong end.
+  const logRef = useRef<HTMLPreElement | null>(null);
+  useEffect(() => {
+    const pre = logRef.current;
+    if (pre) pre.scrollTop = pre.scrollHeight;
+  }, [open, event.log_tail]);
   // Today's rows read as an age; the clock is still in `title` either way.
   const whenText =
     now !== undefined && isSameLocalDay(event.ts, now)
@@ -212,9 +225,36 @@ export function EventRow({
             ))}
           </p>
           {event.log_tail ? (
-            <pre className="activity-row__log" tabIndex={0} aria-label={`Log tail of event ${event.seq}`}>
-              {event.log_tail}
-            </pre>
+            <div className="activity-row__log-box">
+              <p className="activity-row__log-bar">
+                <span className="activity-row__meta">
+                  {badLines === 0 ? 'Log tail' : `Log tail — ${badLines} failing line${badLines === 1 ? '' : 's'}`}
+                </span>
+                <CopyButton
+                  text={event.log_tail}
+                  label={`event ${event.seq} log`}
+                  testId={`activity-event-log-copy-${event.seq}`}
+                >
+                  Copy log
+                </CopyButton>
+              </p>
+              <pre
+                className="activity-row__log"
+                ref={logRef}
+                tabIndex={0}
+                data-testid={`activity-event-log-${event.seq}`}
+                aria-label={`Log tail of event ${event.seq}`}
+              >
+                {lines.map((line, index) => (
+                  <span
+                    key={index}
+                    className={`activity-row__log-line${line.bad ? ' activity-row__log-line--bad' : ''}`}
+                  >
+                    {line.text === '' ? '\u00a0' : line.text}
+                  </span>
+                ))}
+              </pre>
+            </div>
           ) : null}
           {event.log_url && /^(https?:\/\/|\/)/.test(event.log_url) ? (
             <a href={event.log_url} target="_blank" rel="noreferrer">

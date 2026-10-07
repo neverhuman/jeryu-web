@@ -230,7 +230,13 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
       outcome: 'failure',
       seconds: 114,
       summary: 'Gate failed on neverhuman/jeryu#99',
-      log_tail: 'error[E0432]: unresolved import\ngate: FAILED',
+      // Long enough that its end is below the box: a reader left at the top
+      // would not see the two lines that say what went wrong.
+      log_tail: [
+        ...Array.from({ length: 80 }, (_, index) => `   Compiling jeryu-core unit ${index + 1}`),
+        'error[E0432]: unresolved import',
+        'gate: FAILED',
+      ].join('\n'),
     }),
     pipelineEvent({
       seq: 9,

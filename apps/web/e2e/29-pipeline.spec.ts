@@ -346,7 +346,18 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('activity-event-12')).toContainText('needs you');
     const gate = page.getByTestId('activity-event-10');
     await gate.getByRole('button', { name: 'Log for event 10' }).click();
-    await expect(gate.getByLabel('Log tail of event 10')).toContainText('gate: FAILED');
+    const tail = gate.getByTestId('activity-event-log-10');
+    await expect(tail).toContainText('gate: FAILED');
+    // The tail opens at its end, where the failure is, and the lines that
+    // report one carry the danger tone while the build noise stays plain.
+    await expect
+      .poll(() => tail.evaluate((pre) => pre.scrollTop > 0 && pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 1))
+      .toBe(true);
+    await expect(tail.locator('.activity-row__log-line--bad')).toHaveText([
+      'error[E0432]: unresolved import',
+      'gate: FAILED',
+    ]);
+    await expect(gate).toContainText('2 failing lines');
     await expect(gate.getByRole('link', { name: 'neverhuman/jeryu#99' })).toHaveAttribute(
       'href',
       '/repos/jeryu/neverhuman/jeryu/pulls/99'
@@ -480,6 +491,12 @@ test.describe('Pipeline visibility', () => {
     const json = JSON.parse((await copied()) ?? '{}') as { seq: number; kind: string };
     expect(json.seq).toBe(10);
     expect(json.kind).toBe('gate.log');
+
+    // And the log tail itself, whole, for the ticket that quotes it.
+    await gate.getByTestId('activity-event-log-copy-10').click();
+    const tail = (await copied()) ?? '';
+    expect(tail.startsWith('   Compiling jeryu-core unit 1')).toBe(true);
+    expect(tail.endsWith('gate: FAILED')).toBe(true);
   });
 
   test('Activity freezes the list on Pause and picks the tail back up on Resume @action:activity.pause', async ({

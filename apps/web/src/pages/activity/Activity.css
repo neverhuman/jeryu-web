@@ -377,6 +377,33 @@
   overflow-wrap: anywhere;
 }
 
+/* The tail's own header: what it is, how much of it failed, and the button
+   that hands the whole thing over. */
+.activity-row__log-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.activity-row__log-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* One line of a tail. A block, so the line that failed is a full-width band
+   rather than a word-shaped stain. */
+.activity-row__log-line {
+  display: block;
+}
+
+.activity-row__log-line--bad {
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+}
+
 /* Wall mode ----------------------------------------------------------- */
 
 .activity--wall {
