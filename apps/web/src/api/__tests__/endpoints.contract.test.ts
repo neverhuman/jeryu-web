@@ -35,6 +35,17 @@ describe('endpoint contract', () => {
     expect(endpoints.releaseBoard('a/b c')).toBe('/api/v1/release-board/a%2Fb%20c');
   });
 
+  it('builds account and repository bot routes', () => {
+    expect(endpoints.bots()).toBe('/api/v1/bots');
+    expect(endpoints.botKeys('a/b')).toBe('/api/v1/bots/a%2Fb/keys');
+    expect(endpoints.botSuspend('id')).toBe('/api/v1/bots/id/suspend');
+    expect(endpoints.botRevoke('id')).toBe('/api/v1/bots/id/revoke');
+    expect(endpoints.repoBots('repo 1')).toBe('/api/v1/repos/repo%201/bots');
+    expect(endpoints.repoBotActivity('repo-1')).toBe(
+      '/api/v1/repos/repo-1/bot-activity',
+    );
+  });
+
   it('never calls /api/v1/activity, which the server does not serve', () => {
     for (const path of allPaths()) {
       expect(path).not.toMatch(/^\/api\/v1\/activity(?:[/?]|$)/);

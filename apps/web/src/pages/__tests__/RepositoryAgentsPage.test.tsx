@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +23,7 @@ describe('RepositoryAgentsPage — New Session', () => {
     const fetchSpy = mockFetch({
       'GET /api/v1/repos?host=jeryu': listResponse(),
       'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
       'POST /api/v1/repos/repo-1/sessions': createdResponse('run-new'),
     });
 
@@ -49,6 +50,7 @@ describe('RepositoryAgentsPage — New Session', () => {
     mockFetch({
       'GET /api/v1/repos?host=jeryu': listResponse(),
       'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
       'POST /api/v1/repos/repo-1/sessions': {
         status: 503,
         body: {
@@ -81,6 +83,7 @@ describe('RepositoryAgentsPage — empty repository', () => {
     mockFetch({
       'GET /api/v1/repos?host=jeryu': listResponse(),
       'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
       [`GET /api/v1/shift/todos?limit=${SHIFT_TODO_PAGE_LIMIT}&page=1`]: { generated_at: NOW, todos: [] },
     });
 
@@ -95,6 +98,7 @@ describe('RepositoryAgentsPage — empty repository', () => {
     mockFetch({
       'GET /api/v1/repos?host=jeryu': listResponse(),
       'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
       [`GET /api/v1/shift/todos?limit=${SHIFT_TODO_PAGE_LIMIT}&page=1`]: { generated_at: NOW, todos: [queueTodo()] },
     });
 
@@ -110,6 +114,135 @@ describe('RepositoryAgentsPage — empty repository', () => {
       'href',
       '/work/20260921-002116'
     );
+  });
+});
+
+const OTHER_ROUTE = '/repos/jeryu/bob%2Fother/agents';
+
+describe('RepositoryAgentsPage — Grokbot and Musebot roster', () => {
+  beforeEach(stubBrowserTransports);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('shows a Grokbot and a Musebot, with general, repository, and task reach', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': {
+        bots: [
+          botSummary({ id: 'g-general', display_name: 'Northwind', kind: 'grok' }),
+          botSummary({
+            id: 'm-repo',
+            display_name: 'Southwind',
+            kind: 'muse',
+            slug: 'south',
+            reach: { mode: 'repositories', repos: [{ owner: 'alice', name: 'jeryu' }] },
+            last_outcome: null,
+          }),
+          botSummary({
+            id: 'g-issue',
+            display_name: 'Issuebound',
+            kind: 'grok',
+            slug: 'issue',
+            reach: {
+              mode: 'task',
+              repo: { owner: 'alice', name: 'jeryu' },
+              task_kind: 'issue',
+              task_id: '17',
+            },
+            last_outcome: 'failed',
+          }),
+          botSummary({
+            id: 'm-branch',
+            display_name: 'Branchbound',
+            kind: 'muse',
+            slug: 'branch',
+            reach: {
+              mode: 'task',
+              repo: { owner: 'alice', name: 'jeryu' },
+              task_kind: 'branch',
+              task_id: 'feature/login',
+            },
+            last_outcome: 'ok',
+          }),
+        ],
+      },
+    });
+
+    renderPage();
+
+    const rows = await screen.findAllByTestId('bot-row');
+    expect(rows).toHaveLength(4);
+
+    expect(within(rows[0]).getByTestId('bot-kind')).toHaveTextContent('Grokbot');
+    expect(rows[0]).toHaveTextContent('Northwind');
+    expect(rows[0]).not.toHaveTextContent('Musebot');
+    expect(rows[0]).toHaveTextContent('General');
+    expect(rows[0]).toHaveTextContent('shipped');
+    expect(within(rows[0]).getByTitle(/Last successful access/)).toBeInTheDocument();
+
+    expect(within(rows[1]).getByTestId('bot-kind')).toHaveTextContent('Musebot');
+    expect(rows[1]).toHaveTextContent('Southwind');
+    expect(rows[1]).toHaveTextContent('This repo');
+
+    expect(rows[2]).toHaveTextContent('Task #17');
+    expect(rows[3]).toHaveTextContent('feature/login');
+    expect(rows[3]).not.toHaveTextContent('Task #');
+
+    const href = screen.getByTestId('add-bot').getAttribute('href') ?? '';
+    expect(new URL(href, 'http://localhost').searchParams.get('repo')).toBe('alice/jeryu');
+  });
+
+  it('does not show another repository roster', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const fetchSpy = mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse([
+        { id: REPO_ID, owner: 'alice', name: 'jeryu' },
+        { id: 'repo-2', owner: 'bob', name: 'other' },
+      ]),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-2/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': {
+        bots: [botSummary({ display_name: 'Northwind' })],
+      },
+      'GET /api/v1/repos/repo-2/bots': { bots: [] },
+    });
+
+    const first = renderPage(AGENTS_ROUTE, client);
+    expect(await screen.findByText('Northwind')).toBeInTheDocument();
+    first.unmount();
+
+    renderPage(OTHER_ROUTE, client);
+    expect(screen.queryByText('Northwind')).not.toBeInTheDocument();
+    const empty = await screen.findByTestId('bot-empty');
+    expect(empty.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'No Grokbot or Musebot on this repo yet'
+    );
+    const urls = (fetchSpy.mock.calls as Array<[unknown]>).map(([url]) => String(url));
+    expect(urls.some((url: string) => url.includes('/api/v1/repos/repo-2/bots'))).toBe(true);
+    expect(screen.queryByText('Northwind')).not.toBeInTheDocument();
+  });
+
+  it('shows the exact empty sentence', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+    });
+
+    renderPage();
+
+    const empty = await screen.findByTestId('bot-empty');
+    expect(empty.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'No Grokbot or Musebot on this repo yet'
+    );
+    expect(screen.getByTestId('agents-empty')).toBeInTheDocument();
+    expect(screen.getByTestId('new-session-button')).toBeInTheDocument();
   });
 });
 
@@ -196,18 +329,23 @@ interface RouteResult {
   body: unknown;
 }
 
-function renderPage(): { pathname: () => string } {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  let current = AGENTS_ROUTE;
+function renderPage(
+  route = AGENTS_ROUTE,
+  client?: QueryClient
+): { pathname: () => string; unmount: () => void } {
+  const queryClient =
+    client ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+  let current = route;
   function LocationProbe(): null {
     current = useLocation().pathname;
     return null;
   }
-  render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[AGENTS_ROUTE]}>
+  const view = render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[route]}>
         <LocationProbe />
         <Routes>
           <Route
@@ -218,7 +356,29 @@ function renderPage(): { pathname: () => string } {
       </MemoryRouter>
     </QueryClientProvider>
   );
-  return { pathname: () => current };
+  return { pathname: () => current, unmount: () => view.unmount() };
+}
+
+function botSummary(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 'bot-1',
+    owner: 'alice',
+    slug: 'north',
+    display_name: 'Northwind',
+    kind: 'grok',
+    status: 'active',
+    reach: { mode: 'general' },
+    credential_generation: 1,
+    last_successful_access: NOW,
+    last_auth: null,
+    last_mutation: null,
+    last_heartbeat: null,
+    last_action: null,
+    last_outcome: 'shipped',
+    last_repo: null,
+    created_at: NOW,
+    ...overrides,
+  };
 }
 
 function mockFetch(
@@ -279,33 +439,35 @@ function createdResponse(runId: string): Record<string, unknown> {
   };
 }
 
-function listResponse(): Record<string, unknown> {
+function listResponse(
+  repos: Array<{ id: string; owner: string; name: string }> = [
+    { id: REPO_ID, owner: 'alice', name: 'jeryu' },
+  ]
+): Record<string, unknown> {
   return {
     generated_at: '2026-06-05T00:00:00Z',
-    total: 1,
-    repositories: [
-      {
-        id: { id: REPO_ID, host: 'jeryu', owner: 'alice', name: 'jeryu' },
-        entity: { kind: 'repository', id: REPO_ID },
-        description: null,
-        visibility: 'private',
-        default_branch: 'main',
-        family: null,
-        repo_role: null,
-        topics: [],
-        language: null,
-        health: 'healthy',
-        open_pull_requests: 0,
-        failing_checks: 0,
-        running_jobs: 0,
-        active_agents: 0,
-        blocked_agents: 0,
-        updated_at: '2026-06-05T00:00:00Z',
-        clone_http_url: null,
-        clone_ssh_url: null,
-        available_actions: [],
-      },
-    ],
-    facets: { hosts: ['jeryu'], owners: ['alice'], families: [], languages: [] },
+    total: repos.length,
+    repositories: repos.map((repo) => ({
+      id: { id: repo.id, host: 'jeryu', owner: repo.owner, name: repo.name },
+      entity: { kind: 'repository', id: repo.id },
+      description: null,
+      visibility: 'private',
+      default_branch: 'main',
+      family: null,
+      repo_role: null,
+      topics: [],
+      language: null,
+      health: 'healthy',
+      open_pull_requests: 0,
+      failing_checks: 0,
+      running_jobs: 0,
+      active_agents: 0,
+      blocked_agents: 0,
+      updated_at: '2026-06-05T00:00:00Z',
+      clone_http_url: null,
+      clone_ssh_url: null,
+      available_actions: [],
+    })),
+    facets: { hosts: ['jeryu'], owners: repos.map((repo) => repo.owner), families: [], languages: [] },
   };
 }

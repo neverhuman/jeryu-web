@@ -57,6 +57,7 @@ describe('router route table', () => {
     'signup',
     'wiki',
     'wiki/*',
+    'bots',
     'in-flight',
     'pull-room',
   ])('registers %s above the not-found catch-all', (path) => {

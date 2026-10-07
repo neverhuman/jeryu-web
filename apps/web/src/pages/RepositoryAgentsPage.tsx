@@ -13,6 +13,7 @@ import { useResolveRepo } from '../hooks/useResolveRepo';
 import { useRealtime } from '../hooks/useRealtime';
 import { useCreateSession } from '../hooks/useCreateSession';
 import { useShiftTodos } from '../hooks/useShift';
+import { RepoBotRoster } from './bots/RepoBotRoster';
 import { repoQueueRuns, type RepoQueueRun } from './repoQueueRuns';
 import { todoHref } from './shift/workPaths';
 
@@ -264,6 +265,11 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
       ) : null}
 
       <div className="agents__layout">
+        <RepoBotRoster
+          repoId={resolved.data.id}
+          owner={resolved.data.summary.id.owner}
+          name={resolved.data.summary.id.name}
+        />
         <section
           className="page__section agents__list-pane"
           aria-labelledby="agents-list"

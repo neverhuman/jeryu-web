@@ -16,6 +16,7 @@
 import {
   Activity,
   BookOpen,
+  Bot,
   Brain,
   ClipboardList,
   Cog,
@@ -285,6 +286,16 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     paletteIcon: 'cog',
     shortcut: 'g s',
     keywords: ['settings', 'admin', 'preferences', 'account'],
+    group: 'account',
+  },
+  {
+    id: 'nav.bots',
+    label: 'Grokbot and Musebot',
+    path: '/bots',
+    icon: Bot,
+    paletteIcon: 'bot',
+    shortcut: 'g b',
+    keywords: ['grokbot', 'musebot', 'enrollment', 'reach', 'grok', 'muse'],
     group: 'account',
   },
 ];

@@ -15,6 +15,7 @@ import { MOVED_ROUTES, movedRouteElement } from './movedRoutes';
 import { AppShell } from '../layout/AppShell';
 import { HomeRedirect } from '../layout/HomeRedirect';
 import { ActivityPage } from '../pages/activity';
+import { BotsPage } from '../pages/bots/BotsPage';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { FleetPage } from '../pages/FleetPage';
 import { ForgeLinkRedirect } from '../pages/ForgeLinkRedirect';
@@ -97,6 +98,7 @@ export const router = createBrowserRouter([
       // How to get around: the keys, which System page answers what, and where
       // the account controls are.
       { path: HELP_PATH.slice(1), element: <HelpPage /> },
+      { path: 'bots', element: <BotsPage /> },
       // The internal wiki: the repository chosen in Settings, read as pages.
       { path: 'wiki', element: <WikiPage /> },
       { path: 'wiki/*', element: <WikiPage /> },

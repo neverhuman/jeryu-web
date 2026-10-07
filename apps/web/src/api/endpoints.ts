@@ -331,6 +331,21 @@ export const endpoints = {
   /** Record that a finding looks wrong to the operator reading it (admin-only). */
   qualityGateDispute: (findingId: string): string =>
     `/api/v1/quality-gate/findings/${encodeURIComponent(findingId)}/dispute`,
+
+  /** Account Grokbot and Musebot enrollments. */
+  bots: (): string => '/api/v1/bots',
+  botKeys: (id: string): string =>
+    `/api/v1/bots/${encodeURIComponent(id)}/keys`,
+  botSuspend: (id: string): string =>
+    `/api/v1/bots/${encodeURIComponent(id)}/suspend`,
+  botRevoke: (id: string): string =>
+    `/api/v1/bots/${encodeURIComponent(id)}/revoke`,
+  /** Reach is already clipped to this repository. */
+  repoBots: (id: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/bots`,
+  /** Optional activity feed. The roster does not render it. */
+  repoBotActivity: (id: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/bot-activity`,
 } as const;
 
 export type Endpoints = typeof endpoints;

@@ -1,0 +1,167 @@
+/* Account Grokbot / Musebot form, list, and the kind badge the repo roster reuses.
+ * Narrow viewports wrap the form and stack each enrollment instead of scrolling
+ * the terminal or the rest of the shell sideways. */
+
+.kind-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-3);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.kind-badge--grok {
+  color: var(--color-accent-info);
+  background: var(--color-accent-info-bg);
+  border-color: transparent;
+}
+
+.kind-badge--muse {
+  color: var(--color-accent-success);
+  background: var(--color-accent-success-bg);
+  border-color: transparent;
+}
+
+.enroll-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.enroll-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.enroll-form__span {
+  grid-column: 1 / -1;
+}
+
+.enroll-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.enroll-form__field input,
+.enroll-form__field select,
+.enroll-form__field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-0);
+  color: var(--color-fg-primary);
+  font: inherit;
+}
+
+.enroll-form__note,
+.enroll-form__error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+.enroll-form__note {
+  color: var(--color-fg-secondary);
+}
+
+.enroll-form__error {
+  color: var(--color-accent-warning);
+}
+
+.enroll-setup__secret {
+  margin: 0;
+  padding: var(--space-3);
+  max-width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-0);
+  color: var(--color-fg-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.enroll-setup h3 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.enroll-table-wrap {
+  max-width: 100%;
+}
+
+.enroll-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.enroll-table th,
+.enroll-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border-subtle);
+  overflow-wrap: anywhere;
+}
+
+.enroll-table__name {
+  display: block;
+  font-weight: var(--font-weight-semibold);
+}
+
+.enroll-table__slug {
+  display: block;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.enroll-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (max-width: 720px) {
+  .enroll-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .enroll-table thead {
+    display: none;
+  }
+
+  .enroll-table tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .enroll-table tbody th,
+  .enroll-table td {
+    display: block;
+    width: auto;
+    border: 0;
+    padding: 0;
+  }
+
+  .enroll-table__actions {
+    flex-basis: 100%;
+  }
+}

@@ -363,3 +363,106 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Grokbot / Musebot roster. Wraps on a narrow viewport and scrolls inside
+ * itself so the terminal below keeps the remaining height. */
+.agents__bot-roster {
+  flex: 0 1 auto;
+  max-height: 40%;
+  overflow: auto;
+  min-width: 0;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.agents__bot-roster .state-block {
+  min-height: 0;
+  padding: 0.6rem 0.4rem;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.agents__bot-roster .state-block__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.agents__bot-roster .state-block__icon {
+  width: 28px;
+  height: 28px;
+}
+
+.agents__bot-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+}
+
+.agents__bot-head h2 {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}
+
+.agents__add-bot {
+  color: var(--color-accent-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.agents__add-bot:hover {
+  text-decoration: underline;
+}
+
+.agents__bot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.agents__bot-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.7rem;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-2);
+  font-size: var(--font-size-xs);
+}
+
+.agents__bot-name,
+.agents__bot-reach {
+  overflow-wrap: anywhere;
+}
+
+.agents__bot-k {
+  color: var(--color-fg-muted);
+}
+
+@media (max-width: 720px) {
+  .agents__bot-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .agents__bot-row {
+    flex-basis: 100%;
+  }
+}

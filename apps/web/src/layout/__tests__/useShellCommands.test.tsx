@@ -29,6 +29,7 @@ describe('useShellCommands', () => {
       'nav.shared-tools',
       'nav.help',
       'nav.settings',
+      'nav.bots',
       'nav.work-add',
       'nav.activity-wall',
       'help.shortcuts',
@@ -61,6 +62,7 @@ describe('useShellCommands', () => {
       'nav.shared-tools',
       'nav.help',
       'nav.settings',
+      'nav.bots',
       'help.shortcuts',
       'family.switch',
       'family.all',
@@ -126,6 +128,7 @@ describe('useShellCommands', () => {
       'g t': '/shared-tools',
       'g h': '/help',
       'g s': '/settings',
+      'g b': '/bots',
     });
   });
 
