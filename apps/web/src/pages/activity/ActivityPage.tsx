@@ -33,7 +33,7 @@ import { canonicalFamily } from '../../components/family/familyScope';
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
-import { LoadingState, PipelineQueryState } from '../../components/state';
+import { PipelineQueryState } from '../../components/state';
 import { toneClass, type Tone } from '../../components/tone/tone';
 import type { PipelineEventsQuery } from '../../api/types';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
@@ -78,6 +78,7 @@ import { useActivityRowKeys } from './rowKeysModel';
 import { useWallIdle, wallClockText, wallDateText } from './wallModel';
 import { StageRunRow } from './StageRunRow';
 import { ActivityHistogram } from './ActivityHistogram';
+import { ActivitySkeleton } from './ActivitySkeleton';
 import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
 import { UsagePanel } from './UsagePanel';
@@ -347,7 +348,10 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       )}
 
       {feed.base.isPending ? (
-        <LoadingState title="Loading activity…" variant="message" />
+        // The first page is drawn as the rows it will become, so the band,
+        // the strip and the filters keep their places and the list does not
+        // pop in under them.
+        <ActivitySkeleton />
       ) : feed.base.isError ? (
         <PipelineQueryState what="the activity feed" error={feed.base.error} />
       ) : all.length === 0 ? (

@@ -1156,6 +1156,50 @@
   width: 48%;
 }
 
+/* The first page, before it is in: eight rows at the height the events will
+   take, so the list below the band is already its own size and nothing moves
+   when the rows replace it. The line is the height a row's pill gives it, and
+   the bars sit in the middle of it, which is where the words will be. */
+.activity__pending-row {
+  display: block;
+}
+
+.activity__pending-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  height: 24px;
+}
+
+.activity__pending-bar {
+  display: block;
+  height: 0.8em;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-2);
+}
+
+.activity__pending-bar--time {
+  width: 3.5rem;
+}
+
+.activity__pending-bar--icon {
+  width: 13px;
+  height: 13px;
+}
+
+.activity__pending-bar--pill {
+  width: 5rem;
+  height: 1.1em;
+}
+
+.activity__pending-bar--summary {
+  flex: 0 1 auto;
+}
+
+.activity__pending-bar--meta {
+  width: 2.5rem;
+}
+
 /* A folded run of stage beats: the ladder of an attempt, drawn small. The
    stages the run has walked are lit, the one it is on holds a slow pulse —
    the row says where the slot is without the reader opening anything. */
