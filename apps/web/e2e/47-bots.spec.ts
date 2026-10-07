@@ -1,4 +1,4 @@
-// 46-bots.spec.ts — account Grokbot and Musebot enrollment, and the
+// 47-bots.spec.ts — account Grokbot and Musebot enrollment, and the
 // repository roster that links to it.
 //
 // Create and rotate are the only responses that carry an enrollment key.
