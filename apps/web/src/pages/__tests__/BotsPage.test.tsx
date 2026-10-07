@@ -50,8 +50,10 @@ describe('bot reach labels', () => {
     expect(parseRepoLines('not-a-repo').error).toMatch(/owner\/name/);
     expect(parseRepoLines('   ').error).toMatch(/at least one/);
     expect(parseOwnerName('ada/widgets')).toEqual({ owner: 'ada', name: 'widgets' });
+    expect(parseOwnerName('ada/widgets\nbob/other')).toBeNull();
     expect(parseOwnerName('not-a-repo')).toBeNull();
     expect(parseOwnerName(null)).toBeNull();
+    expect(parseOwnerName('')).toBeNull();
     expect(addBotHref('alice', 'jeryu')).toBe('/bots?repo=alice%2Fjeryu');
   });
 });

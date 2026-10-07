@@ -109,7 +109,10 @@ export function parseRepoLines(text: string): ParsedRepos {
 export function parseOwnerName(value: string | null): BotRepoRef | null {
   if (value === null || value.trim() === '') return null;
   const parsed = parseRepoLines(value);
-  if (parsed.error !== null || parsed.repos.length !== 1) return null;
+  const singleRepo = parsed.error === null && parsed.repos.length === 1;
+  if (!singleRepo) {
+    return null;
+  }
   return parsed.repos[0] ?? null;
 }
 
