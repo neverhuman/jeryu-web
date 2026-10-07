@@ -1,5 +1,6 @@
-// ActivityPage.test.tsx — feed rows, log tails, URL filters, load older, the
-// live tail, wall mode, and degradation on an older server.
+// ActivityPage.test.tsx — feed rows, log tails, URL filters, the API line and a
+// row's JSON, load older, the live tail, wall mode, and degradation on an older
+// server.
 
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -311,6 +312,44 @@ describe('ActivityPage', () => {
     fireEvent.keyDown(kind, { key: 'Enter' });
     await waitFor(() =>
       expect(calls.some((c) => c.search.includes('kind=todo.') && c.search.includes('family=jeryu'))).toBe(true)
+    );
+  });
+
+  it('names the request the list is one page of and copies a row as the API returns it', async () => {
+    const calls = mockPipelineApi();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderPage('/activity?family=jeryu&needs_human=1');
+    await screen.findByTestId('activity-event-12');
+
+    // The line under the filters is the request the feed actually made.
+    const api = screen.getByTestId('activity-api');
+    const path = '/api/v1/events?family=jeryu&needs_human=true&limit=100';
+    expect(within(api).getByRole('link', { name: 'API' })).toHaveAttribute('href', path);
+    expect(within(api).getByText(path)).toBeInTheDocument();
+    expect(calls.some((c) => `${c.pathname}${c.search}` === path)).toBe(true);
+    // What is copied is what is shown.
+    fireEvent.click(within(api).getByTestId('activity-api-copy'));
+    expect(writeText).toHaveBeenLastCalledWith(path);
+
+    // The row's own JSON is in its detail, not on the quiet line.
+    const gate = screen.getByTestId('activity-event-10');
+    expect(within(gate).queryByTestId('activity-event-json-10')).toBeNull();
+    fireEvent.click(within(gate).getByRole('button', { name: /Log for event 10/ }));
+    const copyJson = within(gate).getByTestId('activity-event-json-10');
+    expect(copyJson).toHaveAccessibleName('Copy event 10 as JSON');
+    fireEvent.click(copyJson);
+    const copied = writeText.mock.calls[writeText.mock.calls.length - 1][0] as string;
+    expect(JSON.parse(copied)).toEqual(EVENTS.find((event) => event.seq === 10));
+    expect(await within(gate).findByText('Copied')).toBeInTheDocument();
+
+    // A chip is a different view, so it is a different query, and the line follows it.
+    fireEvent.click(screen.getByRole('button', { name: 'Gates' }));
+    await waitFor(() =>
+      expect(within(screen.getByTestId('activity-api')).getByRole('link', { name: 'API' })).toHaveAttribute(
+        'href',
+        '/api/v1/events?family=jeryu&kind=gate.&limit=100'
+      )
     );
   });
 

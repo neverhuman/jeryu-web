@@ -3,7 +3,8 @@
 // the summary with its subject as the link, how long it took — with a thin bar
 // behind the duration, scaled against the longest run of the same kind in the
 // loaded list, so a slow gate or a long attempt shows at a glance. Everything else
-// (who, which commit, why, the log tail) opens below. A row that needs a human
+// (who, which commit, why, the log tail, the event as the API returns it)
+// opens below. A row that needs a human
 // is red until a later event clears its cause; then it is marked resolved.
 // A row the live tail just brought in slides down with a short wash, so the
 // feed says "this is new" without moving anything else.
@@ -14,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { PipelineEvent } from '../../api/types';
+import { CopyButton } from '../../components/copy/CopyButton';
 import { pillClass, toneClass } from '../../components/tone/tone';
 import { absoluteText, clockText, isSameLocalDay, relativeText } from '../../format/when';
 import { useForgeHost } from '../../hooks/useForgeHost';
@@ -24,6 +26,7 @@ import {
   durationShare,
   eventLabel,
   eventLinks,
+  eventJson,
   eventTone,
   exactSecondsText,
   formatSeconds,
@@ -181,6 +184,17 @@ export function EventRow({
               Full log
             </a>
           ) : null}
+          {/* The row in the words the API uses, for a ticket, a script or an
+              agent: the event exactly as the feed received it. */}
+          <p className="activity-row__json">
+            <CopyButton
+              text={eventJson(event)}
+              label={`event ${event.seq} as JSON`}
+              testId={`activity-event-json-${event.seq}`}
+            >
+              Copy JSON
+            </CopyButton>
+          </p>
         </div>
       ) : null}
     </li>

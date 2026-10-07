@@ -7,9 +7,11 @@ import {
   activeChip,
   activityHref,
   applyChip,
+  eventJson,
   eventLabel,
   eventLinks,
   eventTone,
+  eventsApiPath,
   filtersToQuery,
   foldEchoes,
   formatDay,
@@ -98,6 +100,22 @@ describe('activityModel', () => {
     expect(empty.pr).toBe('');
     expect(hasActiveFilters(empty)).toBe(false);
     expect(filtersToQuery(empty)).toEqual({});
+  });
+
+  it('names the request a view is one page of, cursors excluded', () => {
+    expect(eventsApiPath({})).toBe('/api/v1/events?limit=100');
+    expect(eventsApiPath({ family: 'jeryu', kind: 'todo.', pr: 35, needs_human: true })).toBe(
+      '/api/v1/events?family=jeryu&kind=todo.&pr=35&needs_human=true&limit=100'
+    );
+  });
+
+  it('prints an event as the API returned it', () => {
+    const event = pipelineEvent({ seq: 7, kind: 'gate.log', summary: 'Gate failed' });
+    const text = eventJson(event);
+    expect(JSON.parse(text)).toEqual(event);
+    // Indented and newline-terminated: it pastes into a file or a ticket.
+    expect(text).toContain('\n  "seq": 7');
+    expect(text.endsWith('}\n')).toBe(true);
   });
 
   it('takes the kinds the server takes and refuses the rest', () => {

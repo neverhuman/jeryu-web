@@ -2,6 +2,7 @@
 // live dock, and the per-PR events panel. Deterministic given `now`.
 
 import type { Tone } from '../../components/tone/tone';
+import { endpoints } from '../../api/endpoints';
 import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
 import { localDayKey, zoneLabel } from '../../format/when';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
@@ -109,6 +110,25 @@ export function activityHref(filters: Partial<Record<(typeof FILTER_KEYS)[number
   }
   const suffix = qs.toString();
   return suffix ? `${ACTIVITY_PATH}?${suffix}` : ACTIVITY_PATH;
+}
+
+/**
+ * The exact request this page's list is one page of, so the screen and the API
+ * are visibly the same thing: the filters as the server sees them, with the
+ * page size the feed asks for. The cursors (`after_seq`, `before_seq`) are the
+ * live tail's and the older loader's, not the view's, so they are left out.
+ */
+export function eventsApiPath(query: PipelineEventsQuery): string {
+  return endpoints.events({ ...query, limit: ACTIVITY_PAGE_SIZE });
+}
+
+/**
+ * One event as the API returned it, pretty-printed: what an agent or an
+ * operator pastes into a ticket or a script. The keys are in the order the
+ * server sent them, so a row's JSON reads like the response it came from.
+ */
+export function eventJson(event: PipelineEvent): string {
+  return `${JSON.stringify(event, null, 2)}\n`;
 }
 
 /** The kinds a `kind` filter names: one, or several separated by commas. */

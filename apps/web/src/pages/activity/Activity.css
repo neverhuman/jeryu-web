@@ -571,6 +571,41 @@
   color: var(--color-accent-danger);
 }
 
+/* The event in the API's own words, at the foot of the open row. */
+.activity-row__json {
+  margin: var(--space-2) 0 0;
+}
+
+/* Under the filters: the request this list is one page of. The query can be
+   long, so it scrolls inside its own box instead of widening the page. */
+.activity__api {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.activity__api-link {
+  color: var(--color-accent-primary);
+  text-decoration: none;
+}
+
+.activity__api-link:hover {
+  text-decoration: underline;
+}
+
+.activity__api-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  color: var(--color-fg-secondary);
+  user-select: all;
+}
+
 .activity-row__facts {
   display: flex;
   flex-wrap: wrap;

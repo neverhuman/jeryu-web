@@ -429,6 +429,54 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByRole('region', { name: 'Activity filters' })).toBeVisible();
   });
 
+  test('Activity hands over the raw event and the query behind the screen @action:activity.api', async ({
+    page,
+  }) => {
+    // What the clipboard received, kept on the window: the browser's own
+    // clipboard needs a permission the test does not need to ask for.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: async (value: string) => {
+            (window as unknown as { __copied?: string }).__copied = value;
+          },
+        },
+        configurable: true,
+      });
+    });
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    const copied = (): Promise<string | undefined> =>
+      page.evaluate(() => (window as unknown as { __copied?: string }).__copied);
+
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
+
+    // Under the filters: the request this list is one page of.
+    const api = page.getByTestId('activity-api');
+    await expect(api).toContainText('/api/v1/events?limit=100');
+    await expect(api.getByRole('link', { name: 'API' })).toHaveAttribute('href', '/api/v1/events?limit=100');
+    await api.getByTestId('activity-api-copy').click();
+    await expect(api).toContainText('Copied');
+    expect(await copied()).toBe('/api/v1/events?limit=100');
+
+    // A chip is another view, so it is another query, and the line says so.
+    await page.getByRole('button', { name: 'Gates', exact: true }).click();
+    await expect(api.getByRole('link', { name: 'API' })).toHaveAttribute(
+      'href',
+      '/api/v1/events?kind=gate.&limit=100'
+    );
+
+    // The row hands over itself, as the API returned it.
+    const gate = page.getByTestId('activity-event-10');
+    await gate.getByRole('button', { name: 'Log for event 10' }).click();
+    await gate.getByTestId('activity-event-json-10').click();
+    await expect(gate).toContainText('Copied');
+    const json = JSON.parse((await copied()) ?? '{}') as { seq: number; kind: string };
+    expect(json.seq).toBe(10);
+    expect(json.kind).toBe('gate.log');
+  });
+
   test('Activity freezes the list on Pause and picks the tail back up on Resume @action:activity.pause', async ({
     page,
   }) => {

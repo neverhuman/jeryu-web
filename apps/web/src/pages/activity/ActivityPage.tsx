@@ -8,18 +8,23 @@
 // The last-24-hour strip is on every Activity page; `?wall=1` is the wall mode, which shows the same five
 // numbers in large type above a full-height, auto-scrolling feed, meant for a
 // screen on the wall or a demo.
+// Under the filters is the request the list is one page of, so the screen and
+// `/api/v1/events` are visibly the same thing; a row's detail copies that row
+// as the API returns it.
 
 import { Activity, Maximize2, Minimize2, Pause, Play } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
+import { CopyButton } from '../../components/copy/CopyButton';
 import { canonicalFamily } from '../../components/family/familyScope';
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { LoadingState, PipelineQueryState } from '../../components/state';
 import { toneClass, type Tone } from '../../components/tone/tone';
+import type { PipelineEventsQuery } from '../../api/types';
 import { activityTailKey, useActivityFeed } from '../../hooks/useActivityFeed';
 import { isPipelineEventPush, useEventsHistogram, usePipelineNudge } from '../../hooks/usePipeline';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
@@ -29,6 +34,7 @@ import {
   MORE_FILTER_KEYS,
   activeChip,
   applyChip,
+  eventsApiPath,
   filterFieldError,
   filtersToQuery,
   formatDay,
@@ -271,6 +277,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           <SummaryStrip family={filters.family} repo={repo} events={all} />
           <Filters
             filters={filters}
+            query={query}
             repo={repo}
             range={parseRange(params)}
             onChange={update}
@@ -421,12 +428,15 @@ function RowLegend(): JSX.Element {
 
 function Filters({
   filters,
+  query,
   repo,
   range,
   onChange,
   onChip,
 }: {
   filters: ActivityFilters;
+  /** The filters as the server reads them: what the API line says. */
+  query: PipelineEventsQuery;
   /** `owner/name` when the repository shell's Activity tab pins the feed. */
   repo?: string;
   /** The range the band above is drawn at: what the chip counts cover. */
@@ -463,6 +473,7 @@ function Filters({
       ? null
       : chipCounts(histogramBuckets(histogram.data));
   const rangeLabel = HISTOGRAM_RANGES.find((candidate) => candidate.id === range)?.label ?? range;
+  const apiPath = eventsApiPath(query);
   return (
     <section className="activity__filters" aria-label="Activity filters">
       <div className="activity__chip-row">
@@ -527,6 +538,26 @@ function Filters({
           ))}
         </div>
       </details>
+      {/* The same request the list above is one page of: the screen and the API
+          are one thing, and a reader can follow the link to the response or
+          paste the query into a script. */}
+      <p className="activity__api" data-testid="activity-api">
+        <a
+          className="activity__api-link"
+          href={apiPath}
+          target="_blank"
+          rel="noreferrer"
+          title="Open this view as the API answers it"
+        >
+          API
+        </a>
+        <code className="activity__api-path">{apiPath}</code>
+        <CopyButton
+          text={apiPath}
+          label="the API query for this view"
+          testId="activity-api-copy"
+        />
+      </p>
     </section>
   );
 }
