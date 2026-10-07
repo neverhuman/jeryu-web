@@ -109,6 +109,11 @@ html {
      that fits: navigating between a short and a long page never shifts the
      content sideways. */
   overflow-y: scroll;
+  /* The boot style in index.html paints a literal background before any CSS
+     loads; take it over with the token so the canvas outside <body> (overscroll
+     rubber-banding, the strip under a short page) follows the chosen theme
+     instead of staying near-black on a light surface. */
+  background-color: var(--color-bg-0);
 }
 
 body {

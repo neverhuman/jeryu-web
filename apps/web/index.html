@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#05070a" />
+    <meta
+      name="theme-color"
+      content="#05070a"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta
+      name="theme-color"
+      content="#f6f8fa"
+      media="(prefers-color-scheme: light)"
+    />
     <meta name="color-scheme" content="dark light" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link
@@ -14,11 +23,20 @@
       crossorigin="anonymous"
     />
     <title>JeRyu</title>
-    <!-- Paint the near-black terminal background before any CSS loads so
-         there is no white first-paint flash (FOUC) on boot. -->
+    <!-- Paint the theme background before any CSS loads so there is no
+         first-paint flash (FOUC) on boot. The near-black terminal surface is
+         the default; a daylight OS gets the light page colour instead, so a
+         `system` theme preference never flashes dark on the way in. These are
+         the boot copies of `--color-bg-0` in styles/tokens.css; `html` picks
+         up the token itself once app.css lands. -->
     <style>
       html {
         background: #05070a;
+      }
+      @media (prefers-color-scheme: light) {
+        html {
+          background: #f6f8fa;
+        }
       }
     </style>
   </head>

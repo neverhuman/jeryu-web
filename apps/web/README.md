@@ -108,11 +108,19 @@ Themes are applied via `[data-theme]` on `<html>`:
 
 | Selector | Theme |
 |---|---|
-| `:root` | Light theme (default). |
-| `@media (prefers-color-scheme: dark)` | Dark overrides (when no explicit `data-theme`). |
-| `[data-theme="light"]` | Force light (overrides media query). |
-| `[data-theme="dark"]` | Force dark. |
-| `[data-theme="high-contrast"]` | High contrast. |
+| `:root` | Dark theme — the hero surface. |
+| `@media (prefers-color-scheme: light)` | Daylight overrides (when no explicit `data-theme`). |
+| `[data-theme="dark"]` | Force dark (overrides the media query). |
+| `[data-theme="light"]` | Force light. |
+| `[data-theme="high-contrast"]` | Pure-black high contrast. |
+
+The shipped default is **dark**, not the OS preference:
+`preferencesStore.theme` starts at `dark`, and `ThemeProvider` writes
+`data-theme="dark"` on `<html>`. So a browser asking for
+`prefers-color-scheme: light` still boots dark on purpose. The daylight
+media query is the `system` branch: picking **Theme → System** in Settings
+(or the `theme.system` command in the palette) removes `data-theme` and from
+then on the OS preference decides. `Theme → Light` pins light outright.
 
 Token vocabulary (excerpt):
 
