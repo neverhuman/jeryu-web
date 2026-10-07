@@ -8,7 +8,7 @@ vi.mock('../../hooks/useBootstrap', () => ({
   useBootstrap: () => ({ data: { viewer: { login: 'ada', display_name: 'Ada' } } }),
 }));
 vi.mock('../RepoSwitcher', () => ({ RepoSwitcher: () => null }));
-vi.mock('../UserMenu', () => ({ UserMenu: () => null }));
+vi.mock('../AccountMenu', () => ({ AccountMenu: () => null }));
 vi.mock('../../components/family/FamilyScopeChip', () => ({ FamilyScopeChip: () => null }));
 vi.mock('../../stores/realtimeStore', () => ({
   useRealtimeStore: (select: (s: { status: string }) => unknown) => select({ status: 'open' }),
