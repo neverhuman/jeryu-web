@@ -919,7 +919,7 @@ function detailText(event: Pick<PipelineEvent, 'detail'>, key: string): string |
 
 /**
  * Which slot a beat came from: `w1`. The producer's own `detail.slot` first,
- * then the slot of its actor (`alton@xbabe0/w1`), then the summary. Null when
+ * then the slot of its actor (`operator@node-0/w1`), then the summary. Null when
  * nothing names one — two slots then cannot be told apart, so their beats are
  * never folded into one row.
  */
@@ -1167,7 +1167,7 @@ export function burstActor(event: Pick<PipelineEvent, 'actor' | 'source'>): stri
   return actor === '' ? event.source : actor;
 }
 
-/** The burst in one line: `pragent requested changes on 12 jain pull requests`. */
+/** The burst in one line: `review-bot requested changes on 12 jain pull requests`. */
 export function burstTitle(burst: EventBurst): string {
   return `${burstActor(burst.latest)} ${burstVerb(burst.latest)} ${burstSubjectText(burst.events)}`;
 }

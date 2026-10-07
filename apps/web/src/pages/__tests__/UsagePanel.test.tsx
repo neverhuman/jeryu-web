@@ -31,8 +31,8 @@ function renderPage(path = '/activity'): void {
 
 function worker(partial: Partial<ShiftWorker> & Pick<ShiftWorker, 'slot'>): ShiftWorker {
   return {
-    operator: 'alton',
-    host: 'xbabe0',
+    operator: 'operator',
+    host: 'node-0',
     family: 'jeryu',
     state: 'working',
     last_seen: '2026-09-19T13:04:55Z',
@@ -66,7 +66,7 @@ describe('usageModel', () => {
   });
 
   it('makes one row per working slot, from the usage read and the heartbeats', () => {
-    const rows = usageSlotRows(USAGE, [worker({ slot: 'w2', host: 'xbabe2' })], '');
+    const rows = usageSlotRows(USAGE, [worker({ slot: 'w2', host: 'node-2' })], '');
     expect(rows.map((row) => row.slot)).toEqual(['w1', 'w2', 'w3']);
     expect(rows[0]).toMatchObject({
       todoId: '20260919-121041-9d0b27',

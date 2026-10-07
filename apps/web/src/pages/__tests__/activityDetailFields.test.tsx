@@ -35,10 +35,10 @@ const STAGE = pipelineEvent({
   seq: 5,
   kind: 'worker.stage',
   source: 'forge',
-  actor: 'alton@xbabe0/w2',
+  actor: 'operator@node-0/w2',
   outcome: 'gate',
   summary: 'w2 jeryu: agent -> gate on 20260919-0800-aaa',
-  detail: { stage: 'gate', slot: 'w2', runner: 'xbabe0', head_sha: 'b761244b76371995527bfe7795e98492703553a8' },
+  detail: { stage: 'gate', slot: 'w2', runner: 'node-0', head_sha: 'b761244b76371995527bfe7795e98492703553a8' },
 });
 
 describe('EventRow detail fields', () => {
@@ -59,7 +59,7 @@ describe('EventRow detail fields', () => {
     expect(pairs('activity-event-fields-5')).toEqual([
       'Stage: gate',
       'Slot: w2',
-      'Runner: xbabe0',
+      'Runner: node-0',
       'Head: b761244b',
     ]);
   });

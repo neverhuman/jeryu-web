@@ -53,11 +53,11 @@ function options(name: string): string[] {
 }
 
 describe('resolveRepoFilter', () => {
-  const repos = ['neverhuman/jeryu-web', 'neverhuman/jeryu-api', 'acme/jeryu-web'];
+  const repos = ['octo/jeryu-web', 'octo/jeryu-api', 'acme/jeryu-web'];
 
   it('takes a bare name to the one repository called that', () => {
-    expect(resolveRepoFilter('jeryu-api', repos)).toBe('neverhuman/jeryu-api');
-    expect(resolveRepoFilter('  JERYU-API  ', repos)).toBe('neverhuman/jeryu-api');
+    expect(resolveRepoFilter('jeryu-api', repos)).toBe('octo/jeryu-api');
+    expect(resolveRepoFilter('  JERYU-API  ', repos)).toBe('octo/jeryu-api');
   });
 
   it('leaves a name two repositories share, and one no repository has', () => {
@@ -77,11 +77,11 @@ describe('Activity filter suggestions', () => {
 
   it('offers the repositories that exist and the sources the feed knows', async () => {
     mockPipelineApi((req) =>
-      req.pathname === '/api/v1/repos' ? repoList(['neverhuman', 'jeryu-web'], ['acme', 'tools']) : undefined
+      req.pathname === '/api/v1/repos' ? repoList(['octo', 'jeryu-web'], ['acme', 'tools']) : undefined
     );
     renderAt('/activity', '/activity', <ActivityPage />);
     await screen.findByTestId('activity-volume');
-    await waitFor(() => expect(options('repo')).toEqual(['acme/tools', 'neverhuman/jeryu-web']));
+    await waitFor(() => expect(options('repo')).toEqual(['acme/tools', 'octo/jeryu-web']));
     expect(screen.getByLabelText('Repo')).toHaveAttribute('list', 'activity-filter-repo-options');
     expect(options('source')).toEqual([...KNOWN_SOURCES]);
     expect(KNOWN_SOURCES).toContain('forge');
@@ -91,7 +91,7 @@ describe('Activity filter suggestions', () => {
 
   it('commits a bare repository name as the full name the server matches', async () => {
     const calls = mockPipelineApi((req) =>
-      req.pathname === '/api/v1/repos' ? repoList(['neverhuman', 'jeryu-web']) : undefined
+      req.pathname === '/api/v1/repos' ? repoList(['octo', 'jeryu-web']) : undefined
     );
     renderAt('/activity', '/activity', <ActivityPage />);
     await screen.findByTestId('activity-volume');
@@ -104,7 +104,7 @@ describe('Activity filter suggestions', () => {
         calls.some(
           (call) =>
             call.pathname === '/api/v1/events' &&
-            new URLSearchParams(call.search).get('repo') === 'neverhuman/jeryu-web'
+            new URLSearchParams(call.search).get('repo') === 'octo/jeryu-web'
         )
       ).toBe(true)
     );

@@ -2,7 +2,7 @@
 // from the same actor, for the same reason, filed on one subject after another
 // within half an hour. Twelve of them differed only in a pull request number
 // and filled a screen with one sentence repeated; folded they say it once and
-// count the subjects — `pragent requested changes on 12 jain pull requests` —
+// count the subjects — `review-bot requested changes on 12 jain pull requests` —
 // and the rows around them are readable again. Opened, the row hands over the
 // reports themselves, each as the ordinary event row it would have been.
 

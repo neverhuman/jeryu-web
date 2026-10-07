@@ -335,11 +335,11 @@ describe('activityModel', () => {
       pipelineEvent({
         seq: 40,
         kind: 'gate.finished',
-        detail: { runner: 'xbabe2/slot0', recipe: 'just required', receipt: 'target/receipts/9.json' },
+        detail: { runner: 'node-2/slot0', recipe: 'just required', receipt: 'target/receipts/9.json' },
       })
     );
     expect(gate.map((field) => [field.label, field.value])).toEqual([
-      ['Runner', 'xbabe2/slot0'],
+      ['Runner', 'node-2/slot0'],
       ['Recipe', 'just required'],
       ['Receipt', 'target/receipts/9.json'],
     ]);
@@ -505,7 +505,7 @@ describe('foldStageRuns', () => {
       source: 'todoq',
       family: 'jeryu',
       todo_id: '20260919-0800-aaa',
-      actor: 'alton@xbabe0/w1',
+      actor: 'operator@node-0/w1',
       summary: `w1 jeryu: ${from} -> ${to} on 20260919-0800-aaa`,
       ...overrides,
     });
@@ -546,7 +546,7 @@ describe('foldStageRuns', () => {
   });
 
   it('never folds across a slot, a todo, or anything that happened between', () => {
-    const otherSlot = beat(40, 'prepare', 'agent', { actor: 'alton@xbabe0/w2', summary: 'w2 jeryu: prepare -> agent on t2' });
+    const otherSlot = beat(40, 'prepare', 'agent', { actor: 'operator@node-0/w2', summary: 'w2 jeryu: prepare -> agent on t2' });
     expect(foldStageRuns([...run, otherSlot]).map((row) => row.event.seq)).toEqual([43, 40]);
     const otherTodo = beat(40, 'prepare', 'agent', { todo_id: 't2' });
     expect(foldStageRuns([...run, otherTodo]).map((row) => row.event.seq)).toEqual([43, 40]);
@@ -805,20 +805,20 @@ describe('foldBursts', () => {
       ts: `2026-10-06T14:${String(minute).padStart(2, '0')}:00Z`,
       kind: 'pr.review',
       source: 'forge',
-      actor: 'pragent',
-      family: 'veox',
-      repo: `veox/${repo}`,
+      actor: 'review-bot',
+      family: 'acme',
+      repo: `acme/${repo}`,
       pr,
       outcome: 'request_changes',
       reason: 'The gate has not run on this head.',
-      summary: `pragent reviewed veox/${repo}#${pr}`,
+      summary: `review-bot reviewed acme/${repo}#${pr}`,
     });
   }
 
   const pass = [
-    verdict(72, 'jain-web', 4, 20),
-    verdict(71, 'jain-core', 4, 12),
-    verdict(70, 'jain-api', 4, 4),
+    verdict(72, 'shop-web', 4, 20),
+    verdict(71, 'shop-core', 4, 12),
+    verdict(70, 'shop-api', 4, 4),
   ];
   const rows = (events: PipelineEvent[]): ReturnType<typeof foldBursts> => foldBursts(foldStageRuns(events));
 
@@ -830,7 +830,7 @@ describe('foldBursts', () => {
     expect(folded[0].burst?.events.map((event) => event.seq)).toEqual([72, 71, 70]);
     expect(folded[0].burst?.kind).toBe('pr.review');
     expect(folded[0].burst?.reason).toBe('The gate has not run on this head.');
-    expect(burstTitle(folded[0].burst!)).toBe('pragent requested changes on 3 jain pull requests');
+    expect(burstTitle(folded[0].burst!)).toBe('review-bot requested changes on 3 shop pull requests');
     // The row stands for every report it holds, and a day counts them all.
     expect(rowEvents(folded[0])).toHaveLength(3);
     expect(dayTotals(folded).events).toBe(3);
@@ -845,16 +845,16 @@ describe('foldBursts', () => {
   });
 
   it('never folds across a different report, a different reason, or anything between', () => {
-    const approved = { ...verdict(69, 'jain-tool', 4, 2), outcome: 'approve' };
+    const approved = { ...verdict(69, 'shop-tool', 4, 2), outcome: 'approve' };
     expect(rows([...pass, approved]).map((row) => row.event.seq)).toEqual([72, 69]);
-    const otherReason = { ...verdict(69, 'jain-tool', 4, 2), reason: 'Something else entirely.' };
+    const otherReason = { ...verdict(69, 'shop-tool', 4, 2), reason: 'Something else entirely.' };
     expect(rows([...pass, otherReason]).map((row) => row.event.seq)).toEqual([72, 69]);
-    const otherActor = { ...verdict(69, 'jain-tool', 4, 2), actor: 'alton' };
+    const otherActor = { ...verdict(69, 'shop-tool', 4, 2), actor: 'operator' };
     expect(rows([...pass, otherActor]).map((row) => row.event.seq)).toEqual([72, 69]);
     // A merged pull request between two verdicts is what the fold is for: it
     // stays a row of its own, and neither side has enough reports left to fold.
     const merged = pipelineEvent({ seq: 71, kind: 'pr.merged', outcome: 'merged' });
-    const split = rows([verdict(72, 'jain-web', 4, 20), merged, verdict(70, 'jain-api', 4, 4)]);
+    const split = rows([verdict(72, 'shop-web', 4, 20), merged, verdict(70, 'shop-api', 4, 4)]);
     expect(split.map((row) => row.event.seq)).toEqual([72, 71, 70]);
     expect(split.map((row) => row.burst)).toEqual([null, null, null]);
   });
@@ -864,7 +864,7 @@ describe('foldBursts', () => {
     // looked at the neighbour would draw all four as one row covering more
     // than half an hour.
     const trickle = ['15:00', '14:48', '14:36', '14:24'].map((clock, at) => ({
-      ...verdict(83 - at, `jain-${at}`, 4, 0),
+      ...verdict(83 - at, `shop-${at}`, 4, 0),
       ts: `2026-10-06T${clock}:00Z`,
     }));
     const folded = rows(trickle);
@@ -880,7 +880,7 @@ describe('foldBursts', () => {
     // towards that day, so it may not hold a report from the day before.
     const midnight = Date.parse('2026-10-07T00:00:00');
     const spread = [20, 10, 5, -10].map((minutes, at) => ({
-      ...verdict(93 - at, `jain-${at}`, 4, 0),
+      ...verdict(93 - at, `shop-${at}`, 4, 0),
       ts: new Date(midnight + minutes * 60_000).toISOString(),
     }));
     const folded = rows(spread);
@@ -892,7 +892,7 @@ describe('foldBursts', () => {
 
   it('leaves a stage run folded as the run it is', () => {
     const beats = [41, 42, 43].map((seq) =>
-      pipelineEvent({ seq, kind: 'worker.stage', actor: 'alton@xbabe0/w1', summary: `w1 jeryu: prepare -> agent on t1`, todo_id: 't1' })
+      pipelineEvent({ seq, kind: 'worker.stage', actor: 'operator@node-0/w1', summary: `w1 jeryu: prepare -> agent on t1`, todo_id: 't1' })
     ).reverse();
     const folded = rows(beats);
     expect(folded).toHaveLength(1);
@@ -905,7 +905,7 @@ describe('foldBursts', () => {
   });
 
   it('names what a burst happened to, and who it is attributed to', () => {
-    expect(burstSubjectText(pass)).toBe('3 jain pull requests');
+    expect(burstSubjectText(pass)).toBe('3 shop pull requests');
     // Repositories that share no name read as plain pull requests.
     const spread = [verdict(72, 'widgets', 4, 20), verdict(71, 'parts', 4, 12), verdict(70, 'bolts', 4, 4)];
     expect(burstSubjectText(spread)).toBe('3 pull requests');
@@ -914,10 +914,10 @@ describe('foldBursts', () => {
     expect(burstSubjectText(todos)).toBe('3 todos');
     const neither = pass.map((event) => ({ ...event, pr: null, repo: null }));
     expect(burstSubjectText(neither)).toBe('3 events');
-    expect(burstActor(pass[0])).toBe('pragent');
+    expect(burstActor(pass[0])).toBe('review-bot');
     // A slot-shaped actor is named by its slot, and a report with no actor by
     // whatever reported it.
-    expect(burstActor({ actor: 'alton@xbabe0/w1', source: 'todoq' })).toBe('w1');
+    expect(burstActor({ actor: 'operator@node-0/w1', source: 'todoq' })).toBe('w1');
     expect(burstActor({ actor: null, source: 'todoq' })).toBe('todoq');
   });
 
@@ -927,18 +927,18 @@ describe('foldBursts', () => {
         seq,
         ts: `2026-10-06T14:0${at}:00Z`,
         kind: 'pr.merged',
-        actor: 'pragent',
-        repo: `veox/jain-${at}`,
+        actor: 'review-bot',
+        repo: `acme/shop-${at}`,
         pr: 4,
         outcome: 'merged',
       })
     );
-    expect(burstTitle(rows(merges)[0].burst!)).toBe('pragent merged 3 jain pull requests');
+    expect(burstTitle(rows(merges)[0].burst!)).toBe('review-bot merged 3 shop pull requests');
     const gates = merges.map((event) => ({ ...event, kind: 'gate.finished', outcome: 'failure' }));
-    expect(burstTitle(rows(gates)[0].burst!)).toBe('pragent failed the gate on 3 jain pull requests');
+    expect(burstTitle(rows(gates)[0].burst!)).toBe('review-bot failed the gate on 3 shop pull requests');
     // A kind this build does not know still reads as a sentence.
     const unknown = merges.map((event) => ({ ...event, kind: 'orbit.aligned', outcome: null }));
-    expect(burstTitle(rows(unknown)[0].burst!)).toBe('pragent orbit.aligned on 3 jain pull requests');
+    expect(burstTitle(rows(unknown)[0].burst!)).toBe('review-bot orbit.aligned on 3 shop pull requests');
   });
 });
 

@@ -232,7 +232,7 @@ export const EVENTS: PipelineEvent[] = [
     seconds: 114,
     summary: 'Gate failed on jeryu/jeryu-web#35',
     log_tail: 'error[E0432]: unresolved import\ngate: FAILED',
-    detail: { runner: 'xbabe2/slot0', recipe: 'just required', receipt: 'target/receipts/35.json' },
+    detail: { runner: 'node-2/slot0', recipe: 'just required', receipt: 'target/receipts/35.json' },
   }),
   pipelineEvent({
     seq: 9,
@@ -365,8 +365,8 @@ export const USAGE: UsageResponse = {
   bucket_seconds: 300,
   slots: [
     {
-      operator: 'alton',
-      host: 'xbabe0',
+      operator: 'operator',
+      host: 'node-0',
       slot: 'w1',
       family: 'jeryu',
       todo_id: '20260919-121041-9d0b27',
@@ -381,8 +381,8 @@ export const USAGE: UsageResponse = {
       cost_usd: 1.42,
     },
     {
-      operator: 'alton',
-      host: 'xbabe1',
+      operator: 'operator',
+      host: 'node-1',
       slot: 'w3',
       family: 'jain',
       todo_id: '20260919-130515-f8cc66',

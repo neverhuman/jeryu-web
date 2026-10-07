@@ -242,7 +242,7 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
         'error[E0432]: unresolved import',
         'gate: FAILED',
       ].join('\n'),
-      detail: { runner: 'xbabe2/slot0', recipe: 'just required', receipt: 'target/receipts/99.json' },
+      detail: { runner: 'node-2/slot0', recipe: 'just required', receipt: 'target/receipts/99.json' },
     }),
     pipelineEvent({
       seq: 9,
@@ -286,8 +286,8 @@ export function usageBody(): Record<string, unknown> {
     bucket_seconds: 300,
     slots: [
       {
-        operator: 'alton',
-        host: 'xbabe0',
+        operator: 'operator',
+        host: 'node-0',
         slot: 'w1',
         family: 'jeryu',
         todo_id: '20260919-0800-aaa',
@@ -302,8 +302,8 @@ export function usageBody(): Record<string, unknown> {
         cost_usd: 1.42,
       },
       {
-        operator: 'alton',
-        host: 'xbabe1',
+        operator: 'operator',
+        host: 'node-1',
         slot: 'w3',
         family: 'jeryu',
         todo_id: '20260919-130515-f8cc66',

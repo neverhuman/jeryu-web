@@ -507,7 +507,7 @@ test.describe('Pipeline visibility', () => {
           kind: 'todo.claimed',
           family: 'jeryu',
           todo_id: '20260919-0800-aaa',
-          actor: 'alton@xbabe0/w2',
+          actor: 'operator@node-0/w2',
           summary: `w2 claimed 20260919-0800-aaa: ${'a title long enough that this one line has to wrap at a desk width '.repeat(3)}`,
         }),
       ],

@@ -17,7 +17,7 @@ function beat(seq: number, from: string, to: string) {
     source: 'todoq',
     family: 'jeryu',
     todo_id: '20260919-0800-aaa',
-    actor: 'alton@xbabe0/w1',
+    actor: 'operator@node-0/w1',
     summary: `w1 jeryu: ${from} -> ${to} on 20260919-0800-aaa`,
   });
 }

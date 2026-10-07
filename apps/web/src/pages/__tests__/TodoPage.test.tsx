@@ -174,7 +174,7 @@ describe('TodoPage', () => {
       id: '20261006-201244-b2487c',
       title: 'Being worked right now',
       status: 'claimed',
-      claim_by: 'alton@xbabe0/w2',
+      claim_by: 'operator@node-0/w2',
     });
     mockShiftApi((req) => {
       if (req.pathname !== '/api/v1/shift/todos') return undefined;

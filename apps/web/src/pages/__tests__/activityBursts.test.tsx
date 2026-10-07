@@ -18,14 +18,14 @@ function verdict(seq: number, repo: string, minute: number) {
     seq,
     ts: `2026-10-06T14:${String(minute).padStart(2, '0')}:00Z`,
     kind: 'pr.review',
-    actor: 'pragent',
-    family: 'veox',
-    repo: `veox/jain-${repo}`,
+    actor: 'review-bot',
+    family: 'acme',
+    repo: `acme/shop-${repo}`,
     pr: 4,
     outcome: 'request_changes',
     reason: REASON,
     needs_human: true,
-    summary: `pragent reviewed veox/jain-${repo}#4`,
+    summary: `review-bot reviewed acme/shop-${repo}#4`,
   });
 }
 
@@ -35,7 +35,7 @@ const EVENTS = [
     ts: '2026-10-06T14:30:00Z',
     kind: 'pr.merged',
     outcome: 'merged',
-    summary: 'merged veox/jain-web#3',
+    summary: 'merged acme/shop-web#3',
   }),
   verdict(33, 'web', 19),
   verdict(32, 'core', 11),
@@ -55,7 +55,7 @@ describe('Activity bursts', () => {
   it('draws one row for the burst, and leaves the rows around it alone', async () => {
     renderPage();
     const row = await screen.findByTestId('activity-burst-33');
-    expect(within(row).getByText('pragent requested changes on 3 jain pull requests')).toBeInTheDocument();
+    expect(within(row).getByText('review-bot requested changes on 3 shop pull requests')).toBeInTheDocument();
     // The one reason they all gave, said once, and the count of what folded.
     expect(within(row).getByText(REASON)).toBeInTheDocument();
     expect(within(row).getByText('×3')).toBeInTheDocument();
