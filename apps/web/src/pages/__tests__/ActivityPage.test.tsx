@@ -196,6 +196,29 @@ describe('ActivityPage', () => {
     expect(within(gate).getByText('Gate failed')).toHaveClass('page__pill--failed');
   });
 
+  it('names the live count as the loaded rows and where they reach back to', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-19T14:00:00Z') });
+    try {
+      mockPipelineApi((req) =>
+        req.pathname === '/api/v1/events'
+          ? json({
+              events: [
+                pipelineEvent({ seq: 3, ts: '2026-09-19T13:00:00Z', kind: 'todo.claimed' }),
+                pipelineEvent({ seq: 2, ts: '2026-09-19T12:38:00Z', kind: 'todo.claimed' }),
+              ],
+              latest_seq: 3,
+            })
+          : undefined
+      );
+      renderPage();
+      // Not "2 events", which read as the pipeline's total: the pill says it is
+      // showing what it has loaded, from the oldest row it holds.
+      expect(await screen.findByText('Live · Showing 2 since 08:38')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('separates the days, so a clock time can be placed', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-19T14:00:00Z') });
     try {

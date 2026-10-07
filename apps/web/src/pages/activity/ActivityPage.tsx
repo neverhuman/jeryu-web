@@ -57,6 +57,7 @@ import {
   longestSecondsByKind,
   hasMoreFilters,
   isWallMode,
+  loadedCountText,
   parseActivityFilters,
   resolvedSeqs,
   rowSeqs,
@@ -374,7 +375,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
               </p>
             ) : (
               <p className="activity__live" role="status">
-                {paused ? 'Paused' : 'Live'} · {events.length} event{events.length === 1 ? '' : 's'}
+                {paused ? 'Paused' : 'Live'} · {loadedCountText(events, new Date(now))}
               </p>
             )}
             {wall ? null : (

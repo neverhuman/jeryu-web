@@ -4,7 +4,7 @@
 import type { Tone } from '../../components/tone/tone';
 import { endpoints } from '../../api/endpoints';
 import type { PipelineEvent, PipelineEventsQuery, PipelineEventsResponse } from '../../api/types';
-import { localDayKey, zoneLabel } from '../../format/when';
+import { clockText, isSameLocalDay, localDayKey, zoneLabel } from '../../format/when';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
 import { todoHref } from '../shift/workPaths';
 
@@ -355,6 +355,29 @@ export function formatDay(iso: string, now: Date): string {
   );
   const named = days === 0 ? `Today · ${date}` : days === 1 ? `Yesterday · ${date}` : date;
   return `${named} · ${zoneLabel()}`;
+}
+
+/**
+ * How far back the loaded list reaches: the clock alone for a list that starts
+ * today, the date with it when it reaches back past midnight. Minutes are
+ * enough — this is a boundary, not an event's own stamp.
+ */
+export function loadedSinceText(iso: string, now: Date): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return iso;
+  const clock = clockText(at).slice(0, 5);
+  return isSameLocalDay(at, now) ? clock : `${at.getDate()} ${MONTHS[at.getMonth()]} ${clock}`;
+}
+
+/**
+ * What the live pill says it is holding. The number is the rows this page has
+ * loaded, not how many the pipeline has emitted, so it names itself as such
+ * and says where the loaded list ends; totals are the summary strip's job.
+ */
+export function loadedCountText(events: Array<Pick<PipelineEvent, 'ts'>>, now: Date): string {
+  if (events.length === 0) return 'Showing 0 events';
+  // The feed is newest first, so the oldest loaded event is the last one.
+  return `Showing ${events.length} since ${loadedSinceText(events[events.length - 1].ts, now)}`;
 }
 
 export interface DayGroup {

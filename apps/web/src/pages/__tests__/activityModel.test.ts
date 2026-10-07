@@ -25,6 +25,8 @@ import {
   hasDetail,
   formatSeconds,
   hasActiveFilters,
+  loadedCountText,
+  loadedSinceText,
   longestSecondsByKind,
   durationShare,
   exactSecondsText,
@@ -261,6 +263,22 @@ describe('activityModel', () => {
     const groups = groupByDay([...EVENTS, older, oldest]);
     expect(groups.map((group) => group.day)).toEqual(['2026-09-19', '2026-09-18']);
     expect(groups[1].events.map((event) => event.seq)).toEqual([2, 1]);
+  });
+
+  it('says the live count is what is loaded, and how far back it reaches', () => {
+    const now = new Date('2026-09-19T14:00:00Z');
+    const loaded = [
+      pipelineEvent({ seq: 3, ts: '2026-09-19T13:03:26Z', kind: 'pr.opened' }),
+      pipelineEvent({ seq: 2, ts: '2026-09-19T12:40:00Z', kind: 'todo.claimed' }),
+      pipelineEvent({ seq: 1, ts: '2026-09-19T12:38:10Z', kind: 'todo.filed' }),
+    ];
+    // The oldest loaded event is the boundary, to the minute, not the newest.
+    expect(loadedCountText(loaded, now)).toBe('Showing 3 since 08:38');
+    // A page that reaches back past midnight has to say which day it reaches.
+    expect(loadedSinceText('2026-09-18T22:38:10Z', now)).toBe('18 Sep 18:38');
+    expect(loadedSinceText('2026-09-19T12:38:10Z', now)).toBe('08:38');
+    expect(loadedSinceText('nonsense', now)).toBe('nonsense');
+    expect(loadedCountText([], now)).toBe('Showing 0 events');
   });
 
   it('knows which rows have more to say than their one line', () => {
