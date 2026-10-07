@@ -8,6 +8,7 @@ import {
   activeChip,
   activityHref,
   applyChip,
+  eventDetailFields,
   eventJson,
   eventLabel,
   eventLinks,
@@ -35,6 +36,7 @@ import {
   kindPatterns,
   matchesKind,
   maxSeq,
+  MAX_DETAIL_FIELDS,
   mergeEvents,
   minSeq,
   parseActivityFilters,
@@ -265,6 +267,88 @@ describe('activityModel', () => {
     expect(hasDetail(EVENTS.find((e) => e.seq === 10)!)).toBe(true);
     expect(hasDetail(EVENTS.find((e) => e.seq === 12)!)).toBe(true);
     expect(hasDetail(EVENTS.find((e) => e.seq === 11)!)).toBe(false);
+    // A field of its own is enough: a stage beat has neither reason nor log.
+    expect(
+      hasDetail(pipelineEvent({ seq: 30, kind: 'worker.stage', detail: { stage: 'gate' } }))
+    ).toBe(true);
+    expect(hasDetail(pipelineEvent({ seq: 31, kind: 'worker.stage' }))).toBe(false);
+  });
+
+  it('shows each kind the few detail fields its question needs', () => {
+    const gate = eventDetailFields(
+      pipelineEvent({
+        seq: 40,
+        kind: 'gate.finished',
+        detail: { runner: 'xbabe2/slot0', recipe: 'just required', receipt: 'target/receipts/9.json' },
+      })
+    );
+    expect(gate.map((field) => [field.label, field.value])).toEqual([
+      ['Runner', 'xbabe2/slot0'],
+      ['Recipe', 'just required'],
+      ['Receipt', 'target/receipts/9.json'],
+    ]);
+
+    // A number reads as itself; the order is the kind's, not the producer's.
+    const attempt = eventDetailFields(
+      pipelineEvent({
+        seq: 41,
+        kind: 'todo.attempt_finished',
+        detail: { shift: 'dayshift/2026-09-19', attempt: 2, model: 'claude-opus-5' },
+      })
+    );
+    expect(attempt.map((field) => `${field.label} ${field.value}`)).toEqual([
+      'Model claude-opus-5',
+      'Attempt 2',
+      'Shift dayshift/2026-09-19',
+    ]);
+
+    // The staged release's command is the one field worth a copy button.
+    const staged = eventDetailFields(
+      pipelineEvent({
+        seq: 42,
+        kind: 'release.staged',
+        detail: {
+          release: 'prod-20260919T130210Z-01dfe68-unsigned',
+          head_sha: '01dfe680a6de5e02da4e9aa7821534742aa46d7e',
+          deploy_command: 'jeryu deploy prod-20260919T130210Z-01dfe68-unsigned',
+        },
+      })
+    );
+    expect(staged.filter((field) => field.copy).map((field) => field.key)).toEqual(['deploy_command']);
+    // A sha is shortened like every other sha on the screen, whole in its title.
+    expect(staged.find((field) => field.key === 'head_sha')).toMatchObject({
+      label: 'Head',
+      value: '01dfe680',
+      title: '01dfe680a6de5e02da4e9aa7821534742aa46d7e',
+      mono: true,
+    });
+
+    expect(
+      eventDetailFields(pipelineEvent({ seq: 43, kind: 'deploy.status', detail: { log_path: '/var/log/deploy.log' } }))
+    ).toHaveLength(1);
+  });
+
+  it('leaves out the keys a producer did not send, and the kinds with no fields', () => {
+    // An empty string is not a value; `usage` is drawn by the row, not here.
+    expect(
+      eventDetailFields(
+        pipelineEvent({ seq: 50, kind: 'gate.finished', detail: { runner: '  ', usage: { input_tokens: 1 } } })
+      )
+    ).toEqual([]);
+    expect(eventDetailFields(pipelineEvent({ seq: 51, kind: 'pr.merged', detail: { runner: 'x' } }))).toEqual([]);
+    expect(eventDetailFields(pipelineEvent({ seq: 52, kind: 'gate.finished' }))).toEqual([]);
+  });
+
+  it('never shows more than four fields, however many the producer attached', () => {
+    const fields = eventDetailFields(
+      pipelineEvent({
+        seq: 60,
+        kind: 'todo.attempt_finished',
+        detail: { model: 'm', attempt: 1, attempts: 3, shift: 's' },
+      })
+    );
+    expect(fields).toHaveLength(MAX_DETAIL_FIELDS);
+    expect(fields.map((field) => field.key)).toEqual(['model', 'attempt', 'attempts', 'shift']);
   });
 
   it('counts the last 24 hours from the fetched events only', () => {

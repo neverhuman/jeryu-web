@@ -374,9 +374,112 @@ export function groupByDay(events: PipelineEvent[]): DayGroup[] {
   return groups;
 }
 
-/** Whether a row has more to say than its one line: a reason, or a log. */
-export function hasDetail(event: Pick<PipelineEvent, 'reason' | 'log_tail'>): boolean {
-  return Boolean(event.reason) || Boolean(event.log_tail);
+/** Whether a row has more to say than its one line: a reason, a log, or a
+ *  field its producer attached that the open row names. */
+export function hasDetail(event: Pick<PipelineEvent, 'reason' | 'log_tail' | 'kind' | 'detail'>): boolean {
+  return Boolean(event.reason) || Boolean(event.log_tail) || eventDetailFields(event).length > 0;
+}
+
+// ---- The fields a producer attaches to an event ---------------------------
+
+/**
+ * One field of `detail`, as the open row names it. The producer sends a bag of
+ * keys; a row shows the few that answer the question its kind raises — which
+ * runner ran the gate, which model took the attempt, what command would deploy
+ * the release it just staged.
+ */
+export interface DetailField {
+  /** The key as read, so a row can key on it and a test can name it. */
+  key: string;
+  /** What the field is, in words: `Runner`, `Deploy command`. */
+  label: string;
+  value: string;
+  /** Shown as given when the row shortens it: a full sha behind `b761244b`. */
+  title?: string;
+  /** Drawn in the mono face: a sha, a path, a command, a release name. */
+  mono: boolean;
+  /** Worth handing over whole, because nobody should retype it. */
+  copy: boolean;
+}
+
+/** What each key is called, in the words the rest of the screen uses. */
+const DETAIL_LABELS: Record<string, string> = {
+  stage: 'Stage',
+  slot: 'Slot',
+  runner: 'Runner',
+  recipe: 'Recipe',
+  receipt: 'Receipt',
+  model: 'Model',
+  attempt: 'Attempt',
+  attempts: 'Attempts',
+  shift: 'Shift',
+  head_sha: 'Head',
+  release: 'Release',
+  deploy_command: 'Deploy command',
+  log_path: 'Log path',
+};
+
+/** The keys drawn in the mono face: machine words, not prose. */
+const DETAIL_MONO = new Set(['recipe', 'receipt', 'head_sha', 'release', 'deploy_command', 'log_path', 'shift']);
+
+/** The keys worth a copy button: a line a human is meant to run. */
+const DETAIL_COPY = new Set(['deploy_command']);
+
+/**
+ * Which keys each family of kinds shows, in the order it shows them. The first
+ * prefix a kind starts with wins, so `gate.log` and `gate.finished` answer the
+ * same question; a kind no prefix covers shows nothing rather than every key
+ * the producer happened to attach.
+ */
+const DETAIL_KEYS: readonly { prefix: string; keys: readonly string[] }[] = [
+  { prefix: 'gate.', keys: ['runner', 'recipe', 'receipt'] },
+  { prefix: 'todo.', keys: ['model', 'attempt', 'attempts', 'shift'] },
+  { prefix: 'worker.', keys: ['stage', 'slot', 'runner', 'head_sha'] },
+  { prefix: 'release.', keys: ['release', 'head_sha', 'deploy_command'] },
+  { prefix: 'deploy.', keys: ['release', 'log_path'] },
+  { prefix: 'queue.', keys: ['head_sha', 'attempts'] },
+  { prefix: 'review.', keys: ['model', 'runner'] },
+];
+
+/** At most this many fields per row: the open row answers a question, it is
+ *  not the event in full — `Copy JSON` at its foot is. */
+export const MAX_DETAIL_FIELDS = 4;
+
+/** A key's value as one line, or null when the producer sent nothing usable. */
+function detailValue(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() === '' ? null : value.trim();
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : null;
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  return null;
+}
+
+/**
+ * The fields the open row shows for this event, in their kind's order, holding
+ * only the keys its producer actually sent. Empty for a kind with no fields of
+ * its own, and for one whose producer attached no `detail`.
+ */
+export function eventDetailFields(event: Pick<PipelineEvent, 'kind' | 'detail'>): DetailField[] {
+  const detail = event.detail;
+  if (!detail) return [];
+  const keys = DETAIL_KEYS.find((entry) => event.kind.startsWith(entry.prefix))?.keys ?? [];
+  const fields: DetailField[] = [];
+  for (const key of keys) {
+    const value = detailValue(detail[key]);
+    if (value === null) continue;
+    // A sha is shown as its first eight characters, like every other sha on the
+    // screen, with the whole of it in the title.
+    const short = key === 'head_sha' && /^[0-9a-f]{12,}$/i.test(value);
+    fields.push({
+      key,
+      label: DETAIL_LABELS[key] ?? key,
+      value: short ? value.slice(0, 8) : value,
+      ...(short ? { title: value } : {}),
+      mono: DETAIL_MONO.has(key),
+      copy: DETAIL_COPY.has(key),
+    });
+    if (fields.length === MAX_DETAIL_FIELDS) break;
+  }
+  return fields;
 }
 
 /** The five numbers the 24-hour strip shows, wherever they were counted. */

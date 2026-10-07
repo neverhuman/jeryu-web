@@ -503,6 +503,56 @@ test.describe('Pipeline visibility', () => {
     expect(tail.endsWith('gate: FAILED')).toBe(true);
   });
 
+  test('Activity names each field of an open row and hands over the deploy command @action:activity.detail_fields', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: async (value: string) => {
+            (window as unknown as { __copied?: string }).__copied = value;
+          },
+        },
+        configurable: true,
+      });
+    });
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
+
+    // A failed gate: which runner ran it, with which recipe, and where the
+    // receipt landed — none of which the one line could say.
+    const gate = page.getByTestId('activity-event-10');
+    await gate.getByRole('button', { name: 'Log for event 10' }).click();
+    const gateFields = gate.getByTestId('activity-event-fields-10');
+    await expect(gateFields.locator('dt')).toHaveText(['Runner', 'Recipe', 'Receipt']);
+    await expect(gateFields).toContainText('just required');
+    // And the join keys are words now, not the bare wire value beside them.
+    await expect(gate.locator('.activity-row__facts dt')).toHaveText([
+      'Source',
+      'Kind',
+      'Outcome',
+      'Actor',
+      'Commit',
+    ]);
+
+    // The staged release carries the command that would deploy it, which is
+    // the one field nobody should have to retype.
+    const staged = page.getByTestId('activity-event-12');
+    await staged.getByRole('button', { name: 'Why for event 12' }).click();
+    await expect(staged.getByTestId('activity-event-fields-12').locator('dt')).toHaveText([
+      'Release',
+      'Head',
+      'Deploy command',
+    ]);
+    await staged.getByTestId('activity-event-field-copy-12-deploy_command').click();
+    expect(await page.evaluate(() => (window as unknown as { __copied?: string }).__copied)).toBe(
+      'jeryu deploy prod-20260919T130210Z-01dfe68-unsigned'
+    );
+  });
+
   test('Activity freezes the list on Pause and picks the tail back up on Resume @action:activity.pause', async ({
     page,
   }) => {

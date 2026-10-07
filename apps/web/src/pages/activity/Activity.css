@@ -694,9 +694,59 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin: 0 0 var(--space-2);
-  font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--color-fg-muted);
+}
+
+/* The join keys themselves stay in the mono face they are written in; only
+   the words naming them are prose. */
+.activity-row__facts dd {
+  font-family: var(--font-mono);
+}
+
+/* The key fields of the open row: what the producer attached, each under the
+   word for it. Above the join keys, because this is what the row was opened
+   for, and in a wider column so a deploy command fits on its own line. */
+.activity-row__fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+}
+
+/* One label-above-value pair, in both lists. */
+.activity-row__field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.activity-row__field dt {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-fg-muted);
+}
+
+.activity-row__field dd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  min-width: 0;
+}
+
+/* A command, a path, a release name, a receipt: machine words, so the mono
+   face, and a long one scrolls inside its own column rather than widening
+   the row. */
+.activity-row__field-mono {
+  overflow-x: auto;
+  white-space: nowrap;
+  max-width: 28rem;
+  font-family: var(--font-mono);
+  user-select: all;
 }
 
 

@@ -207,6 +207,11 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
       summary: 'Staged prod-20260919T130210Z-01dfe68-unsigned',
       needs_human: true,
       reason: 'Awaiting the deploy command.',
+      detail: {
+        release: 'prod-20260919T130210Z-01dfe68-unsigned',
+        head_sha: '01dfe680a6de5e02da4e9aa7821534742aa46d7e',
+        deploy_command: 'jeryu deploy prod-20260919T130210Z-01dfe68-unsigned',
+      },
     }),
     pipelineEvent({
       seq: 11,
@@ -237,6 +242,7 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
         'error[E0432]: unresolved import',
         'gate: FAILED',
       ].join('\n'),
+      detail: { runner: 'xbabe2/slot0', recipe: 'just required', receipt: 'target/receipts/99.json' },
     }),
     pipelineEvent({
       seq: 9,
@@ -251,6 +257,9 @@ export function pipelineEvents(): Array<Record<string, unknown>> {
       seconds: 240,
       summary: 'w1 finished 20260919-0800-aaa: done',
       detail: {
+        model: 'claude-opus-5',
+        attempt: 2,
+        shift: 'dayshift/2026-09-19',
         usage: {
           input_tokens: 18_000,
           output_tokens: 1_400,

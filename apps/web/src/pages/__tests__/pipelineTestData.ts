@@ -192,6 +192,11 @@ export const EVENTS: PipelineEvent[] = [
     summary: 'Staged prod-20260919T130210Z-01dfe68-unsigned',
     needs_human: true,
     reason: 'Awaiting the deploy command.',
+    detail: {
+      release: 'prod-20260919T130210Z-01dfe68-unsigned',
+      head_sha: '01dfe680a6de5e02da4e9aa7821534742aa46d7e',
+      deploy_command: 'jeryu deploy prod-20260919T130210Z-01dfe68-unsigned',
+    },
   }),
   pipelineEvent({
     seq: 11,
@@ -216,6 +221,7 @@ export const EVENTS: PipelineEvent[] = [
     seconds: 114,
     summary: 'Gate failed on jeryu/jeryu-web#35',
     log_tail: 'error[E0432]: unresolved import\ngate: FAILED',
+    detail: { runner: 'xbabe2/slot0', recipe: 'just required', receipt: 'target/receipts/35.json' },
   }),
   pipelineEvent({
     seq: 9,
@@ -230,6 +236,9 @@ export const EVENTS: PipelineEvent[] = [
     seconds: 240,
     summary: 'w1 finished 20260919-121041-9d0b27: done',
     detail: {
+      model: 'claude-opus-5',
+      attempt: 2,
+      shift: 'dayshift/2026-09-19',
       usage: {
         input_tokens: 18_000,
         output_tokens: 1_400,

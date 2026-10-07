@@ -4,12 +4,15 @@
 // the summary with its subject as the link, how long it took — with a thin bar
 // behind the duration, scaled against the longest run of the same kind in the
 // loaded list, so a slow gate or a long attempt shows at a glance. Everything else
-// (who, which commit, why, the log tail, the event as the API returns it)
-// opens below. A row that needs a human
+// (who, which commit, why, the few fields its kind is asked about — the gate's
+// runner, the attempt's model, the command that would deploy a staged release —
+// the log tail, the event as the API returns it) opens below, each under the
+// word naming it. A row that needs a human
 // is red until a later event clears its cause; then it is marked resolved.
 // A row the live tail just brought in slides down with a short wash, so the
 // feed says "this is new" without moving anything else.
-// The toggle stays on the rows that have something to say (a reason, a log);
+// The toggle stays on the rows that have something to say (a reason, a log, a
+// field of its own);
 // on the quiet ones it waits for the pointer or the keyboard.
 // A log tail opens at its end, where the failure is, with the lines that
 // report one in the danger tone, and a button that hands the whole tail over.
@@ -28,6 +31,7 @@ import { sourceMark } from './sourceModel';
 import { attemptUsage, attemptUsageText, attemptUsageTitle } from './usageModel';
 import {
   durationShare,
+  eventDetailFields,
   eventLabel,
   eventLinks,
   eventJson,
@@ -119,6 +123,8 @@ export function EventRow({
   // The tail as lines, so the ones reporting a failure can carry the tone.
   const lines = event.log_tail ? logLines(event.log_tail) : [];
   const badLines = badLineCount(lines);
+  // The few `detail` keys this kind answers its question with.
+  const fields = eventDetailFields(event);
   // An opened tail starts at its end: a gate writes what went wrong last, and
   // a reader who has to scroll 24rem to reach it has been handed the wrong end.
   const logRef = useRef<HTMLPreElement | null>(null);
@@ -212,18 +218,79 @@ export function EventRow({
       {open ? (
         <div className="activity-row__detail" id={detailId}>
           {event.reason ? <p className="activity-row__reason">{event.reason}</p> : null}
-          <p className="activity-row__facts">
-            <span>{event.source}</span>
-            <span>{event.kind}</span>
-            {event.outcome ? <span>{event.outcome}</span> : null}
-            {event.actor ? <span>{event.actor}</span> : null}
-            {event.sha ? <code title={event.sha}>{shortSha(event.sha)}</code> : null}
-            {others.map((link) => (
-              <Link key={link.to} to={link.to} className="activity-row__link">
-                {link.label}
-              </Link>
-            ))}
-          </p>
+          {/* What the producer attached, for the question this kind raises:
+              which runner ran the gate, which model took the attempt, the
+              command that would deploy what was just staged. */}
+          {fields.length > 0 ? (
+            <dl className="activity-row__fields" data-testid={`activity-event-fields-${event.seq}`}>
+              {fields.map((field) => (
+                <div className="activity-row__field" key={field.key}>
+                  <dt>{field.label}</dt>
+                  <dd>
+                    <span
+                      className={field.mono ? 'activity-row__field-mono' : undefined}
+                      title={field.title}
+                    >
+                      {field.value}
+                    </span>
+                    {field.copy ? (
+                      <CopyButton
+                        text={field.value}
+                        label={`event ${event.seq} ${field.label.toLowerCase()}`}
+                        testId={`activity-event-field-copy-${event.seq}-${field.key}`}
+                      >
+                        Copy
+                      </CopyButton>
+                    ) : null}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          {/* The join keys, each said in words: the bare `forge` or `success`
+              read as wire noise until the reader was told which was which. */}
+          <dl className="activity-row__facts">
+            <div className="activity-row__field">
+              <dt>Source</dt>
+              <dd>{event.source}</dd>
+            </div>
+            <div className="activity-row__field">
+              <dt>Kind</dt>
+              <dd>{event.kind}</dd>
+            </div>
+            {event.outcome ? (
+              <div className="activity-row__field">
+                <dt>Outcome</dt>
+                <dd>{event.outcome}</dd>
+              </div>
+            ) : null}
+            {event.actor ? (
+              <div className="activity-row__field">
+                <dt>Actor</dt>
+                <dd>{event.actor}</dd>
+              </div>
+            ) : null}
+            {event.sha ? (
+              <div className="activity-row__field">
+                <dt>Commit</dt>
+                <dd>
+                  <code title={event.sha}>{shortSha(event.sha)}</code>
+                </dd>
+              </div>
+            ) : null}
+            {others.length > 0 ? (
+              <div className="activity-row__field">
+                <dt>Links</dt>
+                <dd>
+                  {others.map((link) => (
+                    <Link key={link.to} to={link.to} className="activity-row__link">
+                      {link.label}
+                    </Link>
+                  ))}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
           {event.log_tail ? (
             <div className="activity-row__log-box">
               <p className="activity-row__log-bar">
