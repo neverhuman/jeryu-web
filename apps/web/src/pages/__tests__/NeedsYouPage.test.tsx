@@ -205,6 +205,46 @@ describe('NeedsYouPage', () => {
     );
   });
 
+  it('leads both links of a "Changes requested" row to the review, with no bare path in the text', async () => {
+    const href = '/repos/jeryu/acme/web/pulls/12';
+    const label = 'Read the review and push a fix, or dismiss it';
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/attention'
+        ? json({
+            schema_version: 'jeryu.attention/v1',
+            generated_at: '2026-10-01T09:00:00Z',
+            counts: { critical: 0, action: 1, watch: 0 },
+            items: [
+              attentionItem({
+                id: 'pr_changes_requested:acme/web:12',
+                kind: 'pr_changes_requested',
+                title: 'Changes requested on acme/web#12',
+                reason: 'A reviewer asked for changes on "Retry builds" by dana.',
+                next_step: `${label}: open ${href}`,
+                repo: 'acme/web',
+                pr: 12,
+                href,
+                action: { label, command: null },
+              }),
+            ],
+          })
+        : undefined
+    );
+    renderPage();
+
+    const row = await screen.findByTestId('needs-you-item-pr_changes_requested:acme/web:12');
+    const review = `${href}#changes-requested`;
+    expect(within(row).getByRole('link', { name: 'Changes requested on acme/web#12' })).toHaveAttribute(
+      'href',
+      review
+    );
+    expect(
+      within(row).getByRole('link', { name: `${label}: Changes requested on acme/web#12` })
+    ).toHaveAttribute('href', review);
+    expect(within(row).getByText('A reviewer asked for changes on "Retry builds" by dana.')).toBeInTheDocument();
+    expect(within(row).queryByText(new RegExp(`open ${href}`))).toBeNull();
+  });
+
   it("runs the row's own call once, with an Idempotency-Key, and words a refusal in place", async () => {
     const QUEUE_PATH = '/api/v1/repos/jeryu:acme%2Fweb/pulls/7/queue';
     const row = (over: Partial<AttentionItem>): AttentionItem =>
@@ -242,8 +282,9 @@ describe('NeedsYouPage', () => {
     renderPage();
 
     const failed = await screen.findByTestId('needs-you-item-queue_failed:acme/web:7');
-    // The next step is the row's second line; the longer reason is its tooltip.
-    const detail = within(failed).getByText('Queue again: open /repos/jeryu/acme/web/pulls/7');
+    // The next step only repeats the button and the title link, so the row's
+    // second line is the reason, never a bare path.
+    const detail = within(failed).getByText('The queue gate failed twice on the same commit.');
     expect(detail).toHaveAttribute('title', 'The queue gate failed twice on the same commit.');
     // One act, plus the family pill; the title still leads to the pull request.
     expect(within(failed).getAllByRole('button')).toHaveLength(2);

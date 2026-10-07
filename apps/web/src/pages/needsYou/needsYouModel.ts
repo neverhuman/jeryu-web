@@ -2,6 +2,7 @@
 
 import type { Tone } from '../../components/tone/tone';
 import type { AttentionItem, AttentionResponse, AttentionSeverity } from '../../api/types';
+import { CHANGES_REQUESTED_ANCHOR } from '../../components/merge/reviewListModel';
 import { compareInstants } from '../../format/when';
 
 /** Where "what needs a human" lives; every other surface links here. */
@@ -177,7 +178,7 @@ export function alsoLine(item: AttentionItem): { label: string; detail: string; 
   return {
     label: kindLabel(item.kind),
     detail: rowDetail(item)?.text ?? item.title,
-    to: safeHref(item.href),
+    to: attentionHref(item),
   };
 }
 
@@ -295,7 +296,7 @@ export function primaryAction(item: AttentionItem): PrimaryAction {
   if (item.action?.command) {
     return { type: 'command', label, command: item.action.command, where: commandPlace(item) };
   }
-  const to = safeHref(item.href);
+  const to = attentionHref(item);
   return to ? { type: 'link', label, to } : null;
 }
 
@@ -315,16 +316,42 @@ export function apiMethod(method: string | null | undefined): ApiMethod | null {
   return name === 'DELETE' ? 'DELETE' : null;
 }
 
+export interface RowDetail {
+  text: string;
+  title: string;
+  /** Where the step's "open <path>" leads, shown in place of the bare path. */
+  to?: string;
+}
+
+/** "Read the review: open /repos/…" — a next step that ends in a path to open. */
+const OPEN_STEP = /^(.*\S)\s*:\s*open\s+(\/\S*)$/;
+
 /**
  * The row's second line: the server's one-sentence next step when it sends
  * one, else the reason. The reason stays the tooltip either way, since it is
  * often the longer of the two.
+ *
+ * A step ending in ": open <path>" is not shown with the bare path in it: the
+ * path becomes a link (`to`). When that step only repeats the row's own link
+ * button (same words, same place), the line says the reason instead, which
+ * the button does not.
  */
 export function rowDetail(
-  item: Pick<AttentionItem, 'next_step' | 'reason'>
-): { text: string; title: string } | null {
+  item: Pick<AttentionItem, 'next_step' | 'reason'> &
+    Partial<Pick<AttentionItem, 'kind' | 'href' | 'action'>>
+): RowDetail | null {
   const step = (item.next_step ?? '').trim();
   const reason = (item.reason ?? '').trim();
+  const opened = OPEN_STEP.exec(step);
+  const path = opened ? safeHref(opened[2]) : null;
+  if (opened && path) {
+    const words = opened[1].trim();
+    const own = path === safeHref(item.href);
+    const label = (item.action?.label ?? '').trim();
+    if (own && reason && words === label) return { text: reason, title: reason };
+    const to = own ? attentionHref({ kind: item.kind ?? '', href: item.href ?? null }) : path;
+    return { text: words, title: reason || words, to: to ?? path };
+  }
   const text = step || reason;
   return text ? { text, title: reason || text } : null;
 }
@@ -371,6 +398,18 @@ export function systemPulse(input: SystemPulseInput, ago: (iso: string) => strin
 /** Only same-origin app paths are followed; anything else is not a link. */
 export function safeHref(href: string | null | undefined): string | null {
   return href && href.startsWith('/') && !href.startsWith('//') ? href : null;
+}
+
+/**
+ * Where a row leads. A "Changes requested" row names only the pull request,
+ * so its link adds `#changes-requested`: the pull request page opens the
+ * review that asks for changes and scrolls to it, instead of leaving the
+ * reader to hunt for it. Every other row leads to its `href` unchanged.
+ */
+export function attentionHref(item: Pick<AttentionItem, 'kind' | 'href'>): string | null {
+  const to = safeHref(item.href);
+  if (!to || item.kind !== 'pr_changes_requested' || to.includes('#')) return to;
+  return `${to}#${CHANGES_REQUESTED_ANCHOR}`;
 }
 
 /**

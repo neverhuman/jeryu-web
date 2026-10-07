@@ -1,7 +1,8 @@
 // PullConversationTab.tsx — the front page of a pull request: what it says it
 // does, where the merge stands, the threads, and the pipeline's record of it.
 //
-// One column, in reading order: the description, the one merge box, the review
+// One column, in reading order: the description, the reviews with what each
+// reviewer wrote, the one merge box, the review
 // threads (each linking into the Files tab), where the change stands on the
 // work trace, then the pipeline timeline. The
 // Files, Checks and Commits of the pull request are tabs of their own, so
@@ -9,10 +10,10 @@
 
 import type { ReactNode } from 'react';
 
-import { MergeBox, ThreadList } from '../components/merge';
+import { MergeBox, ReviewList, ThreadList } from '../components/merge';
 import type { MergeBoxProps } from '../components/merge/MergeBox';
 import { ErrorState, LoadingState } from '../components/state';
-import type { ReviewThread } from '../api/types';
+import type { PullRequestReview, ReviewThread } from '../api/types';
 import type { usePrThreads } from '../hooks/usePrThreads';
 import { PullPipelineEvents } from './activity/PullPipelineEvents';
 import { pullFileHref } from './pullTabsModel';
@@ -23,6 +24,8 @@ export interface PullConversationTabProps {
   threads: ReturnType<typeof usePrThreads>;
   /** The pull request's own description, as the forge reports it. */
   description?: string | null;
+  /** The review rows, newest first on the page; each body is read here. */
+  reviews?: readonly PullRequestReview[];
   /** The pull request's base path, for the links out of a thread. */
   base: string;
   /** `owner/name` and the number, for the pipeline timeline. */
@@ -41,6 +44,7 @@ export function PullConversationTab({
   merge,
   threads,
   description,
+  reviews = [],
   base,
   repoFullName,
   prNumber,
@@ -61,6 +65,8 @@ export function PullConversationTab({
           <p>{description}</p>
         </section>
       ) : null}
+
+      <ReviewList reviews={reviews} />
 
       {queueAgain}
 

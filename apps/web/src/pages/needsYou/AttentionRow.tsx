@@ -36,7 +36,7 @@ import {
   primaryAction,
   repoFamilyMap,
   rowDetail,
-  safeHref,
+  attentionHref,
   type AttentionSubject,
   type PrimaryAction,
 } from './needsYouModel';
@@ -69,7 +69,7 @@ export function AttentionRow({
   const action = primaryAction(item);
   const family = familyFor(item);
   const detail = rowDetail(item);
-  const to = safeHref(item.href);
+  const to = attentionHref(item);
   // Only an admin ever sees a row: `/api/v1/attention` is admin-only.
   const target = acknowledgeTarget(item);
   return (
@@ -97,6 +97,14 @@ export function AttentionRow({
         {detail ? (
           <p className="needs-you__reason" title={detail.title}>
             {detail.text}
+            {detail.to ? (
+              <>
+                {' · '}
+                <Link to={detail.to} aria-label={`Open: ${item.title}`}>
+                  open
+                </Link>
+              </>
+            ) : null}
           </p>
         ) : null}
         {subject.also.length > 0 ? (

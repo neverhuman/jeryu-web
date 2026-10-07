@@ -17,5 +17,7 @@ export type { MergeBoxProps } from './MergeBox';
 export { gateExplanation } from './passportGates';
 export { QueueAgain } from './QueueAgain';
 export type { QueueAgainProps } from './QueueAgain';
+export { ReviewList } from './ReviewList';
+export type { ReviewListProps } from './ReviewList';
 export { ThreadList } from './ThreadList';
 export type { ThreadListProps } from './ThreadList';

@@ -8,6 +8,7 @@ import {
   familyOf,
   filterByFamily,
   alsoLine,
+  attentionHref,
   attentionSubjects,
   groupSubjects,
   kindRank,
@@ -110,8 +111,8 @@ describe('needsYouModel', () => {
   it('words an "also" line as what it is, what it wants, and where to go', () => {
     expect(alsoLine(REVIEW_HOLD[0])).toEqual({
       label: 'Changes requested',
-      detail: 'Push a fix, or dismiss the review: open /repos/jeryu/acme/widgets/pulls/7',
-      to: '/repos/jeryu/acme/widgets/pulls/7',
+      detail: 'Push a fix, or dismiss the review',
+      to: '/repos/jeryu/acme/widgets/pulls/7#changes-requested',
     });
     expect(alsoLine(attentionItem({ id: 'z', kind: 'pin_behind', href: 'https://evil.example' }))).toEqual({
       label: 'Merged, not pinned for release',
@@ -269,6 +270,51 @@ describe('needsYouModel', () => {
       title: 'Checks are failing.',
     });
     expect(rowDetail({ next_step: null, reason: null })).toBeNull();
+  });
+
+  it('never shows a bare path: "open <path>" becomes a link, or the reason when it repeats the act', () => {
+    const asked = attentionItem({
+      id: 'pr_changes_requested:acme/web:9',
+      kind: 'pr_changes_requested',
+      reason: 'A reviewer asked for changes; the review says what is wrong.',
+      next_step: 'Read the review and push a fix, or dismiss it: open /repos/jeryu/acme/web/pulls/9',
+      href: '/repos/jeryu/acme/web/pulls/9',
+      action: { label: 'Read the review and push a fix, or dismiss it', command: null },
+    });
+    // Same words and place that the row's own link has: the reason says more.
+    expect(rowDetail(asked)).toEqual({
+      text: 'A reviewer asked for changes; the review says what is wrong.',
+      title: 'A reviewer asked for changes; the review says what is wrong.',
+    });
+    // Other words, same place: the words, with the path turned into a link to the review.
+    expect(rowDetail({ ...asked, action: { label: 'Open', command: null } })).toEqual({
+      text: 'Read the review and push a fix, or dismiss it',
+      title: 'A reviewer asked for changes; the review says what is wrong.',
+      to: '/repos/jeryu/acme/web/pulls/9#changes-requested',
+    });
+    // Another place: linked unchanged.
+    expect(rowDetail({ next_step: 'Check the runners: open /fleet', reason: null })).toEqual({
+      text: 'Check the runners',
+      title: 'Check the runners',
+      to: '/fleet',
+    });
+    // An off-site path is not followed, so the step stays words.
+    expect(rowDetail({ next_step: 'Look: open //evil.example', reason: null })).toEqual({
+      text: 'Look: open //evil.example',
+      title: 'Look: open //evil.example',
+    });
+  });
+
+  it('leads a "Changes requested" row to the review itself, and every other row to its href', () => {
+    const href = '/repos/jeryu/acme/web/pulls/9';
+    expect(attentionHref({ kind: 'pr_changes_requested', href })).toBe(`${href}#changes-requested`);
+    expect(attentionHref({ kind: 'pr_changes_requested', href: `${href}#review-r1` })).toBe(
+      `${href}#review-r1`
+    );
+    expect(attentionHref({ kind: 'pr_checks_failing', href })).toBe(href);
+    expect(attentionHref({ kind: 'pr_changes_requested', href: 'https://evil.example' })).toBeNull();
+    const asked = attentionItem({ id: 'c', kind: 'pr_changes_requested', href, action: null });
+    expect(primaryAction(asked)).toEqual({ type: 'link', label: 'Open', to: `${href}#changes-requested` });
   });
 
   it('says where a command runs: the server\'s place, else a checkout of the repository, else nothing', () => {

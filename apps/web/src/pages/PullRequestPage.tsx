@@ -6,7 +6,7 @@
 //   │ Conversation | Files 3 | Checks 1 | Commits 5                    │
 //   └──────────────────────────────────────────────────────────────────┘
 //
-// Conversation is the default: the description, one merge box saying where
+// Conversation is the default: the description, the reviews, one merge box saying where
 // the merge stands, the threads, and the pipeline timeline. Files, Checks and
 // Commits are their own URLs (`/pulls/:n/files?path=`, `/checks`, `/commits`),
 // so each one has the whole width and none of them sits below the fold of a
@@ -501,6 +501,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           <PullConversationTab
             base={base}
             description={data.description}
+            reviews={data.reviews ?? []}
             threads={threads}
             repoFullName={fullName}
             prNumber={prNumber}
