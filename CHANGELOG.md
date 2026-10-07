@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- The signed-out story shows the ink dragon and a waitlist for email, name, and what someone wants from JeRyu. Those colors stay on that screen. Log in is the same session form, and joining the waitlist does not open an account.
 - Every "needs you" count on screen is now one derivation of one list. The nav badge, the live
   activity dock, the Needs you header and each page's "Waiting on you in <area>" strip all count
   `urgentAttention` / `urgentInArea` from `GET /api/v1/attention`: the dock no longer counts

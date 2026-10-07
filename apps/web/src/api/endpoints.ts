@@ -12,6 +12,8 @@ export const endpoints = {
   authMe: (): string => '/api/v1/auth/me',
   authLogin: (): string => '/api/v1/auth/login',
   authSignup: (): string => '/api/v1/auth/signup',
+  /** Public waitlist. Does not create an account or a session. */
+  waitlistJoin: (): string => '/api/v1/waitlist',
   authLogout: (): string => '/api/v1/auth/logout',
   authPassword: (): string => '/api/v1/auth/password',
   authTokens: (): string => '/api/v1/auth/tokens',

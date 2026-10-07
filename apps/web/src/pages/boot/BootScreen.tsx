@@ -9,7 +9,9 @@ import { useEffect, useRef, useState } from 'react';
 import { JeryuLogo } from '../../components/brand/JeryuLogo';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { BootSplash } from './BootSplash';
+import { DragonLanding } from './DragonLanding';
 import { LoginPanel } from './LoginPanel';
+import { WaitlistForm } from './WaitlistForm';
 
 import './boot.css';
 
@@ -114,7 +116,9 @@ export function BootScreen({
               <p>Remove release handoffs.</p>
               <p>Operate billion-token/day repo families at 1000-pull-request/day pace.</p>
             </div>
+            <WaitlistForm />
           </div>
+          {authOpen ? null : <DragonLanding />}
         </section>
 
         {authOpen ? (
