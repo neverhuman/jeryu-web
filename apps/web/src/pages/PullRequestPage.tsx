@@ -17,9 +17,10 @@
 // above all, since an author cannot approve their own pull request) is worded
 // by `approveRefusal` and shown next to the Approve button.
 //
-// A merge queue entry that failed or left the queue is the one case where the
-// queue stops and a person starts: Conversation then offers "Queue again"
-// (`components/merge/QueueAgain`), above the box.
+// The merge queue is the other way to land a change, and the merge box carries
+// it (`components/merge/QueueToMerge`): "Queue to merge" when the base moved
+// under a green head and a direct merge is refused, "Queue again" when the
+// entry failed or left the queue.
 //
 // Conversation also carries the Work section: where the change stands on the
 // twelve-stage work trace, which todos the pull request carries, and the
@@ -36,7 +37,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
-import { QueueAgain, type DiffViewerMode } from '../components/merge';
+import { QueueToMerge, type DiffViewerMode } from '../components/merge';
 import {
   ErrorState,
   LoadingState,
@@ -502,9 +503,6 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
             threads={threads}
             repoFullName={fullName}
             prNumber={prNumber}
-            queueAgain={
-              <QueueAgain repoId={repoId} prNumber={prNumber} enabled={!settled} />
-            }
             work={
               <PullRequestWork
                 summary={summary}
@@ -548,6 +546,19 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
                   ? mergeMutation.error.message
                   : null,
               closeError: setState.error ? setState.error.message : null,
+              queueOffer: (
+                <QueueToMerge
+                  repoId={repoId}
+                  prNumber={prNumber}
+                  detail={data}
+                  mergeError={
+                    mergeMutation.error && !headDrift
+                      ? mergeMutation.error.message
+                      : null
+                  }
+                  enabled={!settled}
+                />
+              ),
             }}
           />
         )}

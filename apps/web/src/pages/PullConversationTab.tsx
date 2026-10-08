@@ -2,7 +2,8 @@
 // does, where the merge stands, the threads, and the pipeline's record of it.
 //
 // One column, in reading order: the description, the reviews with what each
-// reviewer wrote, the one merge box, the review
+// reviewer wrote, the one merge box (which carries the merge queue's own act
+// when the queue is the way to land this change), the review
 // threads (each linking into the Files tab), where the change stands on the
 // work trace, then the pipeline timeline. The
 // Files, Checks and Commits of the pull request are tabs of their own, so
@@ -31,11 +32,6 @@ export interface PullConversationTabProps {
   /** `owner/name` and the number, for the pipeline timeline. */
   repoFullName?: string | null;
   prNumber?: string | null;
-  /**
-   * The merge queue's own act, above the box: a queue entry that failed is the
-   * one case where the queue stops and a person starts.
-   */
-  queueAgain?: ReactNode;
   /** Where the change stands on the work trace, and the todos it carries. */
   work?: ReactNode;
 }
@@ -48,7 +44,6 @@ export function PullConversationTab({
   base,
   repoFullName,
   prNumber,
-  queueAgain,
   work,
 }: PullConversationTabProps): JSX.Element {
   const anchorHref = (thread: ReviewThread): string | null =>
@@ -67,8 +62,6 @@ export function PullConversationTab({
       ) : null}
 
       <ReviewList reviews={reviews} />
-
-      {queueAgain}
 
       <MergeBox {...merge} />
 

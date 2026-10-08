@@ -30,7 +30,7 @@ import {
   Send,
   XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ActionButton } from '../action/ActionButton';
@@ -109,6 +109,11 @@ export interface MergeBoxProps {
   mergeError?: string | null;
   /** The server's refusal of a close / reopen, shown verbatim. */
   closeError?: string | null;
+  /**
+   * The merge queue's own act (`QueueToMerge`): Queue to merge when the base
+   * moved under a green head, Queue again when the entry failed.
+   */
+  queueOffer?: ReactNode;
   /** When true, mutations are disabled (in-flight). */
   isBusy?: boolean;
   className?: string;
@@ -200,6 +205,7 @@ export function MergeBox({
   reviewError = null,
   mergeError = null,
   closeError = null,
+  queueOffer = null,
   isBusy = false,
   className,
 }: MergeBoxProps): JSX.Element {
@@ -528,6 +534,7 @@ export function MergeBox({
           Merge refused: {mergeError}
         </p>
       ) : null}
+      {queueOffer}
 
       {requestChangesOpen ? (
         <div className="merge-box__changes-form">
