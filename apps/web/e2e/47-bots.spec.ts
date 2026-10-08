@@ -205,7 +205,7 @@ test('an empty repository roster links to add a Grokbot or Musebot @action:bots.
 
   const roster = page.getByTestId('bot-roster');
   await expect(roster).toBeVisible();
-  await expect(roster.getByRole('heading', { name: 'Grokbot and Musebot' })).toBeVisible();
+  await expect(roster.getByRole('heading', { name: 'Grokbot and Musebot', exact: true })).toBeVisible();
   await expect(page.getByTestId('bot-empty')).toContainText(
     'No Grokbot or Musebot on this repo yet'
   );
@@ -233,7 +233,7 @@ test('adding one shows the enrollment key and setup script once @action:bots.enr
   await shell.assertShellLoaded(15_000);
 
   await expect(page.getByTestId('enroll-page')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Grokbot and Musebot' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Grokbot and Musebot', exact: true })).toBeVisible();
   await expect(page.getByText('No Grokbot or Musebot on this account yet.')).toBeVisible();
   await expect(page.getByTestId('bot-setup')).toHaveCount(0);
 
