@@ -9,7 +9,9 @@
 //   * a checklist row per thing the merge waits for, each linking to the tab
 //     that owns it;
 //   * the primary action (approve this exact SHA, or merge), with Request
-//     changes beside it;
+//     changes beside it. Merge is always on the page: when the Passport has
+//     not cleared the head the button is there, disabled, with one line per
+//     blocker beside it saying what is happening and where to act;
 //   * Close or Reopen as a ghost button at the end, its comment field opening
 //     only once the reader has asked to close.
 //
@@ -32,6 +34,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ActionButton } from '../action/ActionButton';
+import { CiProgress } from '../ciProgress/CiProgress';
+import { useServerNow } from '../../hooks/useServerNow';
 import type { PullRequestChecks, PullRequestDetail } from '../../api/types';
 import { canChangeDraft } from '../../pages/pullDraftModel';
 import {
@@ -40,6 +44,11 @@ import {
   type ChecklistHrefs,
   type ChecklistRow,
 } from './mergeBoxModel';
+import {
+  mergeGateReasons,
+  pendingGateRun,
+  type MergeGateReason,
+} from './mergeGateModel';
 import {
   pullStateAction,
   targetState,
@@ -65,6 +74,8 @@ export interface MergeBoxProps {
   /** The checks of this head, for the required-checks row; null while reading. */
   checks?: PullRequestChecks | null;
   checksLoading?: boolean;
+  /** When `checks` was fetched, to line this page's clock up with the forge's. */
+  checksReceivedAtMs?: number;
   /** Where each checklist row sends the reader. */
   hrefs: ChecklistHrefs;
   /** Called when the reviewer approves, with the SHA they saw. */
@@ -136,10 +147,45 @@ function ChecklistItem({
   );
 }
 
+function GateReasonItem({
+  reason,
+  lead,
+  progress,
+}: {
+  reason: MergeGateReason;
+  /** The first reason reads loudest: it is the one to look at now. */
+  lead: boolean;
+  /** The running gate's own progress, for the wait this line is about. */
+  progress?: JSX.Element | null;
+}): JSX.Element {
+  const words = reason.href ? (
+    reason.external ? (
+      <a href={reason.href} target="_blank" rel="noreferrer">
+        {reason.text}
+      </a>
+    ) : (
+      <Link to={reason.href}>{reason.text}</Link>
+    )
+  ) : (
+    reason.text
+  );
+  return (
+    <li
+      className={`merge-box__gate-reason${lead ? ' merge-box__gate-reason--lead' : ''}`}
+      data-testid={`pr-merge-reason-${reason.code}`}
+    >
+      <AlertCircle aria-hidden="true" size={13} className="merge-box__gate-icon" />
+      <span className="merge-box__gate-words">{words}</span>
+      {progress}
+    </li>
+  );
+}
+
 export function MergeBox({
   detail,
   checks = null,
   checksLoading = false,
+  checksReceivedAtMs = 0,
   hrefs,
   onApprove,
   onRequestChanges,
@@ -163,6 +209,15 @@ export function MergeBox({
   const rows = mergeChecklist(detail, checks, hrefs, { checksLoading });
   const headline = mergeHeadline(detail, rows);
   const mergeable = canMergeNow(detail);
+  // The Merge button stays on the page when the merge is refused; these are
+  // the lines that say why, in the server's own order.
+  const gateReasons = settled ? [] : mergeGateReasons(detail, checks, hrefs);
+  const pendingRun = pendingGateRun(gateReasons, checks);
+  const nowMs = useServerNow(
+    checks?.server_time,
+    checksReceivedAtMs,
+    pendingRun !== null
+  );
   const primary = primaryAction(detail);
   const approve = approveAvailability(detail, viewerLogin);
   const cta = approveCta(detail, viewerLogin);
@@ -352,17 +407,16 @@ export function MergeBox({
       ) : null}
 
       <div className="merge-box__actions">
-        {mergeable ? (
-          <ActionButton
-            variant={primary === 'merge' ? 'primary' : 'default'}
-            icon={<GitMerge aria-hidden="true" size={12} />}
-            onClick={() => handleMerge('merge')}
-            disabled={isBusy}
-            actionId="pull.merge"
-          >
-            Merge
-          </ActionButton>
-        ) : null}
+        <ActionButton
+          variant={primary === 'merge' ? 'primary' : 'default'}
+          icon={<GitMerge aria-hidden="true" size={12} />}
+          onClick={() => handleMerge('merge')}
+          disabled={isBusy || !mergeable}
+          aria-disabled={isBusy || !mergeable ? true : undefined}
+          actionId="pull.merge"
+        >
+          Merge
+        </ActionButton>
         {cta.show ? (
           <ActionButton
             variant={cta.emphasized ? 'primary' : 'default'}
@@ -396,6 +450,29 @@ export function MergeBox({
           </ActionButton>
         ) : null}
       </div>
+
+      {gateReasons.length > 0 ? (
+        <ol className="merge-box__gate" data-testid="pr-merge-gate">
+          {gateReasons.map((reason, index) => (
+            <GateReasonItem
+              key={reason.code}
+              reason={reason}
+              lead={index === 0}
+              progress={
+                index === 0 && pendingRun ? (
+                  <CiProgress
+                    startedAt={pendingRun.startedAt}
+                    estimate={pendingRun.estimate}
+                    nowMs={nowMs}
+                    variant="inline"
+                    testId="pr-merge-gate-progress"
+                  />
+                ) : null
+              }
+            />
+          ))}
+        </ol>
+      ) : null}
 
       {mergeable ? (
         <div className="merge-box__merge-methods">

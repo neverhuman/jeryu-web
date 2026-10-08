@@ -1137,3 +1137,37 @@
 .pr-cockpit__state--merged {
   color: var(--color-fg-primary);
 }
+
+/* Why Merge is not pressable: one line per blocker, the first one loudest. */
+.merge-box__gate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.merge-box__gate-reason {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.merge-box__gate-reason--lead {
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.merge-box__gate-icon {
+  flex: none;
+  color: var(--color-accent-warning);
+}
+
+.merge-box__gate-words a {
+  color: inherit;
+}

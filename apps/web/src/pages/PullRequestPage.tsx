@@ -50,7 +50,7 @@ import { useMergePr } from '../hooks/useMergePr';
 import { useSetPullState } from '../hooks/useSetPullState';
 import { useSetPullDraft } from '../hooks/useSetPullDraft';
 import { useSubmitReview } from '../hooks/useSubmitReview';
-import { usePullRequest } from '../hooks/usePullRequest';
+import { pullRequestQueryKey, usePullRequest } from '../hooks/usePullRequest';
 import { prChecksQueryKey, usePrChecks } from '../hooks/usePrChecks';
 import { repoScope, useRunnerChangeNudge } from '../hooks/useRunnerChangeNudge';
 import { usePrDiff } from '../hooks/usePrDiff';
@@ -132,10 +132,17 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const detail = usePullRequest(repoId, prNumber);
   const diff = usePrDiff(repoId, prNumber);
   const checks = usePrChecks(repoId, prNumber);
-  // A gate starting or finishing on this repository refetches the checks.
+  // A gate starting or finishing on this repository refetches the checks, and
+  // the detail with them: the Passport verdict the Merge button reads changes
+  // the moment a required gate goes green.
   useRunnerChangeNudge(
     repoScope(fullName),
     prChecksQueryKey(repoId, prNumber),
+    Boolean(checks.data?.server_time)
+  );
+  useRunnerChangeNudge(
+    repoScope(fullName),
+    pullRequestQueryKey(repoId, prNumber),
     Boolean(checks.data?.server_time)
   );
   const threads = usePrThreads(repoId, prNumber);
@@ -511,8 +518,10 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
               detail: data,
               checks: checks.data ?? null,
               checksLoading: checks.isPending,
+              checksReceivedAtMs: checks.dataUpdatedAt,
               hrefs: {
                 threads: `${base}#pr-threads`,
+                conversation: base,
                 checks: `${base}/checks`,
                 commits: `${base}/commits`,
               },

@@ -226,12 +226,14 @@ test('the merge box states the verdict once and lists what is waiting @action:pr
   expect(await blockedStatements(page)).toEqual(['Blocked: 2 things need doing']);
 
   // The primary action is the approval of this exact head, with Request
-  // changes beside it — and no merge offered while the Passport holds.
+  // changes beside it — and Merge still on the page, disabled, saying what
+  // each blocker needs (e2e/47-pr-merge-gate.spec.ts covers the wording).
   await expect(
     page.getByRole('button', { name: `Approve exact SHA ${HEAD_SHA.slice(0, 7)}` })
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Request changes' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Merge', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Merge', exact: true })).toBeDisabled();
+  await expect(page.getByTestId('pr-merge-gate').locator('li')).toHaveCount(2);
 
   // The description and the pull request's threads are on the same page.
   await expect(page.getByTestId('pr-description')).toContainText(

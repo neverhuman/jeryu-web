@@ -4,8 +4,9 @@
 //   1. One headline, and the verdict said nowhere else on the page.
 //   2. A checklist row per thing the merge waits for, linking to its tab.
 //   3. The exact head SHA the reviewer saw carried into `onApprove`
-//      (§35.1.7), with Merge offered only once the Passport and
-//      `mergeable.can_merge` both allow it.
+//      (§35.1.7), with Merge always on the page but pressable only once the
+//      Passport and `mergeable.can_merge` both allow it (the reasons it is
+//      disabled are MergeGate.test.tsx).
 //   4. An author's own Approve disabled, naming who has to approve instead,
 //      and a server refusal shown with its next step.
 //   5. Close as a quiet button that asks before it turns red, with the
@@ -27,6 +28,7 @@ import {
 
 const HREFS = {
   threads: '/pulls/32#pr-threads',
+  conversation: '/pulls/32',
   checks: '/pulls/32/checks',
   commits: '/pulls/32/commits',
 };
@@ -123,9 +125,9 @@ describe('MergeBox', () => {
     });
   });
 
-  it('withholds Merge while the Passport has not cleared the head', () => {
+  it('keeps Merge on the page, disabled, while the Passport has not cleared', () => {
     show();
-    expect(screen.queryByRole('button', { name: 'Merge' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Merge' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Squash' })).toBeNull();
   });
 

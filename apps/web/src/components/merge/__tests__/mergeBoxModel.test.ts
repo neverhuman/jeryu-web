@@ -19,6 +19,7 @@ import {
 
 const HREFS = {
   threads: '/pulls/32#pr-threads',
+  conversation: '/pulls/32',
   checks: '/pulls/32/checks',
   commits: '/pulls/32/commits',
 };

@@ -29,6 +29,7 @@ type Story = StoryObj<typeof MergeBox>;
 const HEAD_SHA = 'abcdef1234567890abcdef1234567890abcdef12';
 const HREFS = {
   threads: '#pr-threads',
+  conversation: '/pulls/32',
   checks: '/checks',
   commits: '/commits',
 };

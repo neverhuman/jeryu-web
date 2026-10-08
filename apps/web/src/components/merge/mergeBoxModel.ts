@@ -39,6 +39,8 @@ export interface ChecklistRow {
 export interface ChecklistHrefs {
   /** The Conversation tab, threads anchor included. */
   threads: string;
+  /** The Conversation tab itself, for a `#review-<id>` anchor. */
+  conversation: string;
   /** The Checks tab. */
   checks: string;
   /** The Commits tab: which commits the approvals are counted against. */

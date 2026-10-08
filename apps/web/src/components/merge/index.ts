@@ -15,6 +15,8 @@ export type { ChecksPanelProps } from './ChecksPanel';
 export { MergeBox } from './MergeBox';
 export type { MergeBoxProps } from './MergeBox';
 export { gateExplanation } from './passportGates';
+export { mergeGateReasons, pendingGateRun } from './mergeGateModel';
+export type { MergeGateReason } from './mergeGateModel';
 export { QueueAgain } from './QueueAgain';
 export type { QueueAgainProps } from './QueueAgain';
 export { ReviewList } from './ReviewList';
