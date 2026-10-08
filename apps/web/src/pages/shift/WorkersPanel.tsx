@@ -5,6 +5,11 @@
 // 24h / 7d swim-lane timeline per slot, and an hourly capacity chart of
 // planned vs busy slots and queue depth.
 //
+// The panel can be narrowed to one family and a set of hosts (`?family=` and
+// `?host=` on /work), which is where "3 workers" on a release-board target
+// points: the live table, the pools and the timeline then show those slots
+// only, and the filter says so with a way out of it.
+//
 // The members of an external worker pool are grouped under their family in
 // their own block, with the reason behind each state and how loaded each
 // member is: they are not queue slots and have no todo or lease to show. A
@@ -21,8 +26,17 @@ import { ShiftError } from './shiftCommon';
 import { ShiftCapacityChart, ShiftTimeline } from './ShiftCharts';
 import { splitWorkers } from './shiftModel';
 import { When } from '../../format/When';
-import { type PoolSummary, poolSummaries, splitPools, splitSupervisors } from './workersModel';
-import { todoHref } from './workPaths';
+import {
+  type PoolSummary,
+  type SlotFilter,
+  filterSlots,
+  hasSlotFilter,
+  poolSummaries,
+  slotFilterText,
+  splitPools,
+  splitSupervisors,
+} from './workersModel';
+import { todoHref, workersHref } from './workPaths';
 
 import '../page.css';
 import './Shift.css';
@@ -32,11 +46,20 @@ const RANGES = [
   { hours: 168, label: '7d' },
 ] as const;
 
-export function WorkersPanel(): JSX.Element {
+export function WorkersPanel({
+  family = '',
+  hosts = [],
+}: {
+  /** The page's family filter; '' is every family. */
+  family?: string;
+  /** `?host=` on /work; empty is every host. */
+  hosts?: readonly string[];
+} = {}): JSX.Element {
   const workers = useShiftWorkers();
   const [hours, setHours] = useState<number>(24);
   const history = useShiftWorkersHistory(hours);
-  const all = workers.data?.workers ?? [];
+  const filter: SlotFilter = { family, hosts };
+  const all = filterSlots(workers.data?.workers ?? [], filter);
   const [showStale, setShowStale] = useState(false);
   // Slots unseen for over an hour are ghosts of old runs: hidden until asked for.
   const { shown, hidden } = splitWorkers(all, new Date());
@@ -50,6 +73,10 @@ export function WorkersPanel(): JSX.Element {
   const list = showSupervisors ? [...current.workers, ...current.supervisors] : current.workers;
   const healthy = list.filter((w) => w.healthy).length;
   const pools = poolSummaries(seen.pools);
+  // The timeline reads the same filter as the table, so a filtered panel never
+  // draws a lane the table above it leaves out.
+  const past = filterSlots(history.data?.slots ?? [], filter);
+  const lanes = showSupervisors ? past : splitSupervisors(past).workers;
 
   return (
     <div className="work-workers__panel" data-testid="shift-workers-panel">
@@ -68,6 +95,11 @@ export function WorkersPanel(): JSX.Element {
               {showSupervisors ? 'Hide' : 'Show'} {current.supervisors.length} supervisor
               {current.supervisors.length === 1 ? '' : 's'}
             </button>
+          ) : null}
+          {hasSlotFilter(filter) ? (
+            <span className="shift__muted" data-testid="shift-workers-filter">
+              {slotFilterText(filter)} · <Link to={workersHref('')}>show every slot</Link>
+            </span>
           ) : null}
           {hidden.length > 0 ? (
             <button
@@ -132,16 +164,10 @@ export function WorkersPanel(): JSX.Element {
           <LoadingState title="Loading history…" variant="message" />
         ) : history.isError ? (
           <ShiftError title="Could not load worker history." error={history.error} />
-        ) : history.data.slots.length === 0 ? (
+        ) : lanes.length === 0 ? (
           <EmptyState icon={Activity} title="No worker activity in this window." />
         ) : (
-          <ShiftTimeline
-            from={history.data.from}
-            to={history.data.to}
-            slots={
-              showSupervisors ? history.data.slots : splitSupervisors(history.data.slots).workers
-            }
-          />
+          <ShiftTimeline from={history.data.from} to={history.data.to} slots={lanes} />
         )}
       </section>
 

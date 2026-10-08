@@ -11,6 +11,7 @@
 // several jobs at once and it can be unavailable for a reason of its own — so
 // it is counted and shown on its own, per family, beside the queue's slots.
 
+import { sameFamily } from '../../components/family/familyScope';
 import { familyName } from '../needsYou/needsYouModel';
 
 const SUPERVISOR_SLOT = 'supervisor';
@@ -42,6 +43,44 @@ export function laneLabel(
 
 export function spansManyHosts(entries: ReadonlyArray<{ host: string }>): boolean {
   return new Set(entries.map((entry) => entry.host).filter(Boolean)).size > 1;
+}
+
+// ------------------------------------------------------------ slot filter
+
+/** What the workers panel is narrowed to: `?family=` and `?host=` on /work. */
+export interface SlotFilter {
+  /** '' is every family. */
+  family: string;
+  /** Empty is every host. */
+  hosts: readonly string[];
+}
+
+export function hasSlotFilter(filter: SlotFilter): boolean {
+  return Boolean(filter.family) || filter.hosts.length > 0;
+}
+
+/**
+ * The slots a filter keeps: a family (either spelling of its key) and a set of
+ * hosts, as the release board links to them. An empty filter keeps them all.
+ */
+export function filterSlots<T extends { family: string; host: string }>(
+  entries: readonly T[],
+  filter: SlotFilter
+): T[] {
+  const hosts = new Set(filter.hosts);
+  return entries.filter(
+    (entry) =>
+      (!filter.family || sameFamily(entry.family, filter.family)) &&
+      (hosts.size === 0 || hosts.has(entry.host))
+  );
+}
+
+/** `acme on node-a, node-b`: what the panel says it is showing. */
+export function slotFilterText(filter: SlotFilter): string {
+  const parts: string[] = [];
+  if (filter.family) parts.push(filter.family);
+  if (filter.hosts.length > 0) parts.push(`on ${filter.hosts.join(', ')}`);
+  return parts.join(' ');
 }
 
 // ------------------------------------------------------------ worker pools

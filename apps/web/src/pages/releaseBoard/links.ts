@@ -1,11 +1,17 @@
-// links.ts — the URLs that tie the release board to the Runners page.
+// links.ts — the URLs that tie the release board to the Runners and Work pages.
 //
 // A family's board lives at `/releases/family/<family>` and each lane on it
 // has the anchor `#lane-<laneId>`, so "where is this runner's release" is one
 // link. The other way, a stage target that names its runners links to
 // `/runners?runners=<id,id>`, which highlights those rows. `/releases?family=`
 // is the older spelling of the board's address and redirects to the path.
+// A target run by an external worker pool has no runner id: its slots report
+// to the shift heartbeat as a family and a host, so it links the other way, to
+// the workers panel on `/work?family=&host=#workers`.
 // Everything here is pure, so it is unit-tested without a router.
+
+import type { BoardTargetSlot } from '../../api/types/releaseBoard';
+import { workersHref } from '../shift/workPaths';
 
 export const RELEASES_PATH = '/releases';
 
@@ -45,6 +51,28 @@ export function runnersHref(runnerIds: readonly string[]): string {
 /** "1 runner", "3 runners". */
 export function runnerCountLabel(count: number): string {
   return count === 1 ? '1 runner' : `${count} runners`;
+}
+
+/**
+ * `/work?family=acme&host=node-a,node-b#workers`: the workers panel showing
+ * the slots that run a target. The family is only part of the address when
+ * every slot reports under the same one — across families the hosts are the
+ * narrowest honest filter.
+ */
+export function slotsHref(slots: readonly BoardTargetSlot[]): string {
+  const families = [...new Set(slots.map((slot) => slot.family).filter(Boolean))];
+  const hosts = [...new Set(slots.map((slot) => slot.host).filter(Boolean))];
+  return workersHref(families.length === 1 ? (families[0] ?? '') : '', hosts);
+}
+
+/** "1 worker", "3 workers": one per `{family, host}` the target names. */
+export function slotCountLabel(count: number): string {
+  return count === 1 ? '1 worker' : `${count} workers`;
+}
+
+/** `acme · node-a`, one slot per line: the link's hover text. */
+export function slotsTitle(slots: readonly BoardTargetSlot[]): string {
+  return slots.map((slot) => `${slot.family} · ${slot.host}`).join('\n');
 }
 
 /**

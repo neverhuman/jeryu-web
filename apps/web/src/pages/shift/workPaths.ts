@@ -4,6 +4,21 @@ export const WORK_PATH = '/work';
 /** In-page anchors: the composer and the workers strip. */
 export const WORK_ADD_ID = 'add';
 export const WORK_WORKERS_ID = 'workers';
+/** The workers panel's own filter: a comma-separated list of hosts. */
+export const WORK_HOST_PARAM = 'host';
+
+/**
+ * The workers panel, opened, narrowed to a family and a set of hosts — where
+ * "3 workers" on the release board points. An empty family or host list leaves
+ * that filter out.
+ */
+export function workersHref(family: string, hosts: readonly string[] = []): string {
+  const qs = new URLSearchParams();
+  if (family) qs.set('family', family);
+  if (hosts.length > 0) qs.set(WORK_HOST_PARAM, hosts.join(','));
+  const query = qs.toString();
+  return `${WORK_PATH}${query ? `?${query}` : ''}#${WORK_WORKERS_ID}`;
+}
 
 /** Work, filtered to a family, with the given todos opened and highlighted. */
 export function queueHref(family: string, ids: string[] = []): string {

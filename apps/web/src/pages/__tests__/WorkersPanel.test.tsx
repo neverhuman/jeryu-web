@@ -1,5 +1,6 @@
 // WorkersPanel.test.tsx — the opened workers strip: live table, timeline range
-// toggle, capacity chart, and empty / error states.
+// toggle, capacity chart, empty / error states, and the family/host filter a
+// release-board target links to.
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -14,6 +15,27 @@ function renderWorkers(): void {
 
 describe('WorkersPanel', () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it('narrows the live table, pools and timeline to one family and host', async () => {
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/workers' ? json(POOL_WORKERS) : undefined
+    );
+    renderAt('/work', '/work', <WorkersPanel family="globex" hosts={['node-b']} />);
+    // The pool reports as globex on node-b; the queue's own jeryu slots do not.
+    await screen.findByTestId('shift-pool-globex');
+    expect(screen.getByTestId('shift-pool-slot-node-b-member-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-worker-node-0-w1')).toBeNull();
+    const note = screen.getByTestId('shift-workers-filter');
+    expect(note).toHaveTextContent('globex on node-b');
+    expect(within(note).getByRole('link', { name: 'show every slot' })).toHaveAttribute(
+      'href',
+      '/work#workers'
+    );
+    // The timeline reads the same filter: jeryu's history lane is left out, and
+    // with nothing left the window reads as empty rather than as 0 lanes.
+    expect(await screen.findByText('No worker activity in this window.')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-timeline')).toBeNull();
+  });
 
   it('renders the live table, timeline and capacity chart', async () => {
     const calls = mockShiftApi();

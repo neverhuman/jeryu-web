@@ -8,7 +8,8 @@
 // it runs, what promoting would ship, the rollback, and the promote command to
 // copy. One cell per lane is open at a time; pressing it again closes it.
 // Each lane is the anchor `#lane-<id>`, and a target that names its runners
-// links to them on /runners ("2 runners").
+// links to them on /runners ("2 runners"); one run by an external worker pool
+// names its shift slots instead and links to them on /work ("2 workers").
 
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
@@ -22,7 +23,14 @@ import type {
 } from '../../api/types/releaseBoard';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import { useViewState } from '../../hooks/useViewState';
-import { laneAnchorId, runnerCountLabel, runnersHref } from './links';
+import {
+  laneAnchorId,
+  runnerCountLabel,
+  runnersHref,
+  slotCountLabel,
+  slotsHref,
+  slotsTitle,
+} from './links';
 import {
   boardColumns,
   connectorLabel,
@@ -337,6 +345,16 @@ function StageDetail({
                         data-testid="release-board-target-runners"
                       >
                         {runnerCountLabel(target.runners.length)}
+                      </Link>
+                    ) : null}
+                    {target.slots && target.slots.length > 0 ? (
+                      <Link
+                        className="release-board__runners"
+                        to={slotsHref(target.slots)}
+                        title={slotsTitle(target.slots)}
+                        data-testid="release-board-target-slots"
+                      >
+                        {slotCountLabel(target.slots.length)}
                       </Link>
                     ) : null}
                   </th>

@@ -7,7 +7,9 @@
 // An external pool gets a line of its own per family — "acme pool: 3 of 4
 // available, 2 busy (5 active)" — because its members are not queue slots:
 // each holds several jobs, and an unavailable one says why (on hover).
-// Opened, it shows the whole workers panel in place: table, timeline, capacity.
+// Opened, it shows the whole workers panel in place: table, timeline, capacity,
+// narrowed to the page's family and to `?host=` when a release-board target
+// linked here.
 
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -16,11 +18,12 @@ import { Link, useLocation } from 'react-router-dom';
 import type { ShiftTodo } from '../../api/types';
 import { useAttention } from '../../hooks/usePipeline';
 import { useShiftWorkers, useShiftWorkersHistory } from '../../hooks/useShift';
+import { useViewState } from '../../hooks/useViewState';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { WorkersPanel } from './WorkersPanel';
 import { budgetSpentLines, busySparkline, nightWindow, workersLine } from './workPageModel';
 import { poolSummaries } from './workersModel';
-import { WORK_WORKERS_ID, todoHref } from './workPaths';
+import { WORK_HOST_PARAM, WORK_WORKERS_ID, todoHref } from './workPaths';
 
 const OPEN_KEY = 'jeryu.work.workersOpen.v1';
 const SPARK_W = 120;
@@ -38,6 +41,13 @@ export function WorkersStrip({
   const attention = useAttention();
   const history = useShiftWorkersHistory(24);
   const { hash } = useLocation();
+  // `?host=` narrows the opened panel to the hosts a release-board target
+  // named; the link that sets it also carries `#workers`, so it opens here.
+  const view = useViewState();
+  const hosts = view.readList(WORK_HOST_PARAM);
+  // A pool reports under a family this forge hosts no queue for, so the page
+  // hands us '' for it; the address still names it, and the panel can filter.
+  const slotFamily = family || view.read('family');
   const [open, setOpen] = useState<boolean>(
     () => readBrowserText('durable', OPEN_KEY) === '1'
   );
@@ -145,7 +155,7 @@ export function WorkersStrip({
         </div>
       ))}
       <div id={panelId} hidden={!open}>
-        {open ? <WorkersPanel /> : null}
+        {open ? <WorkersPanel family={slotFamily} hosts={hosts} /> : null}
       </div>
     </section>
   );

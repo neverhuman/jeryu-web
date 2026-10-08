@@ -35,6 +35,13 @@
   change by week; a breakdown by model, agent, experiment arm, family, repository, requester or
   week; and the costliest and scrapped todos, each linking to its page. The window (7, 28 or 90
   days) and the cut stay in the address; the family is the shell's scope.
+- A release-board target run by an external worker pool links to it: a target
+  with `slots: [{family, host}]` shows "3 workers" beside its name on
+  `/releases`, pointing at `/work?family=&host=#workers`. The workers panel
+  reads both: it narrows the live table, the pools and the timeline to that
+  family and those hosts, and says what it is filtered to with a way back to
+  every slot. A pool reports to the shift heartbeat and has no runner id, so
+  "N runners" could never name it.
 - The signed-out story shows the ink dragon and a waitlist for email, name, and what someone wants from JeRyu. A new address and a repeat share one receipt, the fields clear after it, and a short privacy line sits under the form (wording pending). Those colors stay on that screen. Log in is the same session form, and joining the waitlist does not open an account.
 - The account control at the top right is a menu: Settings, the theme, the keyboard shortcuts,
   Help and — at the bottom — Log out. It opens with Enter, Space or ↓, walks with the arrow keys

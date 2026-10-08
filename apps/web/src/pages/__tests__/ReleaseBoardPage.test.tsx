@@ -4,7 +4,8 @@
 // show (403, nothing reported, non-admin), each of which keeps the
 // per-repository view below the note. `?repo=` is still the per-repo view.
 // The board's address is `/releases/family/<family>`; its lanes are
-// `#lane-<id>` anchors, and a target that names runners links to /runners.
+// `#lane-<id>` anchors, a target that names runners links to /runners, and one
+// that names shift slots links to those workers on /work.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -498,6 +499,27 @@ describe('ReleasesPage — family release board', () => {
     expect(
       within(screen.getByTestId('release-board-detail-reviewer')).getByRole('link', { name: '1 runner' })
     ).toHaveAttribute('href', '/runners?runners=node-a%2Freviewer');
+  });
+
+  it('links a target that names its shift slots to those workers on /work', async () => {
+    serveBoards();
+    open('/releases/family/globex');
+    fireEvent.click(await screen.findByTestId('release-board-stage-scorer-installed'));
+    const detail = within(screen.getByTestId('release-board-detail-scorer'));
+    const two = detail.getByRole('link', { name: '2 workers' });
+    expect(two).toHaveAttribute('href', '/work?family=globex&host=build-1%2Cbuild-2#workers');
+    expect(two).toHaveAttribute('title', 'globex · build-1\nglobex · build-2');
+    expect(detail.getByRole('link', { name: '1 worker' })).toHaveAttribute(
+      'href',
+      '/work?family=globex&host=node-a#workers'
+    );
+  });
+
+  it('shows no worker link for a target that names no slots', async () => {
+    serveBoards();
+    open('/releases/family/globex');
+    fireEvent.click(await screen.findByTestId('release-board-stage-gate-runner-installed'));
+    expect(screen.queryByTestId('release-board-target-slots')).toBeNull();
   });
 
   it('shows no runner link for a target without runners (an older collector)', async () => {
