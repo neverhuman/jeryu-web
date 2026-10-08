@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkersStrip } from '../shift/WorkersStrip';
 import { ATTENTION, BUDGET_SPENT } from './pipelineTestData';
 import { json, mockShiftApi, renderAt } from './shiftPageHelpers';
-import { TODOS, WORKERS } from './shiftTestData';
+import { POOL_WORKERS, TODOS, WORKERS } from './shiftTestData';
 
 // Node's global localStorage is undefined without a backing file and shadows
 // jsdom's: the strip goes through the storage adapter, so the test brings its own.
@@ -119,6 +119,22 @@ describe('WorkersStrip', () => {
     renderStrip('/work?family=acme', 'acme');
     expect(await screen.findByTestId('work-budget-spent-acme')).toHaveTextContent(
       '· spent $42.00 of $40.00 this shift · 3 todos waiting on budget'
+    );
+  });
+
+  it('gives an external pool its own line, with the paused reason on hover', async () => {
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/workers' ? json(POOL_WORKERS) : undefined
+    );
+    renderStrip();
+    // The pool reports under a family with no todos here, and is shown anyway.
+    const pool = await screen.findByTestId('work-pool-globex');
+    expect(pool).toHaveTextContent('globex pool: 3 of 4 available, 2 busy (5 active)');
+    expect(pool).toHaveTextContent('sign-in needed');
+    expect(pool).toHaveAttribute('title', 'member-4: paused — sign-in needed');
+    // Pool members are not queue slots: the slot counts leave them out.
+    expect(await screen.findByTestId('work-workers-summary')).toHaveTextContent(
+      '1 of 1 slot healthy · 1 working · 0 paused'
     );
   });
 

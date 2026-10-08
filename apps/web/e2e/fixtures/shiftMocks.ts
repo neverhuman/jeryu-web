@@ -300,3 +300,50 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
   });
   return log;
 }
+
+/** One member of an external pool, as the fleet's reporter beats it. */
+function member(overrides: Record<string, unknown>): Record<string, unknown> {
+  return {
+    operator: 'operator',
+    host: 'node-b',
+    family: 'globex',
+    kind: 'pool',
+    state: 'working',
+    capacity: 4,
+    active: 0,
+    last_seen: iso(0),
+    healthy: true,
+    ...overrides,
+  };
+}
+
+/**
+ * Answer `/api/v1/shift/workers` with the queue's own slots and, beside them,
+ * an external pool reporting under a family with no queue of its own. Call it
+ * after `mockShiftApi`, whose route for this one path it takes over.
+ */
+export async function mockWorkerPools(page: Page): Promise<void> {
+  await page.route('**/api/v1/shift/workers', async (route) =>
+    fulfill(route, {
+      generated_at: iso(0),
+      workers: [
+        {
+          operator: 'operator',
+          host: 'node-a',
+          slot: 'w1',
+          family: 'jeryu',
+          state: 'working',
+          stage: 'agent',
+          todo_id: '20260919-0900-ccc',
+          lease_until: iso(30),
+          last_seen: iso(0),
+          healthy: true,
+        },
+        member({ slot: 'member-1', active: 3 }),
+        member({ slot: 'member-2', active: 2 }),
+        member({ slot: 'member-3', state: 'idle' }),
+        member({ slot: 'member-4', state: 'paused', detail: 'sign-in needed' }),
+      ],
+    })
+  );
+}

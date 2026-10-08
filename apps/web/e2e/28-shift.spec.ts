@@ -8,7 +8,7 @@ import { expect, test } from './fixtures/test';
 
 import { mockBootstrap } from './fixtures/mocks';
 import { mockPipelineApi } from './fixtures/pipelineMocks';
-import { NIGHT, mockShiftApi } from './fixtures/shiftMocks';
+import { NIGHT, mockShiftApi, mockWorkerPools } from './fixtures/shiftMocks';
 
 test.describe('Work, one page', () => {
 
@@ -61,6 +61,31 @@ test.describe('Work, one page', () => {
     await expect(page.getByTestId('shift-workers-panel')).toBeVisible();
     await page.goto('/work/shift/new');
     await expect(page).toHaveURL(/\/work#add$/);
+  });
+
+  test('an external pool is counted beside the queue slots @action:shift.worker_pools', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'user' } });
+    await mockShiftApi(page);
+    await mockWorkerPools(page);
+
+    await page.goto('/work');
+    // The pool reports under a family this queue has no todos for, and is
+    // counted on its own line: its members are not queue slots.
+    const pool = page.getByTestId('work-pool-globex');
+    await expect(pool).toContainText('globex pool: 3 of 4 available, 2 busy (5 active)');
+    await expect(pool).toContainText('sign-in needed');
+    await expect(pool).toHaveAttribute('title', 'member-4: paused \u2014 sign-in needed');
+    await expect(page.getByTestId('work-workers-summary')).toContainText('1 of 1 slot healthy');
+
+    // Opened, each member is a row under its family with state, reason and load.
+    await page.getByRole('button', { name: 'Workers' }).click();
+    const group = page.getByTestId('shift-pool-globex');
+    await expect(group.getByTestId('shift-pool-slot-node-b-member-4')).toContainText('sign-in needed');
+    await expect(group.getByTestId('shift-pool-slot-node-b-member-1')).toContainText('3 of 4');
+    await expect(page.getByTestId('shift-worker-node-a-w1')).toBeVisible();
+    await page.getByTestId('work-workers').screenshot({ path: 'playwright-report/work-worker-pools.png' });
   });
 
   test('every family is listed, and a pill on a row filters the whole page @action:shift.family_pill', async ({

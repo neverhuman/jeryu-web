@@ -4,6 +4,11 @@
 // Live table of worker-slot heartbeats (healthy = seen within 120 s), a
 // 24h / 7d swim-lane timeline per slot, and an hourly capacity chart of
 // planned vs busy slots and queue depth.
+//
+// The members of an external worker pool are grouped under their family in
+// their own block, with the reason behind each state and how loaded each
+// member is: they are not queue slots and have no todo or lease to show. A
+// family whose queue is empty still has its pool rendered here.
 
 import { Activity, ServerCog } from 'lucide-react';
 import { useState } from 'react';
@@ -16,7 +21,7 @@ import { ShiftError } from './shiftCommon';
 import { ShiftCapacityChart, ShiftTimeline } from './ShiftCharts';
 import { splitWorkers } from './shiftModel';
 import { When } from '../../format/When';
-import { splitSupervisors } from './workersModel';
+import { type PoolSummary, poolSummaries, splitPools, splitSupervisors } from './workersModel';
 import { todoHref } from './workPaths';
 
 import '../page.css';
@@ -37,9 +42,14 @@ export function WorkersPanel(): JSX.Element {
   const { shown, hidden } = splitWorkers(all, new Date());
   const [showSupervisors, setShowSupervisors] = useState(false);
   // A supervisor starts and stops workers and never carries a todo: folded away.
-  const current = splitSupervisors(showStale ? all : shown);
+  // Pool members are not queue slots: counting them among them would make a
+  // pool-only family read as a queue with slots that carry no todo.
+  const queueSlots = splitPools(all).slots;
+  const seen = splitPools(showStale ? all : shown);
+  const current = splitSupervisors(seen.slots);
   const list = showSupervisors ? [...current.workers, ...current.supervisors] : current.workers;
   const healthy = list.filter((w) => w.healthy).length;
+  const pools = poolSummaries(seen.pools);
 
   return (
     <div className="work-workers__panel" data-testid="shift-workers-panel">
@@ -75,22 +85,31 @@ export function WorkersPanel(): JSX.Element {
           <LoadingState title="Loading workers…" variant="message" />
         ) : workers.isError ? (
           <ShiftError title="Could not load workers." error={workers.error} />
-        ) : all.length === 0 ? (
+        ) : queueSlots.length === 0 ? (
           <EmptyState
             icon={ServerCog}
-            title="No worker has sent a heartbeat."
+            title="No queue slot has sent a heartbeat."
             description="Start todoq supervisor on a machine; its slots appear here within 30 seconds."
           />
         ) : list.length === 0 ? (
           <EmptyState
             icon={ServerCog}
-            title="No worker slot has been seen in the last hour."
+            title="No queue slot has been seen in the last hour."
             description="Every known slot is stale. Check the todoq supervisors, or show the stale slots."
           />
         ) : (
           <WorkersTable workers={list} />
         )}
       </section>
+
+      {pools.length > 0 ? (
+        <section className="shift__section" aria-label="Worker pools" data-testid="shift-pools">
+          <h2 className="page__section-title">Pools</h2>
+          {pools.map((pool) => (
+            <PoolGroup key={pool.family} pool={pool} />
+          ))}
+        </section>
+      ) : null}
 
       <section className="shift__section" aria-label="Timeline">
         <div className="shift__toolbar">
@@ -136,6 +155,65 @@ export function WorkersPanel(): JSX.Element {
           <ShiftCapacityChart points={history.data.capacity} />
         )}
       </section>
+    </div>
+  );
+}
+
+/** One family's pool: the counted line, then a row per member. */
+function PoolGroup({ pool }: { pool: PoolSummary<ShiftWorker> }): JSX.Element {
+  const now = new Date();
+  return (
+    <div data-testid={`shift-pool-${pool.family}`}>
+      <p className="shift__pool-group" title={pool.title || undefined}>
+        {pool.text}
+      </p>
+      <div className="table-scroll">
+        <table className="shift__table">
+          <thead>
+            <tr>
+              <th scope="col">Health</th>
+              <th scope="col">Host</th>
+              <th scope="col">Slot</th>
+              <th scope="col">State</th>
+              <th scope="col">Detail</th>
+              <th scope="col">Active</th>
+              <th scope="col">Last seen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pool.members.map((member) => (
+              <tr
+                key={`${member.operator}/${member.host}/${member.slot}/${member.family}`}
+                data-testid={`shift-pool-slot-${member.host}-${member.slot}`}
+              >
+                <td>
+                  <span
+                    className={`shift-health${member.healthy ? ' is-healthy' : ''}`}
+                    aria-hidden="true"
+                  />
+                  {member.healthy ? (
+                    'healthy'
+                  ) : (
+                    <span className="page__pill page__pill--warning">stale</span>
+                  )}
+                </td>
+                <td>{member.host}</td>
+                <td>{member.slot}</td>
+                <td>{member.state}</td>
+                <td>{member.detail ? member.detail : '—'}</td>
+                <td>
+                  {typeof member.active === 'number'
+                    ? `${member.active} of ${typeof member.capacity === 'number' ? member.capacity : '?'}`
+                    : '—'}
+                </td>
+                <td>
+                  <When at={member.last_seen} now={now} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkersPanel } from '../shift/WorkersPanel';
 import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
-import { HISTORY, WORKERS } from './shiftTestData';
+import { HISTORY, POOL_WORKERS, WORKERS } from './shiftTestData';
 
 function renderWorkers(): void {
   renderAt('/work', '/work', <WorkersPanel />);
@@ -75,6 +75,40 @@ describe('WorkersPanel', () => {
     expect(within(timeline).getByText('jeryu · supervisor')).toBeInTheDocument();
   });
 
+  it('groups an external pool under its family, with state, reason and load', async () => {
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/workers' ? json(POOL_WORKERS) : undefined
+    );
+    renderWorkers();
+    const group = await screen.findByTestId('shift-pool-globex');
+    expect(within(group).getByText('globex pool: 3 of 4 available, 2 busy (5 active)')).toHaveAttribute(
+      'title',
+      'member-4: paused \u2014 sign-in needed'
+    );
+    const paused = within(group).getByTestId('shift-pool-slot-node-b-member-4');
+    expect(within(paused).getByText('paused')).toBeInTheDocument();
+    expect(within(paused).getByText('sign-in needed')).toBeInTheDocument();
+    expect(within(paused).getByText('0 of 4')).toBeInTheDocument();
+    expect(
+      within(within(group).getByTestId('shift-pool-slot-node-b-member-1')).getByText('3 of 4')
+    ).toBeInTheDocument();
+    // A pool member is not a queue slot: the live table keeps its own count.
+    expect(screen.getByText('Live \u00b7 1 of 1 healthy')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-worker-node-b-member-1')).toBeNull();
+  });
+
+  it('renders the pool of a family whose queue has no slots at all', async () => {
+    const pools = POOL_WORKERS.workers.filter((w) => w.kind === 'pool');
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/workers'
+        ? json({ ...POOL_WORKERS, workers: pools })
+        : undefined
+    );
+    renderWorkers();
+    expect(await screen.findByTestId('shift-pool-globex')).toBeInTheDocument();
+    expect(screen.getByText('No queue slot has sent a heartbeat.')).toBeInTheDocument();
+  });
+
   it('renders empty and error states', async () => {
     mockShiftApi((req) => {
       if (req.pathname === '/api/v1/shift/workers') return json({ generated_at: 'x', workers: [] });
@@ -82,7 +116,7 @@ describe('WorkersPanel', () => {
       return undefined;
     });
     renderWorkers();
-    expect(await screen.findByText('No worker has sent a heartbeat.')).toBeInTheDocument();
+    expect(await screen.findByText('No queue slot has sent a heartbeat.')).toBeInTheDocument();
     expect(await screen.findByText('Could not load worker history.')).toBeInTheDocument();
   });
 

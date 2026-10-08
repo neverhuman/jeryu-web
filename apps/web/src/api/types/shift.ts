@@ -166,6 +166,15 @@ export interface ShiftTodoActionRequest {
 }
 
 export type ShiftWorkerState = 'idle' | 'working' | 'stopping' | 'paused';
+
+/**
+ * What a slot is: one of the queue's own slots (the default, and what a
+ * heartbeat without a `kind` means), or one member of an external worker pool
+ * — an account, container or browser profile of a fleet the forge does not
+ * run, which holds several jobs at once.
+ */
+export type ShiftWorkerKind = 'todoq' | 'pool';
+
 export type ShiftWorkerStage = 'prepare' | 'agent' | 'gate' | 'land' | 'record';
 
 export interface ShiftScheduleWindow {
@@ -193,6 +202,12 @@ export interface ShiftHeartbeat {
   planned_slots?: number | null;
   schedule?: ShiftSchedule | null;
   version?: string | null;
+  kind?: ShiftWorkerKind | string | null;
+  /** A few words behind `state`, e.g. why a pool member is paused. */
+  detail?: string | null;
+  /** Jobs this slot can hold at once, and holds now; pool members only. */
+  capacity?: number | null;
+  active?: number | null;
 }
 
 export interface ShiftWorker extends ShiftHeartbeat {

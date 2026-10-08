@@ -149,6 +149,66 @@ export const WORKERS: ShiftWorkersResponse = {
   ],
 };
 
+/**
+ * An external pool reporting as the family `globex`, which has no queue of its
+ * own here: three members of four available, one waiting on a sign-in.
+ */
+export const POOL_WORKERS: ShiftWorkersResponse = {
+  generated_at: '2026-09-19T09:00:00Z',
+  workers: [
+    ...WORKERS.workers,
+    {
+      operator: 'operator',
+      host: 'node-b',
+      slot: 'member-1',
+      family: 'globex',
+      state: 'working',
+      kind: 'pool',
+      capacity: 4,
+      active: 3,
+      last_seen: '2026-09-19T08:59:55Z',
+      healthy: true,
+    },
+    {
+      operator: 'operator',
+      host: 'node-b',
+      slot: 'member-2',
+      family: 'globex',
+      state: 'working',
+      kind: 'pool',
+      capacity: 4,
+      active: 2,
+      last_seen: '2026-09-19T08:59:55Z',
+      healthy: true,
+    },
+    {
+      operator: 'operator',
+      host: 'node-b',
+      slot: 'member-3',
+      family: 'globex',
+      state: 'idle',
+      kind: 'pool',
+      capacity: 4,
+      active: 0,
+      last_seen: '2026-09-19T08:59:55Z',
+      healthy: true,
+    },
+    {
+      operator: 'operator',
+      host: 'node-b',
+      slot: 'member-4',
+      family: 'globex',
+      state: 'paused',
+      kind: 'pool',
+      detail: 'sign-in needed',
+      capacity: 4,
+      active: 0,
+      last_seen: '2026-09-19T08:59:55Z',
+      healthy: true,
+    },
+  ],
+};
+
 export const HISTORY: ShiftWorkersHistoryResponse = {
   from: '2026-09-18T09:00:00Z',
   to: '2026-09-19T09:00:00Z',

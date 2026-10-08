@@ -265,8 +265,22 @@
   color: var(--color-accent-info);
 }
 
+/* One line per external pool, under the queue's own slot line. */
+.work-workers__pool {
+  padding: 0 0 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
 .work-workers__panel {
   padding: 8px 0 16px;
+}
+
+.shift__pool-group {
+  margin-bottom: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-fg-secondary);
 }
 
 .shift__family-cell {

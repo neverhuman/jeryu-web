@@ -11,7 +11,7 @@ import type {
 import { sameFamily } from '../../components/family/familyScope';
 import { familyName } from '../needsYou/needsYouModel';
 import { isFinishedTodo, isLongStale } from './shiftModel';
-import { isSupervisor } from './workersModel';
+import { isPool, isSupervisor } from './workersModel';
 
 /** The name a reader sees: `jeryu-split` and `jeryu` are one family. */
 export function todoFamily(todo: Pick<ShiftTodo, 'family'>): string {
@@ -67,11 +67,12 @@ function clip(text: string): string {
 }
 
 /**
- * The workers block in one line. Supervisors (they carry no work) and slots
- * unseen for over an hour (ghosts of old runs) are left out of the counts.
+ * The workers block in one line. Supervisors (they carry no work), pool
+ * members (counted per pool, on their own line) and slots unseen for over an
+ * hour (ghosts of old runs) are left out of the counts.
  */
 export function workersLine(workers: ShiftWorker[], todos: ShiftTodo[], now: Date): WorkersLine {
-  const slots = workers.filter((w) => !isSupervisor(w) && !isLongStale(w, now));
+  const slots = workers.filter((w) => !isSupervisor(w) && !isPool(w) && !isLongStale(w, now));
   const titles = new Map(todos.map((todo) => [todo.id, todo.title]));
   const working = slots
     .filter((w) => w.state === 'working' && w.todo_id)

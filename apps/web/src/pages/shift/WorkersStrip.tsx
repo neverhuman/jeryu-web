@@ -4,6 +4,9 @@
 // (jeryu w1 on <todo>, …) · 0 paused · night window closed (22:00–07:00 <tz>)" beside a 24 h sparkline of busy slots.
 // A family whose shift budget ran out with todos still waiting says so here as
 // well: idle slots and a spent cap look the same on the heartbeats alone.
+// An external pool gets a line of its own per family — "acme pool: 3 of 4
+// available, 2 busy (5 active)" — because its members are not queue slots:
+// each holds several jobs, and an unavailable one says why (on hover).
 // Opened, it shows the whole workers panel in place: table, timeline, capacity.
 
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -16,6 +19,7 @@ import { useShiftWorkers, useShiftWorkersHistory } from '../../hooks/useShift';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { WorkersPanel } from './WorkersPanel';
 import { budgetSpentLines, busySparkline, nightWindow, workersLine } from './workPageModel';
+import { poolSummaries } from './workersModel';
 import { WORK_WORKERS_ID, todoHref } from './workPaths';
 
 const OPEN_KEY = 'jeryu.work.workersOpen.v1';
@@ -51,6 +55,9 @@ export function WorkersStrip({
   const night = nightWindow(workers.data?.workers ?? [], todos, new Date());
   const spark = busySparkline(history.data?.capacity ?? [], SPARK_W, SPARK_H);
   const budgets = budgetSpentLines(attention.data, family);
+  // An external pool is counted per family, not per slot: its members hold
+  // several jobs each and a paused one is paused for a reason of its own.
+  const pools = poolSummaries(workers.data?.workers ?? []);
   const panelId = 'work-workers-panel';
   const Chevron = open ? ChevronDown : ChevronRight;
 
@@ -120,6 +127,23 @@ export function WorkersStrip({
           </svg>
         ) : null}
       </div>
+      {pools.map((pool) => (
+        <div
+          key={pool.family}
+          className="work-workers__pool"
+          data-testid={`work-pool-${pool.family}`}
+          title={pool.title || undefined}
+        >
+          {pool.text}
+          {pool.unavailable.length > 0 ? (
+            <span className="shift__muted">
+              {' · '}
+              {pool.unavailable[0].detail || pool.unavailable[0].state}
+              {pool.unavailable.length > 1 ? ` +${pool.unavailable.length - 1} more` : ''}
+            </span>
+          ) : null}
+        </div>
+      ))}
       <div id={panelId} hidden={!open}>
         {open ? <WorkersPanel /> : null}
       </div>
