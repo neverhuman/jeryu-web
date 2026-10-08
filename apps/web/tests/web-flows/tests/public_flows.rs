@@ -251,7 +251,7 @@ async fn public_site_journey() -> Result<()> {
         .canonicalize()?;
     let artifacts = repo.join("target/web-flows");
     fs::create_dir_all(&artifacts)?;
-    let fixture = Fixture::start(repo.join("apps/web/dist"));
+    let fixture = Fixture::start(repo.join("apps/web/dist")).await;
     let port = TcpListener::bind("127.0.0.1:0")?.local_addr()?.port();
     let log = File::create(artifacts.join("chromedriver.log"))?;
     let mut process = DriverProcess(

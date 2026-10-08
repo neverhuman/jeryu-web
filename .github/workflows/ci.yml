@@ -91,6 +91,7 @@ jobs:
         with:
           name: frontend-evidence
           path: |
+            target/frontend-checks.log
             target/web-flows/*.json
             target/web-flows/*.png
             target/web-flows/*.html
@@ -139,6 +140,7 @@ jobs:
         with:
           name: rust-web-flow-evidence
           path: |
+            target/frontend-checks.log
             target/web-flows/*.json
             target/web-flows/*.png
             target/web-flows/*.html

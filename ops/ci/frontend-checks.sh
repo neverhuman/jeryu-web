@@ -3,6 +3,8 @@
 # auditor; this script does not grant score, review, merge, or release authority.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
+mkdir -p target
+exec > >(tee target/frontend-checks.log) 2>&1
 source ops/ci/web-deps.sh
 ensure_web_deps
 ensure_playwright_browsers
