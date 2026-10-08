@@ -114,6 +114,7 @@ function SessionPanel({ login }: { login: string | null }): JSX.Element {
           Log out
         </ActionButton>
       </div>
+      {logout.error ? <ErrorState title="Could not log out." error={logout.error} /> : null}
     </section>
   );
 }

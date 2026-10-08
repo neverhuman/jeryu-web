@@ -136,7 +136,7 @@ export default [
   },
   {
     ignores: [
-      'node_modules/**', 'dist/**', 'storybook-static/**',
+      'node_modules/**', 'dist*/**', 'storybook-static/**',
       'playwright-report/**', 'test-results/**', 'coverage/**',
     ],
   },

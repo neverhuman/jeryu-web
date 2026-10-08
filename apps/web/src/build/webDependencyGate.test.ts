@@ -117,6 +117,7 @@ function run(tree: string, fn: string, env: NodeJS.ProcessEnv = {}): RunResult {
       encoding: 'utf8',
       env: {
         ...process.env,
+        CI: '',
         ...env,
         NPM_CALL_LOG: log,
         PATH: `${join(tree, 'fakebin')}:${process.env.PATH ?? ''}`,
@@ -274,5 +275,16 @@ describe('ensure_playwright_browsers', () => {
     expect(result.status).toBe(0);
     expect(result.calls).toEqual(['--workspace @jeryu/web exec -- playwright install chromium']);
     expect(readFileSync(join(cache, '.jeryu-playwright-version'), 'utf8').trim()).toBe('1.56.1');
+  });
+
+  it('provisions system dependencies on a CI runner', () => {
+    const tree = makeTree({ lock: lockfile({ deps: {} }), installed: {} });
+    const cache = browserCache(tree, {});
+    const result = run(tree, 'ensure_playwright_browsers', {
+      CI: 'true',
+      PLAYWRIGHT_BROWSERS_PATH: cache,
+    });
+    expect(result.status).toBe(0);
+    expect(result.calls).toEqual(['--workspace @jeryu/web exec -- playwright install --with-deps chromium']);
   });
 });

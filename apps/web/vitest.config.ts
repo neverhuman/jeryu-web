@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    // Bound jsdom concurrency: large hosts otherwise launch every file at once.
+    maxWorkers: Number(process.env.JERYU_VITEST_WORKERS ?? 4),
     // A fixed, non-UTC zone: the UI shows instants in the reader's zone, so the
     // suite only proves that if the suite's own zone is not UTC.
     env: { TZ: 'America/New_York' },

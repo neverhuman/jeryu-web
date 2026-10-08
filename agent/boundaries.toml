@@ -8,7 +8,7 @@ cross_repo_dependency_policy = "pinned-public-git-tags"
 local_path_patches = false
 
 cargo_members = [
-
+  "apps/web/tests/web-flows",
 ]
 
 [python]

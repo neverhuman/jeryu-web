@@ -1,4 +1,4 @@
-// WaitlistForm.tsx — public waitlist on the signed-out story.
+// WaitlistForm.tsx — public waitlist on its dedicated page.
 //
 // Joining stores an email, an optional name, and an optional note. It does
 // not create an account, call signup, or keep the address in the browser
@@ -8,6 +8,8 @@ import { useState, type FormEvent } from 'react';
 
 import { ApiError, apiSend } from '../../api/client';
 import { endpoints } from '../../api/endpoints';
+
+import './WaitlistForm.css';
 
 type Phase = 'idle' | 'submitting' | 'received' | 'invalid' | 'limited' | 'failed';
 
@@ -103,7 +105,7 @@ export function WaitlistForm(): JSX.Element {
         />
       </label>
       <label className="waitlist__field">
-        What do you want from JeRyu?
+        What do you want from JeRyū?
         <textarea
           name="note"
           maxLength={280}

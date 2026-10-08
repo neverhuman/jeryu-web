@@ -17,7 +17,11 @@ import { TITLE_SUFFIX } from '../../hooks/usePageTitle';
 import { router } from '../router';
 
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ isPending: false, user: { role: 'admin', login: 'operator' } }),
+  useAuth: () => ({
+    isPending: false,
+    user: { role: 'admin', login: 'operator' },
+    logout: { isSuccess: false, isPending: false, reset: vi.fn() },
+  }),
 }));
 vi.mock('../../layout/GlobalHeader', () => ({ GlobalHeader: () => <div /> }));
 vi.mock('../../layout/LeftNav', () => ({ LeftNav: () => <nav aria-label="Primary" /> }));

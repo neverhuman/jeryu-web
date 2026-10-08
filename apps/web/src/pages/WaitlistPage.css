@@ -1,0 +1,12 @@
+.waitlist-page__content { position: relative; z-index: 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 8vw, 120px); align-items: start; width: min(100%, 1250px); margin: 0 auto; padding: clamp(48px, 8vw, 110px) clamp(24px, 5vw, 80px) 80px; }
+.waitlist-page__intro { min-width: 0; }
+.waitlist-page h1 { margin: 0 0 28px; font-family: var(--marketing-display); font-size: clamp(40px, 4.6vw, 64px); line-height: 1.1; font-weight: 600; letter-spacing: -.04em; }
+.waitlist-page__intro > p:not(.landing-section-label) { margin: 0; max-width: 36ch; font-size: 16px; line-height: 1.85; color: var(--color-fg-secondary); }
+.waitlist-page .landing-section-label { margin: 0 0 24px; color: var(--color-accent-primary); font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+.waitlist-page__back { display: inline-flex; align-items: center; min-height: 44px; margin-top: 26px; color: var(--color-fg-primary); font-size: 13px; text-decoration: none; }
+.waitlist-page__form { width: 100%; min-width: 0; max-width: 500px; padding: 30px; border: 1px solid var(--color-border-subtle); background: var(--color-bg-1); }
+@media (max-width: 740px) {
+  .waitlist-page__content { grid-template-columns: 1fr; padding-top: 42px; gap: 30px; }
+  .waitlist-page__form { padding: 24px; max-width: none; }
+  .waitlist-page__intro > p:not(.landing-section-label) { font-size: 15px; max-width: 44ch; }
+}

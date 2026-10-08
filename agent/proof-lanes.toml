@@ -28,3 +28,7 @@ blocks_merge = true
 [lanes.artifact-support]
 required = ["just artifact-support"]
 blocks_merge = false
+
+[lanes.web-flows]
+required = ["bash ops/ci/web-flows.sh"]
+blocks_merge = true

@@ -1,54 +1,46 @@
-import { render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
-const reduced = vi.hoisted(() => ({ current: false }));
-
-vi.mock('../../../hooks/usePrefersReducedMotion', () => ({
-  usePrefersReducedMotion: () => reduced.current,
-}));
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DragonLanding } from '../DragonLanding';
 
-function installMedia(match: (query: string) => boolean): void {
-  window.matchMedia = ((query: string) => ({
-    matches: match(query),
-    media: query,
-    onchange: null,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-    addListener: () => undefined,
-    removeListener: () => undefined,
-    dispatchEvent: () => false,
-  })) as typeof window.matchMedia;
-}
+beforeEach(() => {
+  document.documentElement.setAttribute('data-theme', 'dark');
+  window.matchMedia = vi.fn((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: () => false,
+  }));
+});
+afterEach(() => { cleanup(); document.documentElement.removeAttribute('data-theme'); });
 
 describe('DragonLanding', () => {
-  it('keeps a still poster when motion is reduced', () => {
-    reduced.current = true;
-    installMedia(() => false);
+  it('serves one complete responsive illustration without motion layers', () => {
     render(<DragonLanding />);
-    expect(screen.getByTestId('dragon-poster')).toBeVisible();
+    const image = screen.getByTestId('dragon-poster');
+    expect(image).toHaveAttribute('srcset', expect.stringContaining('640w'));
+    expect(image).toHaveAttribute('width');
+    expect(image).toHaveAttribute('height');
+    expect(image).toHaveAccessibleName(/Japanese dragon/);
     expect(screen.queryByTestId('dragon-layers')).toBeNull();
-    expect(document.querySelector('.dragon-landing--motion')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Animate dragon' })).toBeNull();
   });
 
-  it('mounts the layer group on a wide screen that allows motion', () => {
-    reduced.current = false;
-    installMedia(() => false);
+  it('keeps the same transparent scene when the theme changes', async () => {
     render(<DragonLanding />);
-    expect(screen.getByTestId('dragon-layers')).toBeInTheDocument();
-    expect(document.querySelector('.dragon-landing--motion')).not.toBeNull();
+    const source = screen.getByTestId('dragon-poster').getAttribute('src');
+    expect(source).toContain('dragon-graphic');
+    await act(async () => { document.documentElement.setAttribute('data-theme', 'light'); });
+    expect(screen.getByTestId('dragon-poster')).toHaveAttribute('src', source);
   });
 
-  it('waits for Animate dragon on a narrow screen', async () => {
-    reduced.current = false;
-    installMedia((query) => query.includes('max-width'));
+  it('keeps a useful state after an image failure and permits a retry', async () => {
     const user = userEvent.setup();
     render(<DragonLanding />);
-    expect(screen.queryByTestId('dragon-layers')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Animate dragon' }));
-    expect(screen.getByTestId('dragon-layers')).toBeInTheDocument();
+    fireEvent.error(screen.getByTestId('dragon-poster'));
+    expect(screen.getByRole('status')).toHaveTextContent('could not load');
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(screen.getByTestId('dragon-poster')).toBeVisible();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });

@@ -1,0 +1,46 @@
+{
+  "generator": "node apps/web/scripts/export-landing-graphic-scene.mjs",
+  "converter": "Version: ImageMagick 6.9.12-98 Q16 x86_64 18038 https://legacy.imagemagick.org",
+  "quality": 84,
+  "alpha_quality": 100,
+  "master": "apps/web/design/landing-v6/dragon-graphic-master.png",
+  "master_sha256": "d96cc5c5eac110f4a6921b187c7d240f26e53841adfb2cda691b6525d173b60d",
+  "width": 1086,
+  "height": 1448,
+  "alpha": true,
+  "crop": "Complete transparent portrait; no crop; no baked grid or background",
+  "exports": [
+    {
+      "filename": "dragon-graphic-320.webp",
+      "width": 320,
+      "height": 427,
+      "alpha": true,
+      "bytes": 32014,
+      "sha256": "769bde8b57c4320a485e300c7e6cfa1de003fae07986ea75e67946f97c722737"
+    },
+    {
+      "filename": "dragon-graphic-640.webp",
+      "width": 640,
+      "height": 853,
+      "alpha": true,
+      "bytes": 87510,
+      "sha256": "e2d95d09738a1e4477c2f5002d4030b2713b8835e85f814da8b9fb6addad6265"
+    },
+    {
+      "filename": "dragon-graphic-960.webp",
+      "width": 960,
+      "height": 1280,
+      "alpha": true,
+      "bytes": 163868,
+      "sha256": "44433b7fae13c67c73a2416f043e61830a09fe53a8b03b961c8694b09a04f342"
+    },
+    {
+      "filename": "dragon-graphic-1086.webp",
+      "width": 1086,
+      "height": 1448,
+      "alpha": true,
+      "bytes": 213494,
+      "sha256": "b601239dd09ea5784a646d037f3f5102029ff91d4191acafae093bf00dabf700"
+    }
+  ]
+}
