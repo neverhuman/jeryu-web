@@ -12,7 +12,7 @@ export default defineConfig({
     env: { TZ: 'America/New_York' },
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.{test,spec}.mjs'],
     exclude: ['node_modules', 'dist', 'e2e/**', 'playwright-report/**'],
     coverage: {
       provider: 'v8',

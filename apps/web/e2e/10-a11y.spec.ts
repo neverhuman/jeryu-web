@@ -53,7 +53,15 @@ import {
   snapshotWithReleaseHistory,
 } from './fixtures/releaseChannelMocks';
 
-test.describe.configure({ retries: 1 });
+// `@a11y` on every describe is how the required lane selects this file
+// alongside the `@action:`-tagged matrix in one Playwright invocation
+// (`npm run test:e2e:required`); `scripts/e2e-suite-selection.test.mjs` keeps
+// the tag on every describe so a new one cannot drop out of the gate.
+//
+// `mode: 'parallel'` spreads these scans across the lane's workers. Every test
+// here brings its own page and its own API mocks and writes one scope's
+// evidence under `target/jankurai/ux-qa/`, so no two of them share state.
+test.describe.configure({ mode: 'parallel', retries: 1 });
 
 interface AxeTarget {
   scope: string;
@@ -84,7 +92,7 @@ const TARGETS: AxeTarget[] = [
   },
 ];
 
-test.describe('Accessibility scans (W-T-18)', () => {
+test.describe('Accessibility scans (W-T-18) @a11y', () => {
   for (const target of TARGETS) {
     test(`axe scan: ${target.description}`, async ({ page }) => {
       await mockBootstrap(page);
@@ -170,7 +178,7 @@ async function scanAndAssert(
   ).toBeLessThanOrEqual(25);
 }
 
-test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', () => {
+test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18) @a11y', () => {
   test('axe scan: shell chrome with the System group and the palette open', async ({ page }) => {
     await mockBootstrap(page);
     await mockRepoList(page, [{ id: REPO, default_branch: 'main', visibility: 'internal' }]);
@@ -365,7 +373,7 @@ test.describe('Accessibility scans — operator + cockpit surfaces (W-T-18)', ()
   });
 });
 
-test.describe('Accessibility scans — Work, one page', () => {
+test.describe('Accessibility scans — Work, one page @a11y', () => {
   // One page, three states: as it opens, with the composer opened (`#add`
   // puts the cursor in it), and with the workers line expanded (`#workers`);
   // then one todo's own page.
@@ -389,7 +397,7 @@ test.describe('Accessibility scans — Work, one page', () => {
   }
 });
 
-test.describe('Accessibility scans — Pull requests and Releases', () => {
+test.describe('Accessibility scans — Pull requests and Releases @a11y', () => {
   test('axe scan: Pull requests timeline with family pills', async ({ page }) => {
     // Rows from two repositories, one family pill pressed, so the timeline
     // track, the pills and the view toggle are all on the page.
@@ -555,7 +563,7 @@ test.describe('Accessibility scans — Pull requests and Releases', () => {
   });
 });
 
-test.describe('Accessibility scans — pipeline visibility', () => {
+test.describe('Accessibility scans — pipeline visibility @a11y', () => {
   for (const target of [
     { scope: 'needs-you', path: '/needs-you', testId: 'needs-you-action' },
     { scope: 'activity', path: '/activity', testId: 'activity-event-12' },
@@ -588,7 +596,7 @@ test.describe('Accessibility scans — pipeline visibility', () => {
   }
 });
 
-test.describe('Accessibility scans — Intelligence and Work', () => {
+test.describe('Accessibility scans — Intelligence and Work @a11y', () => {
   test('axe scan: Intelligence, the operator graph and its inline links', async ({ page }) => {
     // The graph is a group of node marks that are buttons: as an
     // `svg[role=img]` it reported focusable children inside an image
@@ -630,7 +638,7 @@ test.describe('Accessibility scans — Intelligence and Work', () => {
   });
 });
 
-test.describe('Accessibility scans — the rows that must be read', () => {
+test.describe('Accessibility scans — the rows that must be read @a11y', () => {
   test('a needs-a-human Activity row keeps its pills legible', async ({ page }) => {
     // The row whose words matter most was the least readable: its danger tint
     // stacked under the danger pills on it ("Deploy failed"), and their text

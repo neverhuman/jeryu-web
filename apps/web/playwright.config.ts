@@ -14,6 +14,8 @@
 
 import { defineConfig, devices } from '@playwright/test';
 
+import { resolveE2eWorkers } from './scripts/e2e-workers.mjs';
+
 // `JERYU_PLAYWRIGHT_E2E_MODE` toggles the test target:
 //   - `ui-only` (default): launch Vite on a dedicated strict port.
 //     Matrix-tagged tests mock all API and WS traffic and are safe in
@@ -31,7 +33,11 @@ const bffBaseURL = process.env.JERYU_PLAYWRIGHT_API_URL ?? 'http://127.0.0.1:878
 const bffHealthURL = `${bffBaseURL.replace(/\/$/, '')}/health`;
 const bffBind = new URL(bffBaseURL).host;
 const externalApi = process.env.JERYU_PLAYWRIGHT_EXTERNAL_API === '1';
-const previewBaseURL = 'http://127.0.0.1:4173';
+// Both SPA servers take their port from `JERYU_PLAYWRIGHT_WEB_PORT` when it is
+// set (one mode uses one of them), so two gates on the same host never share a
+// server and satisfy each other's readiness probe.
+const previewPort = process.env.JERYU_PLAYWRIGHT_WEB_PORT ?? '4173';
+const previewBaseURL = `http://127.0.0.1:${previewPort}`;
 const vitePort = process.env.JERYU_PLAYWRIGHT_WEB_PORT ?? '5175';
 const viteBaseURL = `http://127.0.0.1:${vitePort}`;
 const baseURL = useUiOnly || useViteDev
@@ -69,7 +75,7 @@ const viteWebServer = {
 const previewWebServer = {
   // Vite preview serves the already-built dist tree. The e2e lane builds
   // first, then starts this server with no backend proxy.
-  command: 'npm run preview -- --strictPort',
+  command: `npm run preview -- --strictPort --port ${previewPort}`,
   url: previewBaseURL,
   timeout: 60_000,
   reuseExistingServer: false,
@@ -94,10 +100,16 @@ export default defineConfig({
   // fails at the expect timeout below.
   timeout: 120_000,
   expect: { timeout: 15_000 },
-  fullyParallel: false,
+  // Each test in the mocked modes brings its own page and its own `/api/v1/*`
+  // routes, so tests in one file share nothing and may run on any worker; the
+  // required lane is otherwise paced by its longest single file. `bff-only`
+  // drives a live edge whose state is shared, so there it stays file-serial.
+  fullyParallel: useUiOnly || useUiMocked,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 1,
+  // The required lane selects the action matrix and the a11y scans in one
+  // invocation (`test:e2e:required`), so both suites share these workers.
+  workers: resolveE2eWorkers(process.env),
   ...(useUiOnly || useUiMocked ? { grepInvert: /@bff/ } : {}),
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
@@ -110,7 +122,10 @@ export default defineConfig({
     navigationTimeout: 30_000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    // `retain-on-failure` screencasts every test and throws the recording
+    // away when it passes; the lane is CPU-bound, so pay for the recording
+    // only on the retry that follows a failure, as the trace already does.
+    video: 'on-first-retry',
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

@@ -15,12 +15,26 @@ matrix (build the SPA first):
 - `npm --workspace @jeryu/web run test:e2e:ci`
 - `npm --workspace @jeryu/web run ux-qa`
 
-`test:e2e:ci` runs `test:e2e:actions` in `JERYU_PLAYWRIGHT_E2E_MODE=ui-mocked`
+`test:e2e:ci` runs `test:e2e:required` in `JERYU_PLAYWRIGHT_E2E_MODE=ui-mocked`
 and then verifies `apps/web/playwright-report/junit.xml` against
-`apps/web/e2e/action-matrix.json`. Tests tagged `@bff` are live edge smoke and
-are intentionally excluded from the action matrix; run them with
-`npm --workspace @jeryu/web run test:e2e:bff` only when the BFF workspace is
-available.
+`apps/web/e2e/action-matrix.json`. `test:e2e:required` is one Playwright
+invocation over both required suites: the `@action:`-tagged matrix and the
+`@a11y`-tagged axe scans of `e2e/10-a11y.spec.ts`. One invocation means one
+built-SPA server, one report, and both suites sharing the lane's workers, which
+is why every describe in the a11y spec carries `@a11y`
+(`apps/web/scripts/e2e-suite-selection.test.mjs` holds that). Either suite still
+runs on its own: `test:e2e:actions` and `test:e2e:a11y`.
+
+The lane's worker count comes from `apps/web/scripts/e2e-workers.mjs`: the
+governed `JERYU_CI_JOBS` scaled down, since a Chromium worker costs more than
+one CPU, and capped. `JERYU_PLAYWRIGHT_WORKERS=<n>` overrides it for one run.
+In the mocked modes every test brings its own page and its own `/api/v1/*`
+routes, so the run is fully parallel; `bff-only` drives shared live state and
+stays file-serial.
+
+Tests tagged `@bff` are live edge smoke and are intentionally excluded from the
+action matrix; run them with `npm --workspace @jeryu/web run test:e2e:bff` only
+when the BFF workspace is available.
 
 Specs import `test` and `expect` from `apps/web/e2e/fixtures/test.ts`, never
 from `@playwright/test` directly. That `test` serves the app's own files to the
