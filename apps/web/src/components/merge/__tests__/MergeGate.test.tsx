@@ -184,6 +184,48 @@ describe('the Merge button when the merge is refused', () => {
     );
   });
 
+  it.each([
+    ['plain http', { web_url: 'http://forge.example/gate/41' }],
+    ['a raw API route', { web_url: null, details_url: 'https://forge.example/api/v1/runs/41' }],
+    ['a script URL', { web_url: null, details_url: 'javascript:alert(1)' }],
+    ['an http details page', { web_url: null, details_url: 'http://ci.example/runs/41' }],
+  ] as const)(
+    'refuses to link a failing check to %s, and sends the reader to the checks tab',
+    (_label, urls) => {
+      show(
+        blockedBy(
+          'passport_blocked_checks',
+          `Required context \`${REQUIRED}\` is failing.`,
+          REQUIRED
+        ),
+        checksWith({ status: 'failure', conclusion: 'failure', ...urls })
+      );
+      const reason = screen.getByTestId('pr-merge-reason-passport_blocked_checks');
+      const link = reason.querySelector('a');
+      expect(link).toHaveAttribute('href', HREFS.checks);
+      expect(link).not.toHaveAttribute('target');
+    }
+  );
+
+  it('falls back to a readable details page when the check has no web page', () => {
+    show(
+      blockedBy(
+        'passport_blocked_pending_checks',
+        `Required context \`${REQUIRED}\` is queued or running.`,
+        REQUIRED
+      ),
+      checksWith({
+        status: 'pending',
+        conclusion: null,
+        completed_at: null,
+        web_url: 'http://forge.example/gate/41',
+        details_url: ' https://ci.example/runs/41 ',
+      })
+    );
+    const reason = screen.getByTestId('pr-merge-reason-passport_blocked_pending_checks');
+    expect(reason.querySelector('a')).toHaveAttribute('href', 'https://ci.example/runs/41');
+  });
+
   it('asks for the branch to be updated when the base has moved on', () => {
     show(
       blockedBy(

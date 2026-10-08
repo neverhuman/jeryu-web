@@ -109,7 +109,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   // The required lane selects the action matrix and the a11y scans in one
   // invocation (`test:e2e:required`), so both suites share these workers.
-  workers: resolveE2eWorkers(process.env),
+  // `fullyParallel: false` only serializes tests within a file, so `bff-only`
+  // keeps one worker to stay strictly serial against the shared live edge.
+  workers: useUiOnly || useUiMocked ? resolveE2eWorkers(process.env) : 1,
   ...(useUiOnly || useUiMocked ? { grepInvert: /@bff/ } : {}),
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],

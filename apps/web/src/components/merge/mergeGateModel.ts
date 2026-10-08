@@ -17,7 +17,7 @@ import type {
   PullRequestChecks,
   PullRequestDetail,
 } from '../../api/types';
-import { pendingRun } from './ChecksPanel';
+import { checkPageUrl, pendingRun } from './ChecksPanel';
 import { changesRequestedReview, reviewAnchor } from './reviewListModel';
 import { mergeAllowed } from './pullReviewModel';
 import { gateExplanation } from './passportGates';
@@ -54,11 +54,15 @@ function checkFor(
   return (checks?.checks ?? []).find((check) => check.name === context) ?? null;
 }
 
-/** The check's own page, when it has one that is not an `/api/` route. */
+/**
+ * The check's own page, vetted by the same rule the checks list uses: an
+ * `https:` page or an in-app path, never a raw `/api/` route or plain `http:`.
+ * A check whose links fail that rule sends the reader to the checks tab.
+ */
 function checkHref(
   check: PullRequestChecks['checks'][number] | null
 ): string | null {
-  return check?.web_url ?? check?.details_url ?? null;
+  return check ? checkPageUrl(check) : null;
 }
 
 function plural(count: number, one: string, many: string): string {

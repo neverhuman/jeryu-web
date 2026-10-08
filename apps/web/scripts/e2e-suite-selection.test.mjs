@@ -15,11 +15,24 @@ const a11ySpec = read('e2e/10-a11y.spec.ts');
 
 describe('the a11y spec', () => {
   it('tags every describe @a11y so the required lane selects it', () => {
-    const titles = [...a11ySpec.matchAll(/test\.describe\('([^']*)'/g)].map(
-      (match) => match[1]
+    // Every describe call, whatever its modifier, quote style or title form.
+    const calls = [...a11ySpec.matchAll(/test\.describe(?:\.(\w+))?\(/g)].filter(
+      (match) => match[1] !== 'configure'
     );
+    const titles = [
+      ...a11ySpec.matchAll(
+        /test\.describe(?:\.(?!configure)\w+)?\(\s*(['"`])((?:(?!\1)[^\\]|\\.)*)\1/g
+      ),
+    ].map((match) => match[2]);
     expect(titles.length).toBeGreaterThan(0);
+    // A describe whose title is not a plain literal cannot be checked here.
+    expect(titles).toHaveLength(calls.length);
     expect(titles.filter((title) => !title.includes('@a11y'))).toEqual([]);
+  });
+
+  it('keeps every scan inside a tagged describe', () => {
+    // A top-level test carries no describe tag, so the lane would not select it.
+    expect(a11ySpec.match(/^test(?:\.(?!describe|use|beforeEach|afterEach|beforeAll|afterAll)\w+)?\(/gm)).toBeNull();
   });
 
   it('spreads its scans across the lane workers', () => {
