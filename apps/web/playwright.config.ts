@@ -88,6 +88,12 @@ const webServer = useUiOnly
 
 export default defineConfig({
   testDir: './e2e',
+  // Default is 30s. On a loaded host the multi-route and a11y scans
+  // spend that budget inside Vite's first compile and the retry hits
+  // the same wall. 120s is the test budget; a missing element still
+  // fails at the expect timeout below.
+  timeout: 120_000,
+  expect: { timeout: 15_000 },
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -100,6 +106,8 @@ export default defineConfig({
   ],
   use: {
     baseURL,
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
