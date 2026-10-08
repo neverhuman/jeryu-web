@@ -1,6 +1,7 @@
 name: ci
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [main]
@@ -98,6 +99,7 @@ jobs:
             apps/web/playwright-report/
             apps/web/test-results/
             target/jankurai/ux-qa.json
+            target/jankurai/ux-qa/
             target/security/
           if-no-files-found: error
 
