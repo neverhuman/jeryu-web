@@ -8,7 +8,7 @@
 // (their error state renders, and a title does not wait on data).
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -81,6 +81,49 @@ describe('per-route page titles', () => {
       await memory.navigate('/repos/jeryu/acme/widgets/pulls');
     });
     expect(document.title).toBe('acme/widgets · Pull requests · JeRyu');
+  });
+
+  it('keeps control focus when a push changes only the query or fragment', async () => {
+    const memory = mountAt('/activity');
+    const control = screen.getByRole('link', { name: 'Skip to content' });
+    control.focus();
+
+    await act(async () => {
+      await memory.navigate('/activity?tab=notes');
+    });
+    expect(control).toHaveFocus();
+
+    await act(async () => {
+      await memory.navigate('/activity?tab=notes#details');
+    });
+    expect(control).toHaveFocus();
+
+    // The same control still leads into a different page on the next push.
+    await act(async () => {
+      await memory.navigate('/needs-you');
+    });
+    expect(document.activeElement).toBe(document.getElementById(MAIN_CONTENT_ID));
+  });
+
+  it('tracks replaced paths before deciding where a later push puts focus', async () => {
+    const memory = mountAt('/needs-you');
+    const control = screen.getByRole('link', { name: 'Skip to content' });
+    control.focus();
+
+    await act(async () => {
+      await memory.navigate('/activity', { replace: true });
+    });
+    expect(control).toHaveFocus();
+
+    await act(async () => {
+      await memory.navigate('/activity?tab=notes');
+    });
+    expect(control).toHaveFocus();
+
+    await act(async () => {
+      await memory.navigate('/needs-you');
+    });
+    expect(document.activeElement).toBe(document.getElementById(MAIN_CONTENT_ID));
   });
 
   it('moves focus to the main landmark on a push, and leaves it alone on Back', async () => {
