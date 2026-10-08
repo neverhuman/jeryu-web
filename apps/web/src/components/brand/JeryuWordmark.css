@@ -1,0 +1,19 @@
+.jeryu-wordmark {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  flex: none;
+}
+
+.jeryu-wordmark--nav { width: 154px; }
+.jeryu-wordmark--hero { width: min(100%, 450px); }
+
+@media (max-width: 600px) {
+  .jeryu-wordmark--nav { width: 94px; }
+  .jeryu-wordmark--hero { width: min(100%, 330px); }
+}
+
+@media (forced-colors: active) {
+  .jeryu-wordmark { color: CanvasText; }
+}

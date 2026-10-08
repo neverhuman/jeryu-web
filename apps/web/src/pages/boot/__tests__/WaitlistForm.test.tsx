@@ -41,12 +41,12 @@ describe('WaitlistForm', () => {
     expect(screen.getByText(/send an invitation/)).toBeInTheDocument();
     await user.type(screen.getByLabelText('Email'), 'ada@example.com');
     await user.type(screen.getByLabelText('Name'), 'Ada');
-    await user.type(screen.getByLabelText('What do you want from JeRyu?'), 'agents');
+    await user.type(screen.getByLabelText('What do you want from JeRyū?'), 'agents');
     await user.click(screen.getByRole('button', { name: 'Join the waitlist' }));
     expect(await screen.findByRole('status')).toHaveTextContent("Thanks, you're on the list.");
     expect(screen.getByLabelText('Email')).toHaveValue('');
     expect(screen.getByLabelText('Name')).toHaveValue('');
-    expect(screen.getByLabelText('What do you want from JeRyu?')).toHaveValue('');
+    expect(screen.getByLabelText('What do you want from JeRyū?')).toHaveValue('');
     expect(send).toHaveBeenCalledWith(endpoints.waitlistJoin(), {
       email: 'ada@example.com',
       name: 'Ada',

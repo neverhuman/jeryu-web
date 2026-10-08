@@ -146,12 +146,55 @@ test('global chrome command palette, repo switcher, sidebar, not-found, and logo
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByTestId('settings-page')).toBeVisible();
   await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId('dragon-landing')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByLabel('Username')).toHaveCount(0);
+  await page.screenshot({ path: 'test-results/logout-landing.png', fullPage: true });
   await expect(page.getByRole('heading', { name: 'Git for agents.' })).toBeVisible({
     timeout: 10_000,
   });
   await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible({
     timeout: 10_000,
   });
+});
+
+test('failed logout remains on Settings and can be retried', async ({ page }) => {
+  await mockBootstrap(page, { login: '@e2e', auth: null });
+  await mockRepoList(page, []);
+  let loggedOut = false;
+  let failLogout = true;
+  await page.route('**/api/v1/auth/me', async (route) => {
+    await route.fulfill({
+      status: loggedOut ? 401 : 200,
+      contentType: 'application/json',
+      body: JSON.stringify(loggedOut
+        ? { error: { code: 'unauthorized', message: 'login required' } }
+        : { login: '@e2e', role: 'user', mustChangePassword: false, csrfToken: 'e2e-csrf' }),
+    });
+  });
+  await page.route('**/api/v1/auth/logout', async (route) => {
+    if (!failLogout) loggedOut = true;
+    await route.fulfill({
+      status: failLogout ? 503 : 200,
+      contentType: 'application/json',
+      body: JSON.stringify(failLogout
+        ? { error: { code: 'unavailable', message: 'Logout unavailable' } }
+        : { ok: true }),
+    });
+  });
+
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page.getByRole('alert')).toContainText('Could not log out.');
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole('region', { name: 'Session' })).toContainText('Logged in as @e2e');
+
+  failLogout = false;
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId('dragon-landing')).toBeVisible({ timeout: 10_000 });
+  await page.reload();
+  await expect(page.getByTestId('dragon-landing')).toBeVisible({ timeout: 10_000 });
 });
 
 test('shared tools findings, proposals, adoption, and non-admin settings @action:tools.scan @action:tools.expand_cluster @action:tools.propose @action:tools.ignore @action:shared_tools.proposals @action:tool_fleet.render @action:admin.denied', async ({

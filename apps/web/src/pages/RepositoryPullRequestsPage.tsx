@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import { fetchPullList } from '../api/pullLists';
@@ -57,12 +56,9 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   // default view narrows nothing, so a pull request into `rc/auto` is as
   // visible as one into the default branch. Only the draft filter narrows it.
   const all = pulls.data?.items ?? [];
-  const shown = useMemo(() => filterByDraft(all, drafts), [all, drafts]);
-  const openDrafts = useMemo(() => draftCount(all), [all]);
-  const lanes = useMemo(
-    () => groupPullRequests(shown.map((item) => fromPullRequestSummary(item))),
-    [shown]
-  );
+  const shown = filterByDraft(all, drafts);
+  const openDrafts = draftCount(all);
+  const lanes = groupPullRequests(shown.map((item) => fromPullRequestSummary(item)));
 
   if (resolved.isPending) {
     return (

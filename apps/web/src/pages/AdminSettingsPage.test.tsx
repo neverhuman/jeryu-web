@@ -11,7 +11,7 @@ const accounts = Array.from({ length: 9 }, (_, index) => ({
 vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
     user: { login: 'user-0', role: 'admin', mustChangePassword: false },
-    logout: vi.fn(),
+    logout: { mutate: vi.fn(), isPending: false, error: null },
   }),
 }));
 vi.mock('../api/client', () => ({

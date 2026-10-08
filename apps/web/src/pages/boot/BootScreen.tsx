@@ -1,22 +1,15 @@
-// BootScreen.tsx — signed-out splash → story landing with optional auth panel.
-//
-// Rendered by AppShell in place of the app whenever there is no authenticated
-// user. `/` shows the story first; `/login` and `/signup` open the shared auth
-// form immediately over the same surface.
-
+// Signed-out story and the shared native authentication form.
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-import { JeryuLogo } from '../../components/brand/JeryuLogo';
-import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
-import { BootSplash } from './BootSplash';
-import { DragonLanding } from './DragonLanding';
+import { LandingSections } from './LandingSections';
 import { LoginPanel } from './LoginPanel';
-import { WaitlistForm } from './WaitlistForm';
+import { MarketingHeader } from './MarketingHeader';
+import { MarketingScene } from './MarketingScene';
 
 import './boot.css';
 
 type Mode = 'login' | 'signup';
-const SPLASH_MS = 950;
 
 export function BootScreen({
   initialMode = 'login',
@@ -25,113 +18,65 @@ export function BootScreen({
 }: {
   initialMode?: Mode;
   initialAuthOpen?: boolean;
-  /** The page a deep link was headed to; login lands there. */
+  /** The protected destination resumed after authentication. */
   returnTo?: string | null;
 }): JSX.Element {
-  const prefersReduced = usePrefersReducedMotion();
-  const [phase, setPhase] = useState<'splash' | 'gate'>(
-    prefersReduced || initialAuthOpen ? 'gate' : 'splash'
-  );
-  const [mode, setMode] = useState<Mode>(initialMode);
-  const [authOpen, setAuthOpen] = useState(initialAuthOpen);
+  const [authOpened, setAuthOpened] = useState(false);
+  const authOpen = initialAuthOpen || authOpened;
   const usernameRef = useRef<HTMLInputElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    setMode(initialMode);
-    setAuthOpen(initialAuthOpen);
-    if (initialAuthOpen) {
-      setPhase('gate');
-    }
-  }, [initialAuthOpen, initialMode]);
-
-  // Advance past the splash on a timer, or immediately on any key / pointer.
-  useEffect(() => {
-    if (phase !== 'splash') return;
-    const toGate = (): void => setPhase('gate');
-    const timer = window.setTimeout(toGate, SPLASH_MS);
-    window.addEventListener('keydown', toGate, { once: true });
-    window.addEventListener('pointerdown', toGate, { once: true });
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('keydown', toGate);
-      window.removeEventListener('pointerdown', toGate);
-    };
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase === 'gate' && authOpen) {
-      usernameRef.current?.focus();
-    }
-  }, [authOpen, mode, phase]);
-
-  const openAuth = (nextMode: Mode): void => {
-    setMode(nextMode);
-    setAuthOpen(true);
-  };
-
-  if (phase === 'splash') {
-    return (
-      <main className="boot boot--splash" aria-label="Starting JeRyu">
-        <BootSplash />
-        <p className="sr-only">Starting JeRyu…</p>
-      </main>
-    );
-  }
+    if (authOpen) usernameRef.current?.focus();
+  }, [authOpen, initialMode]);
 
   return (
-    <main className={`boot boot--gate${authOpen ? ' boot--auth-open' : ''}`}>
-      <div className="boot__story">
-        <header className="boot__nav">
-          <span className="boot__brand">
-            <JeryuLogo variant="mark" className="boot__brand-mark" decorative />
-            <span>JeRyu</span>
-          </span>
-          {/* No Sign up here: this is a single-operator forge and accounts are
-              created by the operator, not self-service. */}
-          <nav className="boot__auth-controls" aria-label="Account access">
-            <button
-              type="button"
-              className="boot__auth-link"
-              aria-pressed={authOpen && mode === 'login'}
-              onClick={() => openAuth('login')}
-            >
-              Log in
-            </button>
-          </nav>
-        </header>
-
-        <section className="boot__hero" aria-label="JeRyu product story">
-          <div className="boot__hero-copy">
-            <p className="boot__eyebrow">Rust forge core · React cockpit</p>
+    <main id="main-content" className={`marketing boot${authOpen ? ' boot--auth-open' : ''}`}>
+      <MarketingScene motionTarget={heroRef} subdued={authOpen}>
+        <MarketingHeader
+          onLogin={() => setAuthOpened(true)}
+          onHome={() => setAuthOpened(false)}
+          authOpen={authOpen}
+        />
+        <section ref={heroRef} className="boot__hero" aria-label="JeRyū product story">
+          <div className="boot__hero-copy marketing-scene__copy">
+            <p className="boot__eyebrow"><span aria-hidden="true" />A forge for autonomous work</p>
             <h1>Git for agents.</h1>
             <p className="boot__lede">
-              Made by agents, for agents: a Rust forge core with a React cockpit
-              for repo families moving at machine speed.
+              A home for agent work. From the first issue to a reviewed pull request,
+              keep your code, context, and evidence together.
             </p>
-            <p className="boot__story-rail">
-              Issue -&gt; agent session -&gt; evidence -&gt; pull request -&gt; gated merge -&gt; autonomous deploy
-            </p>
-            <div className="boot__gains" aria-label="JeRyu gains">
-              <p>Preserve agent work.</p>
-              <p>Remove release handoffs.</p>
-              <p>Operate billion-token/day repo families at 1000-pull-request/day pace.</p>
-            </div>
-            <WaitlistForm />
-          </div>
-          {authOpen ? null : <DragonLanding />}
-        </section>
-
-        {authOpen ? (
-          <aside className="boot__auth-panel">
-            {returnTo ? (
-              <p className="boot__return-to" role="status">
-                Log in to continue to <code>{returnTo}</code>
-              </p>
+            {!authOpen ? (
+              <a className="boot__explore" href="#how-it-works">
+                Explore the forge <span aria-hidden="true">↓</span>
+              </a>
             ) : null}
-            <LoginPanel initialMode={mode} firstFieldRef={usernameRef} />
-          </aside>
-        ) : null}
-      </div>
+            <p className="boot__signature">Built for code. Designed for autonomy.</p>
+          </div>
+          {authOpen ? (
+            <div className="boot__auth-panel">
+              {initialAuthOpen ? (
+                <Link to="/" className="boot__back-button">← Back to the story</Link>
+              ) : (
+                <button type="button" className="boot__back-button" onClick={() => setAuthOpened(false)}>
+                  ← Back to the story
+                </button>
+              )}
+              {returnTo ? (
+                <p className="boot__return-to" role="status">
+                  Log in to continue to <code>{returnTo}</code>
+                </p>
+              ) : null}
+              <LoginPanel initialMode={initialMode} firstFieldRef={usernameRef} />
+            </div>
+          ) : null}
+        </section>
+        {!authOpen ? <LandingSections /> : null}
+        <footer className="marketing-footer">
+          <p>JeRyū <span>·</span> The forge for agent work.</p>
+          <Link to="/waitlist">Join waitlist <span aria-hidden="true">↗</span></Link>
+        </footer>
+      </MarketingScene>
     </main>
   );
 }

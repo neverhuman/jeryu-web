@@ -27,3 +27,8 @@ manual_edits = false
 path = "db/fixtures/"
 generator = "npm run fixtures:build"
 manual_edits = false
+
+[[zones]]
+path = "apps/web/src/pages/boot/landing/v6/"
+generator = "node apps/web/scripts/export-landing-graphic-scene.mjs"
+manual_edits = false

@@ -9,12 +9,16 @@ import { NAV_DESTINATIONS } from '../navDestinations';
 interface AuthStub {
   isPending: boolean;
   user: { role: string; mustChangePassword?: boolean } | null;
+  logout?: { isPending: boolean; isSuccess: boolean; reset: ReturnType<typeof vi.fn> };
 }
 
 let auth: AuthStub = { isPending: false, user: null };
 
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => auth,
+  useAuth: () => ({
+    ...auth,
+    logout: auth.logout ?? { isPending: false, isSuccess: false, reset: vi.fn() },
+  }),
 }));
 
 // The shell's children own their own tests; here they only mark where they render.
@@ -121,6 +125,22 @@ describe('AppShell', () => {
     const boot = screen.getByTestId('boot');
     expect(boot.dataset.mode).toBe('signup');
     expect(boot.dataset.open).toBe('true');
+  });
+
+  it('finishes logout on the public story and consumes its redirect there', () => {
+    const reset = vi.fn();
+    auth = { isPending: false, user: null, logout: { isPending: false, isSuccess: true, reset } };
+    renderAt('/settings');
+    const boot = screen.getByTestId('boot');
+    expect(boot.dataset.open).toBe('false');
+    expect(reset).toHaveBeenCalled();
+  });
+
+  it('does not start a login redirect while logout publishes its result', () => {
+    auth = { isPending: false, user: null, logout: { isPending: true, isSuccess: false, reset: vi.fn() } };
+    renderAt('/settings');
+    expect(screen.getByText('Logging out…')).toBeTruthy();
+    expect(screen.queryByTestId('boot')).toBeNull();
   });
 
   it('signed out on /, shows the story with the auth panel closed', () => {

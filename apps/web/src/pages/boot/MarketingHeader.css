@@ -1,0 +1,58 @@
+.marketing-header {
+  position: relative;
+  z-index: 5;
+  width: min(100%, 1600px);
+  min-height: 102px;
+  margin-inline: auto;
+  padding: 20px clamp(24px, 5vw, 80px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.marketing-header__brand {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-fg-primary);
+  text-decoration: none;
+}
+
+.marketing-header__actions { display: flex; align-items: center; gap: 24px; }
+.marketing-header__login,
+.marketing-header__waitlist {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.marketing-header__login { padding-inline: 10px; color: var(--color-fg-primary); background: transparent; }
+.marketing-header__login:hover { color: var(--color-accent-primary); }
+.marketing-header__waitlist { background: var(--marketing-button); color: var(--marketing-button-text); border-color: var(--marketing-button); }
+.marketing-header__waitlist:hover { background: var(--marketing-button-hover); border-color: var(--marketing-button-hover); }
+.marketing-header a:focus-visible,
+.marketing-header button:focus-visible { outline: 2px solid var(--color-fg-primary); outline-offset: 5px; }
+
+@media (max-width: 600px) {
+  .marketing-header { min-height: 78px; padding: 16px 18px; gap: 10px; }
+  .marketing-header__actions { gap: 8px; }
+  .marketing-header__login, .marketing-header__waitlist { font-size: 12px; min-height: 44px; }
+  .marketing-header__login { padding-inline: 7px; }
+  .marketing-header__waitlist { padding-inline: 12px; gap: 10px; }
+}
+
+@media (forced-colors: active) {
+  .marketing-header__waitlist { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+}

@@ -63,16 +63,9 @@ test.describe('Auth hardening browser proof', () => {
     await expect(page.getByRole('heading', { name: 'Git for agents.' })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(
-      page.getByText(
-        'Made by agents, for agents: a Rust forge core with a React cockpit'
-      )
-    ).toBeVisible();
-    await expect(
-      page.getByText(
-        'Issue -> agent session -> evidence -> pull request -> gated merge -> autonomous deploy'
-      )
-    ).toBeVisible();
+    await expect(page.getByText('A home for agent work.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /From intent/ })).toBeVisible();
+    await expect(page.getByLabel('Email')).toHaveCount(0);
     await page.getByRole('button', { name: 'Log in' }).click();
     await expect(page.getByRole('tab', { name: 'Login' })).toHaveAttribute(
       'aria-selected',
@@ -165,7 +158,7 @@ test.describe('Auth hardening browser proof', () => {
     });
 
     await page.goto('/signup');
-    await expect(page.locator('.boot__story')).toBeVisible({
+    await expect(page.locator('.marketing-scene')).toBeVisible({
       timeout: 10_000,
     });
     await expect(

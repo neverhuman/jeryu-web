@@ -9,8 +9,9 @@ Use the local CI entrypoints before pushing changes:
 - `just artifact-support`
 
 For web UI changes, the required browser lane is the mocked Chromium action
-matrix:
+matrix (build the SPA first):
 
+- `npm --workspace @jeryu/web run build`
 - `npm --workspace @jeryu/web run test:e2e:ci`
 - `npm --workspace @jeryu/web run ux-qa`
 
@@ -49,3 +50,29 @@ Agent-readable exception guidance:
 Cost and bounded-operation policy: budget, quota, spend cap, kill switch, and
 stop condition evidence must be added before introducing paid or unbounded
 network operations.
+
+
+## Public pages and Rust flow CI
+
+`bash ops/ci/web-flows.sh` drives the built SPA through Rust/ChromeDriver and an
+in-process Rust fixture server. It covers public home, inline and direct login,
+signup navigation, waitlist success/repeat/validation/errors, HTTP request
+bodies, opacity restoration, the shared grid, and rendered leftward motion.
+The standalone test crate is `apps/web/tests/web-flows`; it imports no backend
+workspace or SDK. Its locked dependencies and matched browser pair are cached
+by the independent `Rust public web flows` job. See its README for local setup.
+
+`bash ops/ci/frontend-checks.sh` reproduces the independent `Frontend checks`
+job: locked npm dependencies, typecheck, lint, unit coverage, type contracts,
+production build, the full rendered action matrix, accessibility, Storybook,
+UX evidence, and the existing security lane. Browser action/a11y tests use the
+built SPA (`ui-mocked`); Vite development mode remains available for debugging.
+Keep the action matrix based on the target branch so unrelated feature tags
+cannot be added accidentally.
+
+The original `local` job and native `jeryu-web/required` gate still require the
+governed Jankurai installation and receipt. The front-end jobs grant no audit,
+merge, or release authority. A hosted runner without that installation fails
+before the canonical gate; do not bypass the verifier to make it green. Runner
+provisioning is tracked in https://github.com/neverhuman/jeryu-web/issues/2.
+All checks, including that existing job, must pass before this PR is ready.

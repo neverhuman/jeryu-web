@@ -79,10 +79,18 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   });
   const logout = useMutation({
     mutationFn: () => apiSend(endpoints.authLogout(), {}),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Stop earlier account reads before publishing the signed-out state.
+      await queryClient.cancelQueries();
       setCsrfToken(null);
+      // Keep the observed account query: removing it starts another account
+      // read and loses the explicit signed-out result.
+      queryClient.removeQueries({
+        predicate: ({ queryKey }) =>
+          !(queryKey.length === 2 && queryKey[0] === 'auth' && queryKey[1] === 'me'),
+      });
+      queryClient.getMutationCache().clear();
       queryClient.setQueryData(AUTH_ME_QUERY_KEY, null);
-      queryClient.clear();
     },
   });
   useEffect(() => {

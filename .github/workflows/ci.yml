@@ -69,3 +69,76 @@ jobs:
             apps/web/test-results/
             apps/web/storybook-static/
           if-no-files-found: ignore
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+      - name: Use Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - name: Frontend checks
+        run: bash ops/ci/frontend-checks.sh
+      - name: Upload frontend evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: frontend-evidence
+          path: |
+            target/web-flows/*.json
+            target/web-flows/*.png
+            target/web-flows/*.html
+            target/web-flows/*.log
+            apps/web/coverage/coverage-summary.json
+            apps/web/playwright-report/
+            apps/web/test-results/
+            target/jankurai/ux-qa.json
+            target/security/
+          if-no-files-found: error
+
+  web-flows:
+    name: Rust public web flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+      - name: Use Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - name: Use Rust 1.95
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt --component clippy
+          rustup default 1.95.0
+      - name: Cache Rust dependencies and matched browser pair
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/web-flows/cargo
+            target/web-flows/browser
+          key: web-flows-${{ runner.os }}-1.95.0-${{ hashFiles('apps/web/tests/web-flows/Cargo.lock', 'ops/ci/web-flows.sh') }}
+      - name: Production build and Rust browser journey
+        run: |
+          npm ci
+          npm --workspace @jeryu/web run build
+          bash ops/ci/web-flows.sh
+      - name: Upload Rust flow evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rust-web-flow-evidence
+          path: |
+            target/web-flows/*.json
+            target/web-flows/*.png
+            target/web-flows/*.html
+            target/web-flows/*.log
+          if-no-files-found: error

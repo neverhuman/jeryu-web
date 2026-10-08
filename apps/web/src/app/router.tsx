@@ -42,6 +42,7 @@ import {
 } from '../pages/qualityGate';
 import { RepoRouter } from '../pages/RepoRouter';
 import { ShiftQueuePage, TodoPage } from '../pages/shift';
+import { WaitlistPage } from '../pages/WaitlistPage';
 import { WikiPage } from '../pages/wiki/WikiPage';
 
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
@@ -116,4 +117,5 @@ export const router = createBrowserRouter([
       { path: '*', element: <NotFoundPage /> },
     ],
   },
+  { path: '/waitlist', element: <WaitlistPage /> },
 ]);

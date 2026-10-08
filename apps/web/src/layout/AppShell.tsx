@@ -79,6 +79,25 @@ export function AppShell(): JSX.Element {
   const authRouteMode = location.pathname === '/signup' ? 'signup' : 'login';
   const isAuthRoute = AUTH_PATHS.has(location.pathname);
   const returnTo = isAuthRoute ? returnPathFrom(location.search) : null;
+  const { isSuccess: loggedOut, reset: resetLogout } = auth.logout;
+
+  // Consume the completed logout only after its public destination renders.
+  // Keeping the redirect in this mounted gate avoids competing navigations
+  // from a Settings panel that signing out has already unmounted.
+  useEffect(() => {
+    if (loggedOut && location.pathname === '/') resetLogout();
+  }, [loggedOut, location.pathname, resetLogout]);
+
+  if (!auth.user && auth.logout.isPending) {
+    return (
+      <main className="auth-page">
+        <LoadingState title="Logging out…" variant="message" />
+      </main>
+    );
+  }
+  if (!auth.user && loggedOut && location.pathname !== '/') {
+    return <Navigate to="/" replace />;
+  }
 
   if (auth.isPending) {
     return (

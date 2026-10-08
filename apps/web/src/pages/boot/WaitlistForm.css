@@ -1,0 +1,14 @@
+.waitlist { display: flex; flex-direction: column; gap: 20px; width: 100%; margin: 0; }
+.waitlist__title { margin: 0 0 4px; color: var(--color-fg-primary); font-size: 21px; font-family: var(--font-sans); font-weight: 500; }
+.waitlist__field { display: flex; flex-direction: column; gap: 9px; color: var(--color-fg-secondary); font-family: var(--font-sans); font-size: 13px; }
+.waitlist__field input, .waitlist__field textarea { width: 100%; min-width: 0; border: 1px solid var(--color-border-strong); border-radius: 0; background: var(--color-bg-0); color: var(--color-fg-primary); font: inherit; }
+.waitlist__field input { min-height: 46px; padding: 0 12px; }
+.waitlist__field textarea { min-height: 110px; padding: 12px; resize: vertical; }
+.waitlist__field input:focus-visible, .waitlist__field textarea:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 3px; }
+.waitlist__submit { width: 100%; min-height: 48px; padding: 12px 18px; border: 1px solid var(--marketing-button, var(--color-accent-primary)); border-radius: 0; background: var(--marketing-button, var(--color-accent-primary)); color: var(--marketing-button-text, var(--color-bg-0)); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.waitlist__submit:disabled { opacity: .65; cursor: wait; }
+.waitlist__status { margin: 0; color: var(--color-fg-primary); font-size: 14px; line-height: 1.6; }
+.waitlist__privacy { margin: 0; color: var(--color-fg-muted); font-size: 12px; line-height: 1.7; }
+@media (forced-colors: active) {
+  .waitlist__submit { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+}

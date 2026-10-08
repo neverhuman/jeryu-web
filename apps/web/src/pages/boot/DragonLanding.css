@@ -1,86 +1,88 @@
 .dragon-landing {
-  position: relative;
-  width: min(100%, 520px);
-  justify-self: end;
-  aspect-ratio: 1;
-  perspective: 1100px;
-  touch-action: pan-y pinch-zoom;
-  background: radial-gradient(
-    ellipse at 62% 46%,
-    color-mix(in srgb, var(--color-accent-primary) 16%, transparent),
-    transparent 68%
-  );
+  position: absolute;
+  z-index: 1;
+  top: 2px;
+  right: max(12px, calc((100% - 1600px) / 2 + 12px));
+  width: min(74vw, 1086px);
+  aspect-ratio: 3 / 4;
+  margin: 0;
+  pointer-events: none;
 }
-
-.dragon-landing__poster,
-.dragon-landing__layer {
+.dragon-landing__poster {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 1;
+  transition: opacity 180ms ease-out;
+  /* Alpha reveals the same grid behind horns and coils in every theme.
+     The tail recedes beneath the product story instead of ending in a box. */
+  mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgb(0 0 0 / .3) 70%, transparent 98%);
+}
+/* Public forms use a faint signature; returning to the story restores it. */
+.marketing-scene[data-dragon-subdued='true'] .dragon-landing__poster { opacity: .1; }
+.dragon-landing__traces {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
+  color: var(--marketing-grid-energy);
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: .55;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 96%);
 }
-
-.dragon-landing__poster {
-  object-fit: cover;
-  object-position: 78% 50%;
-}
-
-.dragon-landing--motion .dragon-landing__poster {
-  opacity: 0;
-}
-
-.dragon-landing__layers {
+.dragon-landing__rails { opacity: .16; }
+.dragon-landing--unavailable { z-index: 4; }
+.dragon-landing__unavailable {
   position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-}
-
-.dragon-landing__head {
-  transform-origin: 49.1875% 26.5625%;
-}
-
-.dragon-landing__pearl {
-  transform-origin: 50.3125% 50%;
-}
-
-.dragon-landing__animate {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  bottom: 6%;
-  transform: translateX(-50%);
-  height: 32px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-accent-primary);
-  border-radius: 0;
+  top: 260px;
+  right: 20%;
+  width: min(280px, 80%);
+  padding: 24px;
+  color: var(--color-fg-secondary);
   background: var(--color-bg-1);
-  color: var(--color-accent-primary);
-  font-size: var(--font-size-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
+  border: 1px solid var(--color-border-strong);
+  text-align: center;
+  pointer-events: auto;
+}
+.dragon-landing__unavailable p { font-size: 14px; }
+.dragon-landing__unavailable button { min-height: 44px; padding: 0 18px; border: 1px solid var(--color-border-strong); background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 13px; cursor: pointer; }
+@media (max-width: 900px) {
+  .dragon-landing { width: 76vw; right: 12px; top: 30px; }
+}
+@media (max-width: 600px) {
+  .dragon-landing { top: 390px; right: 12px; width: calc(100% - 24px); }
+  .dragon-landing__poster { mask-image: linear-gradient(to bottom, transparent, #000 7%, #000 58%, rgb(0 0 0 / .3) 80%, transparent); }
+  .dragon-landing__unavailable { top: 100px; right: 18%; }
+}
+@media (forced-colors: active) {
+  .dragon-landing__traces { display: none; }
+  .dragon-landing__unavailable { color: CanvasText; background: Canvas; border-color: CanvasText; }
 }
 
-.dragon-landing__animate:focus-visible {
-  outline: 2px solid var(--color-accent-primary);
-  outline-offset: 3px;
+/* Short wakes stream behind the right-facing dragon and fade before resetting outside the scene. */
+.dragon-landing__flow {
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0;
+  animation: landing-slipstream 6s linear infinite;
+  animation-play-state: paused;
 }
-
-@media (max-width: 920px) {
-  .dragon-landing {
-    justify-self: center;
-    width: min(100%, 420px);
-    margin-inline: auto;
-  }
+.dragon-landing__flow:nth-child(2) { animation-delay: -2.8s; animation-duration: 7.2s; }
+.dragon-landing__flow:nth-child(3) { animation-delay: -1.6s; animation-duration: 5.4s; }
+.dragon-landing__flow:nth-child(4) { animation-delay: -4.1s; animation-duration: 6.8s; }
+.dragon-landing__flow:nth-child(5) { animation-delay: -3.2s; animation-duration: 8s; }
+[data-background-motion='running'] .dragon-landing__flow { animation-play-state: running; }
+@keyframes landing-slipstream {
+  0% { transform: translate3d(1246px, 0, 0); opacity: 0; }
+  12% { opacity: .9; }
+  80% { opacity: .9; }
+  100% { transform: translate3d(-160px, 0, 0); opacity: 0; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .dragon-landing__layers,
-  .dragon-landing__head,
-  .dragon-landing__pearl {
-    transform: none;
-  }
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .dragon-landing__flow { animation: none; }
+  .dragon-landing__poster { transition: none; }
 }
+[data-theme='high-contrast'] .dragon-landing__flow { animation: none; }
