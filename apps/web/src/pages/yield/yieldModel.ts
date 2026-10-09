@@ -349,7 +349,9 @@ export function todoRefMeta(ref: YieldTodoRef): string {
 }
 
 /** Where a costly todo stands, in the Work page's words and colours. A blocked or
- * handed-off todo is red: its spend is not lost yet, a person can still save it. */
+ * handed-off todo is red: its spend is not lost yet, a person can still save it.
+ * Work still in play (open, claimed, landed but in review) is amber; merged is green;
+ * anything else (closed) is neutral. */
 export function todoRefStatus(ref: YieldTodoRef): { label: string; tone: Tone; hint: string } {
   if (ref.merged) return { label: 'merged', tone: 'ok', hint: 'Reached main.' };
   const tone = statusTone(ref.status);
@@ -362,6 +364,9 @@ export function todoRefStatus(ref: YieldTodoRef): { label: string; tone: Tone; h
   }
   if (ref.status === 'done') {
     return { label: 'in review', tone: 'warn', hint: 'Landed on a shift; not on main yet.' };
+  }
+  if (ref.status === 'open' || ref.status === 'claimed') {
+    return { label: ref.status, tone: 'warn', hint: 'Still in the queue: a worker can pick it up again.' };
   }
   return { label: ref.status, tone, hint: '' };
 }

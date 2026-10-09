@@ -222,7 +222,9 @@ describe('labels', () => {
       label: 'in review',
       tone: 'warn',
     });
-    expect(todoRefStatus({ ...ref, status: 'open', merged: false }).label).toBe('open');
+    expect(todoRefStatus({ ...ref, status: 'open', merged: false })).toMatchObject({ label: 'open', tone: 'warn' });
+    expect(todoRefStatus({ ...ref, status: 'claimed', merged: false }).tone).toBe('warn');
+    expect(todoRefStatus({ ...ref, status: 'closed', merged: false }).tone).toBe('unknown');
   });
 
   it('names the price sources, or says none were named', () => {
