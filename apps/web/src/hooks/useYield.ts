@@ -1,8 +1,10 @@
 // useYield.ts — React Query hook for `GET /api/v1/yield` (admin-only).
 //
-// One read per (family, window, cut). Switching the cut keeps the previous
-// answer on screen until the next one lands, so the KPI row does not blink
-// while only the breakdown table changes. A server that predates the route
+// One read per (family, window, cut). Any switch keeps the previous answer on
+// screen until the next one lands, so the page keeps its height and the reader
+// keeps their place; YieldPage dims it and says it is updating while
+// `isPlaceholderData` is true, so an old window's numbers never pass for the new
+// one's. A server that predates the route
 // answers 404 or the SPA shell; `isPipelineUnavailable` recognises both and the
 // page says "not available on this server version". Nothing retries.
 
@@ -16,20 +18,12 @@ import { OPERATOR_REFRESH } from './refreshPolicy';
 export const YIELD_KEY = ['yield'];
 
 export function useYield(query: YieldQuery): UseQueryResult<YieldReport, Error> {
-  const scope = [query.family ?? '', query.since ?? '', query.until ?? ''];
   return useQuery({
-    queryKey: [...YIELD_KEY, ...scope, query.by ?? ''],
+    queryKey: [...YIELD_KEY, query.family ?? '', query.since ?? '', query.until ?? '', query.by ?? ''],
     queryFn: ({ signal }) => apiGet<YieldReport>(endpoints.yieldReport(query), { signal }),
-    // Only a new cut of the same family and window keeps the old answer up: a
-    // different family or window must not show the last one's numbers.
-    placeholderData: (previous, previousQuery) =>
-      previousQuery && sameScope(previousQuery.queryKey, scope) ? previous : undefined,
+    placeholderData: (previous) => previous,
     ...OPERATOR_REFRESH,
     staleTime: 60_000,
     retry: false,
   });
-}
-
-function sameScope(key: readonly unknown[], scope: readonly string[]): boolean {
-  return scope.every((part, index) => key[YIELD_KEY.length + index] === part);
 }

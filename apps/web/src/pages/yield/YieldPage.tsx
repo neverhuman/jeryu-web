@@ -75,13 +75,14 @@ export function YieldPage(): JSX.Element {
   const by = parseBy(params);
   const dates = useMemo(() => windowDates(days, new Date()), [days]);
   const report = useYield({ ...(scope.family ? { family: scope.family } : {}), ...dates, by });
-  const { data, isPending, isError, error } = report;
+  const { data, isPending, isError, error, isPlaceholderData } = report;
 
   const setParam = (name: string, value: string, fallback: string): void => {
     const next = new URLSearchParams(params);
     if (value === fallback) next.delete(name);
     else next.set(name, value);
-    setParams(next, { replace: true });
+    // A filter is not a new page: keep the reader where they are on the page.
+    setParams(next, { replace: true, preventScrollReset: true });
   };
 
   return (
@@ -111,12 +112,23 @@ export function YieldPage(): JSX.Element {
           description={`No attempt started between ${data.window.since} and ${data.window.until}. Pick a longer window, or come back once agents have worked.`}
         />
       ) : (
-        <YieldBody
-          data={data}
-          days={days}
-          by={by}
-          onBy={(value) => setParam(BY_PARAM, value, DEFAULT_BY)}
-        />
+        <div
+          className={isPlaceholderData ? 'yield__body yield__body--updating' : 'yield__body'}
+          aria-busy={isPlaceholderData}
+          data-testid="yield-body"
+        >
+          {isPlaceholderData ? (
+            <p className="yield__updating" role="status">
+              Updating…
+            </p>
+          ) : null}
+          <YieldBody
+            data={data}
+            days={days}
+            by={by}
+            onBy={(value) => setParam(BY_PARAM, value, DEFAULT_BY)}
+          />
+        </div>
       )}
     </div>
   );

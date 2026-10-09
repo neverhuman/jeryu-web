@@ -105,6 +105,33 @@ test.describe('Yield', () => {
     await expect(page).toHaveURL(/\/work\/20261001-120000-aaaaaa$/);
   });
 
+  test('a filter updates the page in place: the reader stays where they scrolled @action:yield.in_place', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockYieldApi(page);
+    await page.setViewportSize({ width: 1280, height: 600 });
+
+    await page.goto('/yield');
+    const cut = page.getByRole('group', { name: 'Break down by' });
+    await expect(cut).toBeVisible({ timeout: 15_000 });
+    await cut.scrollIntoViewIfNeeded();
+    const before = await page.evaluate(() => window.scrollY);
+    expect(before, 'the breakdown switcher sits below the fold').toBeGreaterThan(0);
+
+    await cut.getByRole('button', { name: 'Agent' }).click();
+    await expect(page).toHaveURL(/[?&]by=agent\b/);
+    await expect(page.getByTestId('yield-breakdown-table').getByRole('columnheader', { name: 'Agent' })).toBeVisible();
+    expect(await page.evaluate(() => window.scrollY), 'switching the cut keeps the scroll position').toBe(before);
+
+    await page.getByRole('group', { name: 'Window' }).getByRole('button', { name: '7 d' }).scrollIntoViewIfNeeded();
+    const atWindow = await page.evaluate(() => window.scrollY);
+    await page.getByRole('group', { name: 'Window' }).getByRole('button', { name: '7 d' }).click();
+    await expect(page).toHaveURL(/[?&]days=7\b/);
+    await expect(page.getByTestId('yield-body')).toHaveAttribute('aria-busy', 'false');
+    expect(await page.evaluate(() => window.scrollY), 'switching the window keeps the scroll position').toBe(atWindow);
+  });
+
   test('a phone in the dark theme reads the page without sideways scrolling @action:yield.phone_dark', async ({
     page,
   }) => {
