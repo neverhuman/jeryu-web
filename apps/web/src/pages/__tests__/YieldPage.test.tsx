@@ -153,13 +153,20 @@ describe('YieldPage', () => {
     const costliest = await screen.findByTestId('yield-costliest');
     const link = within(costliest).getByRole('link', { name: 'Split the billing module' });
     expect(link).toHaveAttribute('href', '/work/20261001-120000-aaaaaa');
-    expect(costliest).toHaveTextContent('acme · done · 3 attempts · claude · model-a');
+    expect(costliest).toHaveTextContent('acme · 3 attempts · claude · model-a');
+    expect(within(costliest).getByTestId('yield-todo-status-20261001-120000-aaaaaa')).toHaveTextContent('merged');
+    expect(within(costliest).getByTestId('yield-todo-status-20261001-120000-aaaaaa')).toHaveClass('page__pill--success');
     expect(costliest).toHaveTextContent('$24.50');
     const scrap = screen.getByTestId('yield-scrap');
     expect(within(scrap).getByRole('link', { name: 'Retry flaky uploads' })).toHaveAttribute(
       'href',
       '/work/20261002-120000-bbbbbb'
     );
+    // Blocked is red: the spend can still reach main if a person unblocks it.
+    const blocked = within(scrap).getByTestId('yield-todo-status-20261002-120000-bbbbbb');
+    expect(blocked).toHaveTextContent('blocked');
+    expect(blocked.className).toMatch(/page__pill--(danger|human|error)/);
+    expect(blocked).toHaveAttribute('title', expect.stringContaining('unblock'));
   });
 
   it('says so while loading, and when nothing worked in the window', async () => {

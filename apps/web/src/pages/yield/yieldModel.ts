@@ -15,7 +15,9 @@ import type {
   YieldTodoRef,
   YieldWeek,
 } from '../../api/types';
+import type { Tone } from '../../components/tone/tone';
 import { shiftDayKey, utcDayKey } from '../../format/when';
+import { statusTone } from '../shift/shiftModel';
 
 export const YIELD_PATH = '/yield';
 
@@ -341,9 +343,27 @@ export function armShare(arm: Pick<YieldArm, 'arm_p'>): string {
 /** The line under a todo's title in the costliest and scrap lists. */
 export function todoRefMeta(ref: YieldTodoRef): string {
   const by = [ref.agent, ref.model].filter((part): part is string => Boolean(part)).join(' · ');
-  return [ref.family, ref.status, plural(ref.attempts, 'attempt'), by]
+  return [ref.family, plural(ref.attempts, 'attempt'), by]
     .filter((part) => part !== '')
     .join(' · ');
+}
+
+/** Where a costly todo stands, in the Work page's words and colours. A blocked or
+ * handed-off todo is red: its spend is not lost yet, a person can still save it. */
+export function todoRefStatus(ref: YieldTodoRef): { label: string; tone: Tone; hint: string } {
+  if (ref.merged) return { label: 'merged', tone: 'ok', hint: 'Reached main.' };
+  const tone = statusTone(ref.status);
+  if (ref.status === 'blocked' || ref.status === 'handoff') {
+    return {
+      label: ref.status,
+      tone: 'human',
+      hint: 'Waiting on a person: open it to unblock it, and the spend can still reach main.',
+    };
+  }
+  if (ref.status === 'done') {
+    return { label: 'in review', tone: 'warn', hint: 'Landed on a shift; not on main yet.' };
+  }
+  return { label: ref.status, tone, hint: '' };
 }
 
 /** The footnote naming where the prices came from. */

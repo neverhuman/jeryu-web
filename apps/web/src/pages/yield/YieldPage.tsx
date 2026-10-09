@@ -37,6 +37,7 @@ import {
 } from '../../hooks/usePipeline';
 import { useYield } from '../../hooks/useYield';
 import { UseThisWhen } from '../../layout/UseThisWhen';
+import { pillClass } from '../../components/tone/tone';
 import { todoHref } from '../shift/workPaths';
 import { YieldFunnelBar } from './YieldFunnel';
 import { YieldTrendChart } from './YieldTrendChart';
@@ -60,6 +61,7 @@ import {
   sourceSegments,
   spendSummary,
   todoRefMeta,
+  todoRefStatus,
   windowDates,
   yieldKpis,
 } from './yieldModel';
@@ -476,17 +478,29 @@ function TodoList({
         <p className="yield__summary">{empty}</p>
       ) : (
         <ol className="yield__todos">
-          {refs.map((ref) => (
-            <li key={ref.id} className="yield__todo">
-              <div className="yield__todo-main">
-                <Link to={todoHref(ref.id)} className="yield__todo-title">
-                  {ref.title || ref.id}
-                </Link>
-                <span className="yield__sub">{todoRefMeta(ref)}</span>
-              </div>
-              <span className="yield__todo-spend">{formatUsd(ref.spend_usd)}</span>
-            </li>
-          ))}
+          {refs.map((ref) => {
+            const status = todoRefStatus(ref);
+            return (
+              <li key={ref.id} className="yield__todo">
+                <div className="yield__todo-main">
+                  <Link to={todoHref(ref.id)} className="yield__todo-title">
+                    {ref.title || ref.id}
+                  </Link>
+                  <span className="yield__sub">
+                    <span
+                      className={pillClass(status.tone)}
+                      title={status.hint || undefined}
+                      data-testid={`yield-todo-status-${ref.id}`}
+                    >
+                      {status.label}
+                    </span>{' '}
+                    {todoRefMeta(ref)}
+                  </span>
+                </div>
+                <span className="yield__todo-spend">{formatUsd(ref.spend_usd)}</span>
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>

@@ -21,6 +21,7 @@ import {
   sourceSegments,
   spendSummary,
   todoRefMeta,
+  todoRefStatus,
   trendData,
   trendGeometry,
   trendSummary,
@@ -202,10 +203,26 @@ describe('labels', () => {
     expect(armLabel({ agent: 'codex', model: 'model-b' })).toBe('codex · model-b');
     expect(armShare({ arm_p: 0.25 })).toBe('25%');
     expect(armShare({ arm_p: null })).toBe('—');
-    expect(todoRefMeta(REPORT.costliest[0])).toBe('acme · done · 3 attempts · claude · model-a');
+    expect(todoRefMeta(REPORT.costliest[0])).toBe('acme · 3 attempts · claude · model-a');
     expect(todoRefMeta({ ...REPORT.costliest[0], agent: null, model: null, attempts: 1 })).toBe(
-      'acme · done · 1 attempt'
+      'acme · 1 attempt'
     );
+  });
+
+  it('colours where a costly todo stands: blocked is red, it can still be saved', () => {
+    const ref = REPORT.costliest[0];
+    expect(todoRefStatus({ ...ref, status: 'blocked', merged: false })).toMatchObject({
+      label: 'blocked',
+      tone: 'human',
+    });
+    expect(todoRefStatus({ ...ref, status: 'blocked', merged: false }).hint).toContain('unblock');
+    expect(todoRefStatus({ ...ref, status: 'handoff', merged: false }).tone).toBe('human');
+    expect(todoRefStatus({ ...ref, status: 'done', merged: true })).toMatchObject({ label: 'merged', tone: 'ok' });
+    expect(todoRefStatus({ ...ref, status: 'done', merged: false })).toMatchObject({
+      label: 'in review',
+      tone: 'warn',
+    });
+    expect(todoRefStatus({ ...ref, status: 'open', merged: false }).label).toBe('open');
   });
 
   it('names the price sources, or says none were named', () => {
