@@ -228,15 +228,50 @@
   background: var(--color-bg-1);
 }
 
-.yield-chart svg {
-  display: block;
-  width: 100%;
-  height: auto;
+/* Labels on the left, the plot beside them, the first and last week under it.
+   The labels are HTML, so they keep the page's font size at any width. */
+.yield-chart__frame {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 8px;
 }
 
-.yield-chart__axis {
-  fill: var(--color-fg-muted);
-  font-size: 10px;
+.yield-chart__y {
+  position: relative;
+  width: 4.5em;
+  font-size: 11px;
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.yield-chart__y-label {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.yield-chart__plot {
+  display: block;
+  width: 100%;
+  height: 160px;
+}
+
+.yield-chart__x {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--color-fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .yield-chart__plot {
+    height: 140px;
+  }
 }
 
 .yield-chart__grid {
@@ -251,7 +286,10 @@
 }
 
 .yield-chart__dot {
-  fill: currentColor;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 8;
+  stroke-linecap: round;
 }
 
 .yield-chart__series.is-series-0,

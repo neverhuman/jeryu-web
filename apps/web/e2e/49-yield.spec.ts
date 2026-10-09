@@ -118,6 +118,16 @@ test.describe('Yield', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(page.getByTestId('yield-scrap')).toBeVisible();
     expect(await sidewaysOverflow(page), 'no sideways scroll at 390px').toBeLessThanOrEqual(0);
+    // The trend's axis text is HTML, so it keeps its size instead of shrinking
+    // with the drawing on a narrow screen.
+    const trend = page.getByTestId('yield-trend');
+    await expect(trend.getByText('$10.00', { exact: true })).toBeVisible();
+    await expect(trend.getByText('2026-10-05', { exact: true })).toBeVisible();
+    const axisPx = await trend
+      .locator('.yield-chart__y-label')
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().height);
+    expect(axisPx, 'axis labels stay legible at 390px').toBeGreaterThanOrEqual(12);
 
     const result = await runAxe(page, { disableRules: ['color-contrast'] });
     await persistAxeResult('yield-phone-dark', result);
