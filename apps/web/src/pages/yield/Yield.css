@@ -1,0 +1,325 @@
+/* Yield.css — the Yield page: controls, KPI tiles, funnel bars, tables, trend.
+   Tokens only: both themes come from the same variables the other pages use. */
+
+.yield__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.yield__segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.yield__segment {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: none;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.yield__segment[aria-pressed='true'] {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+}
+
+.yield__segment:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+.yield__section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.yield__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.yield__tile {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--color-bg-1);
+  min-width: 0;
+}
+
+.yield__tile--headline {
+  border-color: var(--color-accent-primary);
+}
+
+.yield__tile-label {
+  font-size: 12px;
+  color: var(--color-fg-secondary);
+}
+
+.yield__tile-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-fg-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.yield__tile--headline .yield__tile-value {
+  font-size: 34px;
+}
+
+.yield__tile-detail {
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+
+.yield__summary,
+.yield__footnote {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-fg-secondary);
+}
+
+.yield__footnote {
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+
+.yield__muted {
+  color: var(--color-fg-muted);
+}
+
+/* Funnel bars */
+
+.yield-funnel__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.yield-funnel__label {
+  font-size: 12px;
+  color: var(--color-fg-secondary);
+}
+
+.yield-funnel__bar {
+  display: block;
+  width: 100%;
+  height: 20px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.yield-funnel__track { fill: var(--color-bg-2); }
+
+.yield-funnel__seg.is-main,
+.yield-funnel__swatch.is-main { fill: var(--color-accent-success); background: var(--color-accent-success); }
+.yield-funnel__seg.is-pending,
+.yield-funnel__swatch.is-pending { fill: var(--color-accent-info); background: var(--color-accent-info); }
+.yield-funnel__seg.is-scrap,
+.yield-funnel__swatch.is-scrap { fill: var(--color-accent-danger); background: var(--color-accent-danger); }
+.yield-funnel__seg.is-author,
+.yield-funnel__swatch.is-author { fill: var(--color-accent-primary); background: var(--color-accent-primary); }
+.yield-funnel__seg.is-review,
+.yield-funnel__swatch.is-review { fill: var(--color-accent-warning); background: var(--color-accent-warning); }
+.yield-funnel__seg.is-triage,
+.yield-funnel__swatch.is-triage { fill: var(--color-accent-secondary); background: var(--color-accent-secondary); }
+
+.yield-funnel__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--color-fg-secondary);
+}
+
+.yield-funnel__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+/* Tables */
+
+.yield__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.yield__table th,
+.yield__table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.yield__table thead th {
+  color: var(--color-fg-secondary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.yield__table tbody th,
+.yield__table tfoot th {
+  font-weight: 500;
+  color: var(--color-fg-primary);
+  /* A name is read whole; a narrow screen scrolls the table instead. */
+  white-space: nowrap;
+}
+
+.yield__table tfoot th,
+.yield__table tfoot td {
+  font-weight: 600;
+  border-bottom: none;
+}
+
+.yield__caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0 8px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-fg-primary);
+}
+
+.yield__table .yield__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.yield__sub {
+  display: block;
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+
+.yield__not-enough {
+  text-align: center;
+  font-style: italic;
+  color: var(--color-fg-muted);
+}
+
+/* Trend chart */
+
+.yield-chart {
+  width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--color-bg-1);
+}
+
+.yield-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.yield-chart__axis {
+  fill: var(--color-fg-muted);
+  font-size: 10px;
+}
+
+.yield-chart__grid {
+  stroke: var(--color-border-subtle);
+  stroke-width: 1;
+}
+
+.yield-chart__line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.yield-chart__dot {
+  fill: currentColor;
+}
+
+.yield-chart__series.is-series-0,
+.yield-chart__swatch.is-series-0 { color: var(--color-accent-primary); background: var(--color-accent-primary); }
+.yield-chart__series.is-series-1,
+.yield-chart__swatch.is-series-1 { color: var(--color-accent-warning); background: var(--color-accent-warning); }
+.yield-chart__series.is-series-2,
+.yield-chart__swatch.is-series-2 { color: var(--color-accent-success); background: var(--color-accent-success); }
+.yield-chart__series.is-series-3,
+.yield-chart__swatch.is-series-3 { color: var(--color-accent-secondary); background: var(--color-accent-secondary); }
+
+.yield-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-fg-secondary);
+}
+
+.yield-chart__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+.yield-chart__more {
+  color: var(--color-fg-muted);
+}
+
+/* Costliest and scrap lists */
+
+.yield__lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: var(--space-5);
+}
+
+.yield__todos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.yield__todo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 13px;
+}
+
+.yield__todo-main {
+  min-width: 0;
+}
+
+.yield__todo-title {
+  overflow-wrap: anywhere;
+}
+
+.yield__todo-spend {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}

@@ -47,6 +47,7 @@ import { RepoRouter } from '../pages/RepoRouter';
 import { ShiftQueuePage, TodoPage } from '../pages/shift';
 import { WaitlistPage } from '../pages/WaitlistPage';
 import { WikiPage } from '../pages/wiki/WikiPage';
+import { YieldPage } from '../pages/yield';
 
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 
@@ -83,6 +84,8 @@ export const router = createBrowserRouter([
       // One family's release board; each lane is `#lane-<id>` on it.
       { path: 'releases/family/:family', element: <ReleasesPage /> },
       { path: 'intelligence', element: <IntelligencePage /> },
+      // Spend against what reached main: cost per merged change.
+      { path: 'yield', element: <YieldPage /> },
       // The same graph, laid out by dependency depth and coloured by pin staleness.
       { path: DEPENDENCIES_PATH.slice(1), element: <DependenciesPage /> },
       // Quality gate: how the jankurai/proof score behaves, rule -> head -> findings.

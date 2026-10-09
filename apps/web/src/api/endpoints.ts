@@ -7,6 +7,7 @@ import type { RepoGraphInclude } from './types/controlPlane';
 import type { PipelineEventsQuery, PipelineHistogramQuery } from './types/pipeline';
 import type { SearchQuery } from './types/search';
 import type { UsageQuery } from './types/usage';
+import type { YieldQuery } from './types/yield';
 
 export const endpoints = {
   bootstrap: (): string => '/api/v1/bootstrap',
@@ -331,6 +332,17 @@ export const endpoints = {
   /** Record that a finding looks wrong to the operator reading it (admin-only). */
   qualityGateDispute: (findingId: string): string =>
     `/api/v1/quality-gate/findings/${encodeURIComponent(findingId)}/dispute`,
+
+  /** Spend against what reached main: cost per merged change (admin-only). */
+  yieldReport: (query: YieldQuery): string => {
+    const qs = new URLSearchParams();
+    if (query.family) qs.set('family', query.family);
+    if (query.since) qs.set('since', query.since);
+    if (query.until) qs.set('until', query.until);
+    if (query.by) qs.set('by', query.by);
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/yield?${suffix}` : '/api/v1/yield';
+  },
 
   /** Account Grokbot and Musebot enrollments. */
   bots: (): string => '/api/v1/bots',

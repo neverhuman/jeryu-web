@@ -77,6 +77,7 @@ describe('LeftNav', () => {
       'Intelligence',
       'Dependencies',
       'Quality gate',
+      'Yield',
       'Shared tools',
     ]);
   });

@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- A System page, Yield (`/yield`, `g y`, admins only), reads `GET /api/v1/yield` and leads with
+  what a merged change cost. Under it: yield, first-pass rate, review share and killed-run spend;
+  where the spend went (main, pending, scrap; author, review, triage); each routing experiment's
+  arms, held at "not enough data yet" until the server says there is enough; cost per merged
+  change by week; a breakdown by model, agent, experiment arm, family, repository, requester or
+  week; and the costliest and scrapped todos, each linking to its page. The window (7, 28 or 90
+  days) and the cut stay in the address; the family is the shell's scope.
 - The signed-out story shows the ink dragon and a waitlist for email, name, and what someone wants from JeRyu. A new address and a repeat share one receipt, the fields clear after it, and a short privacy line sits under the form (wording pending). Those colors stay on that screen. Log in is the same session form, and joining the waitlist does not open an account.
 - The account control at the top right is a menu: Settings, the theme, the keyboard shortcuts,
   Help and — at the bottom — Log out. It opens with Enter, Space or ↓, walks with the arrow keys

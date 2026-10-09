@@ -19,6 +19,7 @@ import {
   Bot,
   Brain,
   ClipboardList,
+  Coins,
   Cog,
   FolderGit2,
   GitMerge,
@@ -38,6 +39,7 @@ import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
 import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { WORK_PATH } from '../pages/shift/workPaths';
+import { YIELD_PATH } from '../pages/yield/yieldModel';
 import type { AttentionArea } from '../pages/needsYou/needsYouModel';
 
 /**
@@ -241,6 +243,20 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     keywords: ['quality', 'gate', 'jankurai', 'proof', 'score', 'findings', 'dispute'],
     useWhen:
       'Use this when a score surprises you: it shows what the gate would have blocked, and who disagreed.',
+    group: 'system',
+  },
+  {
+    id: 'nav.yield',
+    label: 'Yield',
+    path: YIELD_PATH,
+    icon: Coins,
+    paletteIcon: 'coins',
+    shortcut: 'g y',
+    keywords: ['yield', 'cost', 'spend', 'efficiency', 'tokens', 'usd', 'experiment', 'first pass'],
+    useWhen:
+      'Use this when you want to know what a merged change costs: spend against what reached main, by model, agent and experiment arm.',
+    // `/api/v1/yield` is admin-only, like the pipeline event feed it is read from.
+    adminOnly: true,
     group: 'system',
   },
   {
