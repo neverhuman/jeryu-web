@@ -58,9 +58,13 @@ describe('TodoPage', () => {
         .getAllByRole('listitem')
         .filter((item) => item.getAttribute('data-state') === 'current')
     ).toHaveLength(1);
-    // The trail leads back to Work and to this family's queue.
-    expect(screen.getByRole('link', { name: 'Work' })).toHaveAttribute('href', '/work');
-    expect(screen.getByRole('link', { name: 'jeryu' })).toHaveAttribute('href', '/work?family=jeryu');
+    // The trail names Work and this family's queue, but Work is admin-only:
+    // a non-admin is not linked into a page that would refuse them.
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(trail).toHaveTextContent('Work');
+    expect(trail).toHaveTextContent('jeryu');
+    expect(within(trail).queryByRole('link', { name: 'Work' })).toBeNull();
+    expect(within(trail).queryByRole('link', { name: 'jeryu' })).toBeNull();
     // Non-admins get no row actions.
     expect(screen.queryByRole('button', { name: /Block|Release/ })).toBeNull();
   });
@@ -92,6 +96,10 @@ describe('TodoPage', () => {
     renderTodo('/work/20260919-0900-q1q');
     expect(await screen.findByRole('button', { name: 'Release 20260919-0900-q1q' })).toBeInTheDocument();
     expect(screen.getByLabelText('Priority for 20260919-0900-q1q')).toBeInTheDocument();
+    // An admin's trail leads back to Work and to the family's queue.
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(trail).getByRole('link', { name: 'Work' })).toHaveAttribute('href', '/work');
+    expect(within(trail).getAllByRole('link')).toHaveLength(2);
   });
 
   it("leads an owner's own task with Mark done, and never offers to release it", async () => {

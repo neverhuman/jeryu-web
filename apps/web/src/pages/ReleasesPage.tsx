@@ -38,7 +38,7 @@ import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-r
 
 import { sameFamily } from '../components/family/familyScope';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
-import { PageHeader, queryFreshness } from '../components/pageHeader';
+import { PageHeader } from '../components/pageHeader';
 import { pillClass, type Tone } from '../components/tone/tone';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
@@ -111,16 +111,16 @@ export function ReleasesPage(): JSX.Element {
   // another one is not what this page is waiting on. A family scope is already
   // a family filter, and the board is about a whole family.
   const scopeRepos = perRepository && repoScope.repo ? [repoScope.repo] : null;
-  // The read the view below makes anyway, so the freshness stamp says how old
-  // what is on screen is without a request of its own. The per-repository view
-  // never asks for a board, so its stamp rides on the pins it does read.
+  // The board's own read, so the freshness stamp says how old the board on
+  // screen is without a request of its own. The per-repository view is many
+  // reads (environments, compares) with no one age, so it carries no stamp
+  // rather than one borrowed from a read it does not show.
   const { user } = useAuth();
   const admin = user?.role === 'admin';
   const boards = useReleaseBoardList(admin && !perRepository);
-  const pins = usePins(admin && perRepository);
   const queryClient = useQueryClient();
   const freshness = perRepository
-    ? queryFreshness(pins)
+    ? undefined
     : {
         updatedAt: boards.dataUpdatedAt || null,
         isFetching: boards.isFetching,

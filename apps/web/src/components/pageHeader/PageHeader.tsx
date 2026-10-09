@@ -70,6 +70,12 @@ export interface PageHeaderProps {
   parent?: string;
   /** The trail from `parent` down to this page; the last crumb is the page. */
   crumbs?: BreadcrumbSegment[];
+  /**
+   * True when the viewer is an admin. An `adminOnly` parent is linked only
+   * then: like the nav, the palette and the keyboard, the trail never links a
+   * reader into a page that would refuse them.
+   */
+  viewerIsAdmin?: boolean;
   /** State pills shown beside the title. */
   badges?: ReactNode;
   /** What this page can do, as buttons or links, top right. */
@@ -83,15 +89,20 @@ export interface PageHeaderProps {
   eyebrow?: ReactNode;
 }
 
-/** The nav destination with this id, or null when nothing claims it. */
+/**
+ * The nav destination with this id, or null when nothing claims it. An
+ * `adminOnly` destination is named but not linked unless the viewer is an admin.
+ */
 export function navParentCrumb(
-  parent: string | undefined
+  parent: string | undefined,
+  viewerIsAdmin = false
 ): BreadcrumbSegment | null {
   if (!parent) return null;
   const destination = NAV_DESTINATIONS.find((d) => d.id === parent);
-  return destination
-    ? { label: destination.label, to: destination.path }
-    : null;
+  if (!destination) return null;
+  return destination.adminOnly && !viewerIsAdmin
+    ? { label: destination.label }
+    : { label: destination.label, to: destination.path };
 }
 
 /** A clock that re-reads itself, so relative text on a long-open page ages. */
@@ -158,6 +169,7 @@ export function PageHeader({
   subtitle,
   parent,
   crumbs,
+  viewerIsAdmin = false,
   badges,
   actions,
   freshness,
@@ -166,7 +178,7 @@ export function PageHeader({
   testId,
   eyebrow
 }: PageHeaderProps): JSX.Element {
-  const first = navParentCrumb(parent);
+  const first = navParentCrumb(parent, viewerIsAdmin);
   const trail = [...(first ? [first] : []), ...(crumbs ?? [])];
   return (
     <header

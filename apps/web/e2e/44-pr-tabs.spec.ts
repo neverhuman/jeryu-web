@@ -183,6 +183,10 @@ test('each tab of a pull request has its own URL and is the current one @action:
       'page'
     );
     await expect(bar.locator('[aria-current="page"]')).toHaveCount(1);
+    // The cockpit is a page of its own, outside the repository shell: every
+    // tab keeps the pull request as the one h1, inside the page header.
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(page.locator('[data-page-header] h1')).toContainText('Pull request #');
     // The counts: two changed files, one failing check, one commit.
     await expect(page.getByTestId('pr-tab-count-files')).toHaveText('2');
     await expect(page.getByTestId('pr-tab-count-checks')).toHaveText('1');

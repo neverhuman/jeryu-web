@@ -119,9 +119,11 @@ export function TodoPage(): JSX.Element {
         title={shown ? shown.title : key}
         testId="todo-header"
         parent="nav.work"
+        viewerIsAdmin={isAdmin}
         crumbs={[
+          // The family's queue is a Work page too: linked for admins only.
           ...(shown
-            ? [{ label: shown.family, to: queueHref(shown.family) }]
+            ? [isAdmin ? { label: shown.family, to: queueHref(shown.family) } : { label: shown.family }]
             : []),
           { label: key },
         ]}

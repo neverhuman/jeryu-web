@@ -12,8 +12,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
-import { Breadcrumbs } from '../components/browser';
-import type { BreadcrumbSegment } from '../components/browser';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { When } from '../format/When';
 import {
   EmptyState,
@@ -25,7 +24,7 @@ import { useCommitHistory } from '../hooks/useRepoCommits';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 
 import { shortSha } from './qualityGate/qualityGateModel';
-import { blobPath, repoFrontPath } from './repoBrowserModel';
+import { blobPath, repoShellCrumbs } from './repoBrowserModel';
 import {
   COMMITS_PAGE_SIZE,
   commitPath,
@@ -69,9 +68,24 @@ export function RepositoryCommitsPage({
     setSearchParams(params);
   };
 
+  // The history is a page of its own, outside the repository shell: it wears
+  // the page header in every state, with the trail down through the repository.
+  const crumbs = repoShellCrumbs(provider, fullName, resolved.data?.summary ?? null, {
+    label: 'Commits',
+  });
+  const waitingHeader = (
+    <PageHeader
+      title={historyTitle(refName, path)}
+      testId="repo-commits-header"
+      parent="nav.repos"
+      crumbs={crumbs}
+    />
+  );
+
   if (resolved.isPending) {
     return (
       <div className="page" data-testid="repo-commits-page">
+        {waitingHeader}
         <LoadingState title="Loading repository…" variant="message" />
       </div>
     );
@@ -79,6 +93,7 @@ export function RepositoryCommitsPage({
   if (resolved.error || !resolved.data) {
     return (
       <div className="page" data-testid="repo-commits-page">
+        {waitingHeader}
         <ErrorState
           title="Could not load repository"
           description={resolved.error ? undefined : `No repository named ${fullName}.`}
@@ -88,35 +103,33 @@ export function RepositoryCommitsPage({
     );
   }
 
-  const front = repoFrontPath(provider, fullName);
-  const crumbs: BreadcrumbSegment[] = [
-    { label: 'Repos', to: '/repos' },
-    { label: provider, prefix: 'host', to: `/repos?host=${provider}` },
-    { label: resolved.data.summary.id.owner },
-    { label: resolved.data.summary.id.name, to: front },
-    { label: 'Commits' },
-  ];
   const commits = history.data?.commits ?? [];
   const paging = history.data?.page;
 
   return (
     <div className="page" data-testid="repo-commits-page">
-      <Breadcrumbs segments={crumbs} />
-      <header className="page__header">
-        <h2 className="page__title">{historyTitle(refName, path)}</h2>
-        {path ? (
-          <p className="page__subtitle">
-            Only the commits that touched{' '}
-            <Link to={blobPath(provider, fullName, refName, path)}>{path}</Link>.{' '}
-            <Link to={commitsPath(provider, fullName, refName)}>See the whole history.</Link>
-          </p>
-        ) : null}
+      <PageHeader
+        title={historyTitle(refName, path)}
+        testId="repo-commits-header"
+        parent="nav.repos"
+        crumbs={crumbs}
+        freshness={queryFreshness(history)}
+        subtitle={
+          path ? (
+            <>
+              Only the commits that touched{' '}
+              <Link to={blobPath(provider, fullName, refName, path)}>{path}</Link>.{' '}
+              <Link to={commitsPath(provider, fullName, refName)}>See the whole history.</Link>
+            </>
+          ) : undefined
+        }
+      >
         {paging ? (
           <p className="repo-commits__range" data-testid="repo-commits-range">
             {historyRangeLabel(paging.page, paging.limit, commits.length, paging.total)}
           </p>
         ) : null}
-      </header>
+      </PageHeader>
 
       {history.isPending ? (
         <LoadingState title="Loading commits…" variant="skeleton" rows={5} />

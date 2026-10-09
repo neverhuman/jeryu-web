@@ -70,6 +70,7 @@ import {
   pullStateBadge,
 } from '../components/merge/pullReviewModel';
 import { When } from '../format/When';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { ChecksPanel } from '../components/merge';
 import { TabBar } from '../components/repo/TabBar';
 import { PullConversationTab } from './PullConversationTab';
@@ -87,7 +88,7 @@ import {
   extractDrift,
   type HeadDriftInfo,
 } from './pullRequestDrift';
-import { repoFrontPath } from './repoBrowserModel';
+import { repoFrontPath, repoShellCrumbs } from './repoBrowserModel';
 
 import './page.css';
 
@@ -295,10 +296,31 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     void commits.refetch();
   }, [approve, mergeMutation, review, setDraft, detail, diff, checks, threads, commits]);
 
+  // The cockpit is a page of its own, outside the repository shell, so it
+  // wears the page header in every state: the trail down through the
+  // repository, and the pull request as the page's one h1.
+  const crumbs = repoShellCrumbs(
+    provider,
+    fullName,
+    resolved.data?.summary ?? null,
+    { label: 'Pull requests', to: `${repoFrontPath(provider, fullName)}/pulls` },
+    { label: `#${prNumber ?? ''}` }
+  );
+  const waitingHeader = (
+    <PageHeader
+      title={`Pull request #${prNumber ?? ''}`}
+      className="pr-cockpit__header"
+      testId="pr-header"
+      parent="nav.repos"
+      crumbs={crumbs}
+    />
+  );
+
   // ── Loading + error guards. ────────────────────────────────────────
   if (resolved.isPending) {
     return (
       <div className="page">
+        {waitingHeader}
         <LoadingState
           title={`Loading pull request #${prNumber}…`}
           variant="message"
@@ -312,6 +334,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     if (resolved.error instanceof ApiError && resolved.error.status === 403) {
       return (
         <div className="page">
+          {waitingHeader}
           <PermissionDeniedState
             description="You do not have permission to view this pull request."
             missingPermission="repo.read"
@@ -321,6 +344,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     }
     return (
       <div className="page">
+        {waitingHeader}
         <ErrorState
           title="Repository not found"
           description={resolved.error?.message ?? `No repository ${fullName}.`}
@@ -332,6 +356,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   if (detail.isPending) {
     return (
       <div className="page">
+        {waitingHeader}
         <LoadingState title="Loading pull request…" variant="message" />
       </div>
     );
@@ -341,6 +366,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     if (detail.error instanceof ApiError && detail.error.status === 403) {
       return (
         <div className="page">
+          {waitingHeader}
           <PermissionDeniedState
             description="You do not have permission to view this pull request."
             missingPermission="pr.read"
@@ -350,6 +376,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     }
     return (
       <div className="page">
+        {waitingHeader}
         <ErrorState
           title="Could not load pull request"
           error={detail.error}
@@ -384,36 +411,44 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
 
   return (
     <div className="page page--full pr-page" data-testid="pr-page">
-      <div className="pr-cockpit__header">
-        <h2 className="pr-cockpit__title">
-          Pull request #{summary.number}: {summary.title}
-        </h2>
-        <span
-          className={`pr-cockpit__state pr-cockpit__state--${badge.tone}`}
-          data-testid="pr-state-badge"
-        >
-          {badge.label}
-        </span>
-        <span className="pr-cockpit__meta">
-          <Link to={repoFrontPath(provider, fullName)}>{fullName}</Link>
-          <span aria-hidden="true">·</span>
-          <span>by {summary.author}</span>
-          <span aria-hidden="true">·</span>
-          <span title={summary.updated_at}>
-            {settled ? `${badge.label.toLowerCase()} ` : 'updated '}
-            <When at={summary.updated_at} />
+      <PageHeader
+        title={`Pull request #${summary.number}: ${summary.title}`}
+        className="pr-cockpit__header"
+        testId="pr-header"
+        parent="nav.repos"
+        crumbs={crumbs}
+        freshness={queryFreshness(detail)}
+        badges={
+          <span
+            className={`pr-cockpit__state pr-cockpit__state--${badge.tone}`}
+            data-testid="pr-state-badge"
+          >
+            {badge.label}
           </span>
-        </span>
-        <span className="pr-cockpit__meta">
-          <GitBranch aria-hidden="true" size={12} />
-          <code>{summary.head_ref}</code>
-          <span aria-hidden="true">→</span>
-          <code>{summary.base_ref}</code>
-        </span>
-        <span className="pr-cockpit__meta">
-          <code title={summary.head_sha}>{summary.head_sha.slice(0, 7)}</code>
-        </span>
-      </div>
+        }
+      >
+        <div className="pr-cockpit__metas">
+          <span className="pr-cockpit__meta">
+            <Link to={repoFrontPath(provider, fullName)}>{fullName}</Link>
+            <span aria-hidden="true">·</span>
+            <span>by {summary.author}</span>
+            <span aria-hidden="true">·</span>
+            <span title={summary.updated_at}>
+              {settled ? `${badge.label.toLowerCase()} ` : 'updated '}
+              <When at={summary.updated_at} />
+            </span>
+          </span>
+          <span className="pr-cockpit__meta">
+            <GitBranch aria-hidden="true" size={12} />
+            <code>{summary.head_ref}</code>
+            <span aria-hidden="true">→</span>
+            <code>{summary.base_ref}</code>
+          </span>
+          <span className="pr-cockpit__meta">
+            <code title={summary.head_sha}>{summary.head_sha.slice(0, 7)}</code>
+          </span>
+        </div>
+      </PageHeader>
 
       <TabBar
         label="Pull request"

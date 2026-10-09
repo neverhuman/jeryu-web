@@ -42,8 +42,8 @@ test('a forge-shaped pull link opens the pull request page @action:routing.forge
   await page.goto(`/${REPO.owner}/${REPO.name}/pull/${PR_NUMBER}`);
 
   await expect(page).toHaveURL(new RegExp(`${CANONICAL}$`), { timeout: 15_000 });
-  const heading = page.getByRole('heading', {
-    name: new RegExp(`Pull request #${PR_NUMBER}|PR #${PR_NUMBER}|Add JeRyu Phase 3 backend`, 'i'),
+  const heading = page.locator('h1', {
+    hasText: new RegExp(`Pull request #${PR_NUMBER}|PR #${PR_NUMBER}|Add JeRyu Phase 3 backend`, 'i'),
   });
   await expect(heading).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/Page not found/i)).toHaveCount(0);

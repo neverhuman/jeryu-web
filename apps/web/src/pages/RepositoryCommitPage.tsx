@@ -11,8 +11,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
-import { Breadcrumbs } from '../components/browser';
-import type { BreadcrumbSegment } from '../components/browser';
+import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { DiffFileTree, DiffViewer } from '../components/merge';
 import type { DiffViewerMode } from '../components/merge';
 import { When } from '../format/When';
@@ -27,7 +26,7 @@ import { usePreferencesStore } from '../stores/preferencesStore';
 
 import { parseCommitMessage } from './pullCommitsModel';
 import { shortSha } from './qualityGate/qualityGateModel';
-import { repoFrontPath } from './repoBrowserModel';
+import { repoShellCrumbs } from './repoBrowserModel';
 import { commitPath, commitsPath } from './repoCommitsModel';
 
 import './page.css';
@@ -60,9 +59,59 @@ export function RepositoryCommitPage({
     [commit.data?.message]
   );
 
+  // One commit is a page of its own, outside the repository shell: it wears
+  // the page header in every state, the subject as its h1 once it is read.
+  const crumbs = repoShellCrumbs(
+    provider,
+    fullName,
+    resolved.data?.summary ?? null,
+    { label: 'Commits', to: commitsPath(provider, fullName) },
+    { label: shortSha(sha) }
+  );
+  const header = (
+    <PageHeader
+      title={
+        commit.data ? (
+          <span data-testid="repo-commit-subject">
+            {message.subject || shortSha(commit.data.sha)}
+          </span>
+        ) : (
+          `Commit ${shortSha(sha)}`
+        )
+      }
+      testId="repo-commit-header"
+      parent="nav.repos"
+      crumbs={crumbs}
+      freshness={commit.data ? queryFreshness(commit) : undefined}
+    >
+      {commit.data ? (
+        <p className="repo-commit__meta">
+          <GitCommitHorizontal aria-hidden="true" size={14} />
+          <code title={commit.data.sha}>{shortSha(commit.data.sha)}</code>
+          <span>
+            {commit.data.author}
+            <span aria-hidden="true"> · </span>
+            <When at={commit.data.authored_at} />
+          </span>
+          {commit.data.parents.map((parent) => (
+            <Link
+              key={parent}
+              to={commitPath(provider, fullName, parent)}
+              className="repo-commit__parent"
+              title={parent}
+            >
+              parent {shortSha(parent)}
+            </Link>
+          ))}
+        </p>
+      ) : null}
+    </PageHeader>
+  );
+
   if (resolved.isPending) {
     return (
       <div className="page" data-testid="repo-commit-page">
+        {header}
         <LoadingState title="Loading repository…" variant="message" />
       </div>
     );
@@ -70,6 +119,7 @@ export function RepositoryCommitPage({
   if (resolved.error || !resolved.data) {
     return (
       <div className="page" data-testid="repo-commit-page">
+        {header}
         <ErrorState
           title="Could not load repository"
           description={resolved.error ? undefined : `No repository named ${fullName}.`}
@@ -79,19 +129,9 @@ export function RepositoryCommitPage({
     );
   }
 
-  const front = repoFrontPath(provider, fullName);
-  const crumbs: BreadcrumbSegment[] = [
-    { label: 'Repos', to: '/repos' },
-    { label: provider, prefix: 'host', to: `/repos?host=${provider}` },
-    { label: resolved.data.summary.id.owner },
-    { label: resolved.data.summary.id.name, to: front },
-    { label: 'Commits', to: commitsPath(provider, fullName) },
-    { label: shortSha(sha) },
-  ];
-
   return (
     <div className="page" data-testid="repo-commit-page">
-      <Breadcrumbs segments={crumbs} />
+      {header}
       {commit.isPending ? (
         <LoadingState title="Loading commit…" variant="message" />
       ) : commit.error ? (
@@ -107,30 +147,6 @@ export function RepositoryCommitPage({
         <ErrorState title="Could not load the commit" />
       ) : (
         <>
-          <header className="page__header">
-            <h2 className="page__title" data-testid="repo-commit-subject">
-              {message.subject || shortSha(commit.data.sha)}
-            </h2>
-            <p className="repo-commit__meta">
-              <GitCommitHorizontal aria-hidden="true" size={14} />
-              <code title={commit.data.sha}>{shortSha(commit.data.sha)}</code>
-              <span>
-                {commit.data.author}
-                <span aria-hidden="true"> · </span>
-                <When at={commit.data.authored_at} />
-              </span>
-              {commit.data.parents.map((parent) => (
-                <Link
-                  key={parent}
-                  to={commitPath(provider, fullName, parent)}
-                  className="repo-commit__parent"
-                  title={parent}
-                >
-                  parent {shortSha(parent)}
-                </Link>
-              ))}
-            </p>
-          </header>
 
           {message.paragraphs.length > 0 || message.trailers.length > 0 ? (
             <section className="repo-commit__message" aria-label="Commit message">

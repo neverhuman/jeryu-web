@@ -78,7 +78,9 @@ export interface RepoTrailFacts {
 
 /**
  * The trail above every repository page, after its nav parent (Repositories):
- * the host, the family, the owner and the repository itself. The host is often
+ * the host, the family, the owner and the repository itself, then `tail` for a
+ * page that sits below the repository outside its shell (a pull request, the
+ * commit history, one commit). The host is often
  * named like the owner under it ("jeryu / … / jeryu"), so it says it is the
  * host. The family is often named like the owner ("veox-ai / veox-ai"): then
  * one crumb is both and opens the family; a different family says it is one.
@@ -86,7 +88,8 @@ export interface RepoTrailFacts {
 export function repoShellCrumbs(
   provider: string,
   fullName: string,
-  facts: RepoTrailFacts | null
+  facts: RepoTrailFacts | null,
+  ...tail: BreadcrumbSegment[]
 ): BreadcrumbSegment[] {
   const slash = fullName.lastIndexOf('/');
   const owner = slash === -1 ? '' : fullName.slice(0, slash);
@@ -99,7 +102,9 @@ export function repoShellCrumbs(
       ? [{ label: family, prefix: 'family', to: familyPath }]
       : []),
     family === owner && familyPath ? { label: owner, to: familyPath } : { label: owner },
-    { label: name },
+    // The repository is the page itself unless something sits below it.
+    tail.length > 0 ? { label: name, to: repoFrontPath(provider, fullName) } : { label: name },
+    ...tail,
   ];
 }
 

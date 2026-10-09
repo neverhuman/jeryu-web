@@ -34,6 +34,7 @@ describe('PageHeader', () => {
       <PageHeader
         title="20261003-021117"
         parent="nav.work"
+        viewerIsAdmin
         crumbs={[
           { label: 'acme', to: '/work?family=acme' },
           { label: '20261003-021117' }
@@ -44,6 +45,19 @@ describe('PageHeader', () => {
     const first = crumbs.querySelectorAll('a')[0];
     expect(first.textContent).toBe('Work');
     expect(first.getAttribute('href')).toBe('/work');
+  });
+
+  it('names an admin-only parent without linking it for anyone else', () => {
+    at(
+      <PageHeader
+        title="20261003-021117"
+        parent="nav.work"
+        crumbs={[{ label: '20261003-021117' }]}
+      />
+    );
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(crumbs).toHaveTextContent('Work');
+    expect(crumbs.querySelector('a[href="/work"]')).toBeNull();
   });
 
   it('names an unknown parent in no crumb at all', () => {

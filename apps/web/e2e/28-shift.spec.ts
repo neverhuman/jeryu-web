@@ -203,7 +203,9 @@ test.describe('Work, one page', () => {
   test('a todo has its own page: the row id opens it, and a Needs-you link lands on it @action:shift.todo_page', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'user' } });
+    // The shift queue is an admin-only read (nav.work is adminOnly), and the
+    // todo page links its trail back into it for admins only.
+    await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockShiftApi(page);
     await page.goto('/work');
     const blocked = page.getByTestId('shift-todo-20260919-0930-ddd');

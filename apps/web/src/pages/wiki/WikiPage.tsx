@@ -72,7 +72,12 @@ export function WikiPage(): JSX.Element {
   const wiki = settings.data?.internal_wiki ?? null;
 
   if (settings.isPending) {
-    return <LoadingState title="Loading the wiki…" variant="message" />;
+    return (
+      <div className="page" data-testid="wiki-page">
+        <PageHeader title="Wiki" testId="wiki-header" />
+        <LoadingState title="Loading the wiki…" variant="message" />
+      </div>
+    );
   }
   if (!wiki) {
     return (
@@ -144,7 +149,11 @@ function WikiReader({ wiki }: { wiki: WikiRepository }): JSX.Element {
         )}
       </aside>
       <div className="wiki__main">
-        {listing.isPending || listing.error ? null : path ? (
+        {listing.isPending || listing.error ? (
+          // The listing's own state is told in the page list beside this; the
+          // page still says where the reader is.
+          <PageHeader title="Wiki" testId="wiki-header" freshness={queryFreshness(listing)} />
+        ) : path ? (
           <WikiDocument wiki={wiki} gitRef={ref} path={path} scope={scope} />
         ) : splat === '' ? (
           <>

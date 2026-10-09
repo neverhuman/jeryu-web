@@ -195,6 +195,9 @@ test('the commit count opens the list, the list pages and filters by path @actio
   await page.goto(`${FRONT}/commits/main`);
   await expect(page.getByTestId('repo-commits-page')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('repo-commit-row')).toHaveCount(2);
+  // Outside the repository shell, the history is its own page with one h1.
+  await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.locator('[data-page-header] h1')).toHaveCount(1);
   await expect(page.getByTestId('repo-commits-range')).toHaveText('Commits 1–2 of 2');
 
   await page.goto(`${FRONT}/commits/main?path=src%2Fmain.rs`);
@@ -259,6 +262,9 @@ test('one commit shows its message, its trailers and its diff @action:repo.commi
   await page.goto(`${FRONT}/commit/${HEAD}`);
   await expect(page.getByTestId('repo-commit-page')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('repo-commit-subject')).toHaveText('feat: call run');
+  // The subject is the page's one h1.
+  await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.locator('h1')).toHaveText('feat: call run');
   await expect(page.getByText('The entry point did nothing.')).toBeVisible();
   await expect(page.getByText('20261003-020854')).toBeVisible();
   await expect(page.getByRole('link', { name: /parent bbbbbbbb/ })).toHaveAttribute(
