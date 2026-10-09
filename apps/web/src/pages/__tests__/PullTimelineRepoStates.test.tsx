@@ -67,6 +67,45 @@ describe('the Pull requests timeline', () => {
     expect(nine.querySelector('.pull-timeline__needs')).toBeNull();
   });
 
+  it('says a pull request already on its base needs closing, not merging', () => {
+    const attention = attentionByPull([
+      attentionItem({
+        id: 'landed-7',
+        kind: 'pr_already_landed',
+        title: 'acme/widgets#7 is already on main',
+        reason: 'merging it into main would change nothing',
+        repo: 'acme/widgets',
+        pr: 7,
+        href: '/repos/jeryu/acme/widgets/pulls/7',
+        action: {
+          label: 'Close the pull request: its change is already on the base branch',
+          command: null,
+        },
+      }),
+    ]);
+    render(
+      [pull(7, 'open', { repo: 'acme/widgets' }), pull(8, 'open', { repo: 'acme/widgets' })],
+      undefined,
+      attention
+    );
+
+    const seven = screen.getByTestId('pull-timeline-acme/widgets-7');
+    expect(seven).toHaveClass('needs-human', 'is-already-landed');
+    const status = within(seven).getByTestId('pull-status-acme/widgets-7');
+    expect(status).toHaveTextContent('Already on main · close it');
+    expect(status).not.toHaveTextContent('Mergeable');
+    expect(status).toHaveAttribute('title', 'acme/widgets#7 is already on main');
+    expect(
+      within(seven).getByRole('link', {
+        name: 'Close the pull request: its change is already on the base branch →',
+      })
+    ).toHaveAttribute('href', '/repos/jeryu/acme/widgets/pulls/7');
+
+    const eight = screen.getByTestId('pull-timeline-acme/widgets-8');
+    expect(eight).not.toHaveClass('is-already-landed');
+    expect(within(eight).getByTestId('pull-status-acme/widgets-8')).toHaveTextContent('Mergeable');
+  });
+
   it('heads a section per repository and lists it as one run, furthest from done first', () => {
     const ladders = new Map<number, ReleaseLadder>([
       [3, ladder(null)],

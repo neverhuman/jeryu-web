@@ -258,9 +258,14 @@ function PullRowView({
   const { pr, ladder, supersedes } = row.row;
   const repo = `${pr.repo.owner}/${pr.repo.name}`;
   const id = rowId(row, showRepo);
+  // Its change is already on the base: the gate and review state the status
+  // would show no longer matter, and "Mergeable" would invite a no-op merge.
+  const landed = waiting.find((item) => item.kind === ALREADY_LANDED);
   return (
     <li
-      className={`pull-timeline__row is-${pr.state}${waiting.length > 0 ? ' needs-human' : ''}`}
+      className={`pull-timeline__row is-${pr.state}${waiting.length > 0 ? ' needs-human' : ''}${
+        landed ? ' is-already-landed' : ''
+      }`}
       data-testid={`pull-timeline-${id}`}
       data-state={row.state}
     >
@@ -270,11 +275,11 @@ function PullRowView({
         </Link>
         <span className="pull-timeline__meta">
           <span
-            className="pull-timeline__status"
+            className={`pull-timeline__status${landed ? ' pull-timeline__status--landed' : ''}`}
             data-testid={`pull-status-${id}`}
-            title={pullRowHint(row)}
+            title={landed ? landed.title : pullRowHint(row)}
           >
-            {pullRowStatus(row)}
+            {landed ? alreadyLandedStatus(pr.base_ref) : pullRowStatus(row)}
           </span>{' '}
           {row.alsoWaiting > 0 ? (
             <span className="pull-timeline__waiting" data-testid={`pull-waiting-${id}`}>
@@ -345,6 +350,14 @@ function PullRowView({
       </ol>
     </li>
   );
+}
+
+/** The `/needs-you` kind for an open pull request whose change is already on its base. */
+const ALREADY_LANDED = 'pr_already_landed';
+
+/** The status a row shows in place of its gate and review state once its change has landed. */
+export function alreadyLandedStatus(base: string): string {
+  return `Already on ${base} · close it`;
 }
 
 /** One thing a pull request waits on a person for, and the one thing to do about it. */

@@ -79,6 +79,8 @@ export function subjectKey(
  * silently taking it over.
  */
 export const KIND_PRECEDENCE: readonly string[] = [
+  // Already on its base: closing it is the only act left, whatever else it raised.
+  'pr_already_landed',
   'reviewer_stuck',
   'pr_changes_requested',
   'queue_refused',
@@ -233,6 +235,7 @@ const KIND_LABEL: Record<string, string> = {
   pr_awaiting_approval: 'Awaiting approval',
   pr_ready_to_merge: 'Ready to merge',
   pr_draft_waiting: 'Draft waiting to be marked ready',
+  pr_already_landed: 'Already on the base branch',
   queue_failed: 'Merge queue failed',
   reviewer_stuck: 'Reviewer stuck',
   gate_runner_down: 'Gate runners down',

@@ -700,6 +700,17 @@ button.pull-repo__count-link {
   font-family: var(--font-sans);
 }
 
+/* Its change is already on the base: the row says so in place of a gate or
+   review state, so a no-op pull request never reads as one to merge. */
+.pull-timeline__status--landed {
+  color: var(--color-fg-default);
+  font-weight: 600;
+}
+
+.pull-timeline__row.is-already-landed .pull-timeline__track {
+  opacity: 0.55;
+}
+
 /* ----------------------------------------------------------- the ladder
    dev - canary - stable - prod under the Released stage. */
 

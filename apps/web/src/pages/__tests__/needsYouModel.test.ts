@@ -340,6 +340,7 @@ describe('needsYouModel', () => {
     expect(kindLabel('release_staged')).toBe('Release ready to deploy');
     expect(kindLabel('pin_behind')).toBe('Merged, not pinned for release');
     expect(kindLabel('pr_draft_waiting')).toBe('Draft waiting to be marked ready');
+    expect(kindLabel('pr_already_landed')).toBe('Already on the base branch');
     expect(kindLabel('shift_budget_spent')).toBe('Shift budget spent');
     expect(kindLabel('some_new.kind')).toBe('Some new kind');
     expect(kindLabel('')).toBe('Needs attention');
