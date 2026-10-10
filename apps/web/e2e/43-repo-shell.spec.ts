@@ -16,7 +16,6 @@ import {
   mockRepoAgentRuns,
   mockRepoAutomation,
   mockRepoList,
-  mockSettings,
   mockTree,
 } from './fixtures/mocks';
 import { mockPipelineApi, pipelineEvent } from './fixtures/pipelineMocks';
@@ -72,7 +71,6 @@ async function seed(page: Page, viewer: Parameters<typeof mockBootstrap>[1] = {}
   await mockTree(page, [{ path: 'README.md', kind: 'file' }]);
   await mockReadme(page, { html: '<h1>widget-api</h1>' });
   await mockBlob(page, { path: 'README.md', text: '# widget-api' });
-  await mockSettings(page);
   await mockRepoAutomation(page, AUTOMATION);
   await mockRepoAgentRuns(page, [
     {

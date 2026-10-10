@@ -9,7 +9,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 
 import { ApiError, apiDelete, apiDeleteWithBody, apiSend } from '../api/client';
 
-import { newIdempotencyKey } from './useApplySettingsPatch';
+import { newIdempotencyKey } from './idempotency';
 import { PIPELINE_KEY } from './usePipeline';
 
 export interface AttentionApiCall {

@@ -21,7 +21,7 @@ import { ApiError, apiGet, apiSend } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { QueueEntry, RepoMergeQueueResponse } from '../api/types';
 
-import { newIdempotencyKey } from './useApplySettingsPatch';
+import { newIdempotencyKey } from './idempotency';
 
 export function mergeQueueQueryKey(repoId: string | null): readonly unknown[] {
   return ['repo-merge-queue', repoId];

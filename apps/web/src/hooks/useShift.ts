@@ -24,7 +24,7 @@ import {
 
 import { apiGet, apiSend } from '../api/client';
 import { fetchShiftTodos } from '../api/shiftTodoLists';
-import { newIdempotencyKey } from './useApplySettingsPatch';
+import { newIdempotencyKey } from './idempotency';
 import { PIPELINE_KEY } from './usePipeline';
 import { endpoints } from '../api/endpoints';
 import type {

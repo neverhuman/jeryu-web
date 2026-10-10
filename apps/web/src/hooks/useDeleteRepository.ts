@@ -25,7 +25,7 @@ import type {
   DeleteRepositoryRequest,
 } from '../api/types';
 
-import { newIdempotencyKey } from './useApplySettingsPatch';
+import { newIdempotencyKey } from './idempotency';
 
 export interface DeleteRepositoryInput {
   /** Must byte-match the repository's `owner/name`. */

@@ -15,7 +15,6 @@ import {
   mockReadme,
   mockRefs,
   mockRepoList,
-  mockSettings,
 } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
@@ -37,7 +36,6 @@ async function openSettings(
   await mockRepoList(page, [{ ...REPO, archived }]);
   await mockRefs(page);
   await mockReadme(page, { html: '<h1>redline</h1>' });
-  await mockSettings(page);
   const captured = await mockArchiveRepo(page, opts);
   await page.goto('/repos/jeryu/veox/redline/settings/danger-zone');
   await expect(page.getByTestId('repo-archive-section')).toBeVisible({

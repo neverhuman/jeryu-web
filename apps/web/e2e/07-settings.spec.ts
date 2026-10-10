@@ -1,182 +1,134 @@
-// 07-settings.spec.ts — repository settings preview flow (W-T-15).
+// 07-settings.spec.ts — repository Settings shows only what the forge serves.
 //
-// Smoke for the §35.1.5 settings preview chain:
-//   1. `GET /api/v1/repos/{id}/settings` returns the current values.
-//   2. `POST /api/v1/repos/{id}/settings/preview` returns a typed
-//      `SettingsDiffPreview` with diffs + optional `warnings`.
-//   3. (Phase 3) `PATCH /api/v1/repos/{id}/settings` commits.
-//
-// Phase-3-tolerant: both endpoints are mocked. The SPA's
-// `RepositorySettingsPage` renders the real settings studio; the first test
-// pins the preview contract and the second drives preview/apply/discard/drift
-// through visible controls.
+// The forge serves no per-repository settings API: `GET /api/v1/repos/{id}/
+// settings` is a 404 in production, and this spec pins that shape. Every
+// section still renders from the endpoints that do answer — the repositories
+// list, the branch rule, the automation view — and nothing on the page stages
+// a change, so there is no preview to press.
 
 import { expect, test } from './fixtures/test';
 
 import {
   mockBootstrap,
-  mockRepoLookup,
-  mockSettings,
-  mockSettingsPreview,
+  mockRepoAutomation,
+  mockRepoList,
 } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
-const REPO = { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' } as const;
-const REPO_ID = `${REPO.host}:${REPO.owner}/${REPO.name}`;
+const REPO = { host: 'acme', owner: 'acme', name: 'widget-api' } as const;
+const BASE = `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/settings`;
 
-test.describe('Settings preview (W-T-15)', () => {
-  test('preview round-trips diff + warnings @action:settings.preview_contract', async ({ page }) => {
-    await mockBootstrap(page);
-    await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
-    await mockSettings(page);
-    await mockSettingsPreview(page, [
-      'Enabling `merge.squash` will rewrite the merge button copy.',
-    ]);
-
-    await page.goto(
-      `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/settings/merge`
-    );
-
-    // SPA renders either the not-implemented envelope or the real settings
-    // page; both must put SOMETHING readable on screen.
-    const heading = page.getByRole('heading', { name: /settings/i }).first();
-    const errorState = page.locator('[role="alert"]');
-    await expect(heading.or(errorState)).toBeVisible({ timeout: 15_000 });
-
-    // Drive the preview endpoint from the page's network stack so the
-    // `page.route(...)` mock fires. `page.request.*` uses an isolated
-    // APIRequestContext that bypasses route interception.
-    const url = `/api/v1/repos/${encodeURIComponent(REPO_ID)}/settings/preview`;
-    const previewRes = await page.evaluate(
-      async (postUrl) => {
-        const r = await fetch(postUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': 'e2e-csrf',
-          },
-          body: JSON.stringify({ description: 'new description' }),
-        });
-        const text = await r.text();
-        let body: unknown = text;
-        try {
-          body = text.length > 0 ? JSON.parse(text) : null;
-        } catch {
-          body = text;
-        }
-        return { status: r.status, body };
-      },
-      url
-    );
-
-    expect(previewRes.status, `preview returned ${previewRes.status}`).toBe(200);
-    const body = previewRes.body as {
-      warnings?: string[];
-      current_hash?: string;
-      diffs?: Array<{ field: string; after: string | null }>;
-      side_effects?: string[];
-    };
-    expect(body.current_hash).toBe('settings-hash-1');
-    expect(Array.isArray(body.warnings)).toBe(true);
-    expect(body.warnings?.length ?? 0).toBeGreaterThan(0);
-    expect(body.diffs).toEqual([
-      { field: 'description', before: 'mocked', after: 'new description' },
-    ]);
-    expect(body.side_effects?.length ?? 0).toBeGreaterThan(0);
-  });
-
-  test('settings UI previews, applies, discards, and recovers drift @action:settings.section_nav @action:settings.edit @action:settings.preview_ui @action:settings.apply @action:settings.discard @action:settings.drift_recovery', async ({
+test.describe('Repository Settings', () => {
+  test('every section renders with no settings API, and nothing stages a change @action:settings.section_nav', async ({
     page,
   }) => {
     await mockBootstrap(page);
-    await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
-    const settings = await mockSettings(page);
-    await mockSettingsPreview(page, []);
-
-    let patchCount = 0;
+    await mockRepoList(page, [
+      {
+        id: REPO,
+        default_branch: 'main',
+        visibility: 'internal',
+        family: 'acme',
+      },
+    ]);
+    await mockRepoAutomation(page, {
+      repo: 'acme/widget-api',
+      grantsVisible: true,
+      grants: [
+        {
+          login: '@widget-merge-bot',
+          access: 'write',
+          grantedBy: '@acme-admin',
+          grantedAt: '2026-09-28T10:00:00Z',
+        },
+      ],
+      mirrors: [
+        {
+          target: 'https://github.example/acme/widget-api',
+          direction: 'push',
+          refs: ['refs/heads/main'],
+          state: 'in-sync',
+        },
+      ],
+    });
+    // The production shape: this server answers no per-repo settings route.
+    await page.route('**/api/v1/repos/*/settings', (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 'api_route_not_found',
+          message: 'API route not found',
+        }),
+      })
+    );
     await page.route(
-      /\/api\/v1\/repos\/[^/]+\/settings$/,
-      async (route, request) => {
-        if (request.method() !== 'PATCH') {
-          await route.fallback();
-          return;
-        }
-        patchCount += 1;
-        if (patchCount === 2) {
-          await route.fulfill({
-            status: 409,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              error: {
-                code: 'settings_hash_stale',
-                message: 'Settings changed since preview.',
-                details: { current_hash: 'settings-hash-2' },
-              },
-            }),
-          });
-          return;
-        }
-        const body = JSON.parse(request.postData() ?? '{}') as {
-          description?: string | null;
-        };
-        await route.fulfill({
+      '**/api/v3/repos/acme/widget-api/branches/main/protection',
+      (route) =>
+        route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            ...settings,
-            general: {
-              ...(settings.general as Record<string, unknown>),
-              description: body.description ?? 'mocked',
+            enforce_admins: { enabled: true },
+            required_status_checks: {
+              contexts: ['widget-api/required'],
+              strict: true,
             },
           }),
-        });
-      }
+        })
     );
 
-    await page.goto(
-      `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/settings/general`
+    await page.goto(`${BASE}/general`);
+    const general = page.getByTestId('settings-general');
+    await expect(general).toBeVisible({ timeout: 15_000 });
+    await expect(general).toContainText('main');
+    await expect(general).toContainText('acme');
+    await expect(general).toContainText('internal');
+
+    // Nothing here is staged, so the studio's preview button is gone.
+    await expect(
+      page.getByRole('button', { name: 'Preview changes' })
+    ).toHaveCount(0);
+
+    await page.getByRole('link', { name: /Branch protection/i }).click();
+    await expect(page).toHaveURL(/\/settings\/branch-protection$/);
+    await expect(page.getByTestId('branch-protection')).toContainText(
+      'main is protected'
     );
-    await expect(
-      page.getByRole('heading', { name: /Settings · jeryu/i })
-    ).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole('link', { name: /Merge policy/i }).click();
-    await expect(page).toHaveURL(/\/settings\/merge-policy$/);
-    await page.getByRole('link', { name: /^General$/ }).click();
+    await page.getByRole('link', { name: /^Mirror$/ }).click();
+    await expect(page).toHaveURL(/\/settings\/mirror$/);
+    await expect(page.getByTestId('settings-mirror')).toContainText(
+      'Mirrored to GitHub'
+    );
 
-    await page.getByLabel('Description').fill('updated description');
-    await page.getByRole('button', { name: 'Preview changes' }).click();
+    await page.getByRole('link', { name: /^Access$/ }).click();
+    await expect(page).toHaveURL(/\/settings\/access$/);
+    await expect(page.getByTestId('settings-access')).toContainText(
+      '@widget-merge-bot'
+    );
+
+    await page.getByRole('link', { name: /Danger zone/i }).click();
+    await expect(page).toHaveURL(/\/settings\/danger-zone$/);
     await expect(
-      page.getByRole('rowheader', { name: 'description' })
+      page.getByRole('button', { name: /Archive this repository/i })
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Apply changes' }).click();
-    await expect(page.getByText(/Changes applied/i)).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(
+      page.getByRole('button', { name: /Remove from registry/i })
+    ).toBeVisible();
 
-    await page.getByLabel('Description').fill('discard me');
-    await page.getByRole('button', { name: 'Discard' }).click();
-    await expect(page.getByLabel('Description')).toHaveValue(
-      'updated description'
-    );
-
-    await page.getByLabel('Description').fill('drift me');
-    await page.getByRole('button', { name: 'Preview changes' }).click();
-    await page.getByRole('button', { name: 'Apply changes' }).click();
-    const drift = page.getByRole('alert').filter({
-      hasText: /Settings changed since you opened this page/i,
+    // A section nobody serves is General, not a dead page.
+    await page.goto(`${BASE}/merge-policy`);
+    await expect(page.getByTestId('settings-general')).toBeVisible({
+      timeout: 15_000,
     });
-    await expect(drift).toBeVisible({ timeout: 10_000 });
-    await drift.getByRole('button', { name: 'Refresh' }).click();
-    await expect(drift).toHaveCount(0);
   });
 
   test('deep settings URL returns 200 (SPA fallback) @bff', async ({ request }) => {
-    const res = await request.get(
-      `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/settings/merge`,
-      { failOnStatusCode: false }
-    );
+    const res = await request.get(`${BASE}/branch-protection`, {
+      failOnStatusCode: false,
+    });
     expect(res.status()).toBe(200);
   });
 });

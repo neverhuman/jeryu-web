@@ -1,184 +1,120 @@
-// repositorySettingsSections.tsx — editable section renderers for the Phase 3
-// settings studio (W-FE-12).
+// repositorySettingsSections.tsx — the Settings sections that read live state.
 //
-// Each component renders one left-nav category against the in-memory
-// `RepositorySettings` snapshot. The editable sections here (General / Merge
-// policy / Branch protection / Agents) stage their edits through the page's
-// draft state; the read-only surfaces live in
-// `./repositorySettingsReadonlySections` and are re-exported below so import
-// sites see a single module.
-//
-// These live alongside `RepositorySettingsPage.tsx` so the page module stays
-// focused on orchestration (guards, draft wiring, preview/apply flow).
+// General restates the repository facts the forge already serves (the list
+// endpoint's summary); Access lists the grants the automation endpoint answers
+// to an administrator. Neither can be edited here: this forge serves no
+// per-repository settings API, so the page says what is true instead of
+// staging a change that would go nowhere.
 
-import {
-  AgentPolicyEditor,
-  BranchProtectionEditor,
-  MergePolicyEditor,
-  SettingsSection,
-} from '../components/settings';
-import type {
-  AgentSettings,
-  BranchProtectionRule,
-  MergeSettings,
-  RepositorySettings,
-  RepositoryVisibility,
-  SettingsPatch,
-} from '../api/types';
+import type { AutomationGrantRow, RepositorySummary } from '../api/types';
+import { When } from '../format/When';
 
-export {
-  AccessSectionView,
-  CiSectionView,
-  FeaturesSectionView,
-  NotificationsSectionView,
-  RetentionSectionView,
-  SecuritySectionView,
-} from './repositorySettingsReadonlySections';
+import './page.css';
+
+export interface GeneralSectionViewProps {
+  repo: RepositorySummary;
+  /** Whether this viewer may change the repository at all. */
+  canWrite: boolean;
+}
 
 export function GeneralSectionView({
-  current,
-  patch,
-  setPatch,
-  disabled,
-}: {
-  current: RepositorySettings;
-  patch: SettingsPatch;
-  setPatch: (next: Partial<SettingsPatch>) => void;
-  disabled: boolean;
-}): JSX.Element {
+  repo,
+  canWrite,
+}: GeneralSectionViewProps): JSX.Element {
   return (
-    <SettingsSection
-      title="General"
-      description="Name, description, visibility, default branch."
+    <section
+      className="page__section"
+      aria-labelledby="settings-general"
+      data-testid="settings-general"
     >
-      <div className="settings-section__row">
-        <div className="settings-section__field">
-          <label htmlFor="settings-name">Name</label>
-          <input
-            id="settings-name"
-            type="text"
-            value={current.general.name}
-            disabled
-            readOnly
-          />
+      <h2 className="page__section-title" id="settings-general">
+        General
+      </h2>
+      <dl className="mirror-section__facts">
+        <div>
+          <dt>Default branch</dt>
+          <dd>{repo.default_branch}</dd>
         </div>
-        <div className="settings-section__field">
-          <label htmlFor="settings-default-branch">Default branch</label>
-          <input
-            id="settings-default-branch"
-            type="text"
-            value={patch.default_branch ?? current.general.default_branch}
-            onChange={(e) => setPatch({ default_branch: e.target.value })}
-            disabled={disabled}
-          />
+        <div>
+          <dt>Family</dt>
+          <dd>{repo.family ?? 'none'}</dd>
         </div>
-      </div>
-      <div className="settings-section__field">
-        <label htmlFor="settings-description">Description</label>
-        <input
-          id="settings-description"
-          type="text"
-          value={patch.description ?? current.general.description ?? ''}
-          onChange={(e) => setPatch({ description: e.target.value })}
-          disabled={disabled}
-        />
-      </div>
-      <div className="settings-section__field">
-        <label htmlFor="settings-homepage">Homepage URL</label>
-        <input
-          id="settings-homepage"
-          type="text"
-          value={patch.homepage ?? current.general.homepage ?? ''}
-          onChange={(e) => setPatch({ homepage: e.target.value })}
-          disabled={disabled}
-        />
-      </div>
-      <div className="settings-section__field">
-        <label htmlFor="settings-visibility">Visibility</label>
-        <select
-          id="settings-visibility"
-          value={patch.visibility ?? current.general.visibility}
-          onChange={(e) =>
-            setPatch({
-              visibility: e.target.value as RepositoryVisibility,
-            })
-          }
-          disabled={disabled}
-        >
-          <option value="public">public</option>
-          <option value="internal">internal</option>
-          <option value="private">private</option>
-        </select>
-      </div>
-    </SettingsSection>
+        <div>
+          <dt>Visibility</dt>
+          <dd>{repo.visibility}</dd>
+        </div>
+        <div>
+          <dt>Archived</dt>
+          <dd>{repo.archived ? 'yes — the repository is read-only' : 'no'}</dd>
+        </div>
+      </dl>
+      <p className="text-muted">
+        {canWrite
+          ? 'This forge changes these through its own API, not from this page.'
+          : 'Reading only: changing these needs repo.admin.'}
+      </p>
+    </section>
   );
 }
 
-export function MergePolicyView({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: MergeSettings;
-  onChange: (next: MergeSettings) => void;
-  disabled: boolean;
-}): JSX.Element {
-  return (
-    <SettingsSection
-      title="Merge policy"
-      description="Allowed merge methods, approvals, Merge Passport."
-    >
-      <MergePolicyEditor
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-      />
-    </SettingsSection>
-  );
+export interface AccessSectionViewProps {
+  grants: readonly AutomationGrantRow[] | undefined;
+  /** False when the caller may not read the grants (not an empty list). */
+  visible: boolean;
+  loading?: boolean;
+  failed?: boolean;
 }
 
-export function BranchProtectionView({
-  rules,
-  onChange,
-  disabled,
-}: {
-  rules: BranchProtectionRule[];
-  onChange: (rules: BranchProtectionRule[]) => void;
-  disabled: boolean;
-}): JSX.Element {
+export function AccessSectionView({
+  grants,
+  visible,
+  loading = false,
+  failed = false,
+}: AccessSectionViewProps): JSX.Element {
+  const rows = grants ?? [];
   return (
-    <SettingsSection
-      title="Branch protection"
-      description="Per-pattern rules for required checks, approvals, and force-push behavior."
+    <section
+      className="page__section"
+      aria-labelledby="settings-access"
+      data-testid="settings-access"
     >
-      <BranchProtectionEditor
-        rules={rules}
-        onChange={onChange}
-        disabled={disabled}
-      />
-    </SettingsSection>
-  );
-}
-
-export function AgentSectionView({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: AgentSettings;
-  onChange: (next: AgentSettings) => void;
-  disabled: boolean;
-}): JSX.Element {
-  return (
-    <SettingsSection
-      title="Agents"
-      description="Policy for autonomous coding agents."
-    >
-      <AgentPolicyEditor
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-      />
-    </SettingsSection>
+      <h2 className="page__section-title" id="settings-access">
+        Access
+      </h2>
+      {loading ? (
+        <p className="text-muted">Loading grants…</p>
+      ) : failed ? (
+        <p className="text-muted">This forge did not answer who holds access.</p>
+      ) : !visible ? (
+        <p className="text-muted" data-testid="settings-access-hidden">
+          Only a repository administrator can see who holds which access.
+        </p>
+      ) : rows.length === 0 ? (
+        <p>Nobody holds a grant on this repository yet.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Who</th>
+              <th scope="col">Access</th>
+              <th scope="col">Granted by</th>
+              <th scope="col">Granted</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((grant) => (
+              <tr key={grant.login}>
+                <td>{grant.login}</td>
+                <td>{grant.access}</td>
+                <td>{grant.grantedBy}</td>
+                <td>
+                  <When at={grant.grantedAt} fallback="never" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
   );
 }

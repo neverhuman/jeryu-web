@@ -157,10 +157,6 @@ export const endpoints = {
    *  deployers, grants) and where it is mirrored to. */
   repoAutomation: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/automation`,
-  settings: (id: string): string =>
-    `/api/v1/repos/${encodeURIComponent(id)}/settings`,
-  settingsPreview: (id: string): string =>
-    `/api/v1/repos/${encodeURIComponent(id)}/settings/preview`,
 
   ws: (): string => '/api/v1/ws',
   /**

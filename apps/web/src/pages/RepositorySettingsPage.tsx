@@ -1,67 +1,65 @@
-// RepositorySettingsPage.tsx — Phase 3 settings studio (W-FE-12).
+// RepositorySettingsPage.tsx — repository Settings: what the forge serves.
 //
-// Layout: left nav (per §7.4 W-FE-12 categories) + main pane.
-// Flow per section:
-//   1. User edits fields → "Preview changes" button enables.
-//   2. Click → POST `/settings/preview` → renders `<SettingsDiffPreview>`.
-//   3. Click "Apply" → PATCH `/settings` with `Idempotency-Key` and
-//      `If-Match: "<base_settings_hash>"`.
-//   4. On 409 `settings_hash_stale` → show recovery banner that refetches
-//      the current snapshot and discards the staged patch.
+// Five sections behind `/settings/<section>`, every one a read of live state
+// plus the actions the API does offer:
+//   General           the repository facts from the repositories list.
+//   Branch protection the rule on the default branch.
+//   Mirror            the offsite push mirror from the automation endpoint.
+//   Access            the grants, which only an administrator may read.
+//   Danger zone       archive, remove from the registry, purge.
 //
-// Phase 3 wires the General / Features / Merge policy / Branch protection /
-// Agents / Security / Notifications / Retention sections to the backend
-// `SettingsPatch` (which currently exposes general fields per
-// `contracts/generated/SettingsPatch`). Deeper editors render against the
-// in-memory copy of `RepositorySettings` and stage to the patch via the
-// `pendingPatch` state so they're ready when the backend adds those fields.
+// This forge serves no per-repository settings API, so nothing here stages a
+// change: the page says what is true and leaves changing it to the API.
 
-import { RefreshCcw, ShieldAlert } from 'lucide-react';
 import { useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import {
+  AlertOctagon,
+  Cog,
+  GitBranch,
+  Globe,
+  KeyRound,
+} from 'lucide-react';
 
 import { ApiError } from '../api/client';
 import { RepoArchiveSection } from '../components/repo/RepoArchiveSection';
 import { RepoDangerZone } from '../components/repo/RepoDangerZone';
-import { ActionButton } from '../components/action/ActionButton';
-import { SettingsLayout, SettingsSection } from '../components/settings';
+import { SettingsLayout, type SettingsNavItem } from '../components/settings';
 import {
-  EmptyState,
   ErrorState,
   LoadingState,
   PermissionDeniedState,
 } from '../components/state';
-import { useApplySettingsPatch } from '../hooks/useApplySettingsPatch';
-import { usePreviewSettingsPatch } from '../hooks/usePreviewSettingsPatch';
+import { useAuth } from '../hooks/useAuth';
+import { useBootstrap } from '../hooks/useBootstrap';
 import { useRealtime } from '../hooks/useRealtime';
 import { useRepoAutomation } from '../hooks/useRepoAutomation';
-import { useRepoSettings } from '../hooks/useRepoSettings';
 import { useResolveRepo } from '../hooks/useResolveRepo';
-import { useSettingsDraft } from '../hooks/useSettingsDraft';
 import { useSelectionStore } from '../stores/selectionStore';
-
-import {
-  AccessSectionView,
-  AgentSectionView,
-  BranchProtectionView,
-  CiSectionView,
-  FeaturesSectionView,
-  GeneralSectionView,
-  MergePolicyView,
-  NotificationsSectionView,
-  RetentionSectionView,
-  SecuritySectionView,
-} from './repositorySettingsSections';
-import {
-  PendingChangesPanel,
-  sectionTitleFor,
-} from './repositorySettingsPanels';
 
 import { BranchProtectionSummary } from './BranchProtectionSummary';
 import { RepositoryMirrorSection } from './RepositoryMirrorSection';
+import { canSeeRepoSettings } from './repoShellModel';
 import { repoRefOf, repoUrl } from './repoBrowserModel';
+import {
+  normalizeSection,
+  sectionTitleFor,
+  type SettingsSectionId,
+} from './repositorySettingsModel';
+import {
+  AccessSectionView,
+  GeneralSectionView,
+} from './repositorySettingsSections';
 
 import './page.css';
+
+const SETTINGS_NAV: readonly SettingsNavItem[] = [
+  { id: 'general', label: 'General', icon: Cog },
+  { id: 'branch-protection', label: 'Branch protection', icon: GitBranch },
+  { id: 'mirror', label: 'Mirror', icon: Globe },
+  { id: 'access', label: 'Access', icon: KeyRound },
+  { id: 'danger-zone', label: 'Danger zone', icon: AlertOctagon, danger: true },
+];
 
 function fullNameFromParams(params: Record<string, string | undefined>): string {
   return params.fullName ?? '';
@@ -73,14 +71,17 @@ export interface RepositorySettingsPageProps {
   section?: string;
 }
 
-export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}): JSX.Element {
+export function RepositorySettingsPage(
+  props: RepositorySettingsPageProps = {}
+): JSX.Element {
   const params = useParams();
-  const navigate = useNavigate();
   const provider = props.provider ?? params.provider ?? 'unknown';
   const fullName = props.fullName ?? fullNameFromParams(params);
   // RepoRouter parses the splat and hands the section in; reading only the
   // route param left every section link showing General.
-  const activeSection = props.section ?? params.section ?? 'general';
+  const activeSection: SettingsSectionId = normalizeSection(
+    props.section ?? params.section
+  );
 
   const resolved = useResolveRepo(provider, fullName);
   const repoId = resolved.data?.id ?? null;
@@ -93,25 +94,14 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
 
   useRealtime(repoId ? [`repo.${repoId}`] : []);
 
-  const settings = useRepoSettings(repoId);
   const automation = useRepoAutomation(repoId);
-  const previewMutation = usePreviewSettingsPatch(repoId);
-  const applyMutation = useApplySettingsPatch(repoId);
+  const { user } = useAuth();
+  const bootstrap = useBootstrap();
+  const canWrite = canSeeRepoSettings(
+    user?.role,
+    bootstrap.data?.viewer.global_permissions ?? []
+  );
 
-  const current = settings.data ?? null;
-  const {
-    draft,
-    setDraft,
-    hasPendingPatch,
-    setPatch,
-    handlePreview,
-    handleApply,
-    handleDiscard,
-    handleRecoverFromHashDrift,
-    hashDrift,
-  } = useSettingsDraft({ current, settings, previewMutation, applyMutation });
-
-  // ── Guards ─────────────────────────────────────────────────────────
   if (resolved.isPending) {
     return (
       <div className="page" data-testid="repo-settings-page">
@@ -130,7 +120,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
         <div className="page" data-testid="repo-settings-page">
           <PermissionDeniedState
             description="You do not have permission to view this repository."
-            missingPermission="settings.read"
+            missingPermission="repo.read"
           />
         </div>
       );
@@ -145,155 +135,41 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
     );
   }
 
-  if (settings.isPending) {
-    return (
-      <div className="page" data-testid="repo-settings-page">
-        <LoadingState title="Loading settings…" variant="skeleton" rows={6} />
-      </div>
-    );
-  }
-
-  if (settings.error || !current || !draft) {
-    if (settings.error instanceof ApiError && settings.error.status === 403) {
-      return (
-        <div className="page" data-testid="repo-settings-page">
-          <PermissionDeniedState
-            description="You do not have permission to manage settings."
-            missingPermission="settings.read"
-          />
-        </div>
-      );
-    }
-    if (settings.error instanceof ApiError && settings.error.status === 404) {
-      // This server has no settings API to edit, so the page shows what is true
-      // instead: the rule that protects the default branch, read from the
-      // branch protection endpoint the forge does serve. Removing the
-      // repository is still possible, so the danger zone stays.
-      const [owner = '', name = ''] = fullName.split('/');
-      return (
-        <div className="page" data-testid="repo-settings-page">
-          <header className="page__header">
-            <h2 className="page__title">Settings · {fullName}</h2>
-            <p className="page__subtitle">
-              Read-only on this server: rules are changed through the API.
-            </p>
-          </header>
-          <BranchProtectionSummary
-            owner={owner}
-            repo={name}
-            branch={resolved.data.summary.default_branch ?? 'main'}
-          />
-          <RepositoryMirrorSection
-            mirrors={automation.data?.mirrors}
-            loading={automation.isPending}
-            failed={Boolean(automation.error)}
-          />
-          <RepoArchiveSection repo={resolved.data.summary} />
-          <RepoDangerZone repo={resolved.data.summary} />
-        </div>
-      );
-    }
-    return (
-      <div className="page" data-testid="repo-settings-page">
-        <ErrorState title="Could not load settings" error={settings.error} />
-      </div>
-    );
-  }
-
-  // Build the section view.
-  const sectionTitle = sectionTitleFor(activeSection);
+  const summary = resolved.data.summary;
+  const [owner = '', name = ''] = fullName.split('/');
 
   return (
     // Named like every other state of this page, so a test or a reader can say
     // "the settings page" whether it loaded, failed or was refused.
     <div className="page page--full" data-testid="repo-settings-page">
       <header className="page__header">
-        <h2 className="page__title">Settings · {current.general.name}</h2>
-        <p className="page__subtitle">{sectionTitle}</p>
+        <h2 className="page__title">Settings · {summary.id.name}</h2>
+        <p className="page__subtitle">{sectionTitleFor(activeSection)}</p>
       </header>
 
-      {hashDrift ? (
-        <div className="pr-cockpit__recovery" role="alert">
-          <div className="pr-cockpit__recovery-title">
-            <ShieldAlert aria-hidden="true" size={14} />
-            Settings changed since you opened this page.
-          </div>
-          <div className="pr-cockpit__recovery-shas">
-            Refresh to load the latest snapshot, then re-preview your edits.
-          </div>
-          <ActionButton
-            variant="primary"
-            icon={<RefreshCcw aria-hidden="true" size={12} />}
-            onClick={handleRecoverFromHashDrift}
-          >
-            Refresh
-          </ActionButton>
-        </div>
-      ) : null}
-
       <SettingsLayout
+        sections={SETTINGS_NAV}
         activeSection={activeSection}
-        hrefFor={(id) =>
-          repoUrl(repoRefOf(provider, fullName), 'settings', id)
-        }
+        hrefFor={(id) => repoUrl(repoRefOf(provider, fullName), 'settings', id)}
         renderLink={({ section, href, children }) => (
           <Link
             to={href}
             replace
-            onClick={(e) => {
-              // Prevent the dirty draft from being lost silently — confirm
-              // when the user navigates with pending changes.
-              if (hasPendingPatch) {
-                const ok = window.confirm(
-                  `Discard pending changes to switch sections?`
-                );
-                if (!ok) {
-                  e.preventDefault();
-                  return;
-                }
-                handleDiscard();
-              }
-              setRepo(repoId);
-              return;
-            }}
-            aria-current={
-              section.id === activeSection ? 'page' : undefined
-            }
+            aria-current={section.id === activeSection ? 'page' : undefined}
           >
             {children}
           </Link>
         )}
       >
         {activeSection === 'general' && (
-          <GeneralSectionView
-            current={current}
-            patch={draft.patch}
-            setPatch={setPatch}
-            disabled={applyMutation.isPending}
-          />
-        )}
-
-        {activeSection === 'features' && (
-          <FeaturesSectionView current={current} />
-        )}
-
-        {activeSection === 'merge-policy' && (
-          <MergePolicyView
-            value={draft.merge}
-            onChange={(merge) =>
-              setDraft((d) => (d ? { ...d, merge } : d))
-            }
-            disabled={applyMutation.isPending}
-          />
+          <GeneralSectionView repo={summary} canWrite={canWrite} />
         )}
 
         {activeSection === 'branch-protection' && (
-          <BranchProtectionView
-            rules={draft.branchProtection}
-            onChange={(branchProtection) =>
-              setDraft((d) => (d ? { ...d, branchProtection } : d))
-            }
-            disabled={applyMutation.isPending}
+          <BranchProtectionSummary
+            owner={owner}
+            repo={name}
+            branch={summary.default_branch ?? 'main'}
           />
         )}
 
@@ -305,57 +181,21 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
           />
         )}
 
-        {activeSection === 'agents' && (
-          <AgentSectionView
-            value={draft.agents}
-            onChange={(agents) =>
-              setDraft((d) => (d ? { ...d, agents } : d))
-            }
-            disabled={applyMutation.isPending}
+        {activeSection === 'access' && (
+          <AccessSectionView
+            grants={automation.data?.grants}
+            visible={automation.data?.grantsVisible ?? false}
+            loading={automation.isPending}
+            failed={Boolean(automation.error)}
           />
-        )}
-
-        {activeSection === 'security' && (
-          <SecuritySectionView current={current} />
-        )}
-
-        {activeSection === 'access' && <AccessSectionView current={current} />}
-
-        {activeSection === 'ci' && <CiSectionView current={current} />}
-
-        {activeSection === 'notifications' && (
-          <NotificationsSectionView current={current} />
-        )}
-
-        {activeSection === 'retention' && (
-          <RetentionSectionView current={current} />
         )}
 
         {activeSection === 'danger-zone' && (
           <>
-            <RepoArchiveSection repo={resolved.data.summary} />
-            <RepoDangerZone repo={resolved.data.summary} />
+            <RepoArchiveSection repo={summary} />
+            <RepoDangerZone repo={summary} />
           </>
         )}
-
-        {/* Pending changes panel — always visible while a section is open. */}
-        <PendingChangesPanel
-          hasPendingPatch={hasPendingPatch}
-          hashDrift={Boolean(hashDrift)}
-          previewMutation={previewMutation}
-          applyMutation={applyMutation}
-          onPreview={handlePreview}
-          onApply={handleApply}
-          onDiscard={handleDiscard}
-          onDone={() => {
-            applyMutation.reset();
-            previewMutation.reset();
-            navigate(
-              repoUrl(repoRefOf(provider, fullName), 'settings', activeSection),
-              { replace: true }
-            );
-          }}
-        />
       </SettingsLayout>
     </div>
   );

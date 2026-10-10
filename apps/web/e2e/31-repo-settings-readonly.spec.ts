@@ -1,8 +1,8 @@
 // 31-repo-settings-readonly.spec.ts — repository Settings on a server without
-// the settings API: the page shows what is true, read-only. The default
-// branch's protection rule, and the GitHub mirror (from the repository summary):
-// when its last push failed, the dates and the one sentence that says an
-// operator must fix the host. No buttons besides the danger zone.
+// the settings API: the sections show what is true, read-only. The branch
+// protection section carries the default branch's rule; the Mirror section
+// carries the GitHub mirror, and when its last push failed, the dates and the
+// one sentence that says an operator must fix the host. Neither has a button.
 
 import { expect, test } from './fixtures/test';
 
@@ -58,8 +58,12 @@ test('read-only Settings shows the branch rule and the failing GitHub mirror @ac
     })
   );
 
+  await page.goto('/repos/acme/acme/widget-api/settings/branch-protection');
+  await expect(page.getByTestId('branch-protection')).toContainText(
+    'main is protected by 6 rules.'
+  );
+
   await page.goto('/repos/acme/acme/widget-api/settings/mirror#mirror');
-  await expect(page.getByTestId('branch-protection')).toContainText('main is protected by 6 rules.');
   const mirror = page.getByTestId('settings-mirror');
   await expect(mirror.getByRole('heading', { name: 'Mirror' })).toBeVisible();
   await expect(mirror.getByRole('link', { name: 'Mirrored to GitHub' })).toHaveAttribute(

@@ -34,7 +34,6 @@ import { SearchPage } from '../pages/search/SearchPage';
 import { RepositoryAgentsPage } from '../pages/RepositoryAgentsPage';
 import { RepositoryFamilyPage } from '../pages/RepositoryFamilyPage';
 import { RepositoryPullRequestsPage } from '../pages/RepositoryPullRequestsPage';
-import { RepositorySettingsPage } from '../pages/RepositorySettingsPage';
 import { ToolFleetPage } from '../pages/ToolFleetPage';
 import { ToolFleetToolPage } from '../pages/ToolFleetToolPage';
 import { ToolsPage } from '../pages/ToolsPage';
