@@ -2,14 +2,142 @@
 // the server actually serves, so a rename on either side fails here rather
 // than as a 404 in the deployed bundle.
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
-import { endpoints } from '../endpoints';
+import { endpoints, type Endpoints } from '../endpoints';
+
+interface RouteIndexFixture {
+  routes: string[];
+}
+
+const routeIndex = JSON.parse(
+  readFileSync(join(process.cwd(), 'src/test/fixtures/server-route-index.json'), 'utf8'),
+) as RouteIndexFixture;
+
+const endpointSamples = {
+  bootstrap: [],
+  authMe: [],
+  authLogin: [],
+  authSignup: [],
+  waitlistJoin: [],
+  authLogout: [],
+  authPassword: [],
+  authTokens: [],
+  authToken: ['token-1'],
+  adminUsers: [],
+  adminResetPassword: ['alex'],
+  adminRepoGrants: ['acme', 'widget-api'],
+  adminRepoGrant: ['acme', 'widget-api', 'alex'],
+  siteSettings: [],
+  adminSiteSettings: [],
+  version: [],
+  search: [{ q: 'gate', kind: ['repository'], limit: 10 }],
+  repos: [],
+  repo: ['repo-1'],
+  refs: ['repo-1'],
+  tree: ['repo-1', { ref: 'main', path: 'src' }],
+  blob: ['repo-1', { ref: 'main', path: 'README.md', render: 'html' }],
+  raw: ['repo-1', { ref: 'main', path: 'logo.png' }],
+  readme: ['repo-1', 'main'],
+  pages: ['repo-1', 'main'],
+  blame: ['repo-1', { ref: 'main', path: 'README.md' }],
+  commits: ['repo-1', { ref: 'main', path: 'src', limit: 20, page: 1 }],
+  commit: ['repo-1', 'abc1234'],
+  compare: ['repo-1', 'main', 'feature'],
+  releaseTag: ['repo-1', 'main'],
+  releasePins: [],
+  pulls: ['repo-1', 'open', { limit: 20, page: 1 }],
+  pull: ['repo-1', '7'],
+  pullDiff: ['repo-1', '7'],
+  pullChecks: ['repo-1', '7'],
+  pullThreads: ['repo-1', '7'],
+  pullReviews: ['repo-1', '7'],
+  pullApprove: ['repo-1', '7'],
+  pullReady: ['repo-1', '7'],
+  pullDraft: ['repo-1', '7'],
+  pullMerge: ['repo-1', '7'],
+  pullMergeAttempt: ['repo-1', '7'],
+  pullQueue: ['repo-1', '7'],
+  repoMergeQueue: ['repo-1'],
+  repoAutomation: ['repo-1'],
+  ws: [],
+  controlPlaneStatus: [200],
+  controlPlaneRunners: [],
+  controlPlaneRepoGraph: [{ include: ['depends_on'] }],
+  repoEnvironments: ['acme', 'widget-api'],
+  commitCheckRuns: ['acme', 'widget-api', 'main'],
+  pullCommits: ['acme', 'widget-api', '7', { perPage: 20, page: 1 }],
+  githubPull: ['acme', 'widget-api', '7'],
+  githubIssueComments: ['acme', 'widget-api', '7'],
+  branchProtection: ['acme', 'widget-api', 'main'],
+  ecosystem: [],
+  toolBuildClusters: [{ repo: 'acme/widget-api', limit: 20, includeIgnored: true }],
+  fleetToolAdoption: [],
+  toolRegistrySummary: [],
+  toolFinderScan: [],
+  toolFinderDashboard: [{ limit: 20, includeIgnored: true }],
+  toolFinderPropose: ['cluster-1'],
+  toolProposalDecision: ['tool-1'],
+  toolBuildClusterFeedback: ['cluster-1'],
+  repoAgentRuns: ['repo-1'],
+  repoSessions: ['repo-1'],
+  shiftFamilies: [],
+  shiftTodos: [{ family: 'acme', status: 'open' }],
+  shiftTodoAction: ['acme', '20261003-021037-4e604d'],
+  shiftWorkers: [],
+  shiftWorkersHistory: [6],
+  shiftShifts: ['acme'],
+  shiftOpenPr: ['acme'],
+  events: [{ family: 'acme', limit: 50 }],
+  eventsHistogram: [{ family: 'acme', range: '6h' }],
+  usage: [{ family: 'acme', range: '24h' }],
+  attention: [],
+  pins: [],
+  releaseBoards: [],
+  releaseBoard: ['acme'],
+  qualityGateOverview: [7],
+  qualityGateRule: ['no-empty-state', 7],
+  qualityGateHead: ['acme/widget-api', 'abc1234'],
+  qualityGateDispute: ['finding-1'],
+  yieldReport: [{ family: 'acme', since: '2026-10-01', until: '2026-10-10', by: 'experiment' }],
+  bots: [],
+  botKeys: ['bot-1'],
+  botSuspend: ['bot-1'],
+  botRevoke: ['bot-1'],
+  repoBots: ['repo-1'],
+  repoBotActivity: ['repo-1'],
+} satisfies { [Name in keyof Endpoints]: Parameters<Endpoints[Name]> };
 
 /** Every builder called with placeholder arguments. */
 function allPaths(): string[] {
-  return Object.values(endpoints).map((build) =>
-    (build as (...args: unknown[]) => string)('x', 'y', 'z'),
+  return endpointCalls().map(({ path }) => path);
+}
+
+function endpointCalls(): Array<{ name: keyof Endpoints; path: string }> {
+  return (Object.keys(endpointSamples) as Array<keyof Endpoints>).map((name) => {
+    const build = endpoints[name] as (...args: unknown[]) => string;
+    const args = endpointSamples[name] as unknown[];
+    return { name, path: build(...args) };
+  });
+}
+
+function pathnameOf(path: string): string {
+  return new URL(path, 'https://forge.example').pathname;
+}
+
+function routeMatches(template: string, path: string): boolean {
+  const routeSegments = template.split('/').filter(Boolean);
+  const pathSegments = path.split('/').filter(Boolean);
+  return (
+    routeSegments.length === pathSegments.length &&
+    routeSegments.every((segment, index) =>
+      segment.startsWith('{') && segment.endsWith('}')
+        ? pathSegments[index].length > 0
+        : segment === pathSegments[index],
+    )
   );
 }
 
@@ -49,6 +177,18 @@ describe('endpoint contract', () => {
   it('never calls /api/v1/activity, which the server does not serve', () => {
     for (const path of allPaths()) {
       expect(path).not.toMatch(/^\/api\/v1\/activity(?:[/?]|$)/);
+    }
+  });
+
+  it('keeps every endpoint builder on a server route', () => {
+    const serverRoutes = routeIndex.routes;
+    expect(serverRoutes).not.toContain('/api/v1/repos/{id}/settings');
+    for (const { name, path } of endpointCalls()) {
+      const pathname = pathnameOf(path);
+      expect(
+        serverRoutes.some((template) => routeMatches(template, pathname)),
+        `${String(name)} built ${pathname}, but the server route index does not publish it`,
+      ).toBe(true);
     }
   });
 });
