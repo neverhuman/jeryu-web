@@ -9,7 +9,7 @@
 //   /repos/jeryu/jeryu/jankurai/agents   → agents page
 //   /repos/jeryu/jeryu/jankurai/agents/run-42 → agents page with run-42
 //   /repos/jeryu/jeryu/jankurai/blob/main/src/lib.rs → the same page, file open
-//   /repos/jeryu/jeryu/jankurai/tree/main/docs → front page, Files open on docs/
+//   /repos/jeryu/jeryu/jankurai/tree/main/docs → front page, docs/ open in the Files panel
 //   /repos/jeryu/jeryu/jankurai/commits/main?path=src/main.rs → that file's history
 //   /repos/jeryu/jeryu/jankurai/commit/<sha> → one commit, message and diff
 //   /repos/jeryu/jeryu/jankurai/pulls/42        → one pull request, Conversation
@@ -36,7 +36,6 @@ import { parsePullTail } from './pullTabsModel';
 import { activeRepoTab } from './repoShellModel';
 import { usePageTitle } from '../hooks/usePageTitle';
 import {
-  OPEN_FILES_STATE,
   parseRefAndPath,
   repoFrontPath,
   revealFolderState,
@@ -133,9 +132,9 @@ export function RepoRouter(): JSX.Element {
       return inShell(<RepositoryActivityPage fullName={fullName} />);
     case 'code':
       // The Files panel of the front page is the code browser.
-      return <Navigate to={{ pathname: front, search }} state={OPEN_FILES_STATE} replace />;
+      return <Navigate to={{ pathname: front, search }} replace />;
     case 'tree': {
-      // A link to a folder: the front page at that ref, Files open on the folder.
+      // A link to a folder: the front page at that ref, that folder open in the Files panel.
       const { ref, path } = parseRefAndPath(subTail);
       return (
         <Navigate

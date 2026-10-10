@@ -3,16 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   ancestorsOf,
   commitCountLabel,
-  asksForFilesOpen,
   blobPath,
   folderToReveal,
   healthChipLabel,
   healthOpensChecks,
-  initialPanelOpen,
   openPullsLabel,
-  OPEN_FILES_STATE,
-  panelChoiceText,
-  parsePanelChoice,
   parseRefAndPath,
   refCountsLabel,
   REPO_TABS,
@@ -20,6 +15,7 @@ import {
   repoRefOf,
   repoUrl,
   revealFolderState,
+  treePath,
 } from '../repoBrowserModel';
 
 describe('repoBrowserModel', () => {
@@ -78,30 +74,17 @@ describe('repoBrowserModel', () => {
     expect(ancestorsOf('')).toEqual([]);
   });
 
-  it('remembers the panel choice and otherwise decides by width', () => {
-    expect(parsePanelChoice('open')).toBe(true);
-    expect(parsePanelChoice('closed')).toBe(false);
-    expect(parsePanelChoice(null)).toBeNull();
-    expect(parsePanelChoice('yes')).toBeNull();
-    expect(panelChoiceText(true)).toBe('open');
-    expect(panelChoiceText(false)).toBe('closed');
-    expect(initialPanelOpen(null, 1440)).toBe(true);
-    expect(initialPanelOpen(null, 1099)).toBe(false);
-    expect(initialPanelOpen('closed', 1440)).toBe(false);
-    expect(initialPanelOpen('open', 600)).toBe(true);
-  });
-
-  it('reads the open-files request from navigation state without trusting its shape', () => {
-    expect(asksForFilesOpen(OPEN_FILES_STATE)).toBe(true);
-    expect(asksForFilesOpen(null)).toBe(false);
-    expect(asksForFilesOpen('open')).toBe(false);
-    expect(asksForFilesOpen({ files: 'closed' })).toBe(false);
-    // A folder link opens the panel and that folder.
-    expect(revealFolderState('docs/adr/')).toEqual({ files: 'open', reveal: 'docs/adr' });
-    expect(asksForFilesOpen(revealFolderState('docs'))).toBe(true);
+  it('reads the folder to reveal from navigation state without trusting its shape', () => {
+    expect(revealFolderState('docs/adr/')).toEqual({ reveal: 'docs/adr' });
     expect(folderToReveal(revealFolderState('docs/adr/'))).toBe('docs/adr');
     expect(folderToReveal({ reveal: 7 })).toBeNull();
-    expect(folderToReveal(OPEN_FILES_STATE)).toBeNull();
+    expect(folderToReveal(null)).toBeNull();
+  });
+
+  it('builds the tree route of a folder at a ref', () => {
+    expect(treePath('jeryu', 'root/bullet-kernel', 'feat/x', 'docs/adr')).toBe(
+      '/repos/jeryu/root/bullet-kernel/tree/feat%2Fx/docs/adr'
+    );
   });
 
   it('says how many pull requests are open in words', () => {

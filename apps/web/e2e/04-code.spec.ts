@@ -40,7 +40,7 @@ test.describe('Code browser (W-T-12)', () => {
     const files = page.getByRole('complementary', { name: 'Files' });
     await expect(files).toBeVisible();
     await expect(files.getByRole('treeitem', { name: 'README.md' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Files', exact: true })).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('button', { name: 'Files', exact: true })).toHaveCount(0);
     // The panel is the code browser: there is no separate "Browse code" page to go to.
     await expect(page.getByRole('link', { name: 'Browse code' })).toHaveCount(0);
 
@@ -57,7 +57,7 @@ test.describe('Code browser (W-T-12)', () => {
     await expect(page.getByRole('link', { name: 'View raw file' })).toBeVisible();
   });
 
-  test('the Files panel stays while files open, highlights the file, hides on request and remembers it @action:code.files_panel', async ({ page }) => {
+  test('the Files panel is fixed on the left, stays while files open, highlights the file and cannot be collapsed @action:code.files_panel', async ({ page }) => {
     await mockBootstrap(page);
     await mockRepoLookup(page, {
       id: { host: 'jeryu', owner: 'neverhuman', name: 'jeryu' },
@@ -105,17 +105,24 @@ test.describe('Code browser (W-T-12)', () => {
     await expect(files.getByRole('treeitem', { name: 'web', exact: true })).toHaveAttribute('aria-expanded', 'true');
     await expect(files.locator('[aria-selected="true"]')).toHaveCount(0);
 
-    // Hide, show, hide; the choice survives a reload.
-    const toggle = page.getByRole('button', { name: 'Files', exact: true });
-    await toggle.click();
-    await expect(files).toBeHidden();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await toggle.click();
-    await expect(files).toBeVisible();
-    await toggle.click();
+    // Not collapsible: no toggle, and the panel stays across a reload.
+    await expect(page.getByRole('button', { name: 'Files', exact: true })).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Files', exact: true })).toHaveAttribute('aria-expanded', 'false', { timeout: 15_000 });
-    await expect(page.getByRole('complementary', { name: 'Files' })).toBeHidden();
+    await expect(page.getByRole('complementary', { name: 'Files' })).toBeVisible({ timeout: 15_000 });
+
+    // Fixed on the left of the content.
+    const panelBox = await files.boundingBox();
+    const mainBox = await page.locator('.repo-browser__main').boundingBox();
+    expect(panelBox && mainBox && panelBox.x + panelBox.width <= mainBox.x + 1).toBe(true);
+
+    // Path crumbs: the folder is a link to the tree route, the file is plain.
+    await files.getByRole('treeitem', { name: 'src', exact: true }).click();
+    await files.getByRole('treeitem', { name: 'web', exact: true }).click();
+    await files.getByRole('treeitem', { name: 'pipeline.rs' }).click();
+    const path = page.getByRole('navigation', { name: 'File path' });
+    await expect(path.getByRole('link', { name: 'jeryu' })).toHaveAttribute('href', '/repos/jeryu/neverhuman/jeryu');
+    await expect(path.getByRole('link', { name: 'web' })).toHaveAttribute('href', '/repos/jeryu/neverhuman/jeryu/tree/main/src/web');
+    await expect(path.getByRole('link', { name: 'pipeline.rs' })).toHaveCount(0);
   });
 
   test('blob page exposes rendered/raw tabs and file toolbar actions @action:code.blob_tabs @action:code.blob_raw_link @action:code.blob_download @action:code.blob_permalink', async ({

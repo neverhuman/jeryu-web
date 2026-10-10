@@ -4,7 +4,6 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RepoRouter } from '../RepoRouter';
-import { FILES_PANEL_KEY } from '../repoBrowserModel';
 
 // The gate's Node defines a global localStorage that is undefined without a
 // backing file; the page goes through the storage adapter, so the test brings
@@ -232,13 +231,18 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(items[0]).toContain('jeryu');
     expect(items.join(' ')).not.toMatch(/Repos|host/);
     expect(within(path).getByRole('link', { name: 'jeryu' })).toHaveAttribute('href', FRONT);
+    // Every folder opens its tree route at the current ref; the file is plain.
+    expect(within(path).getByRole('link', { name: 'src' })).toHaveAttribute(
+      'href',
+      `${FRONT}/tree/main/src`
+    );
+    expect(within(path).queryByRole('link', { name: 'lib.rs' })).toBeNull();
     expect(within(path).getByText('lib.rs')).toBeInTheDocument();
   });
 
   it('keeps the Files panel and its open folders while a file opens, and highlights the file', async () => {
     renderAt(FRONT);
-    const files = await screen.findByRole('button', { name: 'Files' });
-    expect(files).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByRole('complementary', { name: 'Files' })).toBeVisible();
     fireEvent.click(await screen.findByRole('treeitem', { name: 'src' }));
     fireEvent.click(await screen.findByRole('treeitem', { name: 'lib.rs' }));
 
@@ -255,26 +259,16 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(section.firstElementChild).toHaveClass('repo-browser__files');
     expect(section.lastElementChild).toHaveClass('repo-browser__main');
 
-    // Hide it: the choice is remembered, and the button becomes the filled action.
-    fireEvent.click(screen.getByRole('button', { name: 'Files' }));
-    expect(screen.getByRole('button', { name: 'Files' })).toHaveAttribute('aria-expanded', 'false');
-    expect(window.localStorage.getItem(FILES_PANEL_KEY)).toBe('closed');
-    expect(screen.queryByRole('complementary', { name: 'Files' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Files' }).className).toContain('action-button--primary');
+    // Fixed: nothing collapses it.
+    expect(screen.queryByRole('button', { name: 'Files' })).toBeNull();
   });
 
-  it('shows one "Find files" affordance: in the panel while it is open, in the header while it is closed', async () => {
+  it('shows one "Find files" affordance, in the panel', async () => {
     renderAt(FRONT);
     const panel = await screen.findByRole('complementary', { name: 'Files' });
-    const openFinders = screen.getAllByRole('button', { name: 'Find files' });
-    expect(openFinders).toHaveLength(1);
-    expect(panel).toContainElement(openFinders[0]);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Files' }));
-    const closedFinders = screen.getAllByRole('button', { name: 'Find files' });
-    expect(closedFinders).toHaveLength(1);
-    expect(screen.queryByRole('complementary', { name: 'Files' })).toBeNull();
-    expect(closedFinders[0].closest('.repo-browser__line')).not.toBeNull();
+    const finders = screen.getAllByRole('button', { name: 'Find files' });
+    expect(finders).toHaveLength(1);
+    expect(panel).toContainElement(finders[0]);
   });
 
   it('opens a deep link to a file with its folders already open', async () => {
@@ -285,20 +279,14 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     );
   });
 
-  it('starts closed on a narrow screen, and /code opens it on the front page', async () => {
+  it('always shows the panel, narrow or not, and /code lands on the front page', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 900 });
     const { unmount } = renderAt(FRONT);
-    expect(await screen.findByRole('button', { name: 'Files' })).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    );
+    expect(await screen.findByRole('complementary', { name: 'Files' })).toBeVisible();
     unmount();
 
     renderAt(`${FRONT}/code`);
-    expect(await screen.findByRole('button', { name: 'Files' })).toHaveAttribute(
-      'aria-expanded',
-      'true'
-    );
+    expect(await screen.findByRole('complementary', { name: 'Files' })).toBeVisible();
     expect(screen.getByTestId('location')).toHaveTextContent(FRONT);
     expect(screen.getByTestId('location')).not.toHaveTextContent('/code');
   });
@@ -312,11 +300,11 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     }
   });
 
-  it('says plainly when a repository has no code here, and offers no Files button', async () => {
+  it('says plainly when a repository has no code here, and has no Files panel', async () => {
     hasCode = false;
     renderAt(FRONT);
     expect(await screen.findByText('No code on this forge')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Files' })).toBeNull();
+    expect(screen.queryByRole('complementary', { name: 'Files' })).toBeNull();
     expect(screen.queryByText('No README found')).toBeNull();
   });
 

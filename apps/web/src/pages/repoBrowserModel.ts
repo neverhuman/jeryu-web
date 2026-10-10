@@ -1,20 +1,14 @@
 // repoBrowserModel.ts — pure helpers for the one repository page.
 //
 // The repository front page (`/repos/:p/:o/:r`) and the file page
-// (`…/blob/<ref>/<path>`) are one layout: content on the left, a Files panel on
-// the right that stays put while you move between them.
+// (`…/blob/<ref>/<path>`) are one layout: the Files panel fixed on the left,
+// the content beside it; the panel stays put while you move between them.
 
 import type { BreadcrumbSegment } from '../components/browser';
 import { failingLabel } from './repoStatusModel';
 import { formatCount } from '../format/number';
 
 export { ancestorsOf } from '../components/browser/fileTreePaths';
-
-/** Where the Files panel choice is remembered (storage adapter, durable). */
-export const FILES_PANEL_KEY = 'jeryu.repoFilesPanel.v1';
-
-/** Below this width the panel starts closed: it would crowd the content. */
-export const FILES_PANEL_MIN_WIDTH = 1100;
 
 /**
  * The repository sub-pages a link can address. `RepoRouter` dispatches on
@@ -113,6 +107,11 @@ export function blobPath(provider: string, fullName: string, ref: string, path: 
   return repoUrl(repoRefOf(provider, fullName), 'blob', `${encodeURIComponent(ref)}/${path}`);
 }
 
+/** The tree route of one folder at one ref; it opens that folder in the Files panel. */
+export function treePath(provider: string, fullName: string, ref: string, dir: string): string {
+  return repoUrl(repoRefOf(provider, fullName), 'tree', `${encodeURIComponent(ref)}/${dir}`);
+}
+
 /** Split a blob splat (`<ref>/<path…>`) into its ref and path. */
 export function parseRefAndPath(splat: string): { ref: string; path: string } {
   if (!splat) return { ref: '', path: '' };
@@ -121,33 +120,9 @@ export function parseRefAndPath(splat: string): { ref: string; path: string } {
   return { ref: splat.slice(0, slash), path: splat.slice(slash + 1) };
 }
 
-/** The remembered panel choice: `true` open, `false` closed, `null` never chosen. */
-export function parsePanelChoice(stored: string | null): boolean | null {
-  if (stored === 'open') return true;
-  if (stored === 'closed') return false;
-  return null;
-}
-
-export function panelChoiceText(open: boolean): string {
-  return open ? 'open' : 'closed';
-}
-
-/** Open or closed when the page loads: the remembered choice, else by width. */
-export function initialPanelOpen(stored: string | null, width: number): boolean {
-  return parsePanelChoice(stored) ?? width >= FILES_PANEL_MIN_WIDTH;
-}
-
-/** `/code` redirects here with this navigation state so the panel opens. */
-export const OPEN_FILES_STATE = { files: 'open' };
-
-/** True when a navigation asked for the Files panel to be open. */
-export function asksForFilesOpen(state: unknown): boolean {
-  return typeof state === 'object' && state !== null && 'files' in state && state.files === 'open';
-}
-
-/** Navigation state for a `…/tree/<ref>/<dir>` link: Files open, that folder open. */
-export function revealFolderState(dir: string): { files: string; reveal: string } {
-  return { files: 'open', reveal: dir.replace(/\/+$/, '') };
+/** Navigation state for a `…/tree/<ref>/<dir>` link: that folder open in the panel. */
+export function revealFolderState(dir: string): { reveal: string } {
+  return { reveal: dir.replace(/\/+$/, '') };
 }
 
 /** The folder a navigation asked to reveal in the Files panel, if any. */

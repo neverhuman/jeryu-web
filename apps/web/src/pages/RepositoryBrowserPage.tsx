@@ -3,13 +3,11 @@
 // The repository front page (`/repos/:p/:o/:r`, README in the main column) and
 // the file page (`…/blob/<ref>/<path>`, the file in the main column) are this
 // one component, so the Files tree stays mounted, keeps the folders the reader
-// opened, and highlights the file being read. The tree is LEFT of the README,
-// where every forge puts it; it used to be an aside on the right, which read
-// backwards. A "Files" button in the header shows and hides it; the choice is
-// remembered. `/code` redirects here with the panel open: it is the code
+// opened, and highlights the file being read. The tree is fixed LEFT of the
+// content, where every forge puts it, and is always shown: it has no collapse
+// toggle and no remembered state. `/code` redirects here: it is the code
 // browser.
 
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -35,29 +33,23 @@ import { useMarkdown } from '../hooks/useMarkdown';
 import { useRealtime } from '../hooks/useRealtime';
 import { useRepoTree } from '../hooks/useRepoTree';
 import { useResolveRepo } from '../hooks/useResolveRepo';
-import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { useSelectionStore } from '../stores/selectionStore';
 import type { TreeEntry } from '../api/types';
 
 import { RepoFileContent } from './RepoFileContent';
 import {
-  FILES_PANEL_KEY,
-  asksForFilesOpen,
   blobPath,
   folderToReveal,
-  initialPanelOpen,
   openPullsLabel,
-  panelChoiceText,
   parseRefAndPath,
   repoFrontPath,
+  treePath,
 } from './repoBrowserModel';
 import { RepoCommitSummary } from './repositoryOverviewFacts';
 import { ClonePopover } from './repositoryOverviewParts';
 
 import '../components/browser/browser.css';
 import './page.css';
-
-const FILES_PANEL_ID = 'repo-files-panel';
 
 export interface RepositoryBrowserPageProps {
   provider: string;
@@ -88,11 +80,6 @@ export function RepositoryBrowserPage({
   const activeRef = onFile ? file.ref : searchParams.get('ref') || defaultBranch;
   const front = repoFrontPath(provider, fullName);
 
-  const [filesOpen, setFilesOpen] = useState<boolean>(
-    () =>
-      asksForFilesOpen(location.state) ||
-      initialPanelOpen(readBrowserText('durable', FILES_PANEL_KEY), window.innerWidth)
-  );
   const [finderOpen, setFinderOpen] = useState(false);
 
   // A repository whose source is hosted elsewhere has no tree here. The root
@@ -118,12 +105,6 @@ export function RepositoryBrowserPage({
     },
     { label: 'Open file finder', group: 'Navigation' }
   );
-
-  const toggleFiles = (): void => {
-    const next = !filesOpen;
-    setFilesOpen(next);
-    writeBrowserText('durable', FILES_PANEL_KEY, panelChoiceText(next));
-  };
 
   const openFile = (entry: TreeEntry): void => {
     navigate(blobPath(provider, fullName, activeRef, entry.path));
@@ -194,22 +175,23 @@ export function RepositoryBrowserPage({
       : front;
   // The trail from Repositories down to this repository is the shell's
   // (components/repo/RepoLayout). On a file this page adds only the path,
-  // starting at the repository it is in, so no crumb is said twice.
+  // starting at the repository it is in, so no crumb is said twice. Every
+  // segment but the last (the open file) is a link: the repository opens its
+  // front, a folder opens that folder at the current ref.
+  const parts = file.path.split('/').filter(Boolean);
   const pathCrumbs: BreadcrumbSegment[] = onFile
     ? [
         { label: summary.id.name, to: frontWithRef },
-        ...file.path
-          .split('/')
-          .filter(Boolean)
-          .map((part) => ({ label: part })),
+        ...parts.map((part, index) =>
+          index === parts.length - 1
+            ? { label: part }
+            : {
+                label: part,
+                to: treePath(provider, fullName, activeRef, parts.slice(0, index + 1).join('/')),
+              }
+        ),
       ]
     : [];
-  const showPanel = filesOpen && !treeMissing;
-  const findFiles = (
-    <ActionButton variant="ghost" onClick={() => setFinderOpen(true)} aria-label="Find files">
-      Find files (t)
-    </ActionButton>
-  );
 
   return (
     <div className="page" data-testid={testId}>
@@ -234,52 +216,35 @@ export function RepositoryBrowserPage({
             {openPullsLabel(summary.open_pull_requests)}
           </Link>
           <ClonePopover httpUrl={summary.clone_http_url} sshUrl={summary.clone_ssh_url} />
-          <span className="repo-browser__spacer" aria-hidden="true" />
-          {treeMissing ? null : (
-            <>
-              {/* Beside an open panel the panel carries this; one affordance each. */}
-              {showPanel ? null : findFiles}
-              <ActionButton
-                // The page's one filled action, and only while the panel is closed.
-                variant={filesOpen ? 'default' : 'primary'}
-                onClick={toggleFiles}
-                aria-expanded={filesOpen}
-                aria-controls={FILES_PANEL_ID}
-                icon={
-                  filesOpen ? (
-                    <PanelLeftClose size={14} aria-hidden="true" />
-                  ) : (
-                    <PanelLeftOpen size={14} aria-hidden="true" />
-                  )
-                }
-              >
-                Files
-              </ActionButton>
-            </>
-          )}
         </div>
       </header>
 
       <section
-        className={`repo-browser${showPanel ? ' repo-browser--with-files' : ''}`}
+        className={`repo-browser${treeMissing ? '' : ' repo-browser--with-files'}`}
         aria-label={onFile ? 'File' : 'Repository overview'}
       >
-        {/* Hidden, not unmounted: the folders the reader opened stay open. */}
-        <aside
-          id={FILES_PANEL_ID}
-          className="repo-browser__files"
-          aria-label="Files"
-          hidden={!showPanel}
-        >
-          <div className="repo-browser__files-head">{findFiles}</div>
-          <FileTree
-            repoId={repoId}
-            refName={activeRef}
-            selectedPath={onFile ? file.path : undefined}
-            revealDir={folderToReveal(location.state) ?? undefined}
-            onSelectFile={openFile}
-          />
-        </aside>
+        {/* Fixed on the left and always shown; a repository whose source is
+            hosted elsewhere has no tree, so there is no panel for it. */}
+        {treeMissing ? null : (
+          <aside className="repo-browser__files" aria-label="Files">
+            <div className="repo-browser__files-head">
+              <ActionButton
+                variant="ghost"
+                onClick={() => setFinderOpen(true)}
+                aria-label="Find files"
+              >
+                Find files (t)
+              </ActionButton>
+            </div>
+            <FileTree
+              repoId={repoId}
+              refName={activeRef}
+              selectedPath={onFile ? file.path : undefined}
+              revealDir={folderToReveal(location.state) ?? undefined}
+              onSelectFile={openFile}
+            />
+          </aside>
+        )}
         <div className="repo-browser__main">
           {noCodeHere ? (
             <EmptyState

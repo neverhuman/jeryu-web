@@ -381,10 +381,6 @@
   background-color: var(--color-bg-1);
 }
 
-.repo-browser__files[hidden] {
-  display: none;
-}
-
 /* One quiet line: branch, open pull requests, clone; the panel controls right. */
 .repo-browser__line {
   display: flex;
@@ -444,7 +440,7 @@
 }
 
 @media (max-width: 1000px) {
-  /* Narrow: the tree, when asked for, sits above what it opens. */
+  /* Narrow: the tree sits above what it opens. */
   .repo-browser--with-files {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -56,9 +56,9 @@ async function seed(page: Page): Promise<void> {
       tty_live: true,
     },
   ]);
-  // The front page: a tree (the Files panel and its button need one), a README
+  // The front page: a tree (the Files panel needs one), a README
   // and the automation panel's view. Without the tree the page draws "No code
-  // on this forge" and has no Files button at all.
+  // on this forge" and has no Files panel at all.
   await mockTree(page);
   await mockReadme(page, { html: '<h1>jankurai</h1>' });
   await mockRepoAutomation(page, { repo: 'jeryu/jankurai' });
@@ -96,8 +96,8 @@ test.describe('Repository sub-page routing', () => {
     // The front page owns Code; the retired tracker has no tab.
     await shell.goto(REPO_PATH);
     await expect(
-      page.getByRole('button', { name: 'Files', exact: true })
-    ).toHaveAttribute('aria-expanded', 'true');
+      page.getByRole('complementary', { name: 'Files' })
+    ).toBeVisible();
     await expect(page.getByRole('link', { name: 'Tracker' })).toHaveCount(0);
     await expect(
       page.getByRole('link', { name: 'Code', exact: true })
