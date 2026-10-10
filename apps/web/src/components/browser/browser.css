@@ -351,7 +351,7 @@
   gap: var(--space-3);
 }
 
-/* The one repository page: content, and a Files panel on the right --------- */
+/* The one repository page: the Files tree, and the content right of it ----- */
 
 .repo-browser {
   display: grid;
@@ -361,7 +361,7 @@
 }
 
 .repo-browser--with-files {
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: 320px minmax(0, 1fr);
 }
 
 .repo-browser__main {
@@ -444,13 +444,12 @@
 }
 
 @media (max-width: 1000px) {
-  /* Narrow: the panel, when asked for, sits above what it opens. */
+  /* Narrow: the tree, when asked for, sits above what it opens. */
   .repo-browser--with-files {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .repo-browser__files {
-    order: -1;
     position: static;
     max-height: 320px;
   }

@@ -5,7 +5,11 @@
 //
 //   * `?family=<key>` — Needs you, Work, In flight, Activity, Repositories.
 //   * `<base>/family/<key>` — the release board (`/releases/family/<key>`) and
-//     the split-family browser (`/repos/family/<key>`), whose family is the page.
+//     the family doorway (`/repos/family/<key>`), whose family is the page.
+//
+// One repository's own pages state their family by being that repository, so a
+// scope is never written into their address: `/repos/<host>/<owner>/<name>`
+// carries no `?family=`, and the rail inside it sets the scope instead.
 //
 // Everything here is pure, so it is unit-tested without a router. The React
 // side (the provider, the tab's memory, the header chip) is FamilyScopeProvider.
@@ -41,6 +45,17 @@ export function canonicalFamily(family: string | null | undefined): string {
 /** True when `a` and `b` name the same family, whichever alias each uses. */
 export function sameFamily(a: string | null | undefined, b: string | null | undefined): boolean {
   return canonicalFamily(a) === canonicalFamily(b);
+}
+
+/** `/repos/<host>/<owner>/<name>…`: the pages of one repository. */
+const REPO_DETAIL_PATH = /^\/repos\/(?!family\/|new$)[^/]+\/[^/]+\/[^/]+/;
+
+/**
+ * True for an address that is one repository: it names its family by naming
+ * the repository, so adding a scope to it would only clutter the URL.
+ */
+export function statesOwnFamily(pathname: string): boolean {
+  return REPO_DETAIL_PATH.test(pathname);
 }
 
 function splitHref(href: string): { pathname: string; search: string; hash: string } {
@@ -85,6 +100,7 @@ export function familyFromHref(href: string): string | null {
  */
 export function withFamilyScope(href: string, family: string): string {
   const { pathname, search, hash } = splitHref(href);
+  if (statesOwnFamily(pathname)) return href;
   const key = canonicalFamily(family);
   const params = new URLSearchParams(search);
   const pathBase = FAMILY_PATH_BASES.find((base) => pathname.startsWith(`${base}/family/`));

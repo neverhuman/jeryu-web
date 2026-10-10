@@ -129,10 +129,13 @@ test.describe('Auth hardening browser proof', () => {
     await page.getByLabel('Password').fill(loginFormCredential);
     await page.getByRole('button', { name: 'Login' }).click();
 
-    await expect(page).toHaveURL(/\/repos\/family\/acme-split\?view=list$/, {
+    // The family address is a doorway: it lands on a member, and the family
+    // is the rail beside it.
+    await expect(page).toHaveURL(/\/repos\/forge\.example\/acme\/acme-core$/, {
       timeout: 10_000,
     });
-    await expect(page.locator('section.split-browser')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('repo-family-rail')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('repo-family-member-acme-web')).toBeVisible();
   });
 
   test('new signup receives no repository visibility by default @action:auth.signup @action:authz.signup_no_repos', async ({ page }) => {

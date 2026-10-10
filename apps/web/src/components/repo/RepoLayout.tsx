@@ -9,12 +9,22 @@
 // The bar is the shared `TabBar`: a `<nav aria-label="Repository">` of links,
 // the current one carrying `aria-current="page"`, arrow keys moving between
 // them. The pull request page is navigated by the same component.
+//
+// Left of the content, a repository that belongs to a family carries that
+// family's rail (RepoFamilyRail): the family is context, not a page of its
+// own. A repository in no family says so in one muted chip and takes the
+// whole width.
 
 import { AlertTriangle } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
+import {
+  FamilyRailControl,
+  RepoFamilyRail,
+  useFamilyRail,
+} from './RepoFamilyRail';
 import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoHealthPill } from './RepoHealthPill';
 import { RepoRoleBadge } from './RepoRoleBadge';
@@ -64,6 +74,7 @@ export function RepoLayout({
   const mayOpenSettings = canSeeRepoSettings(user?.role, permissions);
   // The header's health chip stands for failing checks; pressing it lists them.
   const [checksOpen, setChecksOpen] = useState(false);
+  const rail = useFamilyRail(summary?.family, repoId, tab);
 
   const base = repoFrontPath(provider, fullName);
 
@@ -81,6 +92,7 @@ export function RepoLayout({
         crumbs={repoShellCrumbs(provider, fullName, summary)}
         freshness={queryFreshness(resolved)}
         subtitle={summary?.description || undefined}
+        actions={rail ? <FamilyRailControl rail={rail} /> : null}
         badges={
           summary ? (
             <>
@@ -108,6 +120,15 @@ export function RepoLayout({
               </Link>
               <RepoRoleBadge role={summary.repo_role} />
               <RepoArchivedBadge archived={summary.archived} />
+              {summary.family ? null : (
+                <span
+                  className="page__pill page__pill--muted"
+                  data-testid="repo-no-family"
+                  title="The forge puts this repository in no family"
+                >
+                  no family
+                </span>
+              )}
               <span className="page__pill">{summary.visibility}</span>
               {summary.language ? (
                 <span className="page__pill">{summary.language}</span>
@@ -129,14 +150,24 @@ export function RepoLayout({
         />
       </PageHeader>
 
-      {tab === 'settings' && !mayOpenSettings ? (
-        <PermissionDeniedState
-          description="Only a repository administrator or a writer can open these settings."
-          missingPermission="repo.admin"
-        />
-      ) : (
-        children
-      )}
+      <div
+        className={`repo-shell__body${
+          rail && rail.open ? ' repo-shell__body--with-rail' : ''
+        }`}
+      >
+        {/* Hidden, not unmounted: the family is read once per repository page. */}
+        {rail ? <RepoFamilyRail rail={rail} /> : null}
+        <div className="repo-shell__content">
+          {tab === 'settings' && !mayOpenSettings ? (
+            <PermissionDeniedState
+              description="Only a repository administrator or a writer can open these settings."
+              missingPermission="repo.admin"
+            />
+          ) : (
+            children
+          )}
+        </div>
+      </div>
     </div>
   );
 }

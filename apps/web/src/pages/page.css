@@ -146,6 +146,11 @@
   border-color: transparent;
 }
 
+.page__pill--muted {
+  background-color: transparent;
+  color: var(--color-fg-muted);
+}
+
 .page__pill--warning {
   background-color: var(--color-accent-warning-bg);
   color: var(--color-accent-warning);

@@ -2,12 +2,14 @@
 //
 // The repository front page (`/repos/:p/:o/:r`, README in the main column) and
 // the file page (`…/blob/<ref>/<path>`, the file in the main column) are this
-// one component, so the Files panel on the right stays mounted, keeps the
-// folders the reader opened, and highlights the file being read. A "Files"
-// button in the header shows and hides the panel; the choice is remembered.
-// `/code` redirects here with the panel open: the panel is the code browser.
+// one component, so the Files tree stays mounted, keeps the folders the reader
+// opened, and highlights the file being read. The tree is LEFT of the README,
+// where every forge puts it; it used to be an aside on the right, which read
+// backwards. A "Files" button in the header shows and hides it; the choice is
+// remembered. `/code` redirects here with the panel open: it is the code
+// browser.
 
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -245,9 +247,9 @@ export function RepositoryBrowserPage({
                 aria-controls={FILES_PANEL_ID}
                 icon={
                   filesOpen ? (
-                    <PanelRightClose size={14} aria-hidden="true" />
+                    <PanelLeftClose size={14} aria-hidden="true" />
                   ) : (
-                    <PanelRightOpen size={14} aria-hidden="true" />
+                    <PanelLeftOpen size={14} aria-hidden="true" />
                   )
                 }
               >
@@ -262,6 +264,22 @@ export function RepositoryBrowserPage({
         className={`repo-browser${showPanel ? ' repo-browser--with-files' : ''}`}
         aria-label={onFile ? 'File' : 'Repository overview'}
       >
+        {/* Hidden, not unmounted: the folders the reader opened stay open. */}
+        <aside
+          id={FILES_PANEL_ID}
+          className="repo-browser__files"
+          aria-label="Files"
+          hidden={!showPanel}
+        >
+          <div className="repo-browser__files-head">{findFiles}</div>
+          <FileTree
+            repoId={repoId}
+            refName={activeRef}
+            selectedPath={onFile ? file.path : undefined}
+            revealDir={folderToReveal(location.state) ?? undefined}
+            onSelectFile={openFile}
+          />
+        </aside>
         <div className="repo-browser__main">
           {noCodeHere ? (
             <EmptyState
@@ -284,22 +302,6 @@ export function RepositoryBrowserPage({
             />
           )}
         </div>
-        {/* Hidden, not unmounted: the folders the reader opened stay open. */}
-        <aside
-          id={FILES_PANEL_ID}
-          className="repo-browser__files"
-          aria-label="Files"
-          hidden={!showPanel}
-        >
-          <div className="repo-browser__files-head">{findFiles}</div>
-          <FileTree
-            repoId={repoId}
-            refName={activeRef}
-            selectedPath={onFile ? file.path : undefined}
-            revealDir={folderToReveal(location.state) ?? undefined}
-            onSelectFile={openFile}
-          />
-        </aside>
       </section>
 
       <FileFinder

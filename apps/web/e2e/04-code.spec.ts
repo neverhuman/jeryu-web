@@ -1,8 +1,8 @@
 // 04-code.spec.ts — reading code on the one repository page (W-T-12).
 //
-// The repository front page and the file page are one layout: the README or
-// the open file on the left, a Files panel on the right that stays put. `/code`
-// redirects to the front page with the panel open.
+// The repository front page and the file page are one layout: the Files tree
+// on the left, the README or the open file right of it. `/code` redirects to
+// the front page with the tree open.
 
 import { expect, test } from './fixtures/test';
 

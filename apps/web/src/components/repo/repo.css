@@ -281,23 +281,6 @@
   color: var(--color-accent-primary);
 }
 
-/* Family drill-down page --------------------------------------------------- */
-
-.repo-family-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-4);
-  font-size: var(--font-size-sm);
-  color: var(--color-fg-secondary);
-}
-
-.repo-family-strip__item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
 .repo-family-panel {
   background-color: var(--color-bg-1);
   border: 1px solid var(--color-border-subtle);

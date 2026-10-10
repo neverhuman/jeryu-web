@@ -249,6 +249,11 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     expect(screen.getByRole('treeitem', { name: 'src' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('treeitem', { name: 'lib.rs' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('complementary', { name: 'Files' })).toBeVisible();
+    // The tree is LEFT of the content: it comes first, as on every forge. The
+    // widths are the stylesheet's, so the bounding boxes are proved in e2e.
+    const section = screen.getByRole('region', { name: 'File' });
+    expect(section.firstElementChild).toHaveClass('repo-browser__files');
+    expect(section.lastElementChild).toHaveClass('repo-browser__main');
 
     // Hide it: the choice is remembered, and the button becomes the filled action.
     fireEvent.click(screen.getByRole('button', { name: 'Files' }));

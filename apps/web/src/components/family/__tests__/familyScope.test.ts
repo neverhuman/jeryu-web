@@ -10,6 +10,7 @@ import {
   familyFromLocation,
   familyFromPath,
   sameFamily,
+  statesOwnFamily,
   withFamilyScope,
 } from '../familyScope';
 
@@ -97,6 +98,21 @@ describe('withFamilyScope', () => {
     expect(withFamilyScope('/releases?repo=acme%2Fweb', 'acme')).toBe(
       '/releases?repo=acme%2Fweb&family=acme'
     );
+  });
+
+  it('leaves one repository own address alone: it names its family', () => {
+    // `/repos/<host>/<owner>/<name>` IS a family member; the rail inside it
+    // sets the scope, so the address stays the one the reader can share.
+    expect(withFamilyScope('/repos/acme/acme/widget-web', 'globex')).toBe(
+      '/repos/acme/acme/widget-web'
+    );
+    expect(withFamilyScope('/repos/acme/acme/widget-web/pulls?tab=2', 'acme')).toBe(
+      '/repos/acme/acme/widget-web/pulls?tab=2'
+    );
+    expect(statesOwnFamily('/repos/acme/acme/widget-web')).toBe(true);
+    expect(statesOwnFamily('/repos/family/acme')).toBe(false);
+    expect(statesOwnFamily('/repos/new')).toBe(false);
+    expect(statesOwnFamily('/repos')).toBe(false);
   });
 
   it('takes the scope back off for every family', () => {

@@ -13,6 +13,14 @@ export {
   portalRank,
 } from './familyRollup';
 export type { FamilyRollup } from './familyRollup';
+export { RepoFamilyRail, FamilyRailControl, useFamilyRail } from './RepoFamilyRail';
+export type { FamilyRail } from './RepoFamilyRail';
+export {
+  familyMemberHref,
+  familyRailTier,
+  neighbourMember,
+  sortFamilyMembers,
+} from './repoFamilyRailModel';
 export { RepoHealthPill } from './RepoHealthPill';
 export type { RepoHealthPillProps } from './RepoHealthPill';
 export {

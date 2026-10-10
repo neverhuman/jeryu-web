@@ -72,3 +72,156 @@
     gap: var(--space-4);
   }
 }
+
+/* The family, left of the repository it is the context of ------------------
+ *
+ * At 1280px and up the rail is simply there. From 720px it is a toggle in the
+ * header, and the body goes back to one column when it is closed. Below 720px
+ * the header carries a select instead and the rail never shows.
+ */
+
+.repo-shell__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.repo-shell__body--with-rail {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.repo-shell__content {
+  min-width: 0;
+}
+
+.repo-family-rail {
+  position: sticky;
+  top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+  padding: var(--space-4) var(--space-3) var(--space-4) var(--space-7);
+}
+
+.repo-family-rail[hidden] {
+  display: none;
+}
+
+.repo-family-rail__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.repo-family-rail__name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-primary);
+}
+
+.repo-family-rail__rollup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.repo-family-rail__fact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+}
+
+.repo-family-rail__link {
+  color: var(--color-accent-primary);
+  text-decoration: none;
+}
+
+.repo-family-rail__link:hover {
+  text-decoration: underline;
+}
+
+.repo-family-rail__members {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.repo-family-rail__member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+}
+
+.repo-family-rail__member:hover,
+.repo-family-rail__member[aria-current='page'] {
+  color: var(--color-fg-primary);
+  background-color: var(--color-bg-2);
+  border-color: var(--color-border-subtle);
+}
+
+.repo-family-rail__member-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-family-rail__member-pulls {
+  flex: 0 0 auto;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.repo-family-rail__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-fg-muted);
+}
+
+.repo-family-rail__dot--healthy {
+  background-color: var(--color-accent-success);
+}
+
+.repo-family-rail__dot--degraded {
+  background-color: var(--color-accent-warning);
+}
+
+.repo-family-rail__dot--failing {
+  background-color: var(--color-accent-danger);
+}
+
+.repo-family-rail__select {
+  max-width: 180px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-1);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 720px) {
+  .repo-family-rail {
+    padding-left: var(--space-5);
+  }
+}

@@ -1,27 +1,26 @@
-// RepositoryFamilyPage.tsx — split-family browser.
+// RepositoryFamilyPage.tsx — the old family address, now a doorway.
+//
+// A family used to have a browser of its own here: a member rail, a tree and a
+// preview, with no pull requests, no tabs and no settings, and a ref and an
+// open file that lived in component state so no link could carry them. The
+// family is the context of the repository being read, not a second place to
+// read it from, so it is a rail inside the one repository shell
+// (components/repo/RepoFamilyRail) and this address lands on a member:
+//
+//   /repos/family/<key>            → the repository the family publishes from
+//   /repos/family/<key>?repo=<name> → that member's front page
+//
+// Old links keep working, which is the whole job of this page; it draws the
+// family's loading, empty, denied and failed reads, and nothing else.
 
-import { Boxes, FileText, GitMerge, Play, ShieldAlert } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-
-import { repoHref } from '../components/repo/RepoCard';
-import { repoUrl } from './repoBrowserModel';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Boxes } from 'lucide-react';
+import { useMemo } from 'react';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
-import type { RepositorySummary, TreeEntry } from '../api/types';
 import { ActionButton } from '../components/action/ActionButton';
-import {
-  BranchSelector,
-  CodeViewer,
-  FileTree,
-  ReadmePanel,
-} from '../components/browser';
-import {
-  aggregateFamily,
-  formatFamilyName,
-  portalRank,
-} from '../components/repo';
-import { RepoHealthPill } from '../components/repo/RepoHealthPill';
+import { formatFamilyName } from '../components/repo';
+import { sortFamilyMembers } from '../components/repo/repoFamilyRailModel';
 import { PageHeader, queryFreshness } from '../components/pageHeader';
 import {
   EmptyState,
@@ -29,28 +28,31 @@ import {
   LoadingState,
   PermissionDeniedState,
 } from '../components/state';
-import { useBlob } from '../hooks/useBlob';
-import { useRepoTree } from '../hooks/useRepoTree';
 import { useRepositories } from '../hooks/useRepositories';
-import { pullRoomFamilyHref } from './pullRoomModel';
 import { usePageTitle } from '../hooks/usePageTitle';
 
-import '../components/browser/browser.css';
-import '../components/repo/repo.css';
-import './RepositoryFamilyPage.css';
+import { repoUrl } from './repoBrowserModel';
+
 import './page.css';
 
 export function RepositoryFamilyPage(): JSX.Element {
   const params = useParams();
+  const [searchParams] = useSearchParams();
   const family = params.family ?? '';
+  const wanted = searchParams.get('repo');
   usePageTitle(family || 'Repositories');
   const list = useRepositories({ family, sort: 'name' });
 
   const repos = useMemo(
-    () => sortFamilyRepos(list.data?.repositories ?? []),
+    () => sortFamilyMembers(list.data?.repositories ?? []),
     [list.data?.repositories]
   );
-  const rollup = aggregateFamily(family, repos);
+
+  // The named member, else the one the family publishes from: `sortFamilyRepos`
+  // puts it first. A `?repo=` naming nothing in the family still opens the
+  // family rather than a 404 — the rail is right there to correct the aim.
+  const target = (wanted && repos.find((repo) => repo.id.name === wanted)) || repos[0];
+  if (target) return <Navigate to={repoUrl(target.id)} replace />;
 
   let body: JSX.Element;
   if (list.isPending) {
@@ -80,7 +82,7 @@ export function RepositoryFamilyPage(): JSX.Element {
         />
       );
     }
-  } else if (repos.length === 0) {
+  } else {
     body = (
       <EmptyState
         title="No repositories in this family"
@@ -93,180 +95,18 @@ export function RepositoryFamilyPage(): JSX.Element {
         }
       />
     );
-  } else {
-    body = <SplitFamilyBrowser repos={repos} />;
   }
 
   return (
-    <div
-      className="page page--wide split-family-page"
-      data-testid="repository-family-page"
-    >
+    <div className="page" data-testid="repository-family-page">
       <PageHeader
         title={formatFamilyName(family)}
         testId="repository-family-header"
-        className="split-family-page__header"
         parent="nav.repos"
         crumbs={[{ label: family }]}
         freshness={queryFreshness(list)}
-      >
-        {!list.isPending && !list.error && repos.length > 0 ? (
-          <div
-            className="repo-family-strip"
-            aria-label={`${formatFamilyName(family)} rollup`}
-          >
-            <span className="repo-family-strip__item">
-              {rollup.memberCount} repo{rollup.memberCount === 1 ? '' : 's'}
-            </span>
-            <RepoHealthPill health={rollup.health} />
-            <Link
-              to={pullRoomFamilyHref(family)}
-              className="repo-family-strip__item repo-family-strip__link"
-              title="See these open pull requests"
-              aria-label={`${rollup.openPullRequests} open pull requests, see them`}
-            >
-              <GitMerge size={12} aria-hidden="true" />{' '}
-              {rollup.openPullRequests} open
-            </Link>
-            <span
-              className="repo-family-strip__item"
-              title="Failing checks"
-              aria-label={`${rollup.failingChecks} failing checks`}
-            >
-              <ShieldAlert size={12} aria-hidden="true" />{' '}
-              {rollup.failingChecks} failing
-            </span>
-            <span
-              className="repo-family-strip__item"
-              title="Running jobs"
-              aria-label={`${rollup.runningJobs} running jobs`}
-            >
-              <Play size={12} aria-hidden="true" /> {rollup.runningJobs}{' '}
-              running
-            </span>
-          </div>
-        ) : null}
-      </PageHeader>
-
+      />
       {body}
     </div>
-  );
-}
-
-function SplitFamilyBrowser({
-  repos,
-}: {
-  repos: RepositorySummary[];
-}): JSX.Element {
-  // The selected repo lives in `?repo=<name>` so every repo in the family has
-  // its own shareable URL; no parameter selects the first repo.
-  const [searchParams] = useSearchParams();
-  const selectedName = searchParams.get('repo');
-  const selected = repos.find((repo) => repo.id.name === selectedName) ?? repos[0];
-  const [activeRef, setActiveRef] = useState(selected?.default_branch ?? '');
-  const [selectedFile, setSelectedFile] = useState<TreeEntry | null>(null);
-  const blob = useBlob(selected?.id.id ?? null, activeRef, selectedFile?.path ?? '');
-  // The file tree asks for the same root listing (one request, shared cache).
-  // A 404 there means the source is hosted elsewhere: the tree says so, and a
-  // second empty state ("No README found") beside it would only repeat the fact.
-  const rootTree = useRepoTree(selected?.id.id ?? null, activeRef || (selected?.default_branch ?? ''), '');
-  const noCodeHere = rootTree.error instanceof ApiError && rootTree.error.status === 404;
-
-  useEffect(() => {
-    setActiveRef(selected?.default_branch ?? '');
-    setSelectedFile(null);
-  }, [selected?.id.id, selected?.default_branch]);
-
-  if (!selected) {
-    return <EmptyState title="No repository selected" icon={Boxes} />;
-  }
-
-  return (
-    <section className="split-browser" aria-label="Split repository browser">
-      <aside className="split-browser__rail" aria-label="Split repositories">
-        {repos.map((repo) => (
-          <Link
-            key={repo.id.id}
-            to={`?repo=${encodeURIComponent(repo.id.name)}`}
-            className="split-browser__repo"
-            aria-current={repo.id.id === selected.id.id ? 'page' : undefined}
-          >
-            <span className="split-browser__repo-name">{repo.id.name}</span>
-            <span className="split-browser__repo-owner">{repo.id.owner}</span>
-          </Link>
-        ))}
-      </aside>
-
-      <div className="split-browser__main">
-        <div className="split-browser__toolbar">
-          <div className="split-browser__title">
-            <Link to={repoHref(selected)}>
-              <strong>{selected.id.owner}/{selected.id.name}</strong>
-            </Link>
-            {selected.description ? <span>{selected.description}</span> : null}
-          </div>
-          <BranchSelector
-            repoId={selected.id.id}
-            value={activeRef}
-            onSelect={(refName) => {
-              setActiveRef(refName);
-              setSelectedFile(null);
-            }}
-          />
-        </div>
-
-        <div className="split-browser__panes">
-          <div className="split-browser__tree" aria-label="Files">
-            <FileTree
-              repoId={selected.id.id}
-              refName={activeRef || selected.default_branch}
-              selectedPath={selectedFile?.path}
-              onSelectFile={setSelectedFile}
-            />
-          </div>
-          <div className="split-browser__preview" aria-label="Preview">
-            {selectedFile ? (
-              blob.isPending ? (
-                <LoadingState title={`Loading ${selectedFile.path}...`} variant="message" />
-              ) : blob.error ? (
-                <ErrorState title="Could not load file" error={blob.error} />
-              ) : blob.data ? (
-                <CodeViewer
-                  linkBase={repoUrl(
-                    selected.id,
-                    'blob',
-                    `${activeRef || selected.default_branch}/${selectedFile.path.replace(/[^/]*$/, '')}`
-                  )}
-                  path={selectedFile.path}
-                  text={blob.data.text}
-                  renderedHtml={blob.data.rendered_markdown?.html ?? null}
-                  mime={blob.data.mime}
-                  isBinary={blob.data.is_binary}
-                />
-              ) : (
-                <EmptyState title="File is empty" icon={FileText} />
-              )
-            ) : noCodeHere ? null : (
-              <ReadmePanel
-                linkBase={repoUrl(
-                  selected.id,
-                  'blob',
-                  `${activeRef || selected.default_branch}/`
-                )}
-                repoId={selected.id.id}
-                ref={activeRef || selected.default_branch}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** The family's portal first, then the rest by name. */
-function sortFamilyRepos(repos: RepositorySummary[]): RepositorySummary[] {
-  return [...repos].sort(
-    (a, b) => portalRank(a) - portalRank(b) || a.id.name.localeCompare(b.id.name)
   );
 }
