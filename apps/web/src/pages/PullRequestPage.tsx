@@ -387,6 +387,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
 
   const data = detail.data;
   const summary = data.summary;
+  const repoArchived = resolved.data.summary.archived === true;
 
   const badge = pullStateBadge(summary);
   const settled = isSettled(data);
@@ -562,6 +563,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
               viewerLogin,
               viewerRole: authUser?.role ?? null,
               isBusy,
+              readOnly: repoArchived,
               onApprove: handleApprove,
               onRequestChanges: handleRequestChanges,
               onMerge: handleMerge,
@@ -581,7 +583,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
                   ? mergeMutation.error.message
                   : null,
               closeError: setState.error ? setState.error.message : null,
-              queueOffer: (
+              queueOffer: repoArchived ? null : (
                 <QueueToMerge
                   repoId={repoId}
                   prNumber={prNumber}

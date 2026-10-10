@@ -13,6 +13,7 @@ import {
   mockBlob,
   mockBootstrap,
   mockReadme,
+  mockRefs,
   mockRepoAgentRuns,
   mockRepoAutomation,
   mockRepoList,
@@ -66,9 +67,13 @@ async function seed(page: Page, viewer: Parameters<typeof mockBootstrap>[1] = {}
       family: 'acme',
       open_pull_requests: 4,
       active_agents: 1,
+      jankurai_score: 91,
+      jankurai_decision: 'pass',
+      jankurai_scored_at: '2026-10-01T10:00:00Z',
     },
   ]);
   await mockTree(page, [{ path: 'README.md', kind: 'file' }]);
+  await mockRefs(page);
   await mockReadme(page, { html: '<h1>widget-api</h1>' });
   await mockBlob(page, { path: 'README.md', text: '# widget-api' });
   await mockRepoAutomation(page, AUTOMATION);
@@ -124,6 +129,15 @@ test('every repository page carries the same header and tab bar @action:repo.she
 
     // The same header, on all six: the repository, its visibility, its family.
     await expect(page.getByTestId('repo-shell-title')).toHaveText('widget-api');
+    await expect(page.getByTestId('repo-header-family')).toHaveAttribute(
+      'href',
+      '/repos/family/acme'
+    );
+    await expect(page.getByTestId('repo-header-default-branch')).toHaveText('default branch main');
+    await expect(page.getByTestId('repo-overview-score')).toHaveAttribute(
+      'href',
+      /\/quality-gate\/heads\/acme\/widget-api\//
+    );
     const trail = page.getByTestId('repo-shell-header').getByRole('navigation', { name: 'Breadcrumb' });
     await expect(trail).toContainText('Repositories');
     await expect(trail).toContainText('acme');

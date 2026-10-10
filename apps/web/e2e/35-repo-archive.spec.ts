@@ -15,6 +15,7 @@ import {
   mockReadme,
   mockRefs,
   mockRepoList,
+  mockTree,
 } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
@@ -99,6 +100,33 @@ test.describe('Repository archive', () => {
     await expect(page.locator('.repo-archived-badge').first()).toHaveText(
       'Archived'
     );
+  });
+
+  test('initech/old-thing shows the read-only banner linked to Danger zone @action:repo.unarchive', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockRepoList(page, [
+      {
+        id: { host: 'initech', owner: 'initech', name: 'old-thing' },
+        default_branch: 'main',
+        description: 'Retained for read-only reference.',
+        visibility: 'private',
+        family: 'initech',
+        archived: true,
+      },
+    ]);
+    await mockRefs(page);
+    await mockTree(page, [{ path: 'README.md', kind: 'file' }]);
+    await mockReadme(page, { html: '<h1>old-thing</h1>' });
+
+    await page.goto('/repos/initech/initech/old-thing');
+    const notice = page.getByTestId('repo-archived-notice');
+    await expect(notice).toContainText('Archived: read-only.', { timeout: 10_000 });
+    await expect(
+      notice.getByRole('link', { name: 'Unarchive in Settings › Danger zone' })
+    ).toHaveAttribute('href', '/repos/initech/initech/old-thing/settings/danger-zone');
+    await expect(page.getByRole('button', { name: 'Switch branches/tags: main' })).toBeDisabled();
   });
 
   test('a non-admin is refused with 403 inside the dialog @action:repo.archive_forbidden', async ({

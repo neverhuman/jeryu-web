@@ -33,6 +33,7 @@ let authUser: { role: string } | null = { role: 'user' };
 let failingChecks = 0;
 let repoFamily = 'jeryu-split';
 let repoOwner = 'neverhuman';
+let repoArchived = false;
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ isPending: false, user: authUser }),
 }));
@@ -48,6 +49,7 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     failingChecks = 0;
     repoFamily = 'jeryu-split';
     repoOwner = 'neverhuman';
+    repoArchived = false;
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
     vi.stubGlobal(
@@ -172,7 +174,8 @@ describe('RepositoryBrowserPage (one repository page)', () => {
       'href',
       `${FRONT}/pulls`
     );
-    expect(screen.getByRole('link', { name: 'family jeryu-split' })).toHaveAttribute(
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(trail).getByRole('link', { name: 'family jeryu-split' })).toHaveAttribute(
       'href',
       '/repos/family/jeryu-split'
     );
@@ -389,9 +392,11 @@ describe('RepositoryBrowserPage (one repository page)', () => {
   it('links the score to the quality gate and opens the check that set the chip', async () => {
     failingChecks = 1;
     renderAt(FRONT);
-    expect(await screen.findByTestId('repo-overview-score')).toHaveAttribute(
-      'href',
-      '/quality-gate'
+    await waitFor(() =>
+      expect(screen.getByTestId('repo-overview-score')).toHaveAttribute(
+        'href',
+        '/quality-gate/heads/neverhuman/jeryu/abc123'
+      )
     );
     const chip = await screen.findByTestId('repo-health-chip');
     expect(chip).toHaveTextContent('warning · 1 failing check');
@@ -407,6 +412,16 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     renderAt(FRONT);
     expect(await screen.findByLabelText('Health: healthy')).toBeInTheDocument();
     expect(screen.queryByTestId('repo-health-chip')).toBeNull();
+  });
+
+  it('disables branch switching when the repository is archived', async () => {
+    repoArchived = true;
+    renderAt(FRONT);
+    const branch = await screen.findByRole('button', { name: 'Switch branches/tags: main' });
+    expect(branch).toBeDisabled();
+    expect(await screen.findByTestId('repo-archived-notice')).toHaveTextContent(
+      'Archived: read-only.'
+    );
   });
 
   it('says nothing about commits when the repository has no git data here', async () => {
@@ -457,6 +472,7 @@ function repoSummary(): Record<string, unknown> {
     visibility: 'public',
     default_branch: 'main',
     family: repoFamily,
+    archived: repoArchived,
     repo_role: 'public_portal',
     topics: [],
     language: null,

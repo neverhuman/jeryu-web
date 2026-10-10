@@ -20,6 +20,7 @@ export interface BranchSelectorProps {
   onSelect: (refName: string) => void;
   /** Defaults to "Switch branches/tags". */
   ariaLabel?: string;
+  disabled?: boolean;
 }
 
 export function BranchSelector({
@@ -27,6 +28,7 @@ export function BranchSelector({
   value,
   onSelect,
   ariaLabel = 'Switch branches/tags',
+  disabled = false,
 }: BranchSelectorProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [filterText, setFilterText] = useState('');
@@ -64,7 +66,10 @@ export function BranchSelector({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`${ariaLabel}: ${value}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!disabled) setOpen((v) => !v);
+        }}
+        disabled={disabled}
       >
         <span className="branch-selector__trigger-label">
           <GitBranch size={14} aria-hidden="true" />
@@ -72,7 +77,7 @@ export function BranchSelector({
         </span>
         <ChevronDown size={14} aria-hidden="true" />
       </button>
-      {open ? (
+      {open && !disabled ? (
         <Command
           className="branch-selector__panel"
           label={ariaLabel}

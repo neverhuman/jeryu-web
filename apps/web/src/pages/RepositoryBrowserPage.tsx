@@ -211,7 +211,12 @@ export function RepositoryBrowserPage({
           />
         )}
         <div className="repo-browser__line">
-          <BranchSelector repoId={repoId} value={activeRef} onSelect={selectRef} />
+          <BranchSelector
+            repoId={repoId}
+            value={activeRef}
+            onSelect={selectRef}
+            disabled={summary.archived === true}
+          />
           <Link to={`${front}/pulls`} className="repo-browser__fact">
             {openPullsLabel(summary.open_pull_requests)}
           </Link>

@@ -73,8 +73,11 @@ test('the repository page summarises commits and explains its header chip @actio
   await expect(summary).toContainText('Say what the repository page never said');
   await expect(summary).toContainText('Ada Lovelace');
 
-  // The score reaches the gate that produced it.
-  await expect(page.getByTestId('repo-overview-score')).toHaveAttribute('href', '/quality-gate');
+  // The score reaches the exact head that produced it.
+  await expect(page.getByTestId('repo-overview-score')).toHaveAttribute(
+    'href',
+    /\/quality-gate\/heads\/neverhuman\/jeryu\//
+  );
 
   // The header chip names the check that set it, and opens it in place.
   const chip = page.getByTestId('repo-health-chip');

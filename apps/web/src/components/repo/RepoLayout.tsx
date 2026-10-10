@@ -34,10 +34,12 @@ import { PermissionDeniedState } from '../state';
 import { useBootstrap } from '../../hooks/useBootstrap';
 import { useAuth } from '../../hooks/useAuth';
 import { useRepoAutomation } from '../../hooks/useRepoAutomation';
+import { useRefs } from '../../hooks/useRefs';
 import { useResolveRepo } from '../../hooks/useResolveRepo';
 import { QUALITY_GATE_PATH } from '../../pages/qualityGate/qualityGateModel';
 import { healthOpensChecks, repoFrontPath, repoShellCrumbs } from '../../pages/repoBrowserModel';
 import { firstMirror, mirrorTone } from '../../pages/repositoryMirrorModel';
+import { ClonePopover } from '../../pages/repositoryOverviewParts';
 import {
   RepoHealthChecks,
   RepoHealthChip,
@@ -50,6 +52,7 @@ import {
   type RepoTabKey,
 } from '../../pages/repoShellModel';
 
+import '../browser/browser.css';
 import './repoShell.css';
 
 export interface RepoLayoutProps {
@@ -79,7 +82,17 @@ export function RepoLayout({
 
   const base = repoFrontPath(provider, fullName);
   const automation = useRepoAutomation(repoId);
+  const refs = useRefs(repoId);
   const mirror = firstMirror(automation.data?.mirrors);
+  const defaultBranch = summary?.default_branch ?? '';
+  const defaultBranchSha =
+    refs.data?.find((ref) => ref.kind === 'branch' && ref.name === defaultBranch)?.sha ?? null;
+  const scorePath =
+    summary && defaultBranchSha
+      ? `/quality-gate/heads/${encodeURIComponent(summary.id.owner)}/${encodeURIComponent(
+          summary.id.name
+        )}/${encodeURIComponent(defaultBranchSha)}`
+      : QUALITY_GATE_PATH;
 
   return (
     <div className="repo-shell" data-testid="repo-shell">
@@ -95,7 +108,17 @@ export function RepoLayout({
         crumbs={repoShellCrumbs(provider, fullName, summary)}
         freshness={queryFreshness(resolved)}
         subtitle={summary?.description || undefined}
-        actions={rail ? <FamilyRailControl rail={rail} /> : null}
+        actions={
+          summary ? (
+            <>
+              {rail ? <FamilyRailControl rail={rail} /> : null}
+              <ClonePopover
+                httpUrl={summary.clone_http_url}
+                sshUrl={summary.clone_ssh_url}
+              />
+            </>
+          ) : null
+        }
         badges={
           summary ? (
             <>
@@ -110,7 +133,7 @@ export function RepoLayout({
               )}
               {/* The score links to the quality gate, as it does in the table. */}
               <Link
-                to={QUALITY_GATE_PATH}
+                to={scorePath}
                 className="repo-overview__score-link"
                 title="See what produced this score"
                 data-testid="repo-overview-score"
@@ -124,7 +147,15 @@ export function RepoLayout({
               <RepoRoleBadge role={summary.repo_role} />
               <RepoArchivedBadge archived={summary.archived} />
               <MirrorBadge href={`${base}/settings/mirror#mirror`} tone={mirrorTone(mirror)} />
-              {summary.family ? null : (
+              {summary.family ? (
+                <Link
+                  to={`/repos/family/${encodeURIComponent(summary.family)}`}
+                  className="page__pill page__pill--muted repo-shell__family-chip"
+                  data-testid="repo-header-family"
+                >
+                  family {summary.family}
+                </Link>
+              ) : (
                 <span
                   className="page__pill page__pill--muted"
                   data-testid="repo-no-family"
@@ -133,6 +164,9 @@ export function RepoLayout({
                   no family
                 </span>
               )}
+              <span className="page__pill" data-testid="repo-header-default-branch">
+                default branch {summary.default_branch}
+              </span>
               <span className="page__pill">{summary.visibility}</span>
               {summary.language ? (
                 <span className="page__pill">{summary.language}</span>
@@ -144,6 +178,7 @@ export function RepoLayout({
         {summary && checksOpen && healthOpensChecks(summary) ? (
           <RepoHealthChecks repo={summary} />
         ) : null}
+        {summary?.archived ? <RepoArchivedNotice base={base} /> : null}
         <RepoTabs
           base={base}
           current={tab}
@@ -172,6 +207,17 @@ export function RepoLayout({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function RepoArchivedNotice({ base }: { base: string }): JSX.Element {
+  return (
+    <div className="repo-archived-notice" role="status" data-testid="repo-archived-notice">
+      Archived: read-only.{' '}
+      <Link to={`${base}/settings/danger-zone`}>
+        Unarchive in Settings › Danger zone
+      </Link>
     </div>
   );
 }

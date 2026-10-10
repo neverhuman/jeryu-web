@@ -13,6 +13,7 @@ let authUser: { role: string } | null = { role: 'admin' };
 let permissions: string[] = ['repo.admin'];
 let warnings: string[] = [];
 let mirrors: Record<string, unknown>[] = [];
+let archived = false;
 
 vi.mock('../../../hooks/useAuth', () => ({
   useAuth: () => ({ isPending: false, user: authUser }),
@@ -24,6 +25,7 @@ describe('RepoLayout (the repository shell)', () => {
     permissions = ['repo.admin'];
     warnings = [];
     mirrors = [];
+    archived = false;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = new URL(String(input), 'http://localhost');
       switch (url.pathname) {
@@ -58,6 +60,11 @@ describe('RepoLayout (the repository shell)', () => {
             grantsVisible: false,
             warnings,
           });
+        case '/api/v1/repos/repo-1/refs':
+          return json([
+            { name: 'main', sha: 'abc1234567890abc1234567890abc1234567890a', kind: 'branch', protected: true },
+            { name: 'release', sha: 'def1234567890abc1234567890abc1234567890a', kind: 'branch', protected: false },
+          ]);
         default:
           return json({ code: 'not_found', message: url.pathname }, 404);
       }
@@ -90,6 +97,41 @@ describe('RepoLayout (the repository shell)', () => {
     expect(screen.getByTestId('repo-tab-agents')).toHaveAttribute('aria-current', 'page');
     expect(screen.getByTestId('repo-tab-code')).not.toHaveAttribute('aria-current');
     expect(screen.getByText('the page')).toBeInTheDocument();
+  });
+
+  it('shows repository facts, clone URLs, and a score link for the default branch head', async () => {
+    renderAt('code');
+    expect(await screen.findByTestId('repo-header-family')).toHaveAttribute(
+      'href',
+      '/repos/family/acme'
+    );
+    expect(screen.getByTestId('repo-header-default-branch')).toHaveTextContent(
+      'default branch main'
+    );
+    expect(screen.getByText('private')).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('repo-overview-score')).toHaveAttribute(
+        'href',
+        '/quality-gate/heads/acme/widget-api/abc1234567890abc1234567890abc1234567890a'
+      )
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clone' }));
+    expect(screen.getByLabelText('HTTPS clone URL')).toHaveValue(
+      'https://example.com/acme/widget-api.git'
+    );
+  });
+
+  it('shows a full-width archived notice with the unarchive destination', async () => {
+    archived = true;
+    renderAt('code');
+    const notice = await screen.findByTestId('repo-archived-notice');
+    expect(notice).toHaveTextContent('Archived: read-only.');
+    expect(notice.getElementsByTagName('a')[0]).toHaveAttribute(
+      'href',
+      `${BASE}/settings/danger-zone`
+    );
   });
 
   it('counts the open pull requests and the agents at work on the tabs', async () => {
@@ -180,7 +222,7 @@ function summary(): Record<string, unknown> {
     visibility: 'private',
     default_branch: 'main',
     family: 'acme',
-    archived: false,
+    archived,
     repo_role: null,
     topics: [],
     language: 'Rust',
@@ -191,8 +233,8 @@ function summary(): Record<string, unknown> {
     active_agents: 2,
     blocked_agents: 0,
     updated_at: '2026-10-01T00:00:00Z',
-    clone_http_url: null,
-    clone_ssh_url: null,
+    clone_http_url: 'https://example.com/acme/widget-api.git',
+    clone_ssh_url: 'git@example.com:acme/widget-api.git',
     available_actions: [],
   };
 }

@@ -116,6 +116,8 @@ export interface MergeBoxProps {
   queueOffer?: ReactNode;
   /** When true, mutations are disabled (in-flight). */
   isBusy?: boolean;
+  /** Repository is read-only, so PR-changing actions stay visible but disabled. */
+  readOnly?: boolean;
   className?: string;
 }
 
@@ -207,6 +209,7 @@ export function MergeBox({
   closeError = null,
   queueOffer = null,
   isBusy = false,
+  readOnly = false,
   className,
 }: MergeBoxProps): JSX.Element {
   const review = detail.summary.review;
@@ -231,10 +234,12 @@ export function MergeBox({
   const draftNote = draftReviewNote(detail);
   const isDraft = detail.summary.draft;
   const reviewState = review.user_review_state ?? null;
+  const busyOrReadOnly = isBusy || readOnly;
   // The draft control is offered to whoever the forge would let use it: the
   // author, and an admin on their behalf when the author is away.
   const draftControl =
     onSetDraft &&
+    !readOnly &&
     canChangeDraft(
       detail.summary,
       viewerLogin ? { login: viewerLogin, role: viewerRole ?? 'user' } : null
@@ -278,7 +283,7 @@ export function MergeBox({
         variant="ghost"
         icon={<RotateCcw aria-hidden="true" size={12} />}
         onClick={() => handleSetState('open')}
-        disabled={isBusy}
+        disabled={busyOrReadOnly}
         actionId="pull.reopen"
         data-testid="pr-reopen"
       >
@@ -305,7 +310,7 @@ export function MergeBox({
               setClosing(false);
               setCloseComment('');
             }}
-            disabled={isBusy}
+            disabled={busyOrReadOnly}
           >
             Keep it open
           </ActionButton>
@@ -313,7 +318,7 @@ export function MergeBox({
             variant="human"
             icon={<XCircle aria-hidden="true" size={12} />}
             onClick={() => handleSetState('closed')}
-            disabled={isBusy}
+            disabled={busyOrReadOnly}
             actionId="pull.close"
             data-testid="pr-close-confirm"
           >
@@ -326,7 +331,7 @@ export function MergeBox({
         variant="ghost"
         icon={<XCircle aria-hidden="true" size={12} />}
         onClick={() => setClosing(true)}
-        disabled={isBusy}
+        disabled={busyOrReadOnly}
         data-testid="pr-close"
       >
         Close pull request
@@ -385,7 +390,7 @@ export function MergeBox({
                   variant="primary"
                   icon={<Send aria-hidden="true" size={12} />}
                   onClick={() => void onSetDraft(false)}
-                  disabled={isBusy}
+                  disabled={busyOrReadOnly}
                   actionId="pull.ready_for_review"
                   className="merge-box__row-action"
                   data-testid="pr-ready-for-review"
@@ -417,8 +422,8 @@ export function MergeBox({
           variant={primary === 'merge' ? 'primary' : 'default'}
           icon={<GitMerge aria-hidden="true" size={12} />}
           onClick={() => handleMerge('merge')}
-          disabled={isBusy || !mergeable}
-          aria-disabled={isBusy || !mergeable ? true : undefined}
+          disabled={busyOrReadOnly || !mergeable}
+          aria-disabled={busyOrReadOnly || !mergeable ? true : undefined}
           actionId="pull.merge"
         >
           Merge
@@ -428,7 +433,7 @@ export function MergeBox({
             variant={cta.emphasized ? 'primary' : 'default'}
             icon={<Check aria-hidden="true" size={12} />}
             onClick={() => void onApprove(headSha)}
-            disabled={isBusy || !approve.enabled}
+            disabled={busyOrReadOnly || !approve.enabled}
             actionId="pull.approve"
           >
             {cta.label}
@@ -438,7 +443,7 @@ export function MergeBox({
           variant="default"
           icon={<XCircle aria-hidden="true" size={12} />}
           onClick={() => setRequestChangesOpen((open) => !open)}
-          disabled={isBusy || !onRequestChanges}
+          disabled={busyOrReadOnly || !onRequestChanges}
           actionId="pull.request_changes"
         >
           Request changes
@@ -448,7 +453,7 @@ export function MergeBox({
             variant="ghost"
             icon={<FileEdit aria-hidden="true" size={12} />}
             onClick={() => void onSetDraft(true)}
-            disabled={isBusy}
+            disabled={busyOrReadOnly}
             actionId="pull.convert_to_draft"
             data-testid="pr-convert-to-draft"
           >
@@ -486,7 +491,7 @@ export function MergeBox({
             type="button"
             className="merge-box__method"
             onClick={() => handleMerge('squash')}
-            disabled={isBusy}
+            disabled={busyOrReadOnly}
           >
             Squash
           </button>
@@ -494,7 +499,7 @@ export function MergeBox({
             type="button"
             className="merge-box__method"
             onClick={() => handleMerge('rebase')}
-            disabled={isBusy}
+            disabled={busyOrReadOnly}
           >
             Rebase
           </button>
@@ -553,14 +558,14 @@ export function MergeBox({
             <ActionButton
               variant="ghost"
               onClick={() => setRequestChangesOpen(false)}
-              disabled={isBusy}
+              disabled={busyOrReadOnly}
             >
               Cancel
             </ActionButton>
             <ActionButton
               variant="primary"
               onClick={handleRequestChangesSubmit}
-              disabled={isBusy || requestChangesBody.trim().length === 0}
+              disabled={busyOrReadOnly || requestChangesBody.trim().length === 0}
             >
               Submit
             </ActionButton>

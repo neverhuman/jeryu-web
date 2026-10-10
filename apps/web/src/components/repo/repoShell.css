@@ -94,6 +94,34 @@
   border-color: var(--color-accent-danger);
 }
 
+.repo-shell__family-chip {
+  text-decoration: none;
+}
+
+.repo-shell__family-chip:hover {
+  text-decoration: underline;
+}
+
+.repo-archived-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-accent-warning);
+  border-radius: var(--radius-md);
+  background-color: var(--color-accent-warning-bg);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.repo-archived-notice a {
+  color: var(--color-accent-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
 @media (max-width: 720px) {
   .repo-shell__header {
     padding: var(--space-4) var(--space-5) 0;
