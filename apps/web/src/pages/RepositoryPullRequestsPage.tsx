@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { fetchPullList } from '../api/pullLists';
+import type { PullRequestSummary } from '../api/types';
 import { ErrorState, LoadingState } from '../components/state';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import {
@@ -16,6 +17,7 @@ import { PULL_ORDER_PARAM } from './pullBaseGraphModel';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
 import { fromPullRequestSummary, groupPullRequests } from './pullRoomModel';
+import { repoRefOf, repoUrl } from './repoBrowserModel';
 
 import './page.css';
 import './PullRoomPage.css';
@@ -33,12 +35,18 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   const [search, setSearch] = useSearchParams();
   const view = search.get('view') === 'board' ? 'board' : 'timeline';
   const drafts = parseDraftFilter(search.get('drafts'));
-  const query = (next: { view?: 'timeline' | 'board'; drafts?: PullDraftFilter }) => {
+  const state = parsePullState(search.get('state'));
+  const q = search.get('q') ?? '';
+  const query = (next: { view?: 'timeline' | 'board'; drafts?: PullDraftFilter; state?: PullState; q?: string }) => {
     const out: Record<string, string> = {};
     const wantView = next.view ?? view;
     const wantDrafts = next.drafts ?? drafts;
     if (wantView === 'board') out.view = wantView;
     if (wantDrafts !== 'all') out.drafts = wantDrafts;
+    const wantState = next.state ?? state;
+    const wantQ = next.q ?? q;
+    if (wantState !== 'all') out.state = wantState;
+    if (wantQ) out.q = wantQ;
     // The timeline's own order survives a view or filter switch.
     const order = search.get(PULL_ORDER_PARAM);
     if (order) out[PULL_ORDER_PARAM] = order;
@@ -48,6 +56,8 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
     setSearch(query({ view: next }), { replace: true });
   const setDrafts = (next: PullDraftFilter) =>
     setSearch(query({ drafts: next }), { replace: true });
+  const setState = (next: PullState) => setSearch(query({ state: next }), { replace: true });
+  const setQ = (next: string) => setSearch(query({ q: next }), { replace: true });
   const repoId = resolved.data?.id ?? null;
   const pulls = useQuery({
     queryKey: ['repo-pulls', repoId],
@@ -60,7 +70,10 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   // default view narrows nothing, so a pull request into `rc/auto` is as
   // visible as one into the default branch. Only the draft filter narrows it.
   const all = pulls.data?.items ?? [];
-  const shown = filterByDraft(all, drafts);
+  const shown = filterByDraft(all, drafts).filter((pr) =>
+    (state === 'all' || pr.state === state) &&
+    (!q || `${pr.title} ${pr.author} ${pr.number}`.toLowerCase().includes(q.toLowerCase()))
+  );
   const openDrafts = draftCount(all);
   const lanes = groupPullRequests(shown.map((item) => fromPullRequestSummary(item)));
 
@@ -112,6 +125,17 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
             </button>
           ))}
         </div>
+        <div className="pull-room__filters" role="group" aria-label="Pull request state">
+          {PULL_STATES.map((filter) => (
+            <button key={filter} type="button" aria-pressed={state === filter}
+              data-testid={`pull-state-${filter}`} onClick={() => setState(filter)}>
+              {filter === 'all' ? 'All states' : filter[0].toUpperCase() + filter.slice(1)}
+            </button>
+          ))}
+        </div>
+        <label>Search pull requests
+          <input aria-label="Search pull requests" value={q} onChange={(event) => setQ(event.target.value)} />
+        </label>
         <div className="pull-room__views" role="group" aria-label="View">
           <button type="button" aria-pressed={view === 'timeline'} onClick={() => setView('timeline')}>
             Timeline
@@ -131,12 +155,49 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
           testId="repo-pulls-error"
         />
       ) : view === 'timeline' ? (
-        <PullRequestTimeline pulls={shown} emptyMessage={emptyMessage(drafts)} />
+        <>
+          <PullRequestRows pulls={shown} host={provider} fullName={fullName} />
+          <PullRequestTimeline pulls={shown} emptyMessage={shown.length ? '' : emptyMessage(drafts)} />
+        </>
       ) : (
         <PullRequestListView lanes={lanes} emptyMessage={emptyMessage(drafts)} />
       )}
     </div>
   );
+}
+
+type PullState = 'all' | 'open' | 'merged' | 'closed';
+const PULL_STATES: readonly PullState[] = ['all', 'open', 'merged', 'closed'];
+function parsePullState(value: string | null): PullState {
+  return PULL_STATES.includes(value as PullState) ? value as PullState : 'all';
+}
+
+type EnrichedPull = PullRequestSummary & {
+  review: PullRequestSummary['review'] & { reviewers?: Array<{ login: string; verdict: string; at?: string }> };
+  required_contexts?: Array<{ name: string; state: string; details?: string | null }>;
+};
+
+function PullRequestRows({ pulls, host, fullName }: { pulls: PullRequestSummary[]; host: string; fullName: string }): JSX.Element {
+  const ref = repoRefOf(host, fullName);
+  if (!pulls.length) return <></>;
+  return <div className="pull-list" data-testid="repo-pr-rows">
+    {pulls.map((summary) => {
+      const pr = summary as EnrichedPull;
+      const conversation = repoUrl(ref, 'pulls', `${pr.number}`);
+      const checksUrl = `${conversation}/checks`;
+      const reviewers = pr.review.reviewers ?? [];
+      const contexts = pr.required_contexts ?? [];
+      return <article key={pr.number} className="pull-list__row" data-testid={`repo-pr-${pr.number}`}>
+        <strong>#{pr.number}</strong>
+        <span>REVIEW </span><Link to={conversation}>{reviewers.length
+          ? reviewers.map((reviewer) => `${reviewer.login}: ${reviewer.verdict}`).join(', ')
+          : `${pr.review.approvals}/${pr.review.required_approvals} approvals`}</Link>
+        <span>CHECKS </span><Link to={checksUrl}>{contexts.length
+          ? contexts.map((context) => `${context.name}: ${context.state}${context.details ? ` (${context.details})` : ''}`).join(', ')
+          : `${pr.checks.failing ? 'failing' : pr.checks.pending ? 'pending' : 'passing'}`}</Link>
+      </article>;
+    })}
+  </div>;
 }
 
 /** The empty line says which filter is empty, not just "nothing here". */

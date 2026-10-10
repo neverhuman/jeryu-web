@@ -159,6 +159,38 @@ describe('RepositoryPullRequestsPage', () => {
 
     expect(await screen.findByText('No pull requests')).toBeInTheDocument();
   });
+
+  it('shows reviewer and required context detail and filters merged PRs from the URL', async () => {
+    mockFetch([
+      ['/api/v1/repos?host=forge.example', {
+        generated_at: '2026-06-05T00:00:00Z', total: 1,
+        repositories: [repoSummary({ id: { id: 'acme-widget', host: 'forge.example', owner: 'acme', name: 'widget' } })],
+        facets: { hosts: ['forge.example'], owners: ['acme'], families: [], languages: [] },
+      }],
+      ['/api/v1/repos?host=forge.example&archived=1', {
+        generated_at: '2026-06-05T00:00:00Z', total: 1,
+        repositories: [repoSummary({ id: { id: 'acme-widget', host: 'forge.example', owner: 'acme', name: 'widget' } })],
+        facets: { hosts: ['forge.example'], owners: ['acme'], families: [], languages: [] },
+      }],
+      ['/api/v1/repos/acme-widget/pulls?limit=500&page=1', {
+        total: 2, items: [
+          pullSummary({ number: 31, title: 'Widget checks', repo: { id: 'acme-widget', host: 'forge.example', owner: 'acme', name: 'widget' }, review: { required_approvals: 1, approvals: 0, changes_requested: 0, unresolved_threads: 0, user_review_state: null, reviewers: [{ login: 'review-bot', verdict: 'pending' }] }, checks: { total: 1, passing: 0, failing: 1, pending: 0, skipped: 0 }, required_contexts: [{ name: 'widget-api/required', state: 'failing', details: 'test suite failed' }] }),
+          pullSummary({ number: 32, title: 'Merged widget', state: 'merged', repo: { id: 'acme-widget', host: 'forge.example', owner: 'acme', name: 'widget' } }),
+        ],
+      }],
+    ]);
+
+    renderPage('/repos/forge.example/acme%2Fwidget/pulls?state=merged');
+    expect(await screen.findByText('Merged widget')).toBeInTheDocument();
+    expect(screen.queryByText('Widget checks')).not.toBeInTheDocument();
+
+    renderPage('/repos/forge.example/acme%2Fwidget/pulls?q=Widget');
+    const row = await screen.findByTestId('repo-pr-31');
+    expect(row).toHaveTextContent('review-bot: pending');
+    expect(row).toHaveTextContent('widget-api/required: failing (test suite failed)');
+    expect(row.querySelector('a[href$="/pulls/31"]')).toBeTruthy();
+    expect(row.querySelector('a[href$="/pulls/31/checks"]')).toBeTruthy();
+  });
 });
 
 function renderPage(route: string): void {
@@ -199,7 +231,7 @@ function mockFetch(routes: Array<[string, unknown]>): void {
   });
 }
 
-function repoSummary(): Record<string, unknown> {
+function repoSummary(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: { id: 'repo-1', host: 'jeryu', owner: 'alice', name: 'jeryu' },
     entity: { kind: 'repository', id: 'repo-1' },
@@ -220,6 +252,7 @@ function repoSummary(): Record<string, unknown> {
     clone_http_url: null,
     clone_ssh_url: null,
     available_actions: [],
+    ...over,
   };
 }
 
