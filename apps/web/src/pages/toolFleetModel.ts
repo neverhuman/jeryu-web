@@ -4,6 +4,7 @@
 // testable without rendering.
 
 import type { ToolFleetEntry } from '../api/types';
+import type { ScopedRows } from '../components/family/repoFamilyScope';
 import { repoRefOf, repoUrl } from './repoBrowserModel';
 
 export type AdoptionStatus = 'complete' | 'partial' | 'none';
@@ -124,4 +125,30 @@ export function projectToolFleet(
 /** A `owner/name` repository's page on the forge the caller resolved. */
 export function repoHref(host: string, fullName: string): string {
   return repoUrl(repoRefOf(host, fullName));
+}
+
+/**
+ * Tool adoption as one family sees it: each entry's two repo lists cut to the
+ * repos in scope, and an entry left with none of either dropped and counted —
+ * a tool no repository of this family touches is not this family's adoption
+ * story. `keeps` is the scope's own rule (see components/family/repoFamilyScope).
+ */
+export function scopeToolAdoption(
+  entries: readonly ToolFleetEntry[],
+  keeps: (repo: string) => boolean,
+  active: boolean
+): ScopedRows<ToolFleetEntry> {
+  if (!active) return { rows: [...entries], elsewhere: 0 };
+  const rows: ToolFleetEntry[] = [];
+  let elsewhere = 0;
+  for (const entry of entries) {
+    const adopting_repos = entry.adopting_repos.filter(keeps);
+    const applicable_missing_repos = entry.applicable_missing_repos.filter(keeps);
+    if (adopting_repos.length === 0 && applicable_missing_repos.length === 0) {
+      elsewhere += 1;
+      continue;
+    }
+    rows.push({ ...entry, adopting_repos, applicable_missing_repos });
+  }
+  return { rows, elsewhere };
 }

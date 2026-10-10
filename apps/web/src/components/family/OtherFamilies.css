@@ -1,0 +1,17 @@
+/* "+N in other families": a note under the thing it is about, in the muted
+   voice of the page's own asides, never in a warning colour. */
+.other-families {
+  margin: var(--space-1) 0 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.other-families__all {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-accent-primary);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}

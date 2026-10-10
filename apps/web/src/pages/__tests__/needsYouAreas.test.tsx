@@ -249,7 +249,7 @@ describe('every needs-you count', () => {
     renderAt('/needs-you', '/needs-you', <LeftNav />);
     const badge = await screen.findByTestId('needs-you-badge');
     expect(badge).toHaveTextContent('99+');
-    expect(badge).toHaveAttribute('aria-label', '99+ items need you');
+    expect(badge).toHaveAttribute('aria-label', '99+ items need you.');
 
     vi.restoreAllMocks();
     mockAttention(hundred);

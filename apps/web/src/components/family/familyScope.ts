@@ -120,3 +120,11 @@ export function withFamilyScope(href: string, family: string): string {
   const query = params.toString();
   return `${nextPath}${query ? `?${query}` : ''}${hash ? `#${hash}` : ''}`;
 }
+
+/**
+ * `href` carrying `family` unless it already names a family of its own: a link
+ * to another family's item keeps that family, anything else keeps the scope.
+ */
+export function keepFamilyScope(href: string, family: string): string {
+  return familyFromHref(href) === null ? withFamilyScope(href, family) : href;
+}

@@ -4,12 +4,20 @@
 // The middle step of the drill-down: Quality gate → rule → a scored head. Each
 // row is a head the rule raised a finding on, newest first, and leads to that
 // head's score detail.
+//
+// Each head names its repository, so the family scope narrows the rows here:
+// `GET /quality-gate/rules/:rule` takes no family, and the repo→family map the
+// shell already has answers the question. Heads in other families are counted
+// under the table rather than dropped silently.
 
 import { ShieldCheck } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { pillClass, scoreTone } from '../../components/tone/tone';
-import { EmptyState, LoadingState } from '../../components/state';
+import { LoadingState } from '../../components/state';
+import { OtherFamilies } from '../../components/family/OtherFamilies';
+import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
+import { useRepoFamilyScope } from '../../components/family/useRepoFamilyScope';
 import { useQualityGateRule } from '../../hooks/useQualityGate';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { QualityGateQueryState } from './QualityGateQueryState';
@@ -24,6 +32,8 @@ export function QualityGateRulePage(): JSX.Element {
   usePageTitle(rule ? `${rule} · Quality gate` : 'Quality gate');
   const detail = useQualityGateRule(rule);
   const { data, isPending, isError, error } = detail;
+  const scope = useRepoFamilyScope();
+  const heads = scope.rowsByRepo(data?.heads ?? [], (head) => head.repo);
 
   return (
     <div className="page page--wide" data-testid="quality-gate-rule-page">
@@ -45,12 +55,15 @@ export function QualityGateRulePage(): JSX.Element {
         <LoadingState title="Loading the flagged heads…" variant="message" />
       ) : isError ? (
         <QualityGateQueryState what={`the heads ${rule} flagged`} error={error} />
-      ) : data.heads.length === 0 ? (
-        <EmptyState
-          icon={ShieldCheck}
-          title="This rule flagged nothing in the window."
-          description={`No head scored in the last ${data.window_days} days carries a finding from this rule.`}
-        />
+      ) : heads.rows.length === 0 ? (
+        <>
+          <ScopedEmptyState
+            icon={ShieldCheck}
+            title="This rule flagged nothing in the window."
+            description={`No head scored in the last ${data.window_days} days carries a finding from this rule.`}
+          />
+          <OtherFamilies count={heads.elsewhere} noun="flagged heads" />
+        </>
       ) : (
         <section className="page__section" aria-labelledby="quality-gate-heads">
           <h2 className="page__section-title" id="quality-gate-heads">
@@ -75,7 +88,7 @@ export function QualityGateRulePage(): JSX.Element {
                 </tr>
               </thead>
               <tbody>
-                {data.heads.map((head) => (
+                {heads.rows.map((head) => (
                   <tr
                     key={`${head.repo}@${head.sha}`}
                     data-testid={`quality-gate-head-${head.repo}@${shortSha(head.sha)}`}
@@ -101,6 +114,7 @@ export function QualityGateRulePage(): JSX.Element {
               </tbody>
             </table>
           </div>
+          <OtherFamilies count={heads.elsewhere} noun="flagged heads" />
         </section>
       )}
     </div>

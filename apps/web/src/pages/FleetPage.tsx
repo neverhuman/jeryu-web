@@ -26,6 +26,12 @@
 // highlights those rows and scrolls to the first. Unreadable boards — not an
 // admin, or an older server — just mean no links.
 //
+// The family scope narrows the rows: a runner a family's board lane names is
+// that family's, a runner no board names serves every family and stays, and the
+// rest are counted under the sections as "+N in other families". The runner
+// snapshot itself knows nothing about families, so the narrowing happens here
+// from the boards this page already reads.
+//
 // It used to also render "Runner pools" and "System health" from the
 // bootstrap read model, but those were not real: pool capacity came from a
 // hardcoded 4x10 fixture, "failed" summed every failed check ever recorded,
@@ -61,8 +67,12 @@ import {
   parseRunnersParam,
   runnerAnchorId,
   runnerReleaseIndex,
+  scopeRunnersByFamily,
   type RunnerPlaces
 } from './fleet/releaseIndex';
+import { useFamilyScope } from '../components/family/FamilyScopeProvider';
+import { OtherFamilies } from '../components/family/OtherFamilies';
+import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
 import { RUNNERS_PARAM } from './releaseBoard/links';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { UseThisWhen } from '../layout/UseThisWhen';
@@ -84,15 +94,7 @@ export function FleetPage(): JSX.Element {
       ),
     [runnersQuery.data, runnersQuery.isError, runnersQuery.isStale]
   );
-  // Evidence we can stand behind: a fresh snapshot in which every runner
-  // reported a state we recognise. Anything less and the counts are guesses.
-  const availabilityKnown =
-    runnerNetwork.state === 'fresh' &&
-    runnerNetwork.nodes.every((node) => node.availability !== 'unknown');
-  const sentence = networkSentence(runnerNetwork.nodes);
   const build = forgeBuildLine(runnerNetwork.forge, pageWebCommit());
-  const scorers = scorerSummary(runnerNetwork.nodes);
-  const reviewers = splitReviewers(runnerNetwork.reviewers);
   const boardsQuery = useRunnerReleaseBoards();
   const boards = boardsQuery.data;
   const [params] = useSearchParams();
@@ -105,11 +107,47 @@ export function FleetPage(): JSX.Element {
     [boards, picked]
   );
   const forgeLane = forgeReleaseLane(boards ?? [], runnerNetwork.forge);
+  // One family in scope: only the runners its release board lanes name, plus
+  // the ones no lane names.
+  const scope = useFamilyScope();
+  const scoped = useMemo(() => {
+    const keep = <T extends { runnerId: string }>(rows: readonly T[]) =>
+      scopeRunnersByFamily(rows, scope.family, places.releases);
+    return {
+      nodes: keep(runnerNetwork.nodes),
+      reviewers: keep(runnerNetwork.reviewers),
+      audits: keep(runnerNetwork.audits),
+      automation: keep(runnerNetwork.automation)
+    };
+  }, [
+    places.releases,
+    runnerNetwork.audits,
+    runnerNetwork.automation,
+    runnerNetwork.nodes,
+    runnerNetwork.reviewers,
+    scope.family
+  ]);
+  const elsewhere =
+    scoped.nodes.elsewhere +
+    scoped.reviewers.elsewhere +
+    scoped.audits.elsewhere +
+    scoped.automation.elsewhere;
+  // Every count and sentence on the page is about the rows on it: with a
+  // family in scope the summary describes that family's runners, not the fleet.
+  const nodes = scoped.nodes.rows;
+  const reviewers = splitReviewers(scoped.reviewers.rows);
+  // Evidence we can stand behind: a fresh snapshot in which every runner
+  // reported a state we recognise. Anything less and the counts are guesses.
+  const availabilityKnown =
+    runnerNetwork.state === 'fresh' &&
+    nodes.every((node) => node.availability !== 'unknown');
+  const sentence = networkSentence(nodes);
+  const scorers = scorerSummary(nodes);
   const rendered = [
-    ...runnerNetwork.nodes,
+    ...nodes,
     ...reviewers.listed,
-    ...runnerNetwork.audits,
-    ...runnerNetwork.automation
+    ...scoped.audits.rows,
+    ...scoped.automation.rows
   ].map((node) => node.runnerId);
   const pickedIds = parseRunnersParam(picked);
   const shown = pickedIds.filter((id) => rendered.includes(id));
@@ -118,9 +156,9 @@ export function FleetPage(): JSX.Element {
   // Running passes tick every second on the forge's clock; with none running
   // the page holds still between fetches.
   const anyRunning = [
-    ...runnerNetwork.nodes,
-    ...runnerNetwork.reviewers,
-    ...runnerNetwork.audits
+    ...nodes,
+    ...scoped.reviewers.rows,
+    ...scoped.audits.rows
   ].some((node) => node.tasks.length > 0);
   useRunnerChangeNudge(
     RUNNERS_SCOPE,
@@ -244,20 +282,17 @@ export function FleetPage(): JSX.Element {
         </h2>
         {runnerNetworkState ? (
           runnerNetworkState
-        ) : runnerNetwork.nodes.length === 0 ? (
-          <EmptyState
+        ) : nodes.length === 0 ? (
+          <ScopedEmptyState
             title="No runners are reporting."
             description="Runners appear here as soon as they send a heartbeat."
           />
         ) : (
           <div className="fleet__network-layout" data-testid="fleet-network">
-            <RunnerNodeList
-              nodes={runnerNetwork.nodes}
-              nowMs={nowMs}
-              places={places}
-            />
+            <RunnerNodeList nodes={nodes} nowMs={nowMs} places={places} />
           </div>
         )}
+        <OtherFamilies count={elsewhere} noun="runners" />
       </section>
 
       <section
@@ -268,7 +303,7 @@ export function FleetPage(): JSX.Element {
         <h2 className="page__section-title" id="fleet-reviewers">
           Pull request reviewers
         </h2>
-        {runnerNetworkState ? null : runnerNetwork.reviewers.length === 0 ? (
+        {runnerNetworkState ? null : scoped.reviewers.rows.length === 0 ? (
           // Said, not hidden: an operator looking for the agents that approve
           // and merge should learn that none is reporting, not wonder where
           // the section went.
@@ -297,7 +332,7 @@ export function FleetPage(): JSX.Element {
         )}
       </section>
 
-      {runnerNetworkState || runnerNetwork.audits.length === 0 ? null : (
+      {runnerNetworkState || scoped.audits.rows.length === 0 ? null : (
         <section
           className="page__section"
           aria-labelledby="fleet-audits"
@@ -307,14 +342,14 @@ export function FleetPage(): JSX.Element {
             Quality audits
           </h2>
           <AuditList
-            audits={runnerNetwork.audits}
+            audits={scoped.audits.rows}
             nowMs={nowMs}
             places={places}
           />
         </section>
       )}
 
-      {runnerNetworkState || runnerNetwork.automation.length === 0 ? null : (
+      {runnerNetworkState || scoped.automation.rows.length === 0 ? null : (
         <section
           className="page__section"
           aria-labelledby="fleet-automation"
@@ -324,7 +359,7 @@ export function FleetPage(): JSX.Element {
             Automation
           </h2>
           <AutomationList
-            timers={runnerNetwork.automation}
+            timers={scoped.automation.rows}
             nowMs={nowMs}
             places={places}
           />

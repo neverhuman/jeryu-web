@@ -5,16 +5,26 @@
 // adopted it and how many are applicable-but-missing. Each tool links to its
 // detail page (`/shared-tools/adoption/:tool`). Data is projected from each repo's latest
 // recorded score — no extra computation.
+//
+// Each entry names the repos adopting the tool and the repos that should: with
+// a family in scope both lists are cut to that family's repos, so "3/7" is
+// this family's adoption rather than the fleet's. `GET /fleet/tool-adoption`
+// takes no family, so the cut is made here from the repo→family map the shell
+// already has, and a tool with no repo left in scope drops out of the table.
 
 import { ArrowDown, ArrowUp, Boxes } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 import { pillClass, type Tone } from '../components/tone/tone';
-import { EmptyState, ErrorState, LoadingState } from '../components/state';
+import { ErrorState, LoadingState } from '../components/state';
+import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
+import { OtherFamilies } from '../components/family/OtherFamilies';
+import { useRepoFamilyScope } from '../components/family/useRepoFamilyScope';
 import { useToolFleet } from '../hooks/useToolFleet';
 import {
   defaultDirection,
+  scopeToolAdoption,
   DEFAULT_TOOL_FLEET_FILTERS,
   DEFAULT_TOOL_FLEET_SORT,
   projectToolFleet,
@@ -127,10 +137,15 @@ export function ToolFleetPage(): JSX.Element {
       'replace'
     );
 
-  const tools = data?.tools;
-  const categories = useMemo(() => toolCategories(tools ?? []), [tools]);
+  const scope = useRepoFamilyScope();
+  const scoped = useMemo(
+    () => scopeToolAdoption(data?.tools ?? [], (repo) => scope.keeps(repo), scope.active),
+    [data?.tools, scope]
+  );
+  const tools = scoped.rows;
+  const categories = useMemo(() => toolCategories(tools), [tools]);
   const rows = useMemo(
-    () => projectToolFleet(tools ?? [], filters, sort),
+    () => projectToolFleet(tools, filters, sort),
     [tools, filters, sort]
   );
 
@@ -167,12 +182,15 @@ export function ToolFleetPage(): JSX.Element {
         <LoadingState title="Loading tool adoption…" variant="message" />
       ) : isError ? (
         <ErrorState title="Could not load tool adoption." error={error} />
-      ) : data.tools.length === 0 ? (
-        <EmptyState
-          icon={Boxes}
-          title="No tool-adoption data yet."
-          description="Once repos are scored, their tool adoption appears here."
-        />
+      ) : tools.length === 0 ? (
+        <>
+          <ScopedEmptyState
+            icon={Boxes}
+            title="No tool-adoption data yet."
+            description="Once repos are scored, their tool adoption appears here."
+          />
+          <OtherFamilies count={scoped.elsewhere} noun="tools" />
+        </>
       ) : (
         <section className="page__section">
           <div className="tool-fleet__toolbar" role="search">
@@ -217,7 +235,8 @@ export function ToolFleetPage(): JSX.Element {
               <option value="none">Not adopted</option>
             </select>
             <span className="tool-fleet__count">
-              {rows.length} of {data.tools.length} tools · {data.repos_scored} repos scored
+              {rows.length} of {tools.length} tools ·{' '}
+              {scope.active ? scope.label : `${data.repos_scored} repos scored`}
             </span>
           </div>
 
@@ -240,6 +259,7 @@ export function ToolFleetPage(): JSX.Element {
           {rows.length === 0 ? (
             <p className="tool-fleet__none">No tools match these filters.</p>
           ) : null}
+          <OtherFamilies count={scoped.elsewhere} noun="tools" />
         </section>
       )}
     </div>

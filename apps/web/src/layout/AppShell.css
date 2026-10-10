@@ -993,6 +993,13 @@ a.activity-dock__row:focus-visible {
   border-radius: var(--radius-full);
 }
 
+/* Waiting in another family than the one in scope: reported, not alarmed. */
+.left-nav__badge--elsewhere {
+  color: var(--color-fg-muted);
+  background-color: transparent;
+  font-weight: var(--font-weight-normal);
+}
+
 /* ── Signed-out frame for a public repository ─────────────────────────── */
 .public-shell {
   display: flex;

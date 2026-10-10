@@ -63,6 +63,17 @@
   still opens that item and leaves the scope alone: the chip says "outside acme · switch to
   globex", which is the one click that carries the other family. A scoped page with nothing on it
   says "Nothing for acme here" and offers "Show all families" rather than reading as an outage.
+- The pages that ignored the family scope now follow it. Runners keeps the runners a family's
+  release-board lane names, plus the ones no lane names (they serve every family); the dependency
+  graph, the quality gate's "Failures by repository" and its window totals, a rule's flagged
+  heads, Shared tools' pattern families and tool adoption, and Search's results are all narrowed
+  by the repository→family map the shell already polls, because none of those endpoints takes a
+  `family` yet. Each place says "+N … in other families" with one click back to all of them, so a
+  scope never hides the rest of the fleet. Intelligence and the tool-registry Proposals list are
+  the same page for every family: the header chip says "All families — this page is not
+  per-family" and the scope stays carried, so the next page is scoped again. The left-nav badges
+  and the "Needs you" count narrow too, each saying how many wait elsewhere (a muted "+N" where
+  nothing in scope waits), and `/` plus the page a login returns to keep the carried family.
 - Releases and Runners point at each other. A family's board is `/releases/family/<family>` (the
   family pills link there; `/releases?family=<family>` redirects, keeping other parameters and the
   hash), and each lane is the anchor `#lane-<id>`, scrolled to and ringed briefly when a URL names

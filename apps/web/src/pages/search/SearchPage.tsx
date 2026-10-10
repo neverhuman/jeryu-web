@@ -3,6 +3,12 @@
 // from one server call (`GET /api/v1/search`), which looks in repositories,
 // pull requests, issues, todos and — for admins — the activity log. Pages are
 // matched here, because only the SPA knows its own nav destinations.
+//
+// The family scope is a facet over the answer: a hit naming a repository of
+// another family is left out and counted, and the per-kind totals then come
+// from the rows on screen rather than from the server's unfiltered counts.
+// `GET /api/v1/search` takes no family yet, so the facet is applied here from
+// the repo→family map the shell already has.
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -11,9 +17,11 @@ import { Search } from 'lucide-react';
 import { ActionButton } from '../../components/action/ActionButton';
 import { PageHeader } from '../../components/pageHeader';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
+import { OtherFamilies } from '../../components/family/OtherFamilies';
+import { useRepoFamilyScope } from '../../components/family/useRepoFamilyScope';
 import { useSearch } from '../../hooks/useSearch';
 import { useCommandStore } from '../../stores/commandStore';
-import { hiddenCount, hitGroups, pageHits, type HitGroup } from './searchModel';
+import { hiddenCount, hitGroups, hitRepo, pageHits, type HitGroup } from './searchModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
@@ -32,9 +40,19 @@ export function SearchPage(): JSX.Element {
 
   const search = useSearch({ q: query });
   const answer = search.data;
+  const scope = useRepoFamilyScope();
+  const scoped = useMemo(
+    () => scope.rowsByRepo(answer?.results ?? [], hitRepo),
+    [answer, scope]
+  );
   const groups = useMemo(
-    () => (answer ? hitGroups(answer.kinds, answer.results, answer.counts) : NO_HITS),
-    [answer]
+    () =>
+      answer
+        ? // Scoped, the server's per-kind totals are about every family: the
+          // sections count what is on them instead of promising more.
+          hitGroups(answer.kinds, scoped.rows, scope.active ? {} : answer.counts)
+        : NO_HITS,
+    [answer, scope.active, scoped.rows]
   );
 
   const submit = (e: React.FormEvent): void => {
@@ -84,6 +102,13 @@ export function SearchPage(): JSX.Element {
               Could not search {problem}
             </p>
           ))}
+          {scope.active ? (
+            <p data-testid="search-family-facet">
+              Showing matches in {scope.label}. Pages are the same for every
+              family.
+            </p>
+          ) : null}
+          <OtherFamilies count={scoped.elsewhere} noun="matches" />
           {groups.map((group) => (
             <Section key={group.kind} group={group} query={query} />
           ))}

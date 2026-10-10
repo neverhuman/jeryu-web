@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FamilyScopeChip } from '../FamilyScopeChip';
 import { FAMILY_SCOPE_STORAGE_SLOT } from '../familyScope';
 import { FamilyScopeProvider } from '../FamilyScopeProvider';
+import { useGlobalFamilyPage } from '../useGlobalFamilyPage';
 
 const FAMILIES = {
   families: [
@@ -32,15 +33,22 @@ function Where(): JSX.Element {
   return <p data-testid="where">{`${pathname}${search}`}</p>;
 }
 
-function renderAt(path: string): void {
+/** A page that is the same for every family, like Intelligence. */
+function GlobalPage(): JSX.Element {
+  useGlobalFamilyPage();
+  return <Where />;
+}
+
+function renderAt(path: string, page: () => JSX.Element = Where): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const Page = page;
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <FamilyScopeProvider>
           <FamilyScopeChip />
           <Routes>
-            <Route path="*" element={<Where />} />
+            <Route path="*" element={<Page />} />
           </Routes>
         </FamilyScopeProvider>
       </MemoryRouter>
@@ -134,5 +142,24 @@ describe('FamilyScopeChip', () => {
     const select = screen.getByTestId('family-scope-select');
     expect(select).toHaveValue('initech');
     expect(screen.getByRole('option', { name: 'initech' })).toBeDefined();
+  });
+
+  it('says a page is not per-family, and keeps carrying the family anyway', async () => {
+    mockApi();
+    renderAt('/intelligence?family=acme-split', GlobalPage);
+
+    expect(await screen.findByTestId('family-scope-global')).toHaveTextContent(
+      'All families — this page is not per-family'
+    );
+    // The scope is stated, not cleared: the next page is scoped again.
+    expect(screen.getByTestId('family-scope-select')).toHaveValue('acme');
+    expect(screen.getByTestId('where')).toHaveTextContent('family=acme');
+  });
+
+  it('says nothing about families on a page that does narrow by one', async () => {
+    mockApi();
+    renderAt('/quality-gate?family=acme-split');
+
+    expect(screen.queryByTestId('family-scope-global')).toBeNull();
   });
 });

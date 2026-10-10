@@ -6,13 +6,28 @@
 // how often the operator reading a finding disagreed with it.
 //
 // One obvious action: open the rule that fails most often.
+//
+// With a family in scope, "Failures by repository" is that family's
+// repositories, and the window totals above it are recounted from those rows,
+// so the tiles and the table are about the same set. The rule and dimension
+// counts are the server's own aggregates over every family — the overview
+// endpoint takes no `family`, and a count summed across repositories cannot be
+// taken apart here — so they are labelled as such instead of being narrowed by
+// guesswork.
 
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import type { QualityGateDimensionSummary, QualityGateOverview } from '../../api/types';
+import type {
+  QualityGateDimensionSummary,
+  QualityGateOverview,
+  QualityGateRepoSummary,
+} from '../../api/types';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { EmptyState, LoadingState } from '../../components/state';
+import { OtherFamilies } from '../../components/family/OtherFamilies';
+import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
+import { useRepoFamilyScope } from '../../components/family/useRepoFamilyScope';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { useQualityGateOverview, QUALITY_GATE_WINDOW_DAYS } from '../../hooks/useQualityGate';
 import { repoRefOf, repoUrl } from '../repoBrowserModel';
@@ -103,10 +118,15 @@ function QualityGateOverviewBody({
   data: QualityGateOverview;
 }): JSX.Element {
   const rules = sortRules(data.rules);
-  const repos = sortRepos(data.repos);
+  const scope = useRepoFamilyScope();
+  const scopedRepos = scope.rowsByRepo(data.repos, (repo) => repo.repo);
+  const repos = sortRepos(scopedRepos.rows);
   const forgeHost = useForgeHost();
   const top = topFailingRule(data.rules);
   const latest = countsLatestHeads(data.rules);
+  // The window totals are recounted from the rows on screen, so the tiles and
+  // the repository table never describe different fleets.
+  const window = scope.active ? windowOf(repos) : data;
 
   return (
     <>
@@ -118,24 +138,30 @@ function QualityGateOverviewBody({
           <Tile
             testId="quality-gate-tile-fail-rate"
             label="Fail rate"
-            value={percent(data.fail_rate, data.heads_scored)}
-            detail={`of ${data.heads_scored} scored head${data.heads_scored === 1 ? '' : 's'}`}
+            value={percent(window.fail_rate, window.heads_scored)}
+            detail={`of ${window.heads_scored} scored head${
+              window.heads_scored === 1 ? '' : 's'
+            }`}
           />
           <Tile
             testId="quality-gate-tile-would-block"
             label="Would have blocked"
-            value={String(data.heads_failed)}
+            value={String(window.heads_failed)}
             detail="heads, had the gate been required"
           />
           <Tile
             testId="quality-gate-tile-disputes"
             label="Disputed findings"
             value={String(data.disputes)}
-            detail="findings an admin marked as wrong"
+            detail={
+              scope.active
+                ? 'findings an admin marked as wrong, across every family'
+                : 'findings an admin marked as wrong'
+            }
           />
         </div>
         <p className="quality-gate__summary">
-          {windowSummary(data.window_days, data.heads_scored, data.heads_failed)}
+          {windowSummary(data.window_days, window.heads_scored, window.heads_failed)}
         </p>
         {top ? (
           <Link
@@ -160,6 +186,13 @@ function QualityGateOverviewBody({
         <h2 className="page__section-title" id="quality-gate-rules">
           Failures by rule
         </h2>
+        {scope.active ? (
+          <p className="quality-gate__summary" data-testid="quality-gate-rules-scope">
+            Counted across every family: the overview endpoint cannot count one
+            family&apos;s share of a rule yet. Each rule&apos;s own page is{' '}
+            {scope.label}&apos;s heads.
+          </p>
+        ) : null}
         <p className="quality-gate__summary" data-testid="quality-gate-rules-note">
           {latest
             ? "Counted on each repository's latest scored head: a finding left in place across several pushes counts once."
@@ -252,9 +285,26 @@ function QualityGateOverviewBody({
             </tbody>
           </table>
         </div>
+        <OtherFamilies count={scopedRepos.elsewhere} noun="repositories" />
+        {repos.length === 0 ? (
+          <ScopedEmptyState title="No repository was scored in the window." />
+        ) : null}
       </section>
     </>
   );
+}
+
+/** The window totals the rows on screen add up to; `disputes` stays global. */
+function windowOf(
+  repos: readonly QualityGateRepoSummary[]
+): Pick<QualityGateOverview, 'heads_scored' | 'heads_failed' | 'fail_rate'> {
+  const scored = repos.reduce((sum, repo) => sum + repo.heads_scored, 0);
+  const failed = repos.reduce((sum, repo) => sum + repo.heads_failed, 0);
+  return {
+    heads_scored: scored,
+    heads_failed: failed,
+    fail_rate: scored === 0 ? 0 : failed / scored,
+  };
 }
 
 function DimensionsBelowFloor({

@@ -10,6 +10,8 @@
 
 import type { ForgeBuild } from '../../api/types/controlPlane';
 import type { ReleaseBoard } from '../../api/types/releaseBoard';
+import { sameFamily } from '../../components/family/familyScope';
+import type { ScopedRows } from '../../components/family/repoFamilyScope';
 import { releaseLaneHref } from '../releaseBoard/links';
 
 export interface RunnerRelease {
@@ -136,3 +138,25 @@ export interface RunnerPlaces {
 }
 
 export const NO_PLACES: RunnerPlaces = { releases: new Map(), highlighted: new Set() };
+
+/**
+ * The runners a family's scope is about: those a lane of that family's release
+ * board names, and those no board names at all — a runner tied to no lane
+ * serves every family, and calling it another family's would be a guess. The
+ * rest are counted so the page can say how many it is not showing.
+ */
+export function scopeRunnersByFamily<T extends { runnerId: string }>(
+  rows: readonly T[],
+  family: string,
+  releases: ReadonlyMap<string, RunnerRelease>
+): ScopedRows<T> {
+  if (!family) return { rows: [...rows], elsewhere: 0 };
+  const kept: T[] = [];
+  let elsewhere = 0;
+  for (const row of rows) {
+    const release = releases.get(row.runnerId);
+    if (!release || sameFamily(release.family, family)) kept.push(row);
+    else elsewhere += 1;
+  }
+  return { rows: kept, elsewhere };
+}

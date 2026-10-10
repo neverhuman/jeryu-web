@@ -7,6 +7,10 @@
 //
 // On a page reached by a link into another family the chip says so — "outside
 // acme" — and offers the one click that carries that other family instead.
+//
+// On a page that is the same for every family (useGlobalFamilyPage) it says
+// that too, so a count on screen is never read as this family's share of it.
+// The family stays carried either way: the next page is scoped again.
 
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
@@ -57,6 +61,11 @@ export function FamilyScopeChip(): JSX.Element {
           </option>
         ))}
       </select>
+      {scope.pageIsGlobal && scope.carried ? (
+        <span className="family-scope__global" data-testid="family-scope-global">
+          All families — this page is not per-family
+        </span>
+      ) : null}
       {scope.outside ? (
         <button
           type="button"

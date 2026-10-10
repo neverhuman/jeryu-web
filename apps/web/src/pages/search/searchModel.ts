@@ -86,3 +86,12 @@ export function pageHits(query: string, commands: readonly Command[]): PageHit[]
       path: c.target.kind === 'route' ? c.target.path : '',
     }));
 }
+
+/**
+ * The repository a hit names, `owner/name`, or null for one that names none
+ * (a todo, an activity record, a page). The family facet reads this: a hit
+ * with no repository belongs to no family the scope can rule out, so it stays.
+ */
+export function hitRepo(hit: SearchHit): string | null {
+  return hit.repo ? `${hit.repo.owner}/${hit.repo.name}` : null;
+}

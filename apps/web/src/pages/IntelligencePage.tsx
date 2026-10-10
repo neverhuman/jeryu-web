@@ -1,4 +1,11 @@
 // IntelligencePage.tsx - intelligence snapshot dashboard.
+//
+// The one page the family scope does not narrow: its nodes are evidence about
+// the forge's own machinery — snapshot freshness, tool builds, the ecosystem —
+// and nothing on it maps to a repository a family owns, so there is nothing
+// honest to filter. It says so in the header chip (`useGlobalFamilyPage`)
+// rather than let the chip imply these counts are one family's. The scope
+// stays carried: Dependencies, linked from here, is scoped again.
 
 import { useMemo } from 'react';
 import {
@@ -26,6 +33,7 @@ import {
   ToolBuildDossiers,
   useGraphViewState,
 } from './intelligence';
+import { useGlobalFamilyPage } from '../components/family/useGlobalFamilyPage';
 import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
@@ -35,6 +43,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 
 export function IntelligencePage(): JSX.Element {
   usePageTitle('Intelligence');
+  useGlobalFamilyPage();
   const query = useControlPlane();
 
   return (

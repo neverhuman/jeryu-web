@@ -7,11 +7,16 @@
 // server-side scan of every split family (the server also re-runs it on a
 // schedule); progress streams in real time over
 // the `tool_finder.scan` WebSocket scope into the progress panel.
+//
+// A pattern family names the repos it spans, so the family scope keeps the
+// ones that reach into it: the scan endpoint takes no family, and the repo→
+// family map the shell already has answers it here. The rest are counted under
+// the cards.
 
 import { Radar, Sparkles } from 'lucide-react';
 
 import { PageHeader, queryFreshness } from '../components/pageHeader';
-import { EmptyState, ErrorState, LoadingState } from '../components/state';
+import { ErrorState, LoadingState } from '../components/state';
 import {
   useToolFinderDashboard,
   useToolFinderScan,
@@ -22,6 +27,9 @@ import {
   formatCount,
   formatScannedAt,
 } from './tools';
+import { OtherFamilies } from '../components/family/OtherFamilies';
+import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
+import { useRepoFamilyScope } from '../components/family/useRepoFamilyScope';
 import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
@@ -33,6 +41,13 @@ export function ToolsPage(): JSX.Element {
   usePageTitle('Shared tools');
   const dashboard = useToolFinderDashboard();
   const scan = useToolFinderScan();
+  const scope = useRepoFamilyScope();
+  // A family stays while any repo it spans is in scope: a cluster shared with
+  // another family is this family's problem too.
+  const families = scope.rowsByRepos(
+    dashboard.data?.families ?? [],
+    (family) => family.repos
+  );
   // A failed scan is an error with a reason, not an empty result: it gets one
   // clear state, and the "0 clusters in 0 families" statistics stay out of it.
   const scanFailed = !scan.isRunning && scan.status?.phase === 'failed';
@@ -101,20 +116,26 @@ export function ToolsPage(): JSX.Element {
             title="Could not load the dashboard."
             error={dashboard.error}
           />
-        ) : dashboard.data.families.length === 0 ? (
+        ) : families.rows.length === 0 ? (
           scanFailed ? null : (
-          <EmptyState
-            icon={Sparkles}
-            title="No cross-repo clusters yet."
-            description="Run a live scan to mine every split family for duplicated code worth extracting into shared tools."
-          />
+            <>
+              <ScopedEmptyState
+                icon={Sparkles}
+                title="No cross-repo clusters yet."
+                description="Run a live scan to mine every split family for duplicated code worth extracting into shared tools."
+              />
+              <OtherFamilies count={families.elsewhere} noun="pattern families" />
+            </>
           )
         ) : (
-          <div className="tools-dashboard__families">
-            {dashboard.data.families.map((family) => (
-              <PatternFamilyCard key={family.family_id} family={family} />
-            ))}
-          </div>
+          <>
+            <div className="tools-dashboard__families">
+              {families.rows.map((family) => (
+                <PatternFamilyCard key={family.family_id} family={family} />
+              ))}
+            </div>
+            <OtherFamilies count={families.elsewhere} noun="pattern families" />
+          </>
         )}
       </section>
     </div>

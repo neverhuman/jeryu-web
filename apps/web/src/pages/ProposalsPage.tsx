@@ -1,6 +1,10 @@
 // ProposalsPage.tsx — Shared tools → Proposals: the decision step.
 //
-// Lists every tool in `jeryu-tool`'s registry grouped by lifecycle status.
+// Lists every tool in `jeryu-tool`'s registry grouped by lifecycle status. One
+// registry serves every family and an entry names no repository, so the family
+// scope has nothing to narrow here: the header chip says the page is not
+// per-family, and the scope stays carried for Findings and Adoption, which are.
+//
 // Proposed tools (filed from a Findings cluster) carry Approve / Reject for
 // admins: approve moves the tool to building, reject removes it and ignores
 // its origin cluster so the scan stops resurfacing it.
@@ -10,6 +14,7 @@ import { Check, GitPullRequestArrow, X } from 'lucide-react';
 import { ActionButton } from '../components/action/ActionButton';
 import { RETIRED_STATUS_LABEL } from '../components/repo/toolStatusProductCopy';
 import { EmptyState, ErrorState, LoadingState } from '../components/state';
+import { useGlobalFamilyPage } from '../components/family/useGlobalFamilyPage';
 import { useAuth } from '../hooks/useAuth';
 import { useDecideProposal, useToolRegistry } from '../hooks/useToolRegistry';
 import type { ToolRegistryEntry } from '../api/types';
@@ -96,6 +101,7 @@ function ProposedTool({
 
 export function ProposalsPage(): JSX.Element {
   usePageTitle('Tool proposals');
+  useGlobalFamilyPage();
   const registry = useToolRegistry();
   const { user } = useAuth();
   const canDecide = user?.role === 'admin';

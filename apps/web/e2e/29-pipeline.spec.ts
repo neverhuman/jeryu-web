@@ -121,11 +121,19 @@ test.describe('Pipeline visibility', () => {
     await expect(page).toHaveURL(/\/work\/20260919-130515-f8cc66$/);
     await expect(page.getByTestId('todo-page')).toBeVisible();
     // The badge counts critical + action (not watch) and follows the operator.
-    await expect(page.getByTestId('needs-you-badge')).toHaveText('3');
-    // Each page carries its own share in the nav.
+    // This todo is jeryu's, so opening it puts jeryu in scope and the counts
+    // narrow with it: one of the three rows is jeryu's, and the other two are
+    // said beside the badge rather than hidden by the scope.
+    await expect(page.getByTestId('needs-you-badge')).toHaveText('1');
+    await expect(page.getByTestId('needs-you-badge')).toHaveAttribute(
+      'aria-label',
+      '1 item need you. +2 need you in other families.'
+    );
+    // Each page carries its own share in the nav; a page with nothing of this
+    // family's on it says how many wait elsewhere.
     await expect(page.getByTestId('nav-badge-work')).toHaveText('1');
-    await expect(page.getByTestId('nav-badge-releases')).toHaveText('1');
-    await expect(page.getByTestId('nav-badge-system')).toHaveText('1');
+    await expect(page.getByTestId('nav-badge-elsewhere-releases')).toHaveText('+1');
+    await expect(page.getByTestId('nav-badge-elsewhere-system')).toHaveText('+1');
     await expect(page.getByTestId('nav-badge-pulls')).toHaveCount(0);
     // Work shows its own share of Needs you, as every other page does: the
     // rows the Work badge counted, above the queue's own state. (Its red count

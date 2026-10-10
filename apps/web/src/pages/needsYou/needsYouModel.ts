@@ -556,6 +556,51 @@ export function areaBadgeCount(data: AttentionResponse | undefined, area: Attent
 }
 
 /**
+ * The family a badge counts for, and the map that places an item's repository
+ * in a family. Absent — or an empty family — counts every family.
+ */
+export interface AttentionScope {
+  family: string;
+  repoFamilies: ReadonlyMap<string, string>;
+}
+
+/**
+ * What a badge shows and what it is leaving out: the rows in scope, and how
+ * many wait in other families. Nothing urgent is hidden by a scope — the count
+ * narrows with the page it leads to, and the rest is said beside it.
+ */
+export interface BadgeCount {
+  count: number;
+  elsewhere: number;
+}
+
+function scopedCount(
+  items: AttentionItem[],
+  scope: AttentionScope | undefined
+): BadgeCount {
+  if (!scope?.family) return { count: items.length, elsewhere: 0 };
+  const inScope = filterByFamily(items, scope.family, scope.repoFamilies);
+  return { count: inScope.length, elsewhere: items.length - inScope.length };
+}
+
+/** The "Needs you" badge, for the family in scope. */
+export function attentionBadge(
+  data: AttentionResponse | undefined,
+  scope?: AttentionScope
+): BadgeCount {
+  return scopedCount(urgentAttention(data), scope);
+}
+
+/** One page's nav badge, for the family in scope. */
+export function areaBadge(
+  data: AttentionResponse | undefined,
+  area: AttentionArea,
+  scope?: AttentionScope
+): BadgeCount {
+  return scopedCount(urgentInArea(data, area), scope);
+}
+
+/**
  * What a page's own Needs-you strip is about: one todo, or one repository's
  * pull request. This is the question a page asks; `AttentionSubject` is the
  * answer — one row with every item that one cause raised.

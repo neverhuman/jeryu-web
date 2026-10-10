@@ -36,8 +36,8 @@ import {
 import {
   canonicalFamily,
   FAMILY_SCOPE_STORAGE_SLOT,
-  familyFromHref,
   familyFromLocation,
+  keepFamilyScope,
   sameFamily,
   withFamilyScope,
 } from './familyScope';
@@ -81,6 +81,15 @@ export interface FamilyScope {
   /** Whether the header chip's family picker is open. */
   pickerOpen: boolean;
   setPickerOpen: (open: boolean) => void;
+  /**
+   * True while the page on screen is the same for every family: nothing on it
+   * maps to repositories, so there is nothing to narrow. The chip says so
+   * instead of implying the page was filtered, and the scope stays carried, so
+   * the next page is scoped again. A page declares this with
+   * `useGlobalFamilyPage`.
+   */
+  pageIsGlobal: boolean;
+  setPageIsGlobal: (global: boolean) => void;
 }
 
 const ALL_FAMILIES: FamilyScope = {
@@ -95,6 +104,8 @@ const ALL_FAMILIES: FamilyScope = {
   scopedPath: (to) => to,
   pickerOpen: false,
   setPickerOpen: () => {},
+  pageIsGlobal: false,
+  setPageIsGlobal: () => {},
 };
 
 const FamilyScopeContext = createContext<FamilyScope>(ALL_FAMILIES);
@@ -104,8 +115,18 @@ export function useFamilyScope(): FamilyScope {
   return useContext(FamilyScopeContext);
 }
 
-function readRemembered(): string {
+/**
+ * The family this tab carries, read straight from its memory. The provider
+ * wraps the signed-in shell only, so the two places that choose a destination
+ * before it exists — the `/` redirect and the one a finished login returns to —
+ * read it here rather than widening to every family on the way in.
+ */
+export function readRememberedFamily(): string {
   return canonicalFamily(readBrowserText('tab', FAMILY_SCOPE_STORAGE_SLOT));
+}
+
+function readRemembered(): string {
+  return readRememberedFamily();
 }
 
 function remember(family: string): void {
@@ -118,6 +139,7 @@ export function FamilyScopeProvider({ children }: { children: ReactNode }): JSX.
   const navigate = useNavigate();
   const [remembered, setRemembered] = useState(readRemembered);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pageIsGlobal, setPageIsGlobal] = useState(false);
   // The scope this tab chose, while the navigation that states it is still on
   // its way: until then the URL is one step behind and must not be read back.
   const chosen = useRef<string | null>(null);
@@ -180,7 +202,7 @@ export function FamilyScopeProvider({ children }: { children: ReactNode }): JSX.
     (to: string): string =>
       // A link carries the scope, not the family of the item being visited:
       // on a page outside the scope that is the family the tab still carries.
-      familyFromHref(to) === null ? withFamilyScope(to, outside ? remembered : family) : to,
+      keepFamilyScope(to, outside ? remembered : family),
     [family, outside, remembered]
   );
 
@@ -199,12 +221,15 @@ export function FamilyScopeProvider({ children }: { children: ReactNode }): JSX.
       scopedPath,
       pickerOpen,
       setPickerOpen,
+      pageIsGlobal,
+      setPageIsGlobal,
     }),
     [
       clearFamily,
       family,
       label,
       outside,
+      pageIsGlobal,
       pickerOpen,
       remembered,
       scopedPath,

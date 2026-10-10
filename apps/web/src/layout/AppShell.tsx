@@ -44,7 +44,11 @@ import { BootScreen } from '../pages/boot/BootScreen';
 import { homePathFor } from './HomeRedirect';
 import { PublicRepoShell } from './PublicRepoShell';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
-import { FamilyScopeProvider } from '../components/family/FamilyScopeProvider';
+import { keepFamilyScope } from '../components/family/familyScope';
+import {
+  FamilyScopeProvider,
+  readRememberedFamily,
+} from '../components/family/FamilyScopeProvider';
 import { FullScreenProvider, useFullScreenShell } from './fullScreen';
 
 import './AppShell.css';
@@ -79,12 +83,21 @@ export function isPublicRepoPath(pathname: string): boolean {
   return sub === undefined || sub === 'blob' || sub === 'tree' || sub === 'code';
 }
 
+/** A `?next=` destination with the carried family on it, when it states none. */
+function keepScopeOn(next: string | null): string | null {
+  return next === null ? null : keepFamilyScope(next, readRememberedFamily());
+}
+
 export function AppShell(): JSX.Element {
   const location = useLocation();
   const auth = useAuth();
   const authRouteMode = location.pathname === '/signup' ? 'signup' : 'login';
   const isAuthRoute = AUTH_PATHS.has(location.pathname);
-  const returnTo = isAuthRoute ? returnPathFrom(location.search) : null;
+  // The page a login returns to keeps the family this tab carries, unless the
+  // address itself names one: signing back in must not widen the scope.
+  const returnTo = isAuthRoute
+    ? keepScopeOn(returnPathFrom(location.search))
+    : null;
   const { isSuccess: loggedOut, reset: resetLogout } = auth.logout;
 
   // Consume the completed logout only after its public destination renders.
@@ -168,7 +181,11 @@ function Shell(): JSX.Element {
   const [navDrawerOpen, setNavDrawerOpen] = useState(false);
   const authRouteMode = location.pathname === '/signup' ? 'signup' : 'login';
   const isAuthRoute = AUTH_PATHS.has(location.pathname);
-  const returnTo = isAuthRoute ? returnPathFrom(location.search) : null;
+  // The page a login returns to keeps the family this tab carries, unless the
+  // address itself names one: signing back in must not widen the scope.
+  const returnTo = isAuthRoute
+    ? keepScopeOn(returnPathFrom(location.search))
+    : null;
 
   // Register navigation commands so the palette is non-empty on first render.
   useShellCommands(auth.user?.role === 'admin');

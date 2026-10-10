@@ -1,4 +1,10 @@
 // DependenciesPage.tsx - the operator graph laid out by dependency depth.
+//
+// The graph is repositories, so the family scope narrows it: a node whose
+// repository another family owns is left out, and the count of what was left
+// out is said under the heading. `GET /control-plane/repo-graph` takes no
+// family, so the narrowing is done here from the repo→family map the shell
+// already has (see components/family/repoFamilyScope).
 
 import { useMemo } from 'react';
 
@@ -12,6 +18,8 @@ import {
   useGraphViewState,
 } from './intelligence';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { OtherFamilies } from '../components/family/OtherFamilies';
+import { useRepoFamilyScope } from '../components/family/useRepoFamilyScope';
 import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
@@ -26,9 +34,28 @@ export function DependenciesPage(): JSX.Element {
   // Filters, the search box and the picked node are in the URL: the graph a
   // person is looking at is a link, and Back undoes the node before it.
   const { filters, selectedNodeId, setFilters, selectNode } = useGraphViewState();
+  // One family in scope keeps that family's repositories; a node the map
+  // cannot place stays, so the graph does not empty out while the list loads.
+  const scope = useRepoFamilyScope();
+  const scoped = useMemo(() => {
+    const response = query.data ?? null;
+    if (!response || !scope.active) return { response, elsewhere: 0 };
+    const kept = scope.rowsByRepo(response.nodes, (node) => node.label);
+    const ids = new Set(kept.rows.map((node) => node.id));
+    return {
+      response: {
+        ...response,
+        nodes: kept.rows,
+        edges: response.edges.filter(
+          (edge) => ids.has(edge.source) && ids.has(edge.target)
+        ),
+      },
+      elsewhere: kept.elsewhere,
+    };
+  }, [query.data, scope]);
   const graph = useMemo(
-    () => buildDependencyGraph(query.data ?? null, filters, selectedNodeId),
-    [filters, query.data, selectedNodeId]
+    () => buildDependencyGraph(scoped.response, filters, selectedNodeId),
+    [filters, scoped.response, selectedNodeId]
   );
 
   const current = graph.edges.filter(
@@ -58,6 +85,7 @@ export function DependenciesPage(): JSX.Element {
             {current} current pins
           </span>
         </div>
+        <OtherFamilies count={scoped.elsewhere} noun="repositories" />
         {query.isLoading ? (
           <LoadingState variant="message" title="Loading the dependency graph." />
         ) : query.isError ? (
