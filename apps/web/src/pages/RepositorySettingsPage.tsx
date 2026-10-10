@@ -34,6 +34,7 @@ import {
 import { useApplySettingsPatch } from '../hooks/useApplySettingsPatch';
 import { usePreviewSettingsPatch } from '../hooks/usePreviewSettingsPatch';
 import { useRealtime } from '../hooks/useRealtime';
+import { useRepoAutomation } from '../hooks/useRepoAutomation';
 import { useRepoSettings } from '../hooks/useRepoSettings';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import { useSettingsDraft } from '../hooks/useSettingsDraft';
@@ -57,7 +58,7 @@ import {
 } from './repositorySettingsPanels';
 
 import { BranchProtectionSummary } from './BranchProtectionSummary';
-import { GithubMirrorSummary } from './GithubMirrorSummary';
+import { RepositoryMirrorSection } from './RepositoryMirrorSection';
 import { repoRefOf, repoUrl } from './repoBrowserModel';
 
 import './page.css';
@@ -93,6 +94,7 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
   useRealtime(repoId ? [`repo.${repoId}`] : []);
 
   const settings = useRepoSettings(repoId);
+  const automation = useRepoAutomation(repoId);
   const previewMutation = usePreviewSettingsPatch(repoId);
   const applyMutation = useApplySettingsPatch(repoId);
 
@@ -181,7 +183,11 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
             repo={name}
             branch={resolved.data.summary.default_branch ?? 'main'}
           />
-          <GithubMirrorSummary mirror={resolved.data.summary.mirror} />
+          <RepositoryMirrorSection
+            mirrors={automation.data?.mirrors}
+            loading={automation.isPending}
+            failed={Boolean(automation.error)}
+          />
           <RepoArchiveSection repo={resolved.data.summary} />
           <RepoDangerZone repo={resolved.data.summary} />
         </div>
@@ -288,6 +294,14 @@ export function RepositorySettingsPage(props: RepositorySettingsPageProps = {}):
               setDraft((d) => (d ? { ...d, branchProtection } : d))
             }
             disabled={applyMutation.isPending}
+          />
+        )}
+
+        {activeSection === 'mirror' && (
+          <RepositoryMirrorSection
+            mirrors={automation.data?.mirrors}
+            loading={automation.isPending}
+            failed={Boolean(automation.error)}
           />
         )}
 

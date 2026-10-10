@@ -50,8 +50,8 @@ import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoRoleBadge } from './RepoRoleBadge';
 import { When } from '../../format/When';
 import { pullRoomHref } from '../../pages/pullRoomModel';
+import { repoUrl } from '../../pages/repoBrowserModel';
 
-import { repoHref } from './RepoCard';
 import { familyHref } from './RepoFamilyCard';
 
 import './repo.css';
@@ -131,13 +131,15 @@ function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
         </span>
       )}
       {mirrorFailing(repo.mirror) ? (
-        <span
+        <Link
+          to={`${repoHref(repo)}/settings/mirror#mirror`}
           className="repo-status-chip repo-status-chip--warning"
           title={MIRROR_OPERATOR_SENTENCE}
+          onClick={(e) => e.stopPropagation()}
           data-testid={`repo-mirror-failing-${repo.id.name}`}
         >
           mirror failing
-        </span>
+        </Link>
       ) : null}
       {pass ? (
         <CiProgress
@@ -160,6 +162,10 @@ function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
       ) : null}
     </span>
   );
+}
+
+function repoHref(repo: RepositorySummary): string {
+  return repoUrl(repo.id);
 }
 
 /**

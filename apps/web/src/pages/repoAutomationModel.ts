@@ -127,7 +127,9 @@ export function actorKindText(kind: string): string {
 }
 
 export function mirrorTone(mirror: AutomationMirror): AutomationTone {
-  if (mirror.behind || mirror.lastError) return 'bad';
+  if (mirror.state === 'ahead' || mirror.state === 'diverged') return 'bad';
+  if ((mirror.tagDrift?.length ?? 0) > 0) return 'bad';
+  if (mirror.behind || mirror.lastError) return 'waiting';
   if (mirror.state === 'in_sync') return 'ok';
   return 'waiting';
 }

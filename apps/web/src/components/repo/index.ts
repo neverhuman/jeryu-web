@@ -1,5 +1,3 @@
-export { RepoCard, repoHref } from './RepoCard';
-export type { RepoCardProps } from './RepoCard';
 export { RepoTable } from './RepoTable';
 export type { RepoTableProps } from './RepoTable';
 export { RepoRoleBadge } from './RepoRoleBadge';
@@ -28,8 +26,6 @@ export {
   JANKURAI_GOOD_THRESHOLD,
 } from './JankuraiScoreBadge';
 export type { JankuraiScoreBadgeProps } from './JankuraiScoreBadge';
-export { MirrorStatusBadge } from './MirrorStatusBadge';
-export type { MirrorStatusBadgeProps } from './MirrorStatusBadge';
 export { DeleteRepoDialog } from './DeleteRepoDialog';
 export type { DeleteRepoDialogProps, DeleteRepoTier } from './DeleteRepoDialog';
 export { RepoDangerZone } from './RepoDangerZone';

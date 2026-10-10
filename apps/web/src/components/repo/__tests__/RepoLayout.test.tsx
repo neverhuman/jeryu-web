@@ -12,6 +12,7 @@ const BASE = '/repos/acme/acme/widget-api';
 let authUser: { role: string } | null = { role: 'admin' };
 let permissions: string[] = ['repo.admin'];
 let warnings: string[] = [];
+let mirrors: Record<string, unknown>[] = [];
 
 vi.mock('../../../hooks/useAuth', () => ({
   useAuth: () => ({ isPending: false, user: authUser }),
@@ -22,6 +23,7 @@ describe('RepoLayout (the repository shell)', () => {
     authUser = { role: 'admin' };
     permissions = ['repo.admin'];
     warnings = [];
+    mirrors = [];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = new URL(String(input), 'http://localhost');
       switch (url.pathname) {
@@ -51,7 +53,7 @@ describe('RepoLayout (the repository shell)', () => {
             checks: [],
             requiredContexts: [],
             actors: [],
-            mirrors: [],
+            mirrors,
             grants: [],
             grantsVisible: false,
             warnings,
@@ -107,6 +109,22 @@ describe('RepoLayout (the repository shell)', () => {
     renderAt('code');
     await screen.findByTestId('repo-tab-automation');
     await waitFor(() => expect(screen.queryByTestId('repo-tab-automation-warning')).toBeNull());
+  });
+
+  it('links the mirror badge to the Settings mirror anchor', async () => {
+    mirrors = [
+      {
+        target: 'https://github.example/acme/widget-api',
+        direction: 'push',
+        refs: ['refs/heads/main'],
+        state: 'in_sync',
+        behind: false,
+      },
+    ];
+    renderAt('code');
+    const badge = await screen.findByTestId('repo-header-mirror-badge');
+    expect(badge).toHaveTextContent('GitHub ↗');
+    expect(badge).toHaveAttribute('href', `${BASE}/settings/mirror#mirror`);
   });
 
   it('moves between tabs with the arrow keys, one tab stop for the bar', async () => {

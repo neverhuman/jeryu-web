@@ -37,6 +37,7 @@ import { useRepoAutomation } from '../../hooks/useRepoAutomation';
 import { useResolveRepo } from '../../hooks/useResolveRepo';
 import { QUALITY_GATE_PATH } from '../../pages/qualityGate/qualityGateModel';
 import { healthOpensChecks, repoFrontPath, repoShellCrumbs } from '../../pages/repoBrowserModel';
+import { firstMirror, mirrorTone } from '../../pages/repositoryMirrorModel';
 import {
   RepoHealthChecks,
   RepoHealthChip,
@@ -77,6 +78,8 @@ export function RepoLayout({
   const rail = useFamilyRail(summary?.family, repoId, tab);
 
   const base = repoFrontPath(provider, fullName);
+  const automation = useRepoAutomation(repoId);
+  const mirror = firstMirror(automation.data?.mirrors);
 
   return (
     <div className="repo-shell" data-testid="repo-shell">
@@ -120,6 +123,7 @@ export function RepoLayout({
               </Link>
               <RepoRoleBadge role={summary.repo_role} />
               <RepoArchivedBadge archived={summary.archived} />
+              <MirrorBadge href={`${base}/settings/mirror#mirror`} tone={mirrorTone(mirror)} />
               {summary.family ? null : (
                 <span
                   className="page__pill page__pill--muted"
@@ -143,10 +147,10 @@ export function RepoLayout({
         <RepoTabs
           base={base}
           current={tab}
-          repoId={repoId}
           mayOpenSettings={mayOpenSettings}
           openPullRequests={summary?.open_pull_requests ?? null}
           activeAgents={summary?.active_agents ?? null}
+          automationWarnings={automation.data?.warnings.length ?? 0}
         />
       </PageHeader>
 
@@ -179,23 +183,22 @@ function nameOf(fullName: string): string {
 function RepoTabs({
   base,
   current,
-  repoId,
   mayOpenSettings,
   openPullRequests,
   activeAgents,
+  automationWarnings,
 }: {
   base: string;
   current: RepoTabKey;
-  repoId: string | null;
   mayOpenSettings: boolean;
   openPullRequests: number | null;
   activeAgents: number | null;
+  automationWarnings: number;
 }): JSX.Element {
   const tabs = visibleRepoTabs(mayOpenSettings);
   // Automation is marked when something it reports needs a person; the query is
   // the same one the Automation tab reads, so the mark costs no extra request.
-  const automation = useRepoAutomation(repoId);
-  const warned = (automation.data?.warnings.length ?? 0) > 0;
+  const warned = automationWarnings > 0;
 
   const items = tabs.map((tab) => ({
     key: tab.key,
@@ -222,5 +225,25 @@ function RepoTabs({
       testId="repo-tabs"
       idPrefix="repo-tab"
     />
+  );
+}
+
+function MirrorBadge({
+  href,
+  tone,
+}: {
+  href: string;
+  tone: ReturnType<typeof mirrorTone>;
+}): JSX.Element | null {
+  if (tone === 'unknown') return null;
+  return (
+    <Link
+      to={href}
+      className={`repo-mirror-link repo-mirror-link--${tone}`}
+      data-testid="repo-header-mirror-badge"
+      title="Open mirror settings"
+    >
+      GitHub ↗
+    </Link>
   );
 }

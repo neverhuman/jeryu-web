@@ -157,6 +157,76 @@
   border-color: transparent;
 }
 
+.page__pill--human {
+  background-color: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+  border-color: transparent;
+}
+
+.mirror-section {
+  border-left: 3px solid var(--color-border-subtle);
+}
+
+.mirror-section--ok {
+  border-left-color: var(--color-accent-success);
+}
+
+.mirror-section--warn {
+  border-left-color: var(--color-accent-warning);
+}
+
+.mirror-section--human {
+  border-left-color: var(--color-accent-danger);
+}
+
+.mirror-section__summary,
+.mirror-section__facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.mirror-section__target {
+  color: var(--color-accent-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.mirror-section__facts {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+}
+
+.mirror-section__facts dt {
+  min-width: 150px;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.mirror-section__facts dd {
+  margin: 0;
+  color: var(--color-fg-primary);
+}
+
+.mirror-section__tag-drift h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.mirror-section__tag-drift table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.mirror-section__tag-drift th,
+.mirror-section__tag-drift td {
+  padding: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+  text-align: left;
+}
+
 /* A link inside a sentence is told apart by more than its colour. */
 .page__roadmap-note a {
   text-decoration: underline;

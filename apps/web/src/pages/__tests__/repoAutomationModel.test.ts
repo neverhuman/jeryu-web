@@ -156,10 +156,11 @@ describe('mirrors', () => {
     ...over,
   });
 
-  it('reads a level mirror as fine and a behind or failing one as not', () => {
+  it('reads a level mirror as fine, behind as waiting, and diverged as bad', () => {
     expect(mirrorTone(mirror())).toBe('ok');
-    expect(mirrorTone(mirror({ state: 'behind', behind: true }))).toBe('bad');
-    expect(mirrorTone(mirror({ lastError: 'push rejected' }))).toBe('bad');
+    expect(mirrorTone(mirror({ state: 'behind', behind: true }))).toBe('waiting');
+    expect(mirrorTone(mirror({ lastError: 'push rejected' }))).toBe('waiting');
+    expect(mirrorTone(mirror({ state: 'diverged' }))).toBe('bad');
     expect(mirrorTone(mirror({ state: 'unknown' }))).toBe('waiting');
   });
 

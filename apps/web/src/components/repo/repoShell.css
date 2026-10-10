@@ -63,6 +63,37 @@
   color: var(--color-accent-warning);
 }
 
+.repo-mirror-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.repo-mirror-link--ok {
+  color: var(--color-accent-success);
+  background-color: var(--color-accent-success-bg);
+}
+
+.repo-mirror-link--warn {
+  color: var(--color-accent-warning);
+  background-color: var(--color-accent-warning-bg);
+}
+
+.repo-mirror-link--human {
+  color: var(--color-accent-danger);
+  background-color: var(--color-accent-danger-bg);
+  border-color: var(--color-accent-danger);
+}
+
 @media (max-width: 720px) {
   .repo-shell__header {
     padding: var(--space-4) var(--space-5) 0;

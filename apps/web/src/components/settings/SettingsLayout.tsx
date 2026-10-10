@@ -38,6 +38,7 @@ export const SETTINGS_NAV: SettingsNavItem[] = [
   { id: 'features', label: 'Features', icon: Sparkles },
   { id: 'merge-policy', label: 'Merge policy', icon: GitMerge },
   { id: 'branch-protection', label: 'Branch protection', icon: GitBranch },
+  { id: 'mirror', label: 'Mirror', icon: Globe },
   { id: 'ci', label: 'CI / Workflows', icon: Globe },
   { id: 'agents', label: 'Agents', icon: Bot },
   { id: 'access', label: 'Access', icon: KeyRound },

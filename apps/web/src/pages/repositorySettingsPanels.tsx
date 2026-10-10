@@ -21,6 +21,7 @@ const SECTION_TITLES: Record<string, string> = {
   general: 'General',
   'merge-policy': 'Merge policy',
   'branch-protection': 'Branch protection',
+  mirror: 'Mirror',
   features: 'Features',
   ci: 'CI / Workflows',
   agents: 'Agents',

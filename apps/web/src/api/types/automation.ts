@@ -64,6 +64,12 @@ export interface AutomationActor {
 }
 
 /** One place the repository is copied to. */
+export interface AutomationMirrorTagDrift {
+  ref: string;
+  forgeSha?: string | null;
+  mirrorSha?: string | null;
+}
+
 export interface AutomationMirror {
   /** Where the copy lives, as a reader would open it. */
   target: string;
@@ -78,6 +84,12 @@ export interface AutomationMirror {
   lastPushedAt?: string | null;
   lastCheckedAt?: string | null;
   lastError?: string | null;
+  /** How many commits the target lacks, when the forge can count them. */
+  behindBy?: number | null;
+  /** True while the forge has scheduled another push attempt. */
+  retryPending?: boolean | null;
+  /** Tags whose target differs between the forge and the mirror. */
+  tagDrift?: AutomationMirrorTagDrift[];
 }
 
 /** One grant on the repository. */
