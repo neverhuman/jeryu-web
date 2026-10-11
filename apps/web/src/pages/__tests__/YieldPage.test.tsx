@@ -189,6 +189,48 @@ describe('YieldPage', () => {
     expect(screen.queryByTestId('yield-kpi-per-merged')).toBeNull();
   });
 
+  it('labels a still-loading window with the window it was read for, dimmed and busy', async () => {
+    const week = windowDates(7, new Date());
+    mockYieldApi((req) =>
+      req.pathname === '/api/v1/yield' && new URLSearchParams(req.search).get('since') === week.since
+        ? new Promise<Response>(() => {})
+        : undefined
+    );
+    renderAt('/yield', '/yield', <YieldPage />);
+    expect(await screen.findByRole('heading', { name: 'Last 28 days' })).toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole('group', { name: 'Window' })).getByRole('button', { name: '7 d' }));
+
+    const body = await screen.findByTestId('yield-body');
+    await waitFor(() => expect(body).toHaveAttribute('aria-busy', 'true'));
+    // The 28-day numbers are still up: they must not be called the last 7 days.
+    expect(screen.getByRole('heading', { name: 'Last 28 days' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Last 7 days' })).toBeNull();
+    expect(screen.getByTestId('yield-spend-summary')).toHaveTextContent('in the last 28 days');
+    expect(within(body).getByRole('status')).toHaveTextContent(
+      'Updating… showing the last 28 days until the 7-day read lands.'
+    );
+  });
+
+  it('keeps an empty window dimmed and busy while the next window loads', async () => {
+    const week = windowDates(7, new Date());
+    mockYieldApi((req) => {
+      if (req.pathname !== '/api/v1/yield') return undefined;
+      if (new URLSearchParams(req.search).get('since') === week.since) return new Promise<Response>(() => {});
+      return json({ ...REPORT, totals: row(), groups: [], weekly: [], experiments: [], costliest: [], scrap: [] });
+    });
+    renderAt('/yield', '/yield', <YieldPage />);
+    expect(await screen.findByText('No work in this window.')).toBeInTheDocument();
+    expect(screen.getByTestId('yield-body')).toHaveAttribute('aria-busy', 'false');
+
+    fireEvent.click(within(screen.getByRole('group', { name: 'Window' })).getByRole('button', { name: '7 d' }));
+
+    const body = screen.getByTestId('yield-body');
+    await waitFor(() => expect(body).toHaveAttribute('aria-busy', 'true'));
+    expect(within(body).getByText('No work in this window.')).toBeInTheDocument();
+    expect(within(body).getByText(/^Updating…/)).toHaveClass('yield__updating');
+  });
+
   it('degrades plainly on a server without the route', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(errorResponse(404, 'no such route'));
     renderAt('/yield', '/yield', <YieldPage />);

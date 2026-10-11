@@ -124,12 +124,33 @@ test.describe('Yield', () => {
     await expect(page.getByTestId('yield-breakdown-table').getByRole('columnheader', { name: 'Agent' })).toBeVisible();
     expect(await page.evaluate(() => window.scrollY), 'switching the cut keeps the scroll position').toBe(before);
 
-    await page.getByRole('group', { name: 'Window' }).getByRole('button', { name: '7 d' }).scrollIntoViewIfNeeded();
+    // Scroll a little, keeping the window switch in view, so a reset to the top would show.
+    const week = page.getByRole('group', { name: 'Window' }).getByRole('button', { name: '7 d' });
+    const weekTop = await week.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    await page.evaluate((top) => window.scrollTo(0, Math.max(1, Math.floor(top - 100))), weekTop);
+    await expect(week).toBeInViewport();
     const atWindow = await page.evaluate(() => window.scrollY);
-    await page.getByRole('group', { name: 'Window' }).getByRole('button', { name: '7 d' }).click();
+    expect(atWindow, 'the page is scrolled before the window switch').toBeGreaterThan(0);
+    await week.click();
     await expect(page).toHaveURL(/[?&]days=7\b/);
     await expect(page.getByTestId('yield-body')).toHaveAttribute('aria-busy', 'false');
     expect(await page.evaluate(() => window.scrollY), 'switching the window keeps the scroll position').toBe(atWindow);
+  });
+
+  test('the report sections keep their spacing inside the report body @action:yield.overview', async ({ page }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockYieldApi(page);
+    await page.goto('/yield');
+    const body = page.getByTestId('yield-body');
+    await expect(body.getByTestId('yield-kpi-per-merged')).toBeVisible({ timeout: 15_000 });
+    const gaps = await body.evaluate((el) => {
+      const sections = Array.from(el.querySelectorAll(':scope > section'));
+      return sections.slice(1).map((section, index) =>
+        Math.round(section.getBoundingClientRect().top - sections[index].getBoundingClientRect().bottom)
+      );
+    });
+    expect(gaps.length, 'the body holds several sections').toBeGreaterThan(2);
+    for (const gap of gaps) expect(gap, 'sections are spaced apart, not stacked flush').toBeGreaterThanOrEqual(16);
   });
 
   test('a phone in the dark theme reads the page without sideways scrolling @action:yield.phone_dark', async ({

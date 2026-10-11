@@ -348,8 +348,9 @@ export function todoRefMeta(ref: YieldTodoRef): string {
     .join(' · ');
 }
 
-/** Where a costly todo stands, in the Work page's words and colours. A blocked or
- * handed-off todo is red: its spend is not lost yet, a person can still save it.
+/** Where a costly todo stands, in the Work page's words. The colours are this list's
+ * own, not `statusTone`'s (used only for anything not named here): a blocked or
+ * handed-off todo is red, because its spend is not lost yet and a person can still save it.
  * Work still in play (open, claimed, landed but in review) is amber; merged is green;
  * anything else (closed) is neutral. */
 export function todoRefStatus(ref: YieldTodoRef): { label: string; tone: Tone; hint: string } {

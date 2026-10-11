@@ -362,6 +362,13 @@
   white-space: nowrap;
 }
 
+/* The report body carries the section rhythm `.page` gives its direct children. */
+.yield__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
 /* The previous report stays up while the next one loads (the page keeps its
    height and scroll position); it is dimmed so nobody mistakes it for the current answer. */
 .yield__body--updating {
@@ -370,7 +377,7 @@
 }
 
 .yield__updating {
-  margin: 0 0 var(--space-2, 8px);
+  margin: 0;
   font-size: 0.85rem;
-  color: var(--text-muted, inherit);
+  color: var(--color-fg-muted);
 }

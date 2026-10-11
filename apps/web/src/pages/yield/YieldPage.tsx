@@ -8,7 +8,7 @@
 // the window and the breakdown's cut live in the address (`?days=`, `?by=`).
 
 import { Coins, ServerOff } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type {
@@ -78,6 +78,13 @@ export function YieldPage(): JSX.Element {
   const dates = useMemo(() => windowDates(days, new Date()), [days]);
   const report = useYield({ ...(scope.family ? { family: scope.family } : {}), ...dates, by });
   const { data, isPending, isError, error, isPlaceholderData } = report;
+  // While a new window loads, the old answer stays up: label it with the window
+  // it was read for, not the one just picked.
+  const [settledDays, setSettledDays] = useState(days);
+  useEffect(() => {
+    if (data && !isPlaceholderData) setSettledDays(days);
+  }, [data, isPlaceholderData, days]);
+  const shownDays = isPlaceholderData ? settledDays : days;
 
   const setParam = (name: string, value: string, fallback: string): void => {
     const next = new URLSearchParams(params);
@@ -107,12 +114,6 @@ export function YieldPage(): JSX.Element {
         <LoadingState title="Loading what the work cost…" variant="message" />
       ) : isError ? (
         <YieldQueryState error={error} onRetry={() => void report.refetch()} />
-      ) : data.totals.todos === 0 ? (
-        <ScopedEmptyState
-          icon={Coins}
-          title="No work in this window."
-          description={`No attempt started between ${data.window.since} and ${data.window.until}. Pick a longer window, or come back once agents have worked.`}
-        />
       ) : (
         <div
           className={isPlaceholderData ? 'yield__body yield__body--updating' : 'yield__body'}
@@ -121,15 +122,25 @@ export function YieldPage(): JSX.Element {
         >
           {isPlaceholderData ? (
             <p className="yield__updating" role="status">
-              Updating…
+              {shownDays === days
+                ? 'Updating…'
+                : `Updating… showing the last ${shownDays} days until the ${days}-day read lands.`}
             </p>
           ) : null}
-          <YieldBody
-            data={data}
-            days={days}
-            by={by}
-            onBy={(value) => setParam(BY_PARAM, value, DEFAULT_BY)}
-          />
+          {data.totals.todos === 0 ? (
+            <ScopedEmptyState
+              icon={Coins}
+              title="No work in this window."
+              description={`No attempt started between ${data.window.since} and ${data.window.until}. Pick a longer window, or come back once agents have worked.`}
+            />
+          ) : (
+            <YieldBody
+              data={data}
+              days={shownDays}
+              by={by}
+              onBy={(value) => setParam(BY_PARAM, value, DEFAULT_BY)}
+            />
+          )}
         </div>
       )}
     </div>
