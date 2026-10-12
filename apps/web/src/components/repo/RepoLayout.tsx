@@ -31,6 +31,8 @@ import { RepoRoleBadge } from './RepoRoleBadge';
 import { TabBar } from './TabBar';
 import { PageHeader, queryFreshness } from '../pageHeader';
 import { PermissionDeniedState } from '../state';
+import { livePresenceCount } from '../../api/agentPresence';
+import { useRepoAgentPresence } from '../../hooks/useAgentPresence';
 import { useBootstrap } from '../../hooks/useBootstrap';
 import { useAuth } from '../../hooks/useAuth';
 import { useRepoAutomation } from '../../hooks/useRepoAutomation';
@@ -83,6 +85,13 @@ export function RepoLayout({
   const base = repoFrontPath(provider, fullName);
   const automation = useRepoAutomation(repoId);
   const refs = useRefs(repoId);
+  // The Agents count: the live agents the presence list holds, once the Agents
+  // tab has read it (other tabs only read the cache, so it costs no request),
+  // else the repository summary's own count.
+  const presence = useRepoAgentPresence(repoId, { fetch: tab === 'agents' });
+  const activeAgents = presence.data
+    ? livePresenceCount(presence.data.items)
+    : (summary?.active_agents ?? null);
   const mirror = firstMirror(automation.data?.mirrors);
   const defaultBranch = summary?.default_branch ?? '';
   const defaultBranchSha =
@@ -185,7 +194,7 @@ export function RepoLayout({
           current={tab}
           mayOpenSettings={mayOpenSettings}
           openPullRequests={summary?.open_pull_requests ?? null}
-          activeAgents={summary?.active_agents ?? null}
+          activeAgents={activeAgents}
           automationWarnings={automation.data?.warnings.length ?? 0}
         />
       </PageHeader>

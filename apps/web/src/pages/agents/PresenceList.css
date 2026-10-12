@@ -1,0 +1,243 @@
+/* PresenceList.css — agent presence rows (Agents page) and the compact family list. */
+
+.presence {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.presence__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-2);
+  font-size: var(--font-size-xs);
+}
+
+.presence__row--stale,
+.presence__row--ended {
+  opacity: 0.75;
+}
+
+.presence__row--collides {
+  border-color: var(--color-accent-warning);
+}
+
+.presence__head,
+.presence__meta,
+.presence__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.presence__name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  color: var(--color-fg-primary);
+  overflow-wrap: anywhere;
+}
+
+.presence__open {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.presence__open:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-3);
+}
+
+.presence__open.is-active {
+  border-color: var(--color-accent-primary);
+  background: var(--color-accent-primary-bg);
+}
+
+.presence__agent {
+  font-weight: var(--font-weight-semibold);
+}
+
+.presence__headline {
+  color: var(--color-fg-secondary);
+}
+
+.presence__runner {
+  color: var(--color-fg-muted);
+}
+
+.presence__state,
+.presence__run-status,
+.presence__via {
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.presence__state {
+  text-transform: capitalize;
+}
+
+.presence__state--ok {
+  background: var(--color-accent-success-bg);
+  color: var(--color-accent-success);
+}
+
+.presence__state--warn {
+  background: var(--color-accent-warning-bg);
+  color: var(--color-accent-warning);
+}
+
+.presence__state--unknown,
+.presence__state--failed,
+.presence__state--human,
+.presence__run-status {
+  background: var(--color-bg-3);
+  color: var(--color-fg-muted);
+}
+
+.presence__via {
+  background: var(--color-accent-primary-bg);
+  color: var(--color-fg-primary);
+  box-shadow: inset 0 0 0 1px var(--color-accent-primary);
+}
+
+.presence__tty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--color-fg-muted);
+}
+
+.presence__tty.is-live {
+  color: var(--color-accent-success);
+}
+
+.presence__meta {
+  color: var(--color-fg-secondary);
+}
+
+.presence__fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.presence__mono {
+  font-family: var(--font-mono);
+}
+
+.presence__collision {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.25rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-warning-bg);
+  color: var(--color-fg-primary);
+  overflow-wrap: anywhere;
+}
+
+.presence__collision svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  color: var(--color-accent-warning);
+}
+
+.presence__links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--color-accent-primary);
+  text-decoration: none;
+}
+
+.presence__links a:hover {
+  text-decoration: underline;
+}
+
+/* ── Compact family list ─────────────────────────────────────────────────── */
+
+.presence-compact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.presence-compact__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.4rem;
+  padding: 0.2rem 0.3rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-xs);
+  text-decoration: none;
+  min-width: 0;
+}
+
+a.presence-compact__row:hover {
+  background: var(--color-bg-3);
+}
+
+.presence-compact__agent {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.presence-compact__fact {
+  color: var(--color-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+.presence-compact__warn {
+  color: var(--color-accent-warning);
+}
+
+.presence-compact__empty {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.presence__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-fg-muted);
+  flex: 0 0 auto;
+}
+
+.presence__dot--ok {
+  background: var(--color-accent-success);
+}
+
+.presence__dot--warn {
+  background: var(--color-accent-warning);
+}

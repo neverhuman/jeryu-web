@@ -3,6 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, GitBranch, Server, Bot, Radio, ListChecks, Cpu } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import {
+  livePresenceCount,
+  mergePresenceWithRuns,
+  presenceRunId,
+  presenceUnsupported,
+  type PresenceRow,
+} from '../api/agentPresence';
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { RepoAgentRunsResponse, RepoAgentSummary } from '../api/types';
@@ -13,6 +20,10 @@ import { useResolveRepo } from '../hooks/useResolveRepo';
 import { useRealtime } from '../hooks/useRealtime';
 import { useCreateSession } from '../hooks/useCreateSession';
 import { useShiftTodos } from '../hooks/useShift';
+import { useRepoAgentPresence } from '../hooks/useAgentPresence';
+import { useTickingNow } from '../hooks/useTickingNow';
+import { PresenceList } from './agents/PresenceList';
+import { agentLabel } from './agents/presenceModel';
 import { RepoBotRoster } from './bots/RepoBotRoster';
 import { repoQueueRuns, type RepoQueueRun } from './repoQueueRuns';
 import { todoHref } from './shift/workPaths';
@@ -96,7 +107,17 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
     staleTime: 10_000,
   });
 
-  const items = runs.data?.items ?? [];
+  const items = useMemo(() => runs.data?.items ?? [], [runs.data]);
+
+  // Agent presence: everyone at work here, jeryu's own runs among them. An
+  // older server has no such route; the page then shows the runs alone.
+  const presence = useRepoAgentPresence(repoId);
+  const presenceMissing = presence.isError && presenceUnsupported(presence.error);
+  const presenceRows = useMemo(
+    () => (presence.data ? mergePresenceWithRuns(presence.data.items, items) : null),
+    [presence.data, items]
+  );
+  const now = useTickingNow();
 
   // Queue runs: a worker attempt on a todo naming this repository is work the
   // operator has running here, and it never shows up under `agent-runs`.
@@ -179,6 +200,16 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
     }]);
   }
 
+  function onOpenPresence(row: PresenceRow): void {
+    const runId = presenceRunId(row.item);
+    if (!runId) return;
+    setActivePanes([{
+      runId,
+      shellRunId: row.run?.shell_run_id ?? null,
+      label: `${agentLabel(row.item)} · ${row.item.branch ?? runId}`,
+    }]);
+  }
+
   if (resolved.isPending) {
     return (
       <div className="page" data-testid="repo-agents-page">
@@ -207,7 +238,10 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
   const atCapacity = activePanes.length >= MAX_AGENT_PANES;
   // The terminal belongs to agent runs. With none to open, its "choose a run"
   // prompt would only stack a second empty state under the list's own.
-  const showTerminalPane = activePanes.length > 0 || items.length > 0;
+  const showTerminalPane =
+    activePanes.length > 0 ||
+    items.length > 0 ||
+    (presenceRows ?? []).some((row) => presenceRunId(row.item) !== null);
 
   return (
     <div className="page page--full agents" data-testid="repo-agents-page">
@@ -270,41 +304,66 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
           owner={resolved.data.summary.id.owner}
           name={resolved.data.summary.id.name}
         />
-        <section
-          className="page__section agents__list-pane"
-          aria-labelledby="agents-list"
-        >
-          <h2 className="page__section-title" id="agents-list">
-            Runs
-          </h2>
-          {runs.isPending ? (
-            <LoadingState variant="message" title="Loading agent runs." />
-          ) : runs.isError ? (
-            <ErrorState
-              title="Could not load agent runs."
-              error={runs.error}
-              onRetry={() => void runs.refetch()}
-              testId="agents-runs-error"
-            />
-          ) : items.length === 0 ? (
-            <EmptyState
-              title="No agent session on this repository yet."
-              description="Start one with New Session."
-              testId="agents-empty"
-            />
-          ) : (
-            <ul className="agents__list" data-testid="agents-list">
-              {items.map((run: RepoAgentSummary) => (
-                <AgentRow
-                  key={run.run_id}
-                  run={run}
-                  onSelect={() => onSelectRun(run)}
-                  active={activePanes.some((p) => p.runId === run.run_id)}
+        {presenceRows ? (
+          <PresencePane
+            rows={presenceRows}
+            host={resolved.data.summary.id.host}
+            repo={`${resolved.data.summary.id.owner}/${resolved.data.summary.id.name}`}
+            now={now}
+            openRuns={new Set(activePanes.map((pane) => pane.runId))}
+            onOpenRun={onOpenPresence}
+          />
+        ) : presence.isPending && repoId ? (
+          <section className="page__section agents__list-pane" aria-label="Agents at work">
+            <LoadingState variant="message" title="Loading agents." />
+          </section>
+        ) : (
+          <>
+            {presence.isError && !presenceMissing ? (
+              <p className="agents__presence-note" role="status" data-testid="agents-presence-error">
+                Could not load the other agents at work here; showing jeryu runs only.{' '}
+                <button type="button" onClick={() => void presence.refetch()}>
+                  Retry
+                </button>
+              </p>
+            ) : null}
+            <section
+              className="page__section agents__list-pane"
+              aria-labelledby="agents-list"
+            >
+              <h2 className="page__section-title" id="agents-list">
+                Runs
+              </h2>
+              {runs.isPending ? (
+                <LoadingState variant="message" title="Loading agent runs." />
+              ) : runs.isError ? (
+                <ErrorState
+                  title="Could not load agent runs."
+                  error={runs.error}
+                  onRetry={() => void runs.refetch()}
+                  testId="agents-runs-error"
                 />
-              ))}
-            </ul>
-          )}
-        </section>
+              ) : items.length === 0 ? (
+                <EmptyState
+                  title="No agent session on this repository yet."
+                  description="Start one with New Session."
+                  testId="agents-empty"
+                />
+              ) : (
+                <ul className="agents__list" data-testid="agents-list">
+                  {items.map((run: RepoAgentSummary) => (
+                    <AgentRow
+                      key={run.run_id}
+                      run={run}
+                      onSelect={() => onSelectRun(run)}
+                      active={activePanes.some((p) => p.runId === run.run_id)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
 
         {queueRuns.length > 0 ? (
           <section
@@ -366,6 +425,57 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** The presence list: one row per agent at work here, live ones first. */
+function PresencePane({
+  rows,
+  host,
+  repo,
+  now,
+  openRuns,
+  onOpenRun,
+}: {
+  rows: PresenceRow[];
+  host: string;
+  repo: string;
+  now: number;
+  openRuns: ReadonlySet<string>;
+  onOpenRun: (row: PresenceRow) => void;
+}): JSX.Element {
+  const live = livePresenceCount(rows.map((row) => row.item));
+  return (
+    <section
+      className="page__section agents__presence-pane"
+      aria-labelledby="agents-presence"
+      data-testid="agents-presence"
+    >
+      <h2 className="page__section-title" id="agents-presence">
+        Agents at work
+        {live > 0 ? (
+          <span className="agents__presence-count" data-testid="agents-presence-live">
+            {live} live
+          </span>
+        ) : null}
+      </h2>
+      {rows.length === 0 ? (
+        <EmptyState
+          title="No agents are active on this repository."
+          description="Start one with New Session."
+          testId="agents-empty"
+        />
+      ) : (
+        <PresenceList
+          rows={rows}
+          host={host}
+          repo={repo}
+          now={now}
+          openRuns={openRuns}
+          onOpenRun={onOpenRun}
+        />
+      )}
+    </section>
   );
 }
 

@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- A repository's Agents tab lists everyone at work on it, from `GET /api/v1/repos/{id}/agent-presence`:
+  CLI sessions of any vendor, queue workers, reviewers, gates and jeryu's own runs, one row each,
+  live first. A row shows agent and model, what it is doing, who started it, branch and checkout,
+  state, started and last seen, spend so far, and links to the pull request, the todo and (for a
+  jeryu run) the live terminal; a session that reaches the repository through its family says
+  "via family", and two live agents on one branch each carry a collision warning. A jeryu run is
+  listed once and still opens its terminal. The tab's count is the live agents once the tab has
+  read the list. The family rail adds a compact "Active agents" list from
+  `GET /api/v1/agent-presence?family=<key>`. A server without these routes (404, 405, HTML) shows
+  the runs list and the rail exactly as before, with no banner.
 - The Bots page is now called Agents (nav, palette and page title; still `/bots`, `g b`). A
   bot's reach lists each repository on its own row, and an owners reach (`{"mode":"owners"}`,
   every repository under those owners the account can reach, later ones too) lists as `owner/*`

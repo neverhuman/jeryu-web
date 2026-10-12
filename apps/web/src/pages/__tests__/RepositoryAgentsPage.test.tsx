@@ -246,6 +246,178 @@ describe('RepositoryAgentsPage — enrolled agent roster', () => {
   });
 });
 
+describe('RepositoryAgentsPage — agent presence', () => {
+  beforeEach(stubBrowserTransports);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const RUN = {
+    run_id: 'run-1',
+    branch: 'fix/parser',
+    runner: 'node-a',
+    status: 'running',
+    tty_live: true,
+    agent: 'editor',
+    shell_run_id: 'shell-1',
+    updated_at: NOW,
+  };
+  // Not live, so no terminal opens by itself.
+  const ENDED_RUN = { ...RUN, status: 'exited', tty_live: false };
+
+  it('lists everyone at work in one list, live first, with family, collision and links', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [RUN] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+      'GET /api/v1/repos/repo-1/agent-presence': {
+        items: [
+          presenceItem({ id: 'external:ended', state: 'ended', agent: 'codex' }),
+          presenceItem({
+            id: 'external:cli:one',
+            collides_with: ['external:cli:two'],
+            links: { pr: 'alice/jeryu#12', todo: 'acme:20261012-1200-abc123' },
+            host: 'node-a',
+          }),
+          presenceItem({
+            id: 'external:cli:two',
+            agent: 'claude-code',
+            operator: 'grace',
+            via: 'family',
+            family: 'acme',
+            collides_with: ['external:cli:one'],
+          }),
+          presenceItem({
+            id: 'agent_run:run-1',
+            source: 'agent_run',
+            agent: 'editor',
+            branch: 'fix/parser',
+            title: null,
+            operator: null,
+            links: { agent_run: 'run-1' },
+          }),
+        ],
+        total: 4,
+      },
+    });
+
+    renderPage();
+
+    const list = await screen.findByTestId('agents-presence-list');
+    const rows = within(list).getAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    // Ended sorts last; the jeryu run is one row, not two.
+    expect(rows[3]).toHaveAttribute('data-testid', 'presence-row-external:ended');
+    expect(screen.getAllByTestId('agent-row-run-1')).toHaveLength(1);
+    expect(screen.queryByTestId('agents-list')).not.toBeInTheDocument();
+    expect(screen.getByTestId('agents-presence-live')).toHaveTextContent('3 live');
+
+    expect(screen.getByTestId('presence-via-family-external:cli:two')).toHaveTextContent(
+      'via family acme'
+    );
+    expect(screen.queryByTestId('presence-via-family-external:cli:one')).not.toBeInTheDocument();
+    expect(screen.getByTestId('presence-collision-external:cli:one')).toHaveTextContent(
+      'claude-code (grace)'
+    );
+    expect(screen.getByTestId('presence-host-external:cli:one')).toHaveTextContent('node-a');
+    expect(screen.queryByTestId('presence-host-external:cli:two')).not.toBeInTheDocument();
+    expect(screen.getByTestId('presence-pr-external:cli:one')).toHaveAttribute(
+      'href',
+      '/repos/jeryu/alice/jeryu/pulls/12'
+    );
+    expect(screen.getByTestId('presence-pr-external:cli:one')).toHaveTextContent('pull request #12');
+    expect(screen.getByTestId('presence-todo-external:cli:one')).toHaveAttribute(
+      'href',
+      '/work/20261012-1200-abc123?family=acme'
+    );
+    expect(screen.getByTestId('presence-source-external:cli:one')).toHaveTextContent('external');
+    expect(screen.getByTestId('presence-cost-external:cli:one')).toHaveTextContent('$1.23 so far');
+
+    // The live run opened itself, and its row still opens the terminal.
+    const terminals = await screen.findAllByTestId('agent-terminal');
+    expect(terminals[0]).toHaveAttribute('data-run-id', 'run-1');
+    await userEvent.click(screen.getByTestId('agent-row-run-1'));
+    expect(screen.getByTestId('agent-row-run-1')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('says plainly when no agent is active', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+      'GET /api/v1/repos/repo-1/agent-presence': { items: [], total: 0 },
+    });
+
+    renderPage();
+
+    const empty = await screen.findByTestId('agents-empty');
+    expect(empty).toHaveTextContent('No agents are active on this repository.');
+    expect(screen.queryByTestId('agents-no-selection')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the runs list, with no banner, when the server answers with HTML', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [ENDED_RUN] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+      'GET /api/v1/repos/repo-1/agent-presence': () =>
+        new Response('<!doctype html><title>app</title>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        }),
+    });
+
+    renderPage();
+
+    expect(await screen.findByTestId('agents-list')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-row-run-1')).toHaveTextContent('fix/parser');
+    expect(screen.queryByTestId('agents-presence')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agents-presence-error')).not.toBeInTheDocument();
+  });
+
+  it('keeps the runs list and says so quietly when presence fails for real', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [ENDED_RUN] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+      'GET /api/v1/repos/repo-1/agent-presence': {
+        status: 500,
+        body: { error: { code: 'internal', message: 'boom' } },
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByTestId('agents-presence-error', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByTestId('agents-list')).toBeInTheDocument();
+  });
+});
+
+function presenceItem(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 'external:cli:one',
+    source: 'external',
+    session_id: 'cli:one',
+    agent: 'codex',
+    model: 'model-x',
+    operator: 'ada',
+    lane: 'agent-presence',
+    branch: 'ada/agent-presence',
+    title: 'Wire presence into the tab',
+    state: 'active',
+    via: 'repo',
+    started_at: Date.parse(NOW) - 3_600_000,
+    last_active_at: Date.parse(NOW),
+    expires_at: Date.parse(NOW) + 300_000,
+    cost_usd: 1.23,
+    links: {},
+    collides_with: [],
+    ...overrides,
+  };
+}
+
 function queueTodo(): Record<string, unknown> {
   return {
     id: '20260921-002116',
@@ -396,6 +568,9 @@ function mockFetch(
         return jsonResponse(404, {
           error: { code: 'not_found', message: key },
         });
+      }
+      if (typeof match === 'function') {
+        return match();
       }
       if (isRouteResult(match)) {
         return jsonResponse(match.status ?? 200, match.body);
