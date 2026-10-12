@@ -90,6 +90,71 @@ describe('TodoPage', () => {
     );
   });
 
+  it('lets any signed-in person claim a blocked todo, and hand it to a person', async () => {
+    const blocked = todo({
+      id: '20260919-1300-own',
+      title: 'Restart the display manager',
+      status: 'blocked',
+      block_kind: 'owner_task',
+      note: 'needs root on the forge host',
+    });
+    const calls = mockShiftApi((req) => {
+      if (req.pathname === '/api/v1/shift/todos') {
+        return json({ generated_at: '2026-09-19T09:00:00Z', todos: [blocked] });
+      }
+      if (req.pathname === '/api/v1/people') {
+        return json([
+          { login: 'operator', display_name: 'operator' },
+          { login: 'bea', display_name: 'Bea' },
+        ]);
+      }
+      if (req.pathname.endsWith('/action')) return json({ ...blocked, assignee: 'operator' });
+      return undefined;
+    });
+    renderTodo('/work/20260919-1300-own');
+    expect(await screen.findByTestId('todo-assignee-line')).toHaveTextContent('Nobody has this yet');
+    // A non-admin still gets no admin actions, only the ones to take it on.
+    expect(screen.queryByRole('button', { name: /^Release/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Claim 20260919-1300-own' }));
+    await waitFor(() =>
+      expect(calls.find((call) => call.pathname.endsWith('/action'))?.body).toEqual({
+        action: 'claim',
+      })
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Assign 20260919-1300-own to someone' }));
+    const picker = await screen.findByLabelText('Person to assign 20260919-1300-own to');
+    // The picker lists people from /api/v1/people only.
+    expect(within(picker).getByRole('option', { name: 'Bea (bea)' })).toBeInTheDocument();
+    fireEvent.change(picker, { target: { value: 'bea' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Assign' }));
+    await waitFor(() =>
+      expect(
+        calls.filter((call) => call.pathname.endsWith('/action')).map((call) => call.body)
+      ).toContainEqual({ action: 'assign', value: 'bea' })
+    );
+  });
+
+  it('shows who has a todo and lets only them finish or give it back', async () => {
+    serveTodos([
+      todo({ id: '20260919-1400-mine', status: 'blocked', assignee: 'operator' }),
+      todo({ id: '20260919-1401-hers', status: 'blocked', assignee: 'bea' }),
+    ]);
+    renderTodo('/work/20260919-1400-mine');
+    expect(await screen.findByTestId('todo-assignee-line')).toHaveTextContent('You have this');
+    expect(screen.getByRole('button', { name: 'Mark 20260919-1400-mine done' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unassign 20260919-1400-mine' })).toHaveTextContent(
+      'Give it back'
+    );
+  });
+
+  it("offers another user's todo to nobody but its holder", async () => {
+    serveTodos([todo({ id: '20260919-1401-hers', status: 'blocked', assignee: 'bea' })]);
+    renderTodo('/work/20260919-1401-hers');
+    expect(await screen.findByTestId('todo-assignee-line')).toHaveTextContent('bea has this');
+    expect(screen.queryByRole('button', { name: /Claim|Assign|Unassign|Mark .* done/ })).toBeNull();
+  });
+
   it('gives admins the row actions', async () => {
     role = 'admin';
     mockShiftApi();

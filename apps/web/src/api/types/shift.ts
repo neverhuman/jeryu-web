@@ -89,6 +89,11 @@ export interface ShiftTodo {
   block_kind?: ShiftBlockKind | string | null;
   /** While this instant is in the future the todo is parked: nothing claims it. */
   parked_until?: string | null;
+  /**
+   * The person who has taken the todo on (a forge login); null when nobody
+   * has. Workers never claim a todo with an assignee. Absent on older servers.
+   */
+  assignee?: string | null;
   worked_by: ShiftAttempt[];
 }
 
@@ -143,10 +148,14 @@ export type ShiftTodoActionKind =
   | 'close'
   | 'park'
   | 'edit'
-  | 'acknowledge';
+  | 'acknowledge'
+  | 'claim'
+  | 'assign'
+  | 'unassign';
 
 export interface ShiftTodoActionRequest {
   action: ShiftTodoActionKind;
+  /** `assign`: the login of the person to hand the todo to. */
   value?: string | number;
   note?: string;
   /**

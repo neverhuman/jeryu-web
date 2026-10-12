@@ -41,11 +41,11 @@ export function NeedsYouAbout({
   return (
     <section
       className="needs-you__here"
-      aria-label={`${subjects.length} waiting on you here`}
+      aria-label={`${subjects.length} blocked here`}
       data-testid={testId}
     >
       <h2 className="page__section-title">
-        <span className={pillClass('human')}>{subjects.length}</span> Waiting on you
+        <span className={pillClass('human')}>{subjects.length}</span> Blocked here
       </h2>
       <ul className="needs-you__list">
         {subjects.map((row) => (

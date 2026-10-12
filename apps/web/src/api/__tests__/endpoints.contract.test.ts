@@ -28,6 +28,8 @@ const endpointSamples = {
   authTokens: [],
   authToken: ['token-1'],
   adminUsers: [],
+  adminUserKind: ['alex'],
+  people: [],
   adminResetPassword: ['alex'],
   adminRepoGrants: ['acme', 'widget-api'],
   adminRepoGrant: ['acme', 'widget-api', 'alex'],

@@ -12,7 +12,9 @@ export const SEVERITIES: readonly AttentionSeverity[] = ['critical', 'action', '
 
 export const SEVERITY_LABEL: Record<AttentionSeverity, string> = {
   critical: 'Broken — the pipeline is stuck',
-  action: 'Waiting on you',
+  // Blocked on a person — any person: a todo here can be claimed or handed
+  // to someone from its Work page, so it is not only the viewer's.
+  action: 'Blocked',
   watch: 'Worth a look',
 };
 

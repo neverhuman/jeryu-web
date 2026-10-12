@@ -81,7 +81,7 @@ describe('NeedsYouPage', () => {
     // Watch rows are neutral and collapsed behind a count.
     const watch = screen.getByTestId('needs-you-watch');
     expect(watch).not.toHaveAttribute('open');
-    expect(within(watch).getByText('1 thing worth a look, none waiting on you')).toBeInTheDocument();
+    expect(within(watch).getByText('1 thing worth a look, none blocked')).toBeInTheDocument();
     expect(watch.querySelector('.needs-you__row--unknown')).not.toBeNull();
     expect(watch.querySelector('.needs-you__row--human')).toBeNull();
     expect(screen.queryByTestId('needs-you-pulse')).toBeNull();

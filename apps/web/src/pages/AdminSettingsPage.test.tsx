@@ -2,11 +2,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import { apiPut } from '../api/client';
 import { AdminSettingsPage } from './AdminSettingsPage';
 
 const accounts = Array.from({ length: 9 }, (_, index) => ({
   login: `user-${index}`,
   role: index === 0 ? 'admin' : 'user',
+  // user-8 is a build login the instance config names as automation.
+  kind: index === 8 ? 'service' : 'human',
+  kind_source: index === 8 ? 'config' : 'default',
 }));
 
 vi.mock('../hooks/useAuth', () => ({
@@ -51,18 +55,41 @@ describe('AdminSettingsPage user list', () => {
 
     const table = await screen.findByTestId('admin-users-table');
     const headers = within(table).getAllByRole('columnheader');
-    expect(headers.map((cell) => cell.textContent)).toEqual(['User', 'Role', 'Actions']);
+    expect(headers.map((cell) => cell.textContent)).toEqual(['User', 'Role', 'Kind', 'Actions']);
 
     const rows = within(table).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(9);
     rows.forEach((row, index) => {
       const cells = row.children;
-      expect(cells).toHaveLength(3);
+      expect(cells).toHaveLength(4);
       expect(cells[0]).toHaveTextContent(`user-${index}`);
       expect(cells[1]).toHaveTextContent(accounts[index].role);
-      expect(within(cells[2] as HTMLElement).getByRole('button', { name: 'Reset password' }))
+      expect(within(cells[2] as HTMLElement).getByLabelText(`Kind of user-${index}`)).toHaveValue(
+        accounts[index].kind,
+      );
+      expect(within(cells[3] as HTMLElement).getByRole('button', { name: 'Reset password' }))
         .toBeInTheDocument();
     });
+  });
+
+  it('tells people from automation and lets an admin mark a login as automation', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <AdminSettingsPage />
+      </QueryClientProvider>,
+    );
+    const table = await screen.findByTestId('admin-users-table');
+    const build = within(table).getByRole('row', { name: /user-8/ });
+    expect(within(build).getByLabelText('Kind of user-8')).toHaveDisplayValue('Automation');
+    expect(within(build).getByText('config')).toBeInTheDocument();
+
+    fireEvent.change(within(table).getByLabelText('Kind of user-3'), {
+      target: { value: 'service' },
+    });
+    await vi.waitFor(() =>
+      expect(apiPut).toHaveBeenCalledWith('/api/v1/admin/users/user-3/kind', { kind: 'service' }),
+    );
   });
 
   it('lists existing repository grants with a revoke action and keeps granting secondary', async () => {

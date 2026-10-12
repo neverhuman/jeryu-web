@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { apiDelete, apiGet, apiSend } from '../api/client';
+import { apiDelete, apiGet, apiPut, apiSend } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import { ActionButton } from '../components/action/ActionButton';
 import { pillClass } from '../components/tone/tone';
@@ -138,12 +138,23 @@ function SessionPanel({ login }: { login: string | null }): JSX.Element {
   );
 }
 
+type AccountKind = 'human' | 'service';
+
 interface AdminUser {
   login: string;
   role: 'admin' | 'user';
+  /** A person, or automation (absent on older servers: read as a person). */
+  kind?: AccountKind;
+  /** `set` by an admin, named in the instance `config`, or the `default`. */
+  kind_source?: 'set' | 'config' | 'default';
   created_at: string;
   updated_at: string;
 }
+
+const KIND_LABEL: Record<AccountKind, string> = {
+  human: 'Person',
+  service: 'Automation',
+};
 
 interface ResetReceipt {
   login: string;
@@ -160,6 +171,12 @@ function AdminAccessPanel(): JSX.Element {
     mutationFn: (target: string) =>
       apiSend<ResetReceipt>(endpoints.adminResetPassword(target), {}),
     onSuccess: setReceipt,
+  });
+  const queryClient = useQueryClient();
+  const setKind = useMutation({
+    mutationFn: ({ login, kind }: { login: string; kind: AccountKind }) =>
+      apiPut<AdminUser>(endpoints.adminUserKind(login), { kind }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
   return (
     <section className="page__section" aria-labelledby="admin-users">
@@ -178,6 +195,7 @@ function AdminAccessPanel(): JSX.Element {
                 <tr>
                   <th scope="col">User</th>
                   <th scope="col">Role</th>
+                  <th scope="col">Kind</th>
                   <th scope="col">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -189,6 +207,30 @@ function AdminAccessPanel(): JSX.Element {
                     <th scope="row">{account.login}</th>
                     <td>
                       <span className="page__pill">{account.role}</span>
+                    </td>
+                    <td>
+                      <select
+                        value={account.kind ?? 'human'}
+                        disabled={setKind.isPending}
+                        aria-label={`Kind of ${account.login}`}
+                        onChange={(event) =>
+                          setKind.mutate({
+                            login: account.login,
+                            kind: event.target.value as AccountKind,
+                          })
+                        }
+                      >
+                        {(Object.keys(KIND_LABEL) as AccountKind[]).map((kind) => (
+                          <option key={kind} value={kind}>
+                            {KIND_LABEL[kind]}
+                          </option>
+                        ))}
+                      </select>
+                      {account.kind_source === 'config' ? (
+                        <span className="page__pill page__pill--muted" title="Named as automation in the instance configuration">
+                          config
+                        </span>
+                      ) : null}
                     </td>
                     <td className="admin-users__actions">
                       <ActionButton
@@ -203,6 +245,13 @@ function AdminAccessPanel(): JSX.Element {
               </tbody>
             </table>
           </div>
+          {setKind.error ? (
+            <ErrorState title="Could not change the account kind" error={setKind.error} />
+          ) : null}
+          <p className="page__roadmap-note">
+            Only people can be assigned work. Mark bot and service logins as automation so they
+            stay out of the assign list.
+          </p>
           {receipt ? (
             <p className="page__roadmap-note">
               {receipt.login}: {receipt.password}

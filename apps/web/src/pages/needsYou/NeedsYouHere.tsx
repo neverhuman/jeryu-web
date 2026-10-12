@@ -73,7 +73,7 @@ export function NeedsYouHere({
   const pick =
     onFamily ?? ((next: string): void => scope.setFamily(next, { to: NEEDS_YOU_PATH }));
   const now = new Date();
-  const title = `${subjects.length} waiting on you in ${AREA_LABEL[area]}`;
+  const title = `${subjects.length} blocked in ${AREA_LABEL[area]}`;
 
   return (
     <section
@@ -83,7 +83,7 @@ export function NeedsYouHere({
     >
       <h2 className="page__section-title">
         <span className={pillClass('human')}>{subjects.length}</span>{' '}
-        Waiting on you in {AREA_LABEL[area]}
+        Blocked in {AREA_LABEL[area]}
         {/* The family the strip is showing stays on the link: Needs you opens
             on the same rows, not on every family's. */}
         <Link className="needs-you__here-all" to={needsYouHref(family)}>

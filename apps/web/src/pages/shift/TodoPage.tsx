@@ -38,6 +38,8 @@ import {
   type RepoRefs,
 } from './shiftModel';
 import { RepoName, TodoActions, TodoDetail, WhyStuck } from './todoParts';
+import { TodoAssignee } from './TodoAssignee';
+import type { Viewer } from './assigneeModel';
 import { WorkTrace } from './WorkTrace';
 import { todoFacts, workTrace } from './workTraceModel';
 import { WORK_PATH, queueHref, todoHref } from './workPaths';
@@ -109,7 +111,14 @@ export function TodoPage(): JSX.Element {
       </div>
     );
   } else {
-    body = <TodoView todo={matches[0]} refs={refs} isAdmin={isAdmin} />;
+    body = (
+      <TodoView
+        todo={matches[0]}
+        refs={refs}
+        isAdmin={isAdmin}
+        viewer={user ? { login: user.login, admin: isAdmin } : null}
+      />
+    );
   }
 
   const shown = matches.length === 1 ? matches[0] : null;
@@ -166,10 +175,12 @@ function TodoView({
   todo,
   refs,
   isAdmin,
+  viewer,
 }: {
   todo: ShiftTodo;
   refs: RepoRefs;
   isAdmin: boolean;
+  viewer: Viewer | null;
 }): JSX.Element {
   const now = new Date();
   const stuck = todo.status === 'blocked' || todo.status === 'handoff';
@@ -185,6 +196,8 @@ function TodoView({
         hrefs={prHref ? { pr: prHref } : {}}
       />
       <NeedsYouAbout subject={{ todoId: todo.id }} />
+      {/* Anyone signed in may take a todo on or hand it to another person. */}
+      {viewer ? <TodoAssignee todo={todo} viewer={viewer} /> : null}
       {isAdmin ? (
         <p className="shift__actions">
           <TodoActions todo={todo} />

@@ -22,6 +22,9 @@ export const endpoints = {
   authToken: (id: string): string =>
     `/api/v1/auth/tokens/${encodeURIComponent(id)}`,
   adminUsers: (): string => '/api/v1/admin/users',
+  adminUserKind: (login: string): string =>
+    `/api/v1/admin/users/${encodeURIComponent(login)}/kind`,
+  people: (): string => '/api/v1/people',
   adminResetPassword: (login: string): string =>
     `/api/v1/admin/users/${encodeURIComponent(login)}/reset-password`,
   adminRepoGrants: (owner: string, repo: string): string =>

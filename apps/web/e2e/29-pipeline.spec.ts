@@ -141,7 +141,7 @@ test.describe('Pipeline visibility', () => {
     await page.getByTestId('todo-page').getByRole('link', { name: 'Work', exact: true }).click();
     await expect(page.getByTestId('shift-queue-page')).toBeVisible();
     const here = page.getByTestId('needs-you-here-work');
-    await expect(here).toHaveAttribute('aria-label', '1 waiting on you in Work');
+    await expect(here).toHaveAttribute('aria-label', '1 blocked in Work');
     await expect(here.getByText('Allow PATCH of repo default_branch')).toBeVisible();
   });
 
