@@ -203,3 +203,151 @@ describe('a pending check', () => {
     expect(within(progress).getByText('4m 30s so far')).toBeTruthy();
   });
 });
+
+describe('ChecksPanel expected rows', () => {
+  const expectedOnly = {
+    total: 0,
+    expected: 1,
+    passing: 0,
+    failing: 0,
+    pending: 0,
+    skipped: 0,
+    checks: [
+      {
+        id: 'expected:ai-veox-app/required',
+        name: 'ai-veox-app/required',
+        kind: 'expected',
+        status: 'expected-not-reported',
+        state: 'expected-not-reported',
+        source: 'required_by_protection',
+        required: true,
+        title: 'Expected - waiting for a status to be reported',
+        description:
+          'The protection rule of `main` requires `ai-veox-app/required`, and nothing has reported it on this head yet.',
+        waiting_seconds: 930,
+        claim: {
+          state: 'attempted',
+          recipe: 'just required',
+          at: '2026-10-12T17:58:54Z',
+          conclusion: 'error',
+          runner_online: true,
+          runner_id: 'build-1/slot1',
+          runner_url: '/runners?runners=build-1%2Fslot1',
+          reporter: 'gatebot',
+        },
+      },
+    ],
+  } as unknown as PullRequestChecks;
+
+  it('lists a required check nobody reported, with the wait and the runner', async () => {
+    render(<ChecksPanel checks={expectedOnly} />);
+    const required = row('ai-veox-app/required');
+    expect(within(required).getByText('Expected - not reported yet')).toBeTruthy();
+    expect(within(required).getByText('required to merge')).toBeTruthy();
+    expect(screen.getByText('1 expected')).toBeTruthy();
+    const expectation = screen.getByTestId('check-expectation-ai-veox-app/required');
+    expect(expectation.textContent).toContain('waited 15m 30s');
+    expect(expectation.textContent).toContain('build-1/slot1');
+    expect(expectation.textContent).toContain('posted no status');
+    expect(
+      within(expectation)
+        .getByRole('link', { name: /Open the runner/ })
+        .getAttribute('href')
+    ).toBe('/runners?runners=build-1%2Fslot1');
+
+    await userEvent.click(within(required).getByRole('button'));
+    expect(
+      within(required).getByTestId('check-source-ai-veox-app/required').textContent
+    ).toBe('Source: required by branch protection');
+  });
+
+  it('says so when no runner reports anything on the head', () => {
+    const noClaim = {
+      ...expectedOnly,
+      checks: [{ ...expectedOnly.checks[0], claim: null }],
+    } as unknown as PullRequestChecks;
+    render(<ChecksPanel checks={noClaim} />);
+    expect(
+      screen.getByTestId('check-expectation-ai-veox-app/required').textContent
+    ).toContain('No runner reports a gate pass on this head');
+  });
+
+  it('names each row’s source: protection, the CI declaration, or the report alone', async () => {
+    const mixed = {
+      total: 2,
+      expected: 1,
+      passing: 1,
+      failing: 1,
+      pending: 0,
+      skipped: 0,
+      checks: [
+        expectedOnly.checks[0],
+        {
+          id: '2',
+          name: 'ai-veox-app/docs',
+          kind: 'status',
+          status: 'success',
+          state: 'success',
+          source: 'declared_by_ci_config',
+          required: false,
+        },
+        {
+          id: '3',
+          name: 'coverage/report',
+          kind: 'status',
+          status: 'failure',
+          state: 'failure',
+          source: 'reported_only',
+          required: false,
+        },
+      ],
+    } as unknown as PullRequestChecks;
+    render(<ChecksPanel checks={mixed} />);
+    for (const [name, words] of [
+      ['ai-veox-app/required', 'Source: required by branch protection'],
+      ['ai-veox-app/docs', 'Source: declared by .jeryu/ci.toml'],
+      ['coverage/report', 'Source: reported only'],
+    ] as const) {
+      await userEvent.click(within(row(name)).getByRole('button'));
+      expect(within(row(name)).getByTestId(`check-source-${name}`).textContent).toBe(
+        words
+      );
+    }
+    // A reported context nothing requires is still listed, as optional.
+    expect(within(row('coverage/report')).getByText('not required to merge')).toBeTruthy();
+  });
+
+  it('keeps one row as a claimed check moves from expected to pending to success', () => {
+    const { rerender } = render(<ChecksPanel checks={expectedOnly} />);
+    expect(within(row('ai-veox-app/required')).getByText('Expected - not reported yet')).toBeTruthy();
+    const posted = (state: string): PullRequestChecks =>
+      ({
+        total: 1,
+        expected: 0,
+        passing: state === 'success' ? 1 : 0,
+        failing: 0,
+        pending: state === 'pending' ? 1 : 0,
+        skipped: 0,
+        checks: [
+          {
+            id: '9',
+            name: 'ai-veox-app/required',
+            kind: 'status',
+            status: state,
+            state,
+            source: 'required_by_protection',
+            required: true,
+          },
+        ],
+      }) as unknown as PullRequestChecks;
+    for (const [state, word] of [
+      ['pending', 'pending'],
+      ['success', 'passing'],
+    ] as const) {
+      rerender(<ChecksPanel checks={posted(state)} />);
+      expect(screen.getAllByTestId(/^check-row-ai-veox-app\/required$/)).toHaveLength(1);
+      expect(within(row('ai-veox-app/required')).getByText(word)).toBeTruthy();
+      expect(screen.queryByTestId('check-expectation-ai-veox-app/required')).toBeNull();
+    }
+  });
+});

@@ -583,6 +583,7 @@
 .checks-panel__count--failing { color: var(--color-accent-danger); }
 .checks-panel__count--pending { color: var(--color-accent-warning); }
 .checks-panel__count--skipped { color: var(--color-fg-muted); }
+.checks-panel__count--expected { color: var(--color-fg-secondary); }
 
 .checks-panel__empty {
   margin: 0;
@@ -715,6 +716,21 @@
   background-color: var(--color-bg-2);
   color: var(--color-fg-muted);
 }
+.checks-panel__badge--expected {
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  /* An expectation is a dashed outline, not a verdict's filled badge. */
+  border: 1px dashed var(--color-border-strong);
+}
+
+/* What an unreported row says about the wait and about who owes the status. */
+.checks-panel__expectation {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .checks-panel__badge--neutral {
   background-color: var(--color-bg-2);
   color: var(--color-fg-secondary);

@@ -16,6 +16,14 @@
 // forge's estimate when a gate runner reports it, otherwise as elapsed time
 // since its `pending` post. The clock is the forge's, from `server_time`.
 //
+// A row is not only what somebody reported. The forge also sends the rows a
+// head is EXPECTED to get — the base branch's required contexts and the lanes
+// the repository declares in `.jeryu/ci.toml` — so a required check whose
+// runner died before posting anything is visible here ("Expected - not
+// reported yet") instead of missing from the tab while the merge box refuses
+// the merge for it. Such a row says how long the head has waited and, when
+// the forge knows it, which runner owes the status.
+//
 // A check the forge names by UUID ("Attempt 428377c2-6190-…") is shown with
 // the id shortened; the whole id stays in the row's `title` and in the link
 // to the run, so it is still readable and still copyable.
@@ -23,6 +31,7 @@
 import { useState } from 'react';
 import {
   CheckCircle2,
+  Clock,
   ChevronDown,
   ChevronRight,
   Circle,
@@ -35,6 +44,7 @@ import {
 } from 'lucide-react';
 
 import type { PullRequestCheck, PullRequestChecks } from '../../api/types';
+import { durationWords } from '../../format/duration';
 import { useServerNow } from '../../hooks/useServerNow';
 import { CiProgress } from '../ciProgress/CiProgress';
 import type { DurationEstimate } from '../ciProgress/ciProgressModel';
@@ -48,9 +58,21 @@ type Tone =
   | 'pending'
   | 'skipped'
   | 'cancelled'
+  | 'expected'
   | 'neutral';
 
+/** The row state of a context something expects and nothing has reported. */
+export const EXPECTED_NOT_REPORTED = 'expected-not-reported';
+
+/** Whether this row is an expectation rather than a report. */
+export function isExpectedRow(check: PullRequestCheck): boolean {
+  return (
+    check.state === EXPECTED_NOT_REPORTED || check.status === EXPECTED_NOT_REPORTED
+  );
+}
+
 function toneFor(check: PullRequestCheck): Tone {
+  if (isExpectedRow(check)) return 'expected';
   const status = check.status?.toLowerCase() ?? '';
   if (status === 'success' || status === 'passing') return 'success';
   if (status === 'failure' || status === 'failing' || status === 'error')
@@ -68,6 +90,7 @@ const TONE_ICONS: Record<Tone, LucideIcon> = {
   pending: Loader2,
   skipped: CircleOff,
   cancelled: CircleDashed,
+  expected: Clock,
   neutral: Circle,
 };
 
@@ -77,8 +100,52 @@ const TONE_LABELS: Record<Tone, string> = {
   pending: 'pending',
   skipped: 'skipped',
   cancelled: 'cancelled',
+  expected: 'Expected - not reported yet',
   neutral: 'neutral',
 };
+
+/** What a row's source says about why it is listed at all. */
+export function sourceWords(check: PullRequestCheck): string | null {
+  switch (check.source) {
+    case 'required_by_protection':
+      return 'required by branch protection';
+    case 'declared_by_ci_config':
+      return 'declared by .jeryu/ci.toml';
+    case 'reported_only':
+      return 'reported only';
+    default:
+      return null;
+  }
+}
+
+/**
+ * What an expected row says about the wait and about who owes the status: how
+ * long the head has waited, and the gate claim or attempt the forge knows of.
+ */
+export function expectationWords(check: PullRequestCheck): string[] {
+  if (!isExpectedRow(check)) return [];
+  const words: string[] = [];
+  if (typeof check.waiting_seconds === 'number') {
+    words.push(`This head has waited ${durationWords(check.waiting_seconds)}.`);
+  }
+  const claim = check.claim;
+  if (!claim) {
+    words.push('No runner reports a gate pass on this head.');
+    return words;
+  }
+  const runner = claim.runner_id ? `\`${claim.runner_id}\`` : 'a runner';
+  const beating = claim.runner_online ? 'still reporting' : 'no longer reporting';
+  words.push(
+    claim.state === 'running'
+      ? `${runner} claimed this head for \`${claim.recipe}\` and is ${beating}.`
+      : `${runner} finished \`${claim.recipe}\` on this head as ` +
+        `${claim.conclusion ?? 'an unstated outcome'} and posted no status; it is ${beating}.`
+  );
+  if (claim.reporter) {
+    words.push(`It posts its statuses as \`${claim.reporter}\`.`);
+  }
+  return words;
+}
 
 /**
  * The status word shown next to every check. A check whose status is not one
@@ -87,6 +154,7 @@ const TONE_LABELS: Record<Tone, string> = {
  */
 export function checkStatusWord(check: PullRequestCheck, notRequired = false): string {
   const tone = toneFor(check);
+  if (tone === 'expected') return TONE_LABELS.expected;
   if (notRequired) {
     // Say WHY it does not block, not just that it does not.
     return `failing, ${check.advisory?.label ?? 'not required'}`;
@@ -228,6 +296,14 @@ export function ChecksPanel({
             <span className="checks-panel__count checks-panel__count--pending">
               {checks.pending} pending
             </span>
+            {checks.expected ? (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span className="checks-panel__count checks-panel__count--expected">
+                  {checks.expected} expected
+                </span>
+              </>
+            ) : null}
             {checks.skipped > 0 ? (
               <>
                 <span aria-hidden="true"> · </span>
@@ -243,7 +319,10 @@ export function ChecksPanel({
       </header>
 
       {list.length === 0 ? (
-        <p className="checks-panel__empty">No checks have run on this head.</p>
+        <p className="checks-panel__empty">
+          Nothing has run on this head, and nothing requires or declares a check
+          for it.
+        </p>
       ) : (
         <ul className="checks-panel__list">
           {list.map((check) => {
@@ -256,6 +335,8 @@ export function ChecksPanel({
             const Icon = TONE_ICONS[rawTone];
             const statusWord = checkStatusWord(check, notRequired);
             const note = requirementNote(check);
+            const source = sourceWords(check);
+            const expectation = expectationWords(check);
             const pageUrl = checkPageUrl(check);
             const isOpen = expanded.includes(check.id);
             const bodyId = `check-detail-${check.id}`;
@@ -311,6 +392,25 @@ export function ChecksPanel({
                     </span>
                   ) : null}
                 </div>
+                {expectation.length > 0 ? (
+                  <div
+                    className="checks-panel__expectation"
+                    data-testid={`check-expectation-${check.name}`}
+                  >
+                    {expectation.join(' ')}
+                    {check.claim?.runner_url ? (
+                      <>
+                        {' '}
+                        <a
+                          className="checks-panel__page-link"
+                          href={check.claim.runner_url}
+                        >
+                          Open the runner
+                        </a>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
                 {run ? (
                   <div className="checks-panel__progress">
                     <CiProgress
@@ -326,6 +426,14 @@ export function ChecksPanel({
                   className="checks-panel__detail"
                   hidden={!isOpen}
                 >
+                  {source ? (
+                    <div
+                      className="checks-panel__description"
+                      data-testid={`check-source-${check.name}`}
+                    >
+                      Source: {source}
+                    </div>
+                  ) : null}
                   {check.title ? (
                     <div className="checks-panel__detail-title">
                       {check.title}
@@ -372,7 +480,7 @@ export function ChecksPanel({
                         : `Open the ${check.name} report`}
                       <ExternalLink aria-hidden="true" size={12} />
                     </a>
-                  ) : (
+                  ) : tone === 'expected' ? null : (
                     <div className="checks-panel__description">
                       This check reported no page to open.
                     </div>

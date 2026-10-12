@@ -75,6 +75,25 @@ export interface PullRequestCheck {
   web_url?: string | null;
   /** Whether the base branch waits for this context before a merge. */
   required?: boolean;
+  /**
+   * Where the row comes from: a required status context of the base branch's
+   * protection rule, a lane the repository declares in `.jeryu/ci.toml`, or
+   * nothing but the report itself. Absent from an older forge.
+   */
+  source?: CheckSource | string | null;
+  /**
+   * The row's own state: `expected-not-reported` for a context something
+   * expects and nothing has reported, otherwise how the newest run reads.
+   * Absent from an older forge, where `status` is all there is.
+   */
+  state?: string | null;
+  /**
+   * How long this head has waited for a row nothing has reported, in seconds;
+   * absent on a reported row.
+   */
+  waiting_seconds?: number | null;
+  /** What the forge knows about a gate working on an unreported row. */
+  claim?: GateClaim | null;
   /** Why a check does not block the merge; absent when it is required. */
   advisory?: CheckAdvisory | null;
   /**
@@ -86,6 +105,34 @@ export interface PullRequestCheck {
   completed_at: string | null;
   /** The gate runner working on this check now; absent when none reports it. */
   running?: RunningGate | null;
+}
+
+/** Where a checks-tab row comes from. */
+export type CheckSource =
+  | 'required_by_protection'
+  | 'declared_by_ci_config'
+  | 'reported_only';
+
+/**
+ * A gate claim or attempt on this head, for a row nothing has reported. The
+ * runner is named only for a signed-in reader; an anonymous reader of a public
+ * repository is told that a runner owes the status, not which one.
+ */
+export interface GateClaim {
+  /** `running` while a runner claims this head, `attempted` for a finished pass. */
+  state: 'running' | 'attempted' | string;
+  recipe: string;
+  /** When the claim started, or when the finished pass ended (RFC3339). */
+  at: string;
+  /** How the finished pass concluded; absent for a live claim. */
+  conclusion?: string | null;
+  /** Whether the runner is still beating. */
+  runner_online: boolean;
+  runner_id?: string | null;
+  /** The runner's row on `/runners`. */
+  runner_url?: string | null;
+  /** The login the runner posts its statuses as. */
+  reporter?: string | null;
 }
 
 /** A gate pass on a PR head (no runner named), with what passes of its recipe usually take. */
@@ -111,7 +158,10 @@ export interface CheckAdvisory {
 
 /** Wire shape of `GET /pulls/{number}/checks`. */
 export interface PullRequestChecks {
+  /** Rows a reporter actually posted on the head. */
   total: number;
+  /** Rows something expects and nothing has reported yet. */
+  expected?: number;
   passing: number;
   failing: number;
   pending: number;
