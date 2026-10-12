@@ -7,7 +7,7 @@
 // `.markdown-body` container the global stylesheet already styles.
 
 import { isValidElement, useMemo, useRef, type AnchorHTMLAttributes, type HTMLAttributes, type ImgHTMLAttributes, type MouseEvent, type ReactNode } from 'react';
-import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
+import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
@@ -34,6 +34,11 @@ export interface MarkdownSourceProps {
    * sends pages of the wiki to itself and every other file to the repository.
    */
   resolveHref?: (href: string) => string;
+  /**
+   * Element renderers layered over the defaults (a review lays out its
+   * findings table). Pass a stable object; a new one re-renders every element.
+   */
+  components?: Components;
   className?: string;
 }
 
@@ -66,6 +71,7 @@ export function MarkdownSource({
   docDir,
   imageSrc,
   resolveHref,
+  components: extraComponents,
   className,
 }: MarkdownSourceProps): JSX.Element {
   const navigate = useNavigate();
@@ -117,8 +123,8 @@ export function MarkdownSource({
       }
       return <pre {...rest}>{children}</pre>;
     }
-    return { a: Anchor, img: Image, pre: Pre };
-  }, [linkBase, docDir, navigate]);
+    return { a: Anchor, img: Image, pre: Pre, ...extraComponents };
+  }, [linkBase, docDir, navigate, extraComponents]);
 
   // HTML written in the Markdown (an <img>, a comment) is parsed and then
   // sanitized like everything else; without the parse it showed as literal text.

@@ -830,6 +830,57 @@
   overflow-x: auto;
 }
 
+/* A findings table: Where above each finding, three lines until "more". */
+.review-list__body table.review-findings {
+  display: table;
+  width: 100%;
+  overflow-x: visible;
+}
+
+.review-findings th,
+.review-findings td {
+  vertical-align: top;
+}
+
+.review-findings__aside {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.review-findings__finding {
+  min-width: 0;
+}
+
+.review-findings__where {
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+.review-findings__text--clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.review-findings__more {
+  margin-top: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-primary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.review-findings__more:hover,
+.review-findings__more:focus-visible {
+  text-decoration: underline;
+}
+
 .review-list__empty {
   margin: var(--space-2) 0 0;
   color: var(--color-fg-muted);

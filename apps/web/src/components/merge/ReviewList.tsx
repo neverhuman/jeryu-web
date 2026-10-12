@@ -6,7 +6,8 @@
 // review is now one collapsible entry: who, the verdict, when, and the body
 // rendered from its Markdown. The review asking for changes starts open, and a
 // link to `#review-<id>` or `#changes-requested` opens that review and scrolls
-// to it, so a "Changes requested" row lands the reader on the words.
+// to it, so a "Changes requested" row lands the reader on the words. A
+// findings table (Finding + Where columns) is laid out by ReviewFindingsTable.
 
 import { useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -14,6 +15,7 @@ import { useLocation } from 'react-router-dom';
 import type { PullRequestReview } from '../../api/types';
 import { When } from '../../format/When';
 import { MarkdownSource } from '../browser/MarkdownSource';
+import { ReviewFindingsTable } from './ReviewFindingsTable';
 import {
   isChangesRequestedState,
   openReviewIds,
@@ -24,6 +26,8 @@ import {
 } from './reviewListModel';
 
 import './merge.css';
+
+const REVIEW_MARKDOWN = { table: ReviewFindingsTable };
 
 export interface ReviewListProps {
   reviews: readonly PullRequestReview[];
@@ -79,6 +83,7 @@ export function ReviewList({ reviews }: ReviewListProps): JSX.Element | null {
                 {body ? (
                   <MarkdownSource
                     markdown={body}
+                    components={REVIEW_MARKDOWN}
                     className="review-list__body"
                   />
                 ) : (
