@@ -23,6 +23,9 @@ export interface AssigneeChoices {
 
 export const FINISHED: ReadonlySet<string> = new Set(['done', 'closed']);
 
+/** What a person who is not an admin may take on or finish (server rule). */
+const PEOPLE_STATUSES: ReadonlySet<string> = new Set(['blocked', 'handoff']);
+
 export function assigneeChoices(
   todo: Pick<ShiftTodo, 'assignee' | 'status' | 'lease_live'>,
   viewer: Viewer | null
@@ -34,14 +37,15 @@ export function assigneeChoices(
   const free = holder === '';
   // A worker running it now has it; taking it would put two on the work.
   const workerHasIt = todo.lease_live;
-  // An administrator parked it on purpose; taking it on is theirs to undo.
-  const parkedForAdmin = todo.status === 'parked' && !viewer.admin;
-  const mayTake = !workerHasIt && !parkedForAdmin;
+  // A person takes on or finishes only work that stopped for a person; the
+  // rest belongs to the workers and admins (and `done` cannot be undone).
+  const waitsOnPerson = PEOPLE_STATUSES.has(todo.status);
+  const mayTake = !workerHasIt && (viewer.admin || waitsOnPerson);
   return {
     claim: free && mayTake,
     assign: mayTake && (free || holds || viewer.admin),
     unassign: !free && (holds || viewer.admin),
-    done: holds && !viewer.admin,
+    done: holds && !viewer.admin && waitsOnPerson,
   };
 }
 

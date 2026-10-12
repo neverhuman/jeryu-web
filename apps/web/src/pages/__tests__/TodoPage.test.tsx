@@ -102,7 +102,7 @@ describe('TodoPage', () => {
       if (req.pathname === '/api/v1/shift/todos') {
         return json({ generated_at: '2026-09-19T09:00:00Z', todos: [blocked] });
       }
-      if (req.pathname === '/api/v1/shift/families/jeryu/people') {
+      if (req.pathname === '/api/v1/shift/todos/jeryu/20260919-1300-own/people') {
         return json([
           { login: 'operator', display_name: 'operator' },
           { login: 'bea', display_name: 'Bea' },

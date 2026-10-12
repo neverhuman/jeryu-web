@@ -23,7 +23,7 @@ export function TodoAssignee({
   const action = useShiftTodoAction();
   const choices = assigneeChoices(todo, viewer);
   const [picking, setPicking] = useState(false);
-  const people = usePeople(todo.family, picking);
+  const people = usePeople(todo.family, todo.id, picking);
   const [target, setTarget] = useState('');
   const run = (request: Parameters<typeof action.mutate>[0], after?: () => void): void =>
     action.mutate(request, { onSuccess: after });

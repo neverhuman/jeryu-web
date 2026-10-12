@@ -36,10 +36,17 @@ describe('assigneeChoices', () => {
     expect(assigneeChoices(mine, root)).toMatchObject({ assign: true, unassign: true, done: false });
   });
 
-  it('leaves a parked todo to the admins who parked it', () => {
-    const parked = { ...blocked, status: 'parked' };
-    expect(assigneeChoices(parked, ada)).toMatchObject({ claim: false, assign: false });
-    expect(assigneeChoices(parked, root)).toMatchObject({ claim: true, assign: true });
+  it('offers a person only work that stopped for a person', () => {
+    for (const status of ['parked', 'open', 'claimed']) {
+      const other = { ...blocked, status };
+      expect(assigneeChoices(other, ada)).toMatchObject({ claim: false, assign: false });
+      expect(assigneeChoices({ ...other, assignee: 'ada' }, ada)).toMatchObject({
+        done: false,
+        unassign: true,
+      });
+      expect(assigneeChoices(other, root)).toMatchObject({ claim: true, assign: true });
+    }
+    expect(assigneeChoices({ ...blocked, status: 'handoff' }, ada).claim).toBe(true);
   });
 
   it('offers nothing on finished work, to the signed out, or while a worker runs it', () => {
