@@ -6,7 +6,14 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TodoPage } from '../shift/TodoPage';
-import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
+import {
+  errorResponse,
+  json,
+  mockShiftApi,
+  renderAt,
+  type Override,
+  type Recorded,
+} from './shiftPageHelpers';
 import { FAMILIES, TODOS, attempt, todo } from './shiftTestData';
 
 let role: 'admin' | 'user' = 'user';
@@ -398,5 +405,79 @@ describe('TodoPage', () => {
     ]);
     renderTodo('/work/20260919-1100-dup?family=jain');
     expect(await screen.findByRole('heading', { name: 'Jain side' })).toBeInTheDocument();
+  });
+  describe('the comment thread', () => {
+    const THREAD = {
+      family: 'jeryu',
+      todo_id: '20260919-0900-q1q',
+      total: 2,
+      comments: [
+        { author: 'operator', at: '2026-09-19T12:00:00Z', body: '## First outage\n\nGDM crash loop.' },
+        { author: 'alton', at: '2026-09-19T15:45:00Z', body: 'Measured **40s** of downtime.' },
+      ],
+    };
+    const serveThread = (override?: Override): Recorded[] =>
+      mockShiftApi((req) => {
+        if (req.pathname.endsWith('/comments') && req.method === 'GET') return json(THREAD);
+        return override?.(req);
+      });
+
+    it('renders the thread under the body, newest last, as markdown', async () => {
+      serveThread();
+      renderTodo('/work/20260919-0900-q1q');
+      expect(await screen.findByRole('heading', { name: 'First outage' })).toBeInTheDocument();
+      const thread = screen.getByTestId('todo-comments-20260919-0900-q1q');
+      expect(within(thread).getByText('40s').tagName).toBe('STRONG');
+      const items = within(thread).getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+      expect(items[1]).toHaveTextContent('alton');
+      expect(items[1]).toHaveTextContent('Measured 40s of downtime.');
+      // A reader who cannot act on todos reads the thread and adds nothing.
+      expect(within(thread).queryByLabelText(/^Comment on/)).toBeNull();
+    });
+
+    it('says so when a todo has no comments yet', async () => {
+      mockShiftApi();
+      renderTodo('/work/20260919-0900-q1q');
+      const thread = await screen.findByTestId('todo-comments-20260919-0900-q1q');
+      await waitFor(() => expect(thread).toHaveTextContent('No comments yet.'));
+    });
+
+    it('posts what an admin writes and clears the box', async () => {
+      role = 'admin';
+      const calls = serveThread((req) =>
+        req.method === 'POST' && req.pathname.endsWith('/comments')
+          ? json({ author: 'operator', at: '2026-09-19T16:00:00Z', body: 'Second outage today.' }, 201)
+          : undefined
+      );
+      renderTodo('/work/20260919-0900-q1q');
+      const box = await screen.findByLabelText('Comment on 20260919-0900-q1q');
+      const add = screen.getByRole('button', { name: 'Add comment' });
+      // Nothing written is nothing to post.
+      expect(add).toBeDisabled();
+      fireEvent.change(box, { target: { value: '  Second outage today.  ' } });
+      fireEvent.click(add);
+      await waitFor(() =>
+        expect(calls.filter((c) => c.method === 'POST' && c.pathname.endsWith('/comments'))).toHaveLength(1)
+      );
+      const post = calls.find((c) => c.method === 'POST');
+      expect(post?.pathname).toBe('/api/v1/shift/todos/jeryu/20260919-0900-q1q/comments');
+      expect(post?.body).toEqual({ body: 'Second outage today.' });
+      await waitFor(() => expect(screen.getByLabelText('Comment on 20260919-0900-q1q')).toHaveValue(''));
+      // The thread is the only thing a comment writes: no action is posted.
+      expect(calls.filter((c) => c.pathname.endsWith('/action'))).toHaveLength(0);
+    });
+
+    it("shows the server's refusal of a comment beside the box", async () => {
+      role = 'admin';
+      serveThread((req) =>
+        req.method === 'POST' ? errorResponse(422, 'body must not be empty') : undefined
+      );
+      renderTodo('/work/20260919-0900-q1q');
+      const box = await screen.findByLabelText('Comment on 20260919-0900-q1q');
+      fireEvent.change(box, { target: { value: 'x' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add comment' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('body must not be empty');
+    });
   });
 });

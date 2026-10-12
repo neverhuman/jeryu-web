@@ -60,6 +60,11 @@ export function mockShiftApi(override?: Override): Recorded[] {
     calls.push(req);
     const custom = override?.(req);
     if (custom) return custom;
+    // Every todo has a comment thread; by default it is empty.
+    if (url.pathname.endsWith('/comments')) {
+      const id = url.pathname.split('/').at(-2) ?? '';
+      return json({ family: 'jeryu', todo_id: id, comments: [], total: 0 });
+    }
     switch (url.pathname) {
       case '/api/v1/shift/families':
         return json(FAMILIES);

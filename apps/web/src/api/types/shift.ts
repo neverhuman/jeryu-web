@@ -208,6 +208,32 @@ export interface ShiftTodoActionRequest {
   reworks?: string[];
 }
 
+/**
+ * One comment on a todo. The thread is append-only: a comment is never edited
+ * or removed, and posting one changes no status, note, lease or attempt.
+ */
+export interface ShiftTodoComment {
+  /** The login that posted it. */
+  author: string;
+  /** When the server stored it, RFC 3339. */
+  at: string;
+  /** Markdown, as the author wrote it. */
+  body: string;
+}
+
+export interface ShiftTodoCommentsResponse {
+  family: string;
+  todo_id: string;
+  /** Oldest first: the order they were posted in. */
+  comments: ShiftTodoComment[];
+  total: number;
+}
+
+export interface CreateShiftTodoCommentRequest {
+  /** Markdown; the server refuses an empty body. */
+  body: string;
+}
+
 export type ShiftWorkerState = 'idle' | 'working' | 'stopping' | 'paused';
 
 /**

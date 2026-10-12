@@ -145,8 +145,24 @@ async function fulfill(route: Route, body: unknown, status = 200): Promise<void>
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
+/** The seeded comment thread of `20260919-0930-ddd`, oldest first. */
+const SHIFT_COMMENTS: Record<string, Array<Record<string, unknown>>> = {
+  '20260919-0930-ddd': [
+    {
+      author: 'operator',
+      at: iso(-240),
+      body: '## First outage\n\nThe crash loop took the desktop down.',
+    },
+  ],
+};
+
 export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
   const log: ShiftMockLog = { posts: [] };
+  // The thread a POST appends to, so the page shows what was just added.
+  const comments: Record<string, Array<Record<string, unknown>>> = Object.fromEntries(
+    Object.entries(SHIFT_COMMENTS).map(([id, thread]) => [id, [...thread]])
+  );
+  const threadId = (path: string): string => path.split('/').at(-2) ?? '';
   await page.route('**/api/v1/shift/**', async (route, request) => {
     const url = new URL(request.url());
     const path = url.pathname;
@@ -174,12 +190,23 @@ export async function mockShiftApi(page: Page): Promise<ShiftMockLog> {
         }
         return fulfill(route, SHIFT_TODOS[0]);
       }
+      if (path.endsWith('/comments')) {
+        const id = threadId(path);
+        const comment = { author: 'operator', at: iso(0), body: String(body.body ?? '') };
+        comments[id] = [...(comments[id] ?? []), comment];
+        return fulfill(route, comment, 201);
+      }
       if (path.endsWith('/pr')) {
         return fulfill(route, {
           prs: [{ repo: 'jeryu-deploy', number: 41, url: 'https://git.example/jeryu/jeryu-deploy/pulls/41', created: true }],
         });
       }
       return fulfill(route, SHIFT_TODOS[0]);
+    }
+    if (path.endsWith('/comments')) {
+      const id = threadId(path);
+      const thread = comments[id] ?? [];
+      return fulfill(route, { family: 'jeryu', todo_id: id, comments: thread, total: thread.length });
     }
     switch (path) {
       case '/api/v1/shift/families':

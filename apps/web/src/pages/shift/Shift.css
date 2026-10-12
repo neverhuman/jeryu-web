@@ -659,3 +659,36 @@
 .todo-outcome p {
   overflow-wrap: anywhere;
 }
+
+.shift-comments__title {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.shift-comments__list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shift-comments__item {
+  border-left: 2px solid var(--color-border-default);
+  padding-left: 10px;
+}
+
+.shift-comments__byline {
+  margin: 0 0 4px;
+}
+
+.shift-comments__form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shift-comments__form textarea {
+  width: 100%;
+}

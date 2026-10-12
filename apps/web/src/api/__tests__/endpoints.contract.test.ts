@@ -100,6 +100,7 @@ const endpointSamples = {
   shiftTodos: [{ family: 'acme', status: 'open' }],
   shiftTodoAction: ['acme', '20261003-021037-4e604d'],
   shiftTodoPeople: ['acme', '20260101-000000-aaaaaa'],
+  shiftTodoComments: ['acme', '20261003-021037-4e604d'],
   shiftWorkers: [],
   shiftWorkersHistory: [6],
   shiftShifts: ['acme'],

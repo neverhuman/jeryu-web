@@ -307,6 +307,9 @@ export const endpoints = {
     `/api/v1/shift/todos/${encodeURIComponent(family)}/${encodeURIComponent(id)}/action`,
   shiftTodoPeople: (family: string, id: string): string =>
     `/api/v1/shift/todos/${encodeURIComponent(family)}/${encodeURIComponent(id)}/people`,
+  /** A todo's comment thread: `GET` lists it, `POST` appends one. */
+  shiftTodoComments: (family: string, id: string): string =>
+    `/api/v1/shift/todos/${encodeURIComponent(family)}/${encodeURIComponent(id)}/comments`,
   shiftWorkers: (): string => '/api/v1/shift/workers',
   shiftWorkersHistory: (hours: number): string =>
     `/api/v1/shift/workers/history?hours=${hours}`,

@@ -250,6 +250,35 @@ test.describe('Work, one page', () => {
     await expect(page).toHaveURL(/\/work\?family=jeryu$/);
   });
 
+  test('a todo page shows its comment thread and an admin adds to it @action:shift.todo_comments', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    const log = await mockShiftApi(page);
+    await page.goto('/work/20260919-0930-ddd');
+    const thread = page.getByTestId('todo-comments-20260919-0930-ddd');
+    // The thread stands under the body, rendered as markdown.
+    await expect(thread.getByRole('heading', { name: 'First outage' })).toBeVisible({ timeout: 15_000 });
+
+    await thread.getByLabel('Comment on 20260919-0930-ddd').fill('Second outage: **40s** down.');
+    await thread.getByRole('button', { name: 'Add comment' }).click();
+    await expect.poll(() => log.posts.length).toBe(1);
+    expect(log.posts[0]).toEqual({
+      path: '/api/v1/shift/todos/jeryu/20260919-0930-ddd/comments',
+      body: { body: 'Second outage: **40s** down.' },
+    });
+    // Newest last, and the box is empty again.
+    const comments = thread.getByRole('listitem');
+    await expect(comments).toHaveCount(2);
+    await expect(comments.nth(1)).toContainText('Second outage: 40s down.');
+    await expect(thread.getByLabel('Comment on 20260919-0930-ddd')).toHaveValue('');
+    // A comment is not a status action: the todo is as blocked as it was.
+    await expect(page.getByTestId('todo-page-status')).toHaveText('blocked');
+    await expect(page.getByTestId('shift-why-20260919-0930-ddd')).toContainText(
+      'The jeryu-core tag split.7 does not exist.'
+    );
+  });
+
   test("an owner's own task leads with Mark done, and done, close, park and edit each confirm @action:shift.todo_actions", async ({
     page,
   }) => {

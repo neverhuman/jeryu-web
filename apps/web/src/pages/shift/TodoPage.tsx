@@ -5,7 +5,8 @@ import { TodoOutcome } from './TodoOutcome';
 // todo has one address to share. It is the queue row opened up: title, family,
 // status, why it is stuck, the work trace, what waits on you here, repos,
 // commits, then the body,
-// note and every attempt, with the admin actions beside them. Ids are unique
+// note and every attempt, with the admin actions beside them, and last the
+// append-only comment thread. Ids are unique
 // across families; the family scope (`?family=`) only settles the rare id two
 // families share, and the pill carries this todo's family to Work.
 
@@ -38,6 +39,7 @@ import {
   todoPrHref,
   type RepoRefs,
 } from './shiftModel';
+import { TodoComments } from './TodoComments';
 import { RepoName, TodoActions, TodoDetail, WhyStuck } from './todoParts';
 import { TodoAssignee } from './TodoAssignee';
 import type { Viewer } from './assigneeModel';
@@ -270,6 +272,10 @@ function TodoView({
       <section className="shift__section shift__detail" aria-label="Details">
         <TodoDetail todo={todo} relatedTodos={relatedTodos} isAdmin={isAdmin} showNote={!stuck} />
       </section>
+
+      {/* Under the body: what the todo learned after it was filed. Only an
+          admin can act on a todo, so only an admin can add to its thread. */}
+      <TodoComments todo={todo} canComment={isAdmin} />
     </>
   );
 }

@@ -107,6 +107,7 @@
     "/api/v1/shift/todos",
     "/api/v1/shift/todos/{family}/{id}/action",
     "/api/v1/shift/todos/{family}/{id}/people",
+    "/api/v1/shift/todos/{family}/{id}/comments",
     "/api/v1/shift/workers",
     "/api/v1/shift/workers/history",
     "/api/v1/site-settings",

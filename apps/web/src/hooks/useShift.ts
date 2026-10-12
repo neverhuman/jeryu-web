@@ -29,6 +29,7 @@ import { PIPELINE_KEY } from './usePipeline';
 import { SCORECARD_KEY } from './useScorecard';
 import { endpoints } from '../api/endpoints';
 import type {
+  CreateShiftTodoCommentRequest,
   CreateShiftTodoRequest,
   CreateShiftTodosBulkRequest,
   OpenShiftPrResponse,
@@ -36,6 +37,8 @@ import type {
   ShiftShiftsResponse,
   ShiftTodo,
   ShiftTodoActionRequest,
+  ShiftTodoComment,
+  ShiftTodoCommentsResponse,
   ShiftTodosBulkResponse,
   ShiftTodosResponse,
   ShiftWorkersHistoryResponse,
@@ -200,6 +203,46 @@ export function useShiftTodoAction(): UseMutationResult<
       void queryClient.invalidateQueries({ queryKey: [...SHIFT_KEY, 'todos'] });
       void queryClient.invalidateQueries({ queryKey: PIPELINE_KEY });
       void queryClient.invalidateQueries({ queryKey: SCORECARD_KEY });
+    },
+  });
+}
+
+/** One todo's comment thread, oldest first. Any logged-in account reads it. */
+export function useShiftTodoComments(
+  family: string,
+  id: string
+): UseQueryResult<ShiftTodoCommentsResponse, Error> {
+  return useQuery({
+    queryKey: [...SHIFT_KEY, 'comments', family, id],
+    queryFn: ({ signal }) =>
+      apiGet<ShiftTodoCommentsResponse>(endpoints.shiftTodoComments(family, id), { signal }),
+    ...OPERATOR_REFRESH,
+    staleTime: 10_000,
+    // A comment somebody else posts while the page is open shows up on its own.
+    refetchInterval: 30_000,
+    enabled: family !== '' && id !== '',
+    retry: false,
+  });
+}
+
+/**
+ * Append a comment to a todo. The thread is append-only and the write touches
+ * nothing else on the todo, so only the thread is invalidated — and the
+ * pipeline, which gains a `todo.commented` event.
+ */
+export function useAddShiftTodoComment(
+  family: string,
+  id: string
+): UseMutationResult<ShiftTodoComment, Error, CreateShiftTodoCommentRequest> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) =>
+      apiSend<ShiftTodoComment>(endpoints.shiftTodoComments(family, id), body, {
+        idempotencyKey: newIdempotencyKey(),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...SHIFT_KEY, 'comments', family, id] });
+      void queryClient.invalidateQueries({ queryKey: PIPELINE_KEY });
     },
   });
 }
