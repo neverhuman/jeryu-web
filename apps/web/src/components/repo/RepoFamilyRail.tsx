@@ -21,7 +21,11 @@ import { GitMerge, PanelLeftClose, PanelLeftOpen, ShieldAlert } from 'lucide-rea
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { livePresenceCount, presenceUnsupported } from '../../api/agentPresence';
 import type { RepositorySummary } from '../../api/types';
+import { useFamilyAgentPresence } from '../../hooks/useAgentPresence';
+import { useTickingNow } from '../../hooks/useTickingNow';
+import { CompactPresenceList } from '../../pages/agents/PresenceList';
 import { useKeyboardShortcut } from '../../hooks/useKeyboard';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useRepositories } from '../../hooks/useRepositories';
@@ -203,7 +207,53 @@ export function RepoFamilyRail({ rail }: { rail: FamilyRail }): JSX.Element {
           </Link>
         ))}
       </nav>
+
+      <FamilyAgents
+        family={rail.family}
+        host={rail.current?.id.host ?? rail.members[0]?.id.host ?? ''}
+      />
     </aside>
+  );
+}
+
+/**
+ * The family's agents at work, live ones only. A server without the presence
+ * route draws nothing here: the rail looks the way it did before.
+ */
+function FamilyAgents({ family, host }: { family: string; host: string }): JSX.Element | null {
+  const presence = useFamilyAgentPresence(family);
+  const now = useTickingNow();
+  if (presence.isPending) return null;
+  if (presence.isError) {
+    if (presenceUnsupported(presence.error)) return null;
+    return (
+      <section className="repo-family-rail__agents" aria-labelledby="family-agents-title">
+        <h3 className="repo-family-rail__agents-title" id="family-agents-title">
+          Active agents
+        </h3>
+        <p className="presence-compact__empty" data-testid="family-agents-error">
+          Could not load the agents at work.
+        </p>
+      </section>
+    );
+  }
+  const live = livePresenceCount(presence.data.items);
+  return (
+    <section
+      className="repo-family-rail__agents"
+      aria-labelledby="family-agents-title"
+      data-testid="family-agents"
+    >
+      <h3 className="repo-family-rail__agents-title" id="family-agents-title">
+        Active agents
+        {live > 0 ? (
+          <span className="repo-family-rail__agents-count" data-testid="family-agents-count">
+            {live}
+          </span>
+        ) : null}
+      </h3>
+      <CompactPresenceList items={presence.data.items} host={host} now={now} />
+    </section>
   );
 }
 

@@ -77,6 +77,28 @@ function atWidth(width: number): () => void {
   };
 }
 
+/** What the presence routes answer; null is an older server without them. */
+let presenceBody: Record<string, unknown> | null = null;
+
+function presenceRow(overrides: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: 'external:cli:one',
+    source: 'external',
+    agent: 'codex',
+    model: 'model-x',
+    operator: 'ada',
+    branch: 'ada/fix',
+    state: 'active',
+    started_at: Date.now() - 600_000,
+    last_active_at: Date.now() - 60_000,
+    links: {},
+    collides_with: [],
+    repos: ['acme/widget-cli'],
+    families: [],
+    ...overrides,
+  };
+}
+
 describe('the family rail inside the repository shell', () => {
   let restoreWidth = (): void => {};
 
@@ -112,13 +134,78 @@ describe('the family rail inside the repository shell', () => {
           },
         });
       }
+      if (presenceBody && url.pathname.endsWith('agent-presence')) {
+        return json(presenceBody);
+      }
       return json({ code: 'not_found', message: url.pathname }, 404);
     });
   });
 
   afterEach(() => {
     restoreWidth();
+    presenceBody = null;
     vi.restoreAllMocks();
+  });
+
+  it('lists the family active agents, live ones only, with a collision mark', async () => {
+    presenceBody = {
+      items: [
+        presenceRow({ id: 'external:cli:one', collides_with: ['external:cli:two'] }),
+        presenceRow({
+          id: 'external:cli:two',
+          agent: 'claude-code',
+          operator: 'grace',
+          collides_with: ['external:cli:one'],
+        }),
+        presenceRow({ id: 'external:cli:gone', agent: 'old-agent', state: 'ended' }),
+      ],
+      total: 3,
+    };
+    renderShell('acme/widget-web', 'code');
+
+    const agents = await screen.findByTestId('family-agents');
+    expect(screen.getByTestId('family-agents-count')).toHaveTextContent('2');
+    expect(agents).toHaveTextContent('codex · model-x');
+    expect(agents).toHaveTextContent('grace');
+    expect(agents).not.toHaveTextContent('old-agent');
+    expect(screen.getByTestId('family-agent-collision-external:cli:one')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('family-agent-external:cli:one').querySelector('a')
+    ).toHaveAttribute('href', '/repos/acme/acme/widget-cli/agents');
+  });
+
+  it('says plainly when no agent is active in the family', async () => {
+    presenceBody = { items: [], total: 0 };
+    renderShell('acme/widget-web', 'code');
+
+    expect(await screen.findByTestId('family-agents-empty')).toHaveTextContent(
+      'No agents are active in this family.'
+    );
+  });
+
+  it('draws no agents section when the server has no presence route', async () => {
+    renderShell('acme/widget-web', 'code');
+
+    await screen.findByTestId('repo-family-rail');
+    await waitFor(() => {
+      expect(screen.getByTestId('repo-family-member-widget-cli')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('family-agents')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('family-agents-error')).not.toBeInTheDocument();
+  });
+
+  it('counts the live agents on the Agents tab from the presence list', async () => {
+    presenceBody = {
+      items: [
+        presenceRow({ id: 'a', state: 'active' }),
+        presenceRow({ id: 'b', state: 'idle' }),
+        presenceRow({ id: 'c', state: 'ended' }),
+      ],
+      total: 3,
+    };
+    renderShell('acme/widget-web', 'agents');
+
+    expect(await screen.findByTestId('repo-tab-count-agents')).toHaveTextContent('2');
   });
 
   it('names the family, rolls it up, and lists its members with the portal first', async () => {
