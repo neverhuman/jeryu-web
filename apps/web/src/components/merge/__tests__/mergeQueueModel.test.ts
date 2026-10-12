@@ -7,6 +7,7 @@ import {
   queueAgainOffer,
   queueEntryFor,
   queueGateStartedAt,
+  queueGateWaiting,
   readyButBehindBase,
   refusalAsksForQueue,
 } from '../mergeQueueModel';
@@ -153,5 +154,24 @@ describe('mergeQueueModel', () => {
     ).toBe('2026-10-01T09:30:00Z');
     expect(queueGateStartedAt(entry({ state: 'failed' }))).toBeNull();
     expect(queueGateStartedAt(null)).toBeNull();
+  });
+
+  it('waits for a gate runner until the forge says a gate reported on the queue commit', () => {
+    const detail = pullDetail({ approvals: 1, blockers: STALE_BASE });
+    const waiting = entry({ state: 'building', gate_started_at: null });
+    expect(queueGateWaiting(waiting)).toBe(true);
+    expect(queueGateStartedAt(waiting)).toBeNull();
+    expect(mergeQueueOffer({ detail, entry: waiting })?.line).toBe(
+      'In the merge queue: 3333333 is this head replayed onto main, waiting for a gate runner to pick it up.'
+    );
+    const running = entry({ state: 'building', gate_started_at: '2026-10-01T09:02:30Z' });
+    expect(queueGateWaiting(running)).toBe(false);
+    expect(queueGateStartedAt(running)).toBe('2026-10-01T09:02:30Z');
+    expect(mergeQueueOffer({ detail, entry: running })?.line).toBe(
+      'In the merge queue: 3333333 is this head replayed onto main, and the gate is running on it.'
+    );
+    // A forge that does not report it is never read as waiting.
+    expect(queueGateWaiting(entry({ state: 'building' }))).toBe(false);
+    expect(queueGateWaiting(entry({ state: 'failed', gate_started_at: null }))).toBe(false);
   });
 });

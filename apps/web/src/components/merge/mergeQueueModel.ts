@@ -96,9 +96,25 @@ export interface MergeQueueOffer {
   cta: string | null;
 }
 
-/** Where the replay gate started, so the page can show its progress. */
+/**
+ * True while a building entry waits for a gate runner: the forge says no gate
+ * has reported on the queue commit yet. A forge that does not say is never read
+ * as waiting.
+ */
+export function queueGateWaiting(entry: QueueEntry | null): boolean {
+  return (
+    entry?.state === 'building' && 'gate_started_at' in entry && entry.gate_started_at == null
+  );
+}
+
+/**
+ * Where the replay gate started, so the page can show its progress: when the
+ * forge says, the first report on the queue commit, and nothing while it
+ * waits; from an older forge, the last attempt or the enqueue.
+ */
 export function queueGateStartedAt(entry: QueueEntry | null): string | null {
   if (!entry || entry.state !== 'building') return null;
+  if ('gate_started_at' in entry) return entry.gate_started_at ?? null;
   const attempts = entry.attempts ?? [];
   return attempts[attempts.length - 1]?.at ?? entry.enqueued_at;
 }
@@ -124,7 +140,11 @@ export function mergeQueueOffer(input: {
     return {
       kind: 'building',
       state: 'building',
-      line: `In the merge queue: ${entry.queue_sha.slice(0, 7)} is this head replayed onto ${entry.base}, and the gate is running on it.`,
+      line: `In the merge queue: ${entry.queue_sha.slice(0, 7)} is this head replayed onto ${entry.base}, ${
+        queueGateWaiting(entry)
+          ? 'waiting for a gate runner to pick it up'
+          : 'and the gate is running on it'
+      }.`,
       cta: null,
     };
   }

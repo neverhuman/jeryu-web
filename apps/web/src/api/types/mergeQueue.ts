@@ -29,6 +29,12 @@ export interface QueueEntry {
   enqueued_at: string;
   enqueued_by: string;
   attempts?: QueueAttempt[];
+  /**
+   * When a gate first reported on `queue_sha` (a commit status or check run),
+   * null while no gate runner has picked the entry up. Only a building entry
+   * carries it, and a forge that predates it omits it.
+   */
+  gate_started_at?: string | null;
   /** Why it failed or left the queue; null while it is building. */
   reason?: string | null;
   landed_sha?: string | null;
