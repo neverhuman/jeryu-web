@@ -131,7 +131,8 @@ export function RepoLayout({
               ) : (
                 <RepoHealthPill health={summary.health} />
               )}
-              {/* The score links to the quality gate, as it does in the table. */}
+              {/* The score links to this repository's scored head, as it does
+                  in the table. */}
               <Link
                 to={scorePath}
                 className="repo-overview__score-link"

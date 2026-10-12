@@ -19,6 +19,7 @@ import {
 import { ApiError, apiSend, apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type {
+  JankuraiScoreListResponse,
   QualityGateDisputeRequest,
   QualityGateDisputeResponse,
   QualityGateHeadDetail,
@@ -80,6 +81,25 @@ export function useQualityGateHead(
       apiGet<QualityGateHeadDetail>(endpoints.qualityGateHead(repo, sha), { signal }),
     enabled: repo !== '' && sha !== '',
     ...OPERATOR_REFRESH,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
+/**
+ * The scores one repository's branch has had, newest first. A repository
+ * surface shows the newest of them as its score; this read is how a link from
+ * that badge finds the head the number belongs to.
+ */
+export function useRepoBranchScores(
+  repoId: string,
+  branch: string
+): UseQueryResult<JankuraiScoreListResponse, Error> {
+  return useQuery({
+    queryKey: [...QUALITY_GATE_KEY, 'repo-scores', repoId, branch],
+    queryFn: ({ signal }) =>
+      apiGet<JankuraiScoreListResponse>(endpoints.repoJankuraiScores(repoId, branch), { signal }),
+    enabled: repoId !== '' && branch !== '',
     staleTime: 30_000,
     retry: false,
   });

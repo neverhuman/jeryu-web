@@ -39,6 +39,7 @@ import { ToolFleetToolPage } from '../pages/ToolFleetToolPage';
 import { ToolsPage } from '../pages/ToolsPage';
 import {
   QualityGateHeadPage,
+  QualityGateLatestHeadPage,
   QualityGatePage,
   QualityGateRulePage,
 } from '../pages/qualityGate';
@@ -90,6 +91,8 @@ export const router = createBrowserRouter([
       // Quality gate: how the jankurai/proof score behaves, rule -> head -> findings.
       { path: 'quality-gate', element: <QualityGatePage /> },
       { path: 'quality-gate/rules/:rule', element: <QualityGateRulePage /> },
+      // A repository's newest score: the badge on repo surfaces links here.
+      { path: 'quality-gate/heads/:owner/:name', element: <QualityGateLatestHeadPage /> },
       { path: 'quality-gate/heads/:owner/:name/:sha', element: <QualityGateHeadPage /> },
       { path: 'runners', element: <FleetPage /> },
       { path: 'shared-tools/findings', element: <ToolsPage /> },

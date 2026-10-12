@@ -12,6 +12,7 @@ export type { WebBootstrap } from '../../../../../contracts/generated/WebBootstr
 export type { Viewer } from '../../../../../contracts/generated/Viewer';
 export type { WebFeatureFlags } from '../../../../../contracts/generated/WebFeatureFlags';
 export type { RepositorySummary } from '../../../../../contracts/generated/RepositorySummary';
+export type { JankuraiScoreListResponse } from '../../../../../contracts/generated/JankuraiScoreListResponse';
 export type { RepositoryId } from '../../../../../contracts/generated/RepositoryId';
 export type { RepositoryRole } from '../../../../../contracts/generated/RepositoryRole';
 export type { RepositoryVisibility } from '../../../../../contracts/generated/RepositoryVisibility';

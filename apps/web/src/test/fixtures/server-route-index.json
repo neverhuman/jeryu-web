@@ -48,6 +48,7 @@
     "/api/v1/repos/{id}/commit/{sha}",
     "/api/v1/repos/{id}/commits",
     "/api/v1/repos/{id}/compare",
+    "/api/v1/repos/{id}/jankurai-scores",
     "/api/v1/repos/{id}/merge-queue",
     "/api/v1/repos/{id}/pages",
     "/api/v1/repos/{id}/pulls",

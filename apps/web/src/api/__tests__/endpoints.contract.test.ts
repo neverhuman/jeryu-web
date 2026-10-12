@@ -109,6 +109,7 @@ const endpointSamples = {
   botRevoke: ['bot-1'],
   repoBots: ['repo-1'],
   repoBotActivity: ['repo-1'],
+  repoJankuraiScores: ['repo-1', 'main'],
 } satisfies { [Name in keyof Endpoints]: Parameters<Endpoints[Name]> };
 
 /** Every builder called with placeholder arguments. */

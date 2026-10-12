@@ -30,7 +30,7 @@ import type { RepositorySummary } from '../../api/types';
 import { CiProgress } from '../ciProgress/CiProgress';
 import { RunningPassesContext } from '../ciProgress/runningPasses';
 import type { RepoSort } from '../../hooks/useRepositories';
-import { QUALITY_GATE_PATH } from '../../pages/qualityGate/qualityGateModel';
+import { qualityGateRepoPath } from '../../pages/qualityGate/qualityGateModel';
 import {
   attentionRank,
   failingLabel,
@@ -336,10 +336,11 @@ export function RepoTable({
         // Unscored repos sort below every real score (worst-first when
         // ascending) instead of throwing the comparator off with nulls.
         accessorFn: (row) => row.jankurai_score ?? -1,
-        // The score links to the quality gate: the rules and findings behind it.
+        // The score links to this repository's scored head: the number, the
+        // caps and the findings behind it, not the gate's overview.
         cell: ({ row }: RepoCell) => (
           <Link
-            to={QUALITY_GATE_PATH}
+            to={qualityGateRepoPath(row.original.id, row.original.default_branch)}
             className="repo-table__score-link"
             onClick={(e) => e.stopPropagation()}
             title="See what produced this score"

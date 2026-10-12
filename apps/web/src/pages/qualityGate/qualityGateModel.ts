@@ -6,12 +6,15 @@
 // pages. Keeping it apart keeps the pages readable and the maths tested.
 
 import type {
+  JankuraiScoreListResponse,
   QualityGateDay,
   QualityGateDimensionSummary,
   QualityGateRepoSummary,
   QualityGateRuleSummary,
 } from '../../api/types';
 import { blobPath } from '../repoBrowserModel';
+
+type JankuraiScoreSummary = JankuraiScoreListResponse['scores'][number];
 
 /** Where the Quality gate pages live. */
 export const QUALITY_GATE_PATH = '/quality-gate';
@@ -26,6 +29,40 @@ export function qualityGateHeadPath(repo: string, sha: string): string {
   return `${QUALITY_GATE_PATH}/heads/${encodeURIComponent(owner)}/${encodeURIComponent(
     name
   )}/${encodeURIComponent(sha)}`;
+}
+
+/**
+ * The newest score of a repository's branch, wherever a surface shows that
+ * score as the repository's own. The page it opens finds the scored head and
+ * replaces itself with that head's page. `repoId` is the opaque id the
+ * repository API is keyed by; `owner` and `name` stay whole (an owner may hold
+ * nested namespace segments) and only name the page and its redirect.
+ */
+export function qualityGateRepoPath(
+  repo: { id: string; owner: string; name: string },
+  branch: string
+): string {
+  const query = new URLSearchParams({ branch, repo: repo.id });
+  return `${QUALITY_GATE_PATH}/heads/${encodeURIComponent(repo.owner)}/${encodeURIComponent(
+    repo.name
+  )}?${query.toString()}`;
+}
+
+/**
+ * The newest score recorded for `branch`. The list endpoint promises no order
+ * and may carry other branches, so both are checked here.
+ */
+export function newestBranchScore(
+  scores: JankuraiScoreSummary[],
+  branch: string
+): JankuraiScoreSummary | undefined {
+  return scores
+    .filter((entry) => entry.branch === branch)
+    .reduce<JankuraiScoreSummary | undefined>(
+      (newest, entry) =>
+        !newest || Date.parse(entry.created_at) > Date.parse(newest.created_at) ? entry : newest,
+      undefined
+    );
 }
 
 /** The repository's own code page, at the scored commit, on the flagged line. */

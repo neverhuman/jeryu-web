@@ -389,7 +389,7 @@ describe('RepositoryBrowserPage (one repository page)', () => {
     await waitFor(() => expect(screen.queryByTestId('blame-view')).toBeNull());
   });
 
-  it('links the score to the quality gate and opens the check that set the chip', async () => {
+  it("links the score to this repository's scored head and opens the check that set the chip", async () => {
     failingChecks = 1;
     renderAt(FRONT);
     await waitFor(() =>

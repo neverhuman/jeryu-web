@@ -325,6 +325,9 @@ export const endpoints = {
       .split('/')
       .map(encodeURIComponent)
       .join('/')}/${encodeURIComponent(sha)}`,
+  /** A repository's ingested scores on one branch, newest first. `id` is `owner/name`. */
+  repoJankuraiScores: (id: string, branch: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/jankurai-scores?branch=${encodeURIComponent(branch)}`,
   /** Record that a finding looks wrong to the operator reading it (admin-only). */
   qualityGateDispute: (findingId: string): string =>
     `/api/v1/quality-gate/findings/${encodeURIComponent(findingId)}/dispute`,

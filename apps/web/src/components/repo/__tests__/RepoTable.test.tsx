@@ -271,6 +271,10 @@ describe('RepoTable', () => {
     expect(boiler).toHaveTextContent('—');
     expect(boiler).toHaveAttribute('title', 'Primary shared Git authority (jain)');
     expect(screen.getByTestId('repo-description-neverhuman/jeryu-core')).toHaveTextContent('Core split');
-    expect(screen.getByTestId('repo-score-neverhuman/a')).toHaveAttribute('href', '/quality-gate');
+    // The score opens this repository's newest scored head, not the overview.
+    expect(screen.getByTestId('repo-score-neverhuman/a')).toHaveAttribute(
+      'href',
+      '/quality-gate/heads/neverhuman/a?branch=main&repo=repo-0'
+    );
   });
 });

@@ -8,6 +8,8 @@ import {
   formatScore,
   percent,
   qualityGateHeadPath,
+  newestBranchScore,
+  qualityGateRepoPath,
   qualityGateRulePath,
   repoCodeHref,
   ruleFindings,
@@ -107,10 +109,37 @@ describe('qualityGateModel', () => {
     expect(qualityGateHeadPath('jeryu/jeryu-web', 'abc123')).toBe(
       '/quality-gate/heads/jeryu/jeryu-web/abc123'
     );
+    // A repository's own score: its newest head on the branch, read there by
+    // the repository's id. A nested owner stays one path segment.
+    expect(
+      qualityGateRepoPath({ id: 'repo-uuid-1', owner: 'jeryu', name: 'jeryu-web' }, 'release/1')
+    ).toBe('/quality-gate/heads/jeryu/jeryu-web?branch=release%2F1&repo=repo-uuid-1');
+    expect(qualityGateRepoPath({ id: 'r2', owner: 'acme/platform', name: 'widgets' }, 'main')).toBe(
+      '/quality-gate/heads/acme%2Fplatform/widgets?branch=main&repo=r2'
+    );
     expect(repoCodeHref('forge.example', 'jeryu/jeryu-web', 'abc123', 'src/a.ts', 12)).toBe(
       '/repos/forge.example/jeryu/jeryu-web/blob/abc123/src/a.ts#L12'
     );
     expect(shortSha('0863f25ab1c2d3e4')).toBe('0863f25a');
+  });
+
+  it('takes the newest score of the branch, whatever order the list is in', () => {
+    const at = (sha: string, branch: string, created_at: string) => ({
+      branch,
+      commit_sha: sha,
+      score: 90,
+      hard_findings: 0,
+      decision: 'pass',
+      caps_applied: [],
+      created_at,
+    });
+    const scores = [
+      at('old', 'main', '2026-10-10T00:00:00Z'),
+      at('other-branch', 'release', '2026-10-12T12:00:00Z'),
+      at('new', 'main', '2026-10-12T00:00:00Z'),
+    ];
+    expect(newestBranchScore(scores, 'main')?.commit_sha).toBe('new');
+    expect(newestBranchScore(scores, 'trunk')).toBeUndefined();
   });
 
   it('says what the window found, including when it found nothing', () => {
