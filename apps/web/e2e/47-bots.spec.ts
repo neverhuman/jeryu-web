@@ -4,10 +4,16 @@
 // Create and rotate are the only responses that carry an enrollment key.
 // A later visit must not invent one. Narrow viewports keep the page inside
 // the window; the account table stacks instead of widening the document.
+// Agent tokens follow the same rule: the token is shown once, on create.
 
 import { expect, test, type Page, type Route } from './fixtures/test';
 
-import { persistRenderedEvidence } from './fixtures/accessibility';
+import {
+  blockingViolations,
+  persistAxeResult,
+  persistRenderedEvidence,
+  runAxe,
+} from './fixtures/accessibility';
 import { AppShellPage } from './pages/AppShellPage';
 import { mockBootstrap, mockRepoAgentRuns, mockRepoList } from './fixtures/mocks';
 import { mockShiftTodos } from './fixtures/releaseChannelMocks';
@@ -175,7 +181,68 @@ async function mockAccountBots(page: Page, initial: Summary[]): Promise<Summary[
     row.status = action === 'suspend' ? 'suspended' : 'revoked';
     await fulfillJson(route, 200, row);
   });
+  await mockAgentTokens(page, []);
   return bots;
+}
+
+interface TokenRow {
+  token_id: string;
+  bot_id: string;
+  label: string | null;
+  created_at: string;
+  expires_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+}
+
+const ISSUED_TOKEN = 'jat_example_shown_once';
+const FUTURE = '2099-01-01T00:00:00Z';
+
+/** Agent tokens per bot: list, issue (201, token once), revoke. State lives in this call. */
+async function mockAgentTokens(page: Page, initial: TokenRow[]): Promise<void> {
+  const tokens = initial.map((row) => ({ ...row }));
+  await page.route(/\/api\/v1\/bots\/[^/]+\/tokens(?:\/[^/]+\/revoke)?(?:\?.*)?$/, async (route, request) => {
+    const parts = new URL(request.url()).pathname.split('/');
+    const botId = parts[4];
+    const tokenId = parts[6];
+    if (request.method() === 'GET' && tokenId === undefined) {
+      await fulfillJson(route, 200, { tokens: tokens.filter((row) => row.bot_id === botId) });
+      return;
+    }
+    if (request.method() !== 'POST') {
+      await route.fallback();
+      return;
+    }
+    if (tokenId !== undefined) {
+      const row = tokens.find((token) => token.token_id === tokenId && token.bot_id === botId);
+      if (!row) {
+        await fulfillJson(route, 404, apiEnvelope('not_found', `token ${tokenId}`));
+        return;
+      }
+      row.revoked_at = NOW;
+      await fulfillJson(route, 200, row);
+      return;
+    }
+    const body = (request.postDataJSON() ?? {}) as { label?: string; ttl_days?: number };
+    const created: TokenRow = {
+      token_id: `tok-${tokens.length + 1}`,
+      bot_id: botId,
+      label: body.label ?? null,
+      created_at: NOW,
+      expires_at: FUTURE,
+      last_used_at: null,
+      revoked_at: null,
+    };
+    tokens.unshift(created);
+    await fulfillJson(route, 201, {
+      bot: summary({ id: botId }),
+      token_id: created.token_id,
+      token: ISSUED_TOKEN,
+      label: created.label,
+      created_at: created.created_at,
+      expires_at: created.expires_at,
+    });
+  });
 }
 
 async function seedRoster(page: Page): Promise<void> {
@@ -362,4 +429,88 @@ test('a rejected slug shows the invalid_input error and no key @action:bots.inva
   await expect(error).toContainText(INVALID_SLUG_MESSAGE);
   await expect(error).toContainText('invalid_input');
   await expect(page.getByTestId('bot-setup')).toHaveCount(0);
+});
+
+test('an agent token is shown once with setup lines, then revoked after an in-page confirm @action:bots.agent_tokens', async ({
+  page,
+}) => {
+  await mockBootstrap(page);
+  await mockAccountBots(page, [summary()]);
+  await mockAgentTokens(page, [
+    {
+      token_id: 'tok-old',
+      bot_id: BOT_ID,
+      label: 'old laptop',
+      created_at: NOW,
+      expires_at: '2020-01-01T00:00:00Z',
+      last_used_at: null,
+      revoked_at: null,
+    },
+  ]);
+
+  const shell = new AppShellPage(page);
+  await shell.goto('/bots');
+  await shell.assertShellLoaded(15_000);
+
+  const tokens = page.getByTestId('agent-tokens');
+  await expect(tokens).toContainText('Tokens for Northwind');
+  await expect(tokens.getByTestId('agent-token-row')).toContainText('old laptop');
+  await expect(tokens.getByTestId('agent-token-status')).toHaveText('Expired');
+  await expect(tokens.getByTestId('agent-token-row')).toContainText('Never');
+
+  await tokens.getByLabel('Label (optional)').fill('laptop');
+  await tokens.getByLabel('Days valid').fill('30');
+  await tokens.getByRole('button', { name: 'Create token' }).click();
+
+  const issued = page.getByTestId('agent-token-issued');
+  await expect(issued).toBeVisible();
+  await expect(issued).toBeFocused();
+  await expect(issued.getByTestId('agent-token-value')).toContainText(ISSUED_TOKEN);
+  await expect(issued.getByTestId('agent-token-once')).toContainText('You will not see it again');
+  const origin = new URL(page.url()).origin;
+  await expect(issued.getByTestId('agent-token-snippet-claude-code')).toContainText(
+    `claude mcp add --transport http jeryu ${origin}/mcp --header "Authorization: Bearer ${ISSUED_TOKEN}"`
+  );
+  await expect(issued.getByTestId('agent-token-snippet-mcp-json')).toContainText(
+    `"url":"${origin}/mcp"`
+  );
+  await expect(issued.getByTestId('agent-token-snippet-gh-git')).toContainText(
+    `GH_TOKEN=${ISSUED_TOKEN}`
+  );
+  await expect(tokens.getByTestId('agent-token-row').first()).toContainText('laptop');
+
+  const result = await runAxe(page, { disableRules: ['color-contrast'] });
+  await persistAxeResult('bots-agent-tokens', result);
+  // Every axe receipt is paired with rendered evidence of the same surface.
+  const rendered = await persistRenderedEvidence(page, 'bots-agent-tokens');
+  expect(rendered.geometry.width).toBeGreaterThan(0);
+  expect(rendered.geometry.height).toBeGreaterThan(0);
+  expect(
+    blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`),
+    'the agent token panel adds no serious or critical violation'
+  ).toEqual([]);
+
+  await page.setViewportSize(PHONE);
+  await expect
+    .poll(() => sidewaysOverflow(page), {
+      message: `the issued token panel scrolls the page sideways at ${PHONE.width}px`,
+    })
+    .toBeLessThanOrEqual(0);
+
+  await issued.getByTestId('agent-token-dismiss').click();
+  await expect(page.getByTestId('agent-token-issued')).toHaveCount(0);
+  await expect(page.getByText(ISSUED_TOKEN)).toHaveCount(0);
+  expect(page.url()).not.toContain(ISSUED_TOKEN);
+
+  await page.getByRole('button', { name: 'Revoke laptop' }).click();
+  const confirm = page.getByTestId('agent-token-confirm');
+  await expect(confirm).toContainText('Revoke laptop?');
+  await confirm.getByTestId('agent-token-revoke-confirm').click();
+  await expect(page.getByTestId('agent-token-confirm')).toHaveCount(0);
+  await expect(tokens.getByTestId('agent-token-status').first()).toHaveText('Revoked');
+
+  await page.reload();
+  await shell.assertShellLoaded(15_000);
+  await expect(page.getByTestId('agent-tokens')).toContainText('laptop');
+  await expect(page.getByText(ISSUED_TOKEN)).toHaveCount(0);
 });

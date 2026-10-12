@@ -2,7 +2,8 @@
 //
 // Create and rotate are the only responses that carry an enrollment key.
 // The key stays in component state until it is hidden or the page is left.
-// A later visit does not invent one.
+// A later visit does not invent one. The same holds for each bot's agent
+// tokens below the list (AgentTokens.tsx): shown once, on create.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
@@ -22,6 +23,7 @@ import { ActionButton } from '../../components/action/ActionButton';
 import { ErrorState, LoadingState } from '../../components/state';
 import { When } from '../../format/When';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { AgentTokens } from './AgentTokens';
 import { BotKindBadge } from './BotKindBadge';
 import {
   GENERAL_REACH_NOTE,
@@ -276,6 +278,26 @@ export function BotsPage(): JSX.Element {
           </div>
         )}
       </section>
+
+      {bots.length > 0 ? (
+        <section
+          className="page__section agent-tokens-section"
+          aria-labelledby="agent-tokens"
+          data-testid="agent-tokens-section"
+        >
+          <h2 className="page__section-title" id="agent-tokens">
+            Agent tokens
+          </h2>
+          <p className="enroll-form__note">
+            An agent token connects an agent with one URL and one token, on MCP, the REST API,
+            gh and git. It acts for one Grokbot or Musebot: your rights, cut down to its reach. The
+            token is shown once, when you create it.
+          </p>
+          {bots.map((enrollment) => (
+            <AgentTokens key={enrollment.id} bot={enrollment} />
+          ))}
+        </section>
+      ) : null}
     </div>
   );
 }

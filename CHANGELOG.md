@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- The Bots page (`/bots`) manages each bot's scoped agent tokens: a list with label, created,
+  expires, last used (or never) and status (active, expired, revoked); a Revoke that asks in the
+  page first; and a New token form (label, days valid 1 to 365, default 90), off for suspended
+  and revoked bots. A new token is shown once, focused, with Copy and setup lines built from the
+  page's own origin for Claude Code, an MCP client JSON and `GH_TOKEN`; dismissing it forgets it.
+  Server errors (422, 409, 404) show their message in place. When the clipboard refuses, a copy
+  box now selects its text for a copy by hand.
 - A System page, Yield (`/yield`, `g y`, admins only), reads `GET /api/v1/yield` and leads with
   what a merged change cost. Under it: yield, first-pass rate, review share and killed-run spend;
   where the spend went (main, pending, scrap; author, review, triage); each routing experiment's

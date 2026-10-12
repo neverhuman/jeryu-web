@@ -6,11 +6,14 @@
 // machine and directory: it is read before the command, it describes the copy
 // button for assistive tech, and it is never part of what is copied.
 //
+// When the clipboard refuses, the command's text is selected in place, so the
+// reader's own copy shortcut takes it.
+//
 // The command box scrolls when the line is longer than the row it sits in, so
 // it is a tab stop: the command is reachable and readable without a mouse.
 
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import './CopyCommand.css';
 
@@ -25,6 +28,7 @@ export interface CopyCommandProps {
 export function CopyCommand({ command, label, where }: CopyCommandProps): JSX.Element {
   const whereId = useId();
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const textRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (state === 'idle') return () => {};
@@ -39,6 +43,7 @@ export function CopyCommand({ command, label, where }: CopyCommandProps): JSX.El
       setState('copied');
     } catch {
       setState('failed');
+      selectText(textRef.current);
     }
   };
 
@@ -46,7 +51,7 @@ export function CopyCommand({ command, label, where }: CopyCommandProps): JSX.El
     <span className="copy-command">
       {/* The box scrolls when the command is longer than the row, so it is
           focusable: the command can be reached and read without a mouse. */}
-      <code className="copy-command__text" tabIndex={0}>
+      <code className="copy-command__text" tabIndex={0} ref={textRef}>
         {command}
       </code>
       <button
@@ -74,4 +79,17 @@ export function CopyCommand({ command, label, where }: CopyCommandProps): JSX.El
       {box}
     </span>
   );
+}
+
+/** Select everything inside `node`, for a copy by hand. */
+function selectText(node: HTMLElement | null): void {
+  if (!node) return;
+  // Focus first: moving focus afterwards can drop the selection again.
+  node.focus();
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }

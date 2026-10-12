@@ -165,3 +165,75 @@
     flex-basis: 100%;
   }
 }
+
+/* Agent tokens: one card per bot under the account list. The issued token
+ * panel reuses the enrollment setup look; its copy rows never widen the page. */
+
+.agent-tokens-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.agent-tokens {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.agent-tokens__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.agent-tokens__issued {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-accent-warning);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-1);
+  min-width: 0;
+}
+
+.agent-tokens__issued:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.agent-tokens__issued-title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.agent-tokens__copy,
+.agent-tokens__snippet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.agent-tokens__snippet-title {
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.agent-tokens__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.agent-tokens__form {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-3);
+}

@@ -351,6 +351,11 @@ export const endpoints = {
     `/api/v1/bots/${encodeURIComponent(id)}/suspend`,
   botRevoke: (id: string): string =>
     `/api/v1/bots/${encodeURIComponent(id)}/revoke`,
+  /** Agent tokens of one bot: list (GET) and issue (POST). */
+  botTokens: (id: string): string =>
+    `/api/v1/bots/${encodeURIComponent(id)}/tokens`,
+  botTokenRevoke: (id: string, tokenId: string): string =>
+    `/api/v1/bots/${encodeURIComponent(id)}/tokens/${encodeURIComponent(tokenId)}/revoke`,
   /** Reach is already clipped to this repository. */
   repoBots: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/bots`,

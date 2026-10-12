@@ -107,6 +107,8 @@ const endpointSamples = {
   botKeys: ['bot-1'],
   botSuspend: ['bot-1'],
   botRevoke: ['bot-1'],
+  botTokens: ['bot-1'],
+  botTokenRevoke: ['bot-1', 'token-1'],
   repoBots: ['repo-1'],
   repoBotActivity: ['repo-1'],
   repoJankuraiScores: ['repo-1', 'main'],
@@ -169,6 +171,8 @@ describe('endpoint contract', () => {
     expect(endpoints.botKeys('a/b')).toBe('/api/v1/bots/a%2Fb/keys');
     expect(endpoints.botSuspend('id')).toBe('/api/v1/bots/id/suspend');
     expect(endpoints.botRevoke('id')).toBe('/api/v1/bots/id/revoke');
+    expect(endpoints.botTokens('id')).toBe('/api/v1/bots/id/tokens');
+    expect(endpoints.botTokenRevoke('id', 't/1')).toBe('/api/v1/bots/id/tokens/t%2F1/revoke');
     expect(endpoints.repoBots('repo 1')).toBe('/api/v1/repos/repo%201/bots');
     expect(endpoints.repoBotActivity('repo-1')).toBe(
       '/api/v1/repos/repo-1/bot-activity',

@@ -70,6 +70,41 @@ export interface BotEnrollmentReceipt {
   setup_script: string;
 }
 
+/** `POST /api/v1/bots/:id/tokens`. Both fields are optional; the server defaults to 90 days. */
+export interface BotAccessTokenCreateRequest {
+  label?: string;
+  ttl_days?: number;
+}
+
+/**
+ * Returned only by `POST /api/v1/bots/:id/tokens`, with status 201. `token`
+ * starts with `jat_` and is never returned again: a list or a later read
+ * carries `token_id` only.
+ */
+export interface BotAccessTokenReceipt {
+  bot: BotSummary;
+  token_id: string;
+  token: string;
+  label: string | null;
+  created_at: string;
+  expires_at: string;
+}
+
+/** One row of `GET /api/v1/bots/:id/tokens`, and the revoke answer. Never the token. */
+export interface BotAccessTokenSummary {
+  token_id: string;
+  bot_id: string;
+  label: string | null;
+  created_at: string;
+  expires_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface BotAccessTokenListResponse {
+  tokens: BotAccessTokenSummary[];
+}
+
 /** `GET /api/v1/repos/:id/bot-activity`. The roster does not render this. */
 export interface BotActivityResponse {
   events: unknown[];

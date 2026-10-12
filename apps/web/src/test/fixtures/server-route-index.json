@@ -20,6 +20,8 @@
     "/api/v1/bots/{id}/keys",
     "/api/v1/bots/{id}/revoke",
     "/api/v1/bots/{id}/suspend",
+    "/api/v1/bots/{id}/tokens",
+    "/api/v1/bots/{id}/tokens/{token_id}/revoke",
     "/api/v1/codegraph/tool-build/clusters",
     "/api/v1/codegraph/tool-build/clusters/{id}/feedback",
     "/api/v1/control-plane/repo-graph",
