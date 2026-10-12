@@ -124,7 +124,9 @@ describe('TodoPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Assign 20260919-1300-own to someone' }));
     const picker = await screen.findByLabelText('Person to assign 20260919-1300-own to');
-    // The picker lists people from /api/v1/people only.
+    // The picker lists the people this todo's own route returns, never the viewer
+    // themself on a free todo ("I'll take it" is that act).
+    expect(within(picker).queryByRole('option', { name: 'operator' })).toBeNull();
     expect(within(picker).getByRole('option', { name: 'Bea (bea)' })).toBeInTheDocument();
     fireEvent.change(picker, { target: { value: 'bea' } });
     fireEvent.click(screen.getByRole('button', { name: 'Assign' }));
@@ -142,7 +144,9 @@ describe('TodoPage', () => {
     ]);
     renderTodo('/work/20260919-1400-mine');
     expect(await screen.findByTestId('todo-assignee-line')).toHaveTextContent('You have this');
-    expect(screen.getByRole('button', { name: 'Mark 20260919-1400-mine done' })).toBeInTheDocument();
+    // Finishing asks first: done cannot be undone.
+    fireEvent.click(screen.getByRole('button', { name: 'Mark 20260919-1400-mine done' }));
+    expect(screen.getByText('Mark 20260919-1400-mine done? This cannot be undone.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Unassign 20260919-1400-mine' })).toHaveTextContent(
       'Give it back'
     );

@@ -174,6 +174,11 @@ function KindCell({ account }: { account: AdminUser }): JSX.Element {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
   const pinned = account.kind_source === 'config';
+  // A kind this page does not know is shown as the server sent it, never
+  // offered for change: a select without its value would overwrite it blind.
+  if (account.kind !== undefined && !(account.kind in KIND_LABEL)) {
+    return <span className="page__pill page__pill--muted">{String(account.kind)}</span>;
+  }
   return (
     <>
       <select

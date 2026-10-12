@@ -23,6 +23,8 @@ export function TodoAssignee({
   const action = useShiftTodoAction();
   const choices = assigneeChoices(todo, viewer);
   const [picking, setPicking] = useState(false);
+  // `done` cannot be undone: it asks first, as the admin menu's Mark done does.
+  const [finishing, setFinishing] = useState(false);
   const people = usePeople(todo.family, todo.id, picking);
   const [target, setTarget] = useState('');
   const run = (request: Parameters<typeof action.mutate>[0], after?: () => void): void =>
@@ -36,7 +38,12 @@ export function TodoAssignee({
       setTarget('');
     });
   };
-  const candidates = (people.data ?? []).filter((person) => person.login !== todo.assignee);
+  // Not the holder, and not the viewer on a free todo: taking it yourself is
+  // "I'll take it", not a hand-over.
+  const candidates = (people.data ?? []).filter(
+    (person) =>
+      person.login !== todo.assignee && (todo.assignee || person.login !== viewer?.login)
+  );
   // Finished work nobody took on has nothing to say here.
   if (FINISHED.has(todo.status) && !todo.assignee) return null;
   return (
@@ -59,7 +66,8 @@ export function TodoAssignee({
           <ActionButton
             variant="primary"
             disabled={action.isPending}
-            onClick={() => run({ ...base, action: 'done' })}
+            aria-expanded={finishing}
+            onClick={() => setFinishing((open) => !open)}
             aria-label={`Mark ${todo.id} done`}
           >
             Mark done
@@ -87,6 +95,24 @@ export function TodoAssignee({
           </ActionButton>
         ) : null}
       </span>
+      {finishing ? (
+        <form
+          className="shift__block-form"
+          aria-label={`Mark ${todo.id} done?`}
+          onSubmit={(event) => {
+            event.preventDefault();
+            run({ ...base, action: 'done' }, () => setFinishing(false));
+          }}
+        >
+          <span>Mark {todo.id} done? This cannot be undone.</span>
+          <ActionButton type="submit" variant="primary" disabled={action.isPending}>
+            Mark done
+          </ActionButton>
+          <ActionButton variant="default" onClick={() => setFinishing(false)}>
+            Cancel
+          </ActionButton>
+        </form>
+      ) : null}
       {picking ? (
         <form className="shift__block-form" onSubmit={submit} aria-label={`Assign ${todo.id}`}>
           {people.isPending ? (
