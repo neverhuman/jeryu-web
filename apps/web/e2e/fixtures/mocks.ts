@@ -1348,6 +1348,113 @@ export async function mockRepoAgentRuns(
   );
 }
 
+/** One agent presence row, the way `GET .../agent-presence` sends it. */
+export interface MockPresenceItem {
+  id: string;
+  source?: 'external' | 'agent_run' | 'queue_worker' | 'reviewer' | 'gate';
+  agent: string;
+  model?: string;
+  operator?: string;
+  lane?: string;
+  branch?: string;
+  title?: string;
+  state?: 'active' | 'idle' | 'stale' | 'ended';
+  via?: 'repo' | 'family';
+  family?: string;
+  /** Minutes before the test's own clock. */
+  started_minutes_ago?: number;
+  seen_minutes_ago?: number;
+  cost_usd?: number;
+  links?: { pr?: string; todo?: string; agent_run?: string };
+  host?: string;
+  collides_with?: string[];
+  repos?: string[];
+  families?: string[];
+}
+
+function presenceWire(item: MockPresenceItem): Record<string, unknown> {
+  const now = Date.now();
+  const seen = now - (item.seen_minutes_ago ?? 1) * 60_000;
+  return {
+    id: item.id,
+    source: item.source ?? 'external',
+    session_id: item.source === 'agent_run' ? null : item.id.replace(/^[a-z_]+:/, ''),
+    agent: item.agent,
+    model: item.model ?? null,
+    operator: item.operator ?? null,
+    lane: item.lane ?? null,
+    branch: item.branch ?? null,
+    title: item.title ?? null,
+    state: item.state ?? 'active',
+    via: item.via,
+    family: item.family,
+    started_at: now - (item.started_minutes_ago ?? 30) * 60_000,
+    last_active_at: seen,
+    expires_at: seen + 300_000,
+    cost_usd: item.cost_usd ?? null,
+    links: item.links ?? {},
+    host: item.host,
+    collides_with: item.collides_with ?? [],
+    repos: item.repos,
+    families: item.families,
+  };
+}
+
+/**
+ * Mock `GET /api/v1/repos/{id}/agent-presence` — everyone at work on the
+ * repository. `null` answers 404 like an older server without the route,
+ * which the Agents page reads to mean "show the runs alone".
+ */
+export async function mockRepoAgentPresence(
+  page: Page,
+  items: MockPresenceItem[] | null
+): Promise<void> {
+  await page.route(
+    /\/api\/v1\/repos\/[^/]+\/agent-presence(\?.*)?$/,
+    async (route: Route, request) => {
+      if (request.method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      if (items === null) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: 'not_found', message: 'no such route' }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: items.map(presenceWire), total: items.length }),
+      });
+    }
+  );
+}
+
+/** Mock `GET /api/v1/agent-presence?family=<key>` — one family's agents at work. */
+export async function mockFamilyAgentPresence(
+  page: Page,
+  items: MockPresenceItem[] | null
+): Promise<void> {
+  await page.route(/\/api\/v1\/agent-presence(\?.*)?$/, async (route: Route, request) => {
+    if (request.method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    if (items === null) {
+      await route.fulfill({ status: 404, contentType: 'text/html', body: '<!doctype html>' });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: items.map(presenceWire), total: items.length }),
+    });
+  });
+}
+
 export interface MockCreatedSession {
   run_id: string;
   branch?: string;
