@@ -198,7 +198,7 @@ function IntelligenceSnapshot({
           own "priorities" from an older rule set (generic items such as "latest
           artifacts are absent"), and its count never matched Needs you. */}
       <p className="page__roadmap-note" data-testid="intelligence-needs-you">
-        Looking for what is waiting on you? That is <Link to="/needs-you">Needs you</Link>.
+        Looking for what is blocked on a person? That is <Link to="/needs-you">Needs you</Link>.
       </p>
 
       <section className="page__section" aria-labelledby="intelligence-graph">

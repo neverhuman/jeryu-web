@@ -102,7 +102,7 @@ describe('TodoPage', () => {
       if (req.pathname === '/api/v1/shift/todos') {
         return json({ generated_at: '2026-09-19T09:00:00Z', todos: [blocked] });
       }
-      if (req.pathname === '/api/v1/people') {
+      if (req.pathname === '/api/v1/shift/families/jeryu/people') {
         return json([
           { login: 'operator', display_name: 'operator' },
           { login: 'bea', display_name: 'Bea' },
@@ -146,6 +146,15 @@ describe('TodoPage', () => {
     expect(screen.getByRole('button', { name: 'Unassign 20260919-1400-mine' })).toHaveTextContent(
       'Give it back'
     );
+  });
+
+  it('offers nothing to take on when the server predates assignees', async () => {
+    const old = todo({ id: '20260919-1500-old', status: 'blocked' });
+    delete (old as { assignee?: string | null }).assignee;
+    serveTodos([old]);
+    renderTodo('/work/20260919-1500-old');
+    expect(await screen.findByRole('heading', { name: old.title })).toBeInTheDocument();
+    expect(screen.queryByTestId('todo-assignee')).toBeNull();
   });
 
   it("offers another user's todo to nobody but its holder", async () => {

@@ -196,8 +196,10 @@ function TodoView({
         hrefs={prHref ? { pr: prHref } : {}}
       />
       <NeedsYouAbout subject={{ todoId: todo.id }} />
-      {/* Anyone signed in may take a todo on or hand it to another person. */}
-      {viewer ? <TodoAssignee todo={todo} viewer={viewer} /> : null}
+      {/* Anyone signed in who can work on it may take a todo on or hand it to
+          another person. A server that predates assignees sends no `assignee`
+          key at all (a newer one sends null), so offer nothing it would refuse. */}
+      {viewer && 'assignee' in todo ? <TodoAssignee todo={todo} viewer={viewer} /> : null}
       {isAdmin ? (
         <p className="shift__actions">
           <TodoActions todo={todo} />

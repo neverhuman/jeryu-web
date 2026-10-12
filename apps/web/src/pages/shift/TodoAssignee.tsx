@@ -1,8 +1,9 @@
 // TodoAssignee.tsx — who has a todo, and the acts to take it on or hand it over.
 //
-// Shown to every signed-in viewer, not only admins: anyone may pick up blocked
-// work or delegate it to another person. The person picker lists people only
-// (`GET /api/v1/people`), never bots or automation logins.
+// Shown to every signed-in viewer, not only admins: anyone with write access
+// to the todo's code may pick up blocked work or delegate it to another such
+// person. The server decides; a refusal is shown under the buttons. The
+// picker lists the family's people only, never bots or automation logins.
 
 import { useState, type FormEvent } from 'react';
 
@@ -22,7 +23,7 @@ export function TodoAssignee({
   const action = useShiftTodoAction();
   const choices = assigneeChoices(todo, viewer);
   const [picking, setPicking] = useState(false);
-  const people = usePeople(picking);
+  const people = usePeople(todo.family, picking);
   const [target, setTarget] = useState('');
   const run = (request: Parameters<typeof action.mutate>[0], after?: () => void): void =>
     action.mutate(request, { onSuccess: after });

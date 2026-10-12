@@ -161,6 +161,44 @@ interface ResetReceipt {
   password: string;
 }
 
+/**
+ * One account's kind, with its own pending state so changing one row never
+ * freezes the others. A login the instance configuration names is automation
+ * whatever is stored, so its kind is shown but not offered for change.
+ */
+function KindCell({ account }: { account: AdminUser }): JSX.Element {
+  const queryClient = useQueryClient();
+  const setKind = useMutation({
+    mutationFn: (kind: AccountKind) =>
+      apiPut<AdminUser>(endpoints.adminUserKind(account.login), { kind }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+  const pinned = account.kind_source === 'config';
+  return (
+    <>
+      <select
+        value={account.kind ?? 'human'}
+        disabled={pinned || setKind.isPending}
+        aria-label={`Kind of ${account.login}`}
+        title={pinned ? 'Named as automation in the instance configuration' : undefined}
+        onChange={(event) => setKind.mutate(event.target.value as AccountKind)}
+      >
+        {(Object.keys(KIND_LABEL) as AccountKind[]).map((kind) => (
+          <option key={kind} value={kind}>
+            {KIND_LABEL[kind]}
+          </option>
+        ))}
+      </select>
+      {pinned ? <span className="page__pill page__pill--muted">config</span> : null}
+      {setKind.error ? (
+        <span className="shift__error" role="alert">
+          {setKind.error.message}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 function AdminAccessPanel(): JSX.Element {
   const [receipt, setReceipt] = useState<ResetReceipt | null>(null);
   const users = useQuery({
@@ -172,12 +210,8 @@ function AdminAccessPanel(): JSX.Element {
       apiSend<ResetReceipt>(endpoints.adminResetPassword(target), {}),
     onSuccess: setReceipt,
   });
-  const queryClient = useQueryClient();
-  const setKind = useMutation({
-    mutationFn: ({ login, kind }: { login: string; kind: AccountKind }) =>
-      apiPut<AdminUser>(endpoints.adminUserKind(login), { kind }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
-  });
+  // A server that predates account kinds sends none: no column to change.
+  const hasKinds = (users.data ?? []).some((account) => account.kind !== undefined);
   return (
     <section className="page__section" aria-labelledby="admin-users">
       <h2 className="page__section-title" id="admin-users">
@@ -195,7 +229,7 @@ function AdminAccessPanel(): JSX.Element {
                 <tr>
                   <th scope="col">User</th>
                   <th scope="col">Role</th>
-                  <th scope="col">Kind</th>
+                  {hasKinds ? <th scope="col">Kind</th> : null}
                   <th scope="col">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -208,30 +242,11 @@ function AdminAccessPanel(): JSX.Element {
                     <td>
                       <span className="page__pill">{account.role}</span>
                     </td>
-                    <td>
-                      <select
-                        value={account.kind ?? 'human'}
-                        disabled={setKind.isPending}
-                        aria-label={`Kind of ${account.login}`}
-                        onChange={(event) =>
-                          setKind.mutate({
-                            login: account.login,
-                            kind: event.target.value as AccountKind,
-                          })
-                        }
-                      >
-                        {(Object.keys(KIND_LABEL) as AccountKind[]).map((kind) => (
-                          <option key={kind} value={kind}>
-                            {KIND_LABEL[kind]}
-                          </option>
-                        ))}
-                      </select>
-                      {account.kind_source === 'config' ? (
-                        <span className="page__pill page__pill--muted" title="Named as automation in the instance configuration">
-                          config
-                        </span>
-                      ) : null}
-                    </td>
+                    {hasKinds ? (
+                      <td>
+                        <KindCell account={account} />
+                      </td>
+                    ) : null}
                     <td className="admin-users__actions">
                       <ActionButton
                         variant="default"
@@ -245,13 +260,13 @@ function AdminAccessPanel(): JSX.Element {
               </tbody>
             </table>
           </div>
-          {setKind.error ? (
-            <ErrorState title="Could not change the account kind" error={setKind.error} />
+          {hasKinds ? (
+            <p className="page__roadmap-note">
+              Only people can be assigned work. Mark service and automation logins as Automation
+              so they stay out of the assign list; a login the instance configuration names is
+              always automation.
+            </p>
           ) : null}
-          <p className="page__roadmap-note">
-            Only people can be assigned work. Mark bot and service logins as automation so they
-            stay out of the assign list.
-          </p>
           {receipt ? (
             <p className="page__roadmap-note">
               {receipt.login}: {receipt.password}

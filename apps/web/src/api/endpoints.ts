@@ -24,7 +24,8 @@ export const endpoints = {
   adminUsers: (): string => '/api/v1/admin/users',
   adminUserKind: (login: string): string =>
     `/api/v1/admin/users/${encodeURIComponent(login)}/kind`,
-  people: (): string => '/api/v1/people',
+  familyPeople: (family: string): string =>
+    `/api/v1/shift/families/${encodeURIComponent(family)}/people`,
   adminResetPassword: (login: string): string =>
     `/api/v1/admin/users/${encodeURIComponent(login)}/reset-password`,
   adminRepoGrants: (owner: string, repo: string): string =>

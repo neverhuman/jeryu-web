@@ -81,7 +81,9 @@ describe('AdminSettingsPage user list', () => {
     );
     const table = await screen.findByTestId('admin-users-table');
     const build = within(table).getByRole('row', { name: /user-8/ });
+    // A login the configuration names is automation, and not offered for change.
     expect(within(build).getByLabelText('Kind of user-8')).toHaveDisplayValue('Automation');
+    expect(within(build).getByLabelText('Kind of user-8')).toBeDisabled();
     expect(within(build).getByText('config')).toBeInTheDocument();
 
     fireEvent.change(within(table).getByLabelText('Kind of user-3'), {

@@ -36,6 +36,12 @@ describe('assigneeChoices', () => {
     expect(assigneeChoices(mine, root)).toMatchObject({ assign: true, unassign: true, done: false });
   });
 
+  it('leaves a parked todo to the admins who parked it', () => {
+    const parked = { ...blocked, status: 'parked' };
+    expect(assigneeChoices(parked, ada)).toMatchObject({ claim: false, assign: false });
+    expect(assigneeChoices(parked, root)).toMatchObject({ claim: true, assign: true });
+  });
+
   it('offers nothing on finished work, to the signed out, or while a worker runs it', () => {
     expect(assigneeChoices({ ...blocked, status: 'done' }, ada).claim).toBe(false);
     expect(assigneeChoices(blocked, null).claim).toBe(false);

@@ -1,9 +1,10 @@
 // assigneeModel.ts — which "take it on" acts a viewer is offered on a todo.
 //
-// Mirrors the server's rules (jeryu-deploy `web/shift/assignment.rs`): any
+// Mirrors the server's rules (jeryu-deploy `web/shift/assignment.rs`): a
 // person may claim a todo nobody has, hand it on if nobody has it or they do,
 // and give back or finish one they hold; an admin may do all of it. The server
-// still decides — a bot or automation login is refused there, with a reason.
+// also requires write access to the todo's code and refuses bots and
+// automation logins, with a reason the page shows.
 
 import type { ShiftTodo } from '../../api/types';
 
@@ -33,9 +34,12 @@ export function assigneeChoices(
   const free = holder === '';
   // A worker running it now has it; taking it would put two on the work.
   const workerHasIt = todo.lease_live;
+  // An administrator parked it on purpose; taking it on is theirs to undo.
+  const parkedForAdmin = todo.status === 'parked' && !viewer.admin;
+  const mayTake = !workerHasIt && !parkedForAdmin;
   return {
-    claim: free && !workerHasIt,
-    assign: !workerHasIt && (free || holds || viewer.admin),
+    claim: free && mayTake,
+    assign: mayTake && (free || holds || viewer.admin),
     unassign: !free && (holds || viewer.admin),
     done: holds && !viewer.admin,
   };

@@ -91,11 +91,12 @@ export function AttentionRow({
           )}
           <span className="needs-you__context">
             {attentionContext(item)}
-            {/* Who has the todo; a blocked one nobody has is anyone's to claim. */}
-            {item.assignee || item.kind === 'todo_blocked' ? (
+            {/* Who has the todo. The key is absent both when nobody has it and
+                on a server that predates assignees, so absence says nothing. */}
+            {item.assignee ? (
               <span data-testid={`needs-you-assignee-${item.id}`}>
                 {' · '}
-                {item.assignee ? `${item.assignee} has it` : 'unclaimed'}
+                {item.assignee} has it
               </span>
             ) : null}
             {subject.since ? (
