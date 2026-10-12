@@ -306,12 +306,12 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
   },
   {
     id: 'nav.bots',
-    label: 'Grokbot and Musebot',
+    label: 'Agents',
     path: '/bots',
     icon: Bot,
     paletteIcon: 'bot',
     shortcut: 'g b',
-    keywords: ['grokbot', 'musebot', 'enrollment', 'reach', 'grok', 'muse'],
+    keywords: ['agents', 'agent', 'tokens', 'grokbot', 'musebot', 'enrollment', 'reach', 'grok', 'muse'],
     group: 'account',
   },
 ];

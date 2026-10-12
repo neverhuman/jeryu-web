@@ -119,7 +119,7 @@ describe('RepositoryAgentsPage — empty repository', () => {
 
 const OTHER_ROUTE = '/repos/jeryu/bob%2Fother/agents';
 
-describe('RepositoryAgentsPage — Grokbot and Musebot roster', () => {
+describe('RepositoryAgentsPage — enrolled agent roster', () => {
   beforeEach(stubBrowserTransports);
 
   afterEach(() => {
@@ -221,7 +221,7 @@ describe('RepositoryAgentsPage — Grokbot and Musebot roster', () => {
     expect(screen.queryByText('Northwind')).not.toBeInTheDocument();
     const empty = await screen.findByTestId('bot-empty');
     expect(empty.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'No Grokbot or Musebot on this repo yet'
+      'No enrolled agent on this repo yet'
     );
     const urls = (fetchSpy.mock.calls as Array<[unknown]>).map(([url]) => String(url));
     expect(urls.some((url: string) => url.includes('/api/v1/repos/repo-2/bots'))).toBe(true);
@@ -239,7 +239,7 @@ describe('RepositoryAgentsPage — Grokbot and Musebot roster', () => {
 
     const empty = await screen.findByTestId('bot-empty');
     expect(empty.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'No Grokbot or Musebot on this repo yet'
+      'No enrolled agent on this repo yet'
     );
     expect(screen.getByTestId('agents-empty')).toBeInTheDocument();
     expect(screen.getByTestId('new-session-button')).toBeInTheDocument();

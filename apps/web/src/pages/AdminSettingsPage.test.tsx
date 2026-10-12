@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminSettingsPage } from './AdminSettingsPage';
 
@@ -42,7 +43,9 @@ describe('AdminSettingsPage user list', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <AdminSettingsPage />
+        <MemoryRouter>
+          <AdminSettingsPage />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 
@@ -66,7 +69,9 @@ describe('AdminSettingsPage user list', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <AdminSettingsPage />
+        <MemoryRouter>
+          <AdminSettingsPage />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 
@@ -83,5 +88,27 @@ describe('AdminSettingsPage user list', () => {
     const grant = screen.getByRole('button', { name: 'Grant access' });
     expect(grant).not.toHaveClass('action-button--primary');
     expect(grant).toBeDisabled();
+  });
+
+  it('links the agent setup page in a new tab and says what it is for', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <AdminSettingsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const section = screen.getByTestId('settings-connect-agent');
+    expect(within(section).getByRole('heading', { name: 'Connect an agent' })).toBeInTheDocument();
+    const link = within(section).getByRole('link', { name: 'Agent setup page' });
+    expect(link).toHaveAttribute('href', '/api/v1/docs/connect-an-agent.md');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(section).toHaveTextContent(
+      'Send this page and an agent token to an external agent to connect it.'
+    );
+    expect(within(section).getByRole('link', { name: 'Agents' })).toHaveAttribute('href', '/bots');
   });
 });

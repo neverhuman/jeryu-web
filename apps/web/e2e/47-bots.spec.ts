@@ -1,5 +1,6 @@
-// 47-bots.spec.ts — account Grokbot and Musebot enrollment, and the
-// repository roster that links to it.
+// 47-bots.spec.ts — account agent enrollment (Grokbot, Musebot, or any
+// kind), the repository roster that links to it, and the Settings link to the
+// agent setup page.
 //
 // Create and rotate are the only responses that carry an enrollment key.
 // A later visit must not invent one. Narrow viewports keep the page inside
@@ -39,9 +40,9 @@ interface Summary {
   owner: string;
   slug: string;
   display_name: string;
-  kind: 'grok' | 'muse';
+  kind: string;
   status: 'active' | 'suspended' | 'revoked';
-  reach: { mode: 'general' };
+  reach: Record<string, unknown>;
   credential_generation: number;
   last_successful_access: string | null;
   last_auth: null;
@@ -126,14 +127,14 @@ async function mockAccountBots(page: Page, initial: Summary[]): Promise<Summary[
     const body = request.postDataJSON() as {
       slug: string;
       display_name: string;
-      kind: 'grok' | 'muse';
-      reach: { mode: 'general' };
+      kind?: string;
+      reach: Record<string, unknown>;
     };
     const created = summary({
       id: CREATED_BOT_ID,
       slug: body.slug,
       display_name: body.display_name,
-      kind: body.kind,
+      kind: body.kind ?? 'agent',
       reach: body.reach,
       status: 'active',
       credential_generation: 1,
@@ -260,7 +261,7 @@ async function sidewaysOverflow(page: Page): Promise<number> {
   });
 }
 
-test('an empty repository roster links to add a Grokbot or Musebot @action:bots.roster_empty', async ({
+test('an empty repository roster links to add an agent @action:bots.roster_empty', async ({
   page,
 }) => {
   await seedRoster(page);
@@ -272,21 +273,17 @@ test('an empty repository roster links to add a Grokbot or Musebot @action:bots.
 
   const roster = page.getByTestId('bot-roster');
   await expect(roster).toBeVisible();
-  await expect(roster.getByRole('heading', { name: 'Grokbot and Musebot', exact: true })).toBeVisible();
-  await expect(page.getByTestId('bot-empty')).toContainText(
-    'No Grokbot or Musebot on this repo yet'
-  );
+  await expect(roster.getByRole('heading', { name: 'Enrolled agents', exact: true })).toBeVisible();
+  await expect(page.getByTestId('bot-empty')).toContainText('No enrolled agent on this repo yet');
 
   const add = page.getByTestId('add-bot');
-  await expect(add).toHaveText('Add a Grokbot or Musebot');
+  await expect(add).toHaveText('Add an agent');
   await add.click();
 
   await expect(page).toHaveURL(/\/bots\?repo=neverhuman(?:%2F|\/)jeryu$/);
   await expect(page.getByTestId('enroll-page')).toBeVisible();
   await expect(page.getByTestId('bot-reach-select')).toHaveValue('repositories');
-  await expect(page.getByLabel('Repositories, one owner/name per line')).toHaveValue(
-    'neverhuman/jeryu'
-  );
+  await expect(page.getByLabel('Repositories, one per line')).toHaveValue('neverhuman/jeryu');
 });
 
 test('adding one shows the enrollment key and setup script once @action:bots.enroll_once', async ({
@@ -300,13 +297,13 @@ test('adding one shows the enrollment key and setup script once @action:bots.enr
   await shell.assertShellLoaded(15_000);
 
   await expect(page.getByTestId('enroll-page')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Grokbot and Musebot', exact: true })).toBeVisible();
-  await expect(page.getByText('No Grokbot or Musebot on this account yet.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agents', exact: true })).toBeVisible();
+  await expect(page.getByText('No agent on this account yet.')).toBeVisible();
   await expect(page.getByTestId('bot-setup')).toHaveCount(0);
 
   await page.getByLabel('Display name').fill('North');
   await page.getByLabel('Slug').fill('north');
-  await page.getByTestId('bot-kind-select').selectOption('grok');
+  await page.getByLabel('Kind (optional)').fill('grok');
   await page.getByRole('button', { name: 'Add' }).click();
 
   const setup = page.getByTestId('bot-setup');
@@ -513,4 +510,120 @@ test('an agent token is shown once with setup lines, then revoked after an in-pa
   await shell.assertShellLoaded(15_000);
   await expect(page.getByTestId('agent-tokens')).toContainText('laptop');
   await expect(page.getByText(ISSUED_TOKEN)).toHaveCount(0);
+});
+
+test('reach lists one repository or owner per row, and owner/* lines enroll whole owners @action:bots.reach_families', async ({
+  page,
+}) => {
+  await mockBootstrap(page);
+  await mockAccountBots(page, [
+    summary({
+      reach: {
+        mode: 'repositories',
+        repos: [
+          { owner: 'acme', name: 'widgets' },
+          { owner: 'acme', name: 'gadgets' },
+        ],
+      },
+    }),
+    // A reach mode and a kind this page has never heard of still render.
+    summary({
+      id: '33333333-3333-4333-8333-333333333333',
+      slug: 'later',
+      display_name: 'Laterwind',
+      kind: 'codex',
+      reach: { mode: 'galaxy', stars: 3 },
+    }),
+  ]);
+
+  const shell = new AppShellPage(page);
+  await shell.goto('/bots');
+  await shell.assertShellLoaded(15_000);
+
+  const list = page.getByTestId('bot-list');
+  const north = list.getByRole('row').filter({ hasText: 'Northwind' });
+  await expect(north.getByTestId('bot-reach-row')).toHaveText(['acme/widgets', 'acme/gadgets']);
+  const later = list.getByRole('row').filter({ hasText: 'Laterwind' });
+  await expect(later.getByTestId('bot-kind')).toHaveText('codex');
+  await expect(later.getByTestId('bot-reach-row')).toHaveText(['Unknown reach: galaxy']);
+
+  await page.getByLabel('Display name').fill('Family');
+  await page.getByLabel('Slug').fill('family');
+  await page.getByTestId('bot-reach-select').selectOption('repositories');
+  const lines = page.getByLabel('Repositories, one per line');
+  await lines.fill('acme/*\nacme/widgets');
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByRole('alert')).toContainText(
+    'A reach is either whole owners (owner/*) or a list of repositories (owner/name), not both.'
+  );
+
+  await page.getByLabel('Kind (optional)').fill('Claude');
+  await lines.fill('acme/*\numbrella/*');
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByRole('alert')).toContainText('lowercase letter');
+  await expect(page.getByTestId('bot-setup')).toHaveCount(0);
+
+  await page.getByLabel('Kind (optional)').fill('claude');
+  const posted = page.waitForRequest(
+    (request) => request.method() === 'POST' && /\/api\/v1\/bots$/.test(new URL(request.url()).pathname)
+  );
+  await page.getByRole('button', { name: 'Add' }).click();
+  expect((await posted).postDataJSON()).toEqual({
+    slug: 'family',
+    display_name: 'Family',
+    kind: 'claude',
+    reach: { mode: 'owners', owners: ['acme', 'umbrella'] },
+  });
+  await expect(page.getByTestId('bot-setup')).toBeVisible();
+
+  const family = list.getByRole('row').filter({ hasText: 'Family' });
+  await expect(family.getByTestId('bot-kind')).toHaveText('claude');
+  await expect(family.getByTestId('bot-reach-row')).toHaveText(['acme/*', 'umbrella/*']);
+
+  const docLink = page.getByTestId('bots-connect-doc-link');
+  await expect(docLink).toHaveAttribute('href', '/api/v1/docs/connect-an-agent.md');
+  await expect(docLink).toHaveAttribute('target', '_blank');
+
+  const result = await runAxe(page, { disableRules: ['color-contrast'] });
+  await persistAxeResult('bots-reach', result);
+  // Every axe receipt is paired with rendered evidence of the same surface.
+  const rendered = await persistRenderedEvidence(page, 'bots-reach');
+  expect(rendered.geometry.width).toBeGreaterThan(0);
+  expect(rendered.geometry.height).toBeGreaterThan(0);
+  expect(
+    blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`),
+    'the reach rows and the kind field add no serious or critical violation'
+  ).toEqual([]);
+
+  await page.setViewportSize(PHONE);
+  await expect
+    .poll(() => sidewaysOverflow(page), {
+      message: `the reach rows scroll the page sideways at ${PHONE.width}px`,
+    })
+    .toBeLessThanOrEqual(0);
+});
+
+test('Settings links the agent setup page in a new tab @action:settings.connect_agent', async ({
+  page,
+}) => {
+  await mockBootstrap(page);
+  await mockAccountBots(page, []);
+
+  const shell = new AppShellPage(page);
+  await shell.goto('/settings');
+  await shell.assertShellLoaded(15_000);
+
+  const section = page.getByTestId('settings-connect-agent');
+  await expect(section.getByRole('heading', { name: 'Connect an agent' })).toBeVisible();
+  const link = section.getByRole('link', { name: 'Agent setup page' });
+  await expect(link).toHaveAttribute('href', '/api/v1/docs/connect-an-agent.md');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(section).toContainText(
+    'Send this page and an agent token to an external agent to connect it.'
+  );
+
+  await section.getByRole('link', { name: 'Agents', exact: true }).click();
+  await expect(page).toHaveURL(/\/bots$/);
+  await expect(page.getByTestId('enroll-page')).toBeVisible();
 });

@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- The Bots page is now called Agents (nav, palette and page title; still `/bots`, `g b`). A
+  bot's reach lists each repository on its own row, and an owners reach (`{"mode":"owners"}`,
+  every repository under those owners the account can reach, later ones too) lists as `owner/*`
+  rows. The enroll form takes one line per repository: `owner/name` lines make a repositories
+  reach and `owner/*` lines make an owners reach (up to 20 owners, 100 repositories); a mix is
+  refused in place, since one agent has one reach mode. Kind is free text checked against
+  `^[a-z][a-z0-9-]{0,31}$`, with grok, muse, claude and codex offered; left empty, the server
+  uses "agent". grok and muse still read as Grokbot and Musebot, any other kind as itself, and a
+  reach mode or kind the page does not know still renders. Settings and the agent tokens section
+  link the agent setup page (`/api/v1/docs/connect-an-agent.md`, new tab).
 - The Bots page (`/bots`) manages each bot's scoped agent tokens: a list with label, created,
   expires, last used (or never) and status (active, expired, revoked); a Revoke that asks in the
   page first; and a New token form (label, days valid 1 to 365, default 90), off for suspended

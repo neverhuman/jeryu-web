@@ -4,7 +4,10 @@ import { kindLabel } from './botModel';
 
 import './BotsPage.css';
 
-/** Kind text is Grokbot or Musebot. It is never taken from the display name. */
+/**
+ * Kind text comes from `kind` (grok reads Grokbot, muse reads Musebot, any
+ * other kind as itself). It is never taken from the display name.
+ */
 export function BotKindBadge({ kind }: { kind: BotKind }): JSX.Element {
   const tone = kind === 'muse' ? 'muse' : kind === 'grok' ? 'grok' : 'unknown';
   return (

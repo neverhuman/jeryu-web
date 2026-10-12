@@ -1,4 +1,4 @@
-// bots.ts — account Grokbot and Musebot wire types.
+// bots.ts — account agent enrollment wire types.
 //
 // The shape is jeryu_core::model bot JSON. Reach is serde internally tagged
 // on `mode`. Timestamps are RFC3339 or null. Uuid fields are strings.
@@ -11,7 +11,12 @@ export interface BotRepoRef {
   name: string;
 }
 
-export type BotKind = 'grok' | 'muse';
+/**
+ * Free text matching `^[a-z][a-z0-9-]{0,31}$`; the server defaults it to
+ * "agent". `grok` and `muse` read as Grokbot and Musebot. An older server
+ * only knows those two, so a page must still render any other string.
+ */
+export type BotKind = string;
 
 export type BotStatus = 'active' | 'suspended' | 'revoked';
 
@@ -20,6 +25,8 @@ export type BotTaskKind = 'issue' | 'pull' | 'branch';
 export type BotReach =
   | { mode: 'general' }
   | { mode: 'repositories'; repos: BotRepoRef[] }
+  /** Every repository under these owners the account can reach, later ones too. 1 to 20 owners. */
+  | { mode: 'owners'; owners: string[] }
   | {
       mode: 'task';
       repo: BotRepoRef;
@@ -55,7 +62,8 @@ export interface BotListResponse {
 export interface BotCreateRequest {
   slug: string;
   display_name: string;
-  kind: BotKind;
+  /** Left out, the server uses "agent". */
+  kind?: BotKind;
   reach: BotReach;
 }
 

@@ -67,6 +67,20 @@
   color: var(--color-fg-muted);
 }
 
+/* One quiet line of prose inside a section. */
+.page__note {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+/* A link inside a sentence is underlined, so it does not rely on color alone. */
+.page__note a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .page__card {
   background-color: var(--color-bg-1);
   border: 1px solid var(--color-border-subtle);

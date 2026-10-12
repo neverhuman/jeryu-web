@@ -1,8 +1,9 @@
-// RepoBotRoster.tsx — Grokbot and Musebot whose reach includes this repository.
+// RepoBotRoster.tsx — enrolled agents whose reach includes this repository.
 //
 // `GET /api/v1/repos/{id}/bots` is already clipped to this repository, so a
-// repository reach reads "This repo". The query key includes the repo id so
-// one repository cannot show another's enrollments.
+// repository reach reads "This repo" and an owners reach "Whole owner". The
+// query key includes the repo id so one repository cannot show another's
+// enrollments.
 
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -41,23 +42,23 @@ export function RepoBotRoster({
       aria-labelledby="repo-bots-heading"
     >
       <div className="agents__bot-head">
-        <h2 id="repo-bots-heading">Grokbot and Musebot</h2>
+        <h2 id="repo-bots-heading">Enrolled agents</h2>
         <Link className="agents__add-bot" to={addBotHref(owner, name)} data-testid="add-bot">
-          Add a Grokbot or Musebot
+          Add an agent
         </Link>
       </div>
       {roster.isPending ? (
-        <LoadingState variant="message" title="Loading Grokbot and Musebot." />
+        <LoadingState variant="message" title="Loading enrolled agents." />
       ) : roster.isError ? (
         <ErrorState
-          title="Could not load Grokbot or Musebot."
+          title="Could not load enrolled agents."
           error={roster.error}
           onRetry={() => void roster.refetch()}
           testId="bot-roster-error"
         />
       ) : bots.length === 0 ? (
         <EmptyState
-          title="No Grokbot or Musebot on this repo yet"
+          title="No enrolled agent on this repo yet"
           testId="bot-empty"
         />
       ) : (

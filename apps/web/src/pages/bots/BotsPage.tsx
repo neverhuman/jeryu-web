@@ -1,4 +1,4 @@
-// BotsPage.tsx — the signed-in account's Grokbot and Musebot enrollments.
+// BotsPage.tsx — the signed-in account's enrolled agents (Grokbot, Musebot, any kind).
 //
 // Create and rotate are the only responses that carry an enrollment key.
 // The key stays in component state until it is hidden or the page is left.
@@ -14,7 +14,6 @@ import { endpoints } from '../../api/endpoints';
 import type {
   BotCreateRequest,
   BotEnrollmentReceipt,
-  BotKind,
   BotListResponse,
   BotSummary,
   BotTaskKind,
@@ -25,14 +24,19 @@ import { When } from '../../format/When';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { AgentTokens } from './AgentTokens';
 import { BotKindBadge } from './BotKindBadge';
+import { ConnectAgentDoc } from './ConnectAgentDoc';
 import {
   GENERAL_REACH_NOTE,
+  KIND_DEFAULT_NOTE,
+  KIND_SUGGESTIONS,
+  REACH_LINES_HINT,
+  REACH_LINES_LABEL,
   SETUP_WARNING,
-  accountReachSummary,
-  isBotKind,
+  accountReachRows,
   isReachChoice,
   isTaskKind,
   oneTaskChoiceLabel,
+  parseKind,
   parseOwnerName,
   reachFromChoice,
   statusLabel,
@@ -67,7 +71,7 @@ function upsertBot(
 }
 
 export function BotsPage(): JSX.Element {
-  usePageTitle('Grokbot and Musebot');
+  usePageTitle('Agents');
   const [params] = useSearchParams();
   const presetRepo = params.get('repo');
   const queryClient = useQueryClient();
@@ -147,10 +151,10 @@ export function BotsPage(): JSX.Element {
   return (
     <div className="page" data-testid="enroll-page">
       <header className="page__header">
-        <h1 className="page__title">Grokbot and Musebot</h1>
+        <h1 className="page__title">Agents</h1>
         <p className="page__subtitle">
-          Add one on your account and choose what it can reach. The enrollment
-          key is shown once, when you create it or rotate it.
+          Enroll an agent on your account and choose what it can reach. The
+          enrollment key is shown once, when you create it or rotate it.
         </p>
       </header>
 
@@ -192,16 +196,16 @@ export function BotsPage(): JSX.Element {
           <ErrorState title="Could not update it." error={actionError} testId="bot-action-error" />
         ) : null}
         {list.isPending ? (
-          <LoadingState variant="message" title="Loading Grokbot and Musebot." />
+          <LoadingState variant="message" title="Loading agents." />
         ) : list.isError ? (
           <ErrorState
-            title="Could not load Grokbot or Musebot."
+            title="Could not load agents."
             error={list.error}
             onRetry={() => void list.refetch()}
             testId="bot-list-error"
           />
         ) : bots.length === 0 ? (
-          <p className="enroll-form__note">No Grokbot or Musebot on this account yet.</p>
+          <p className="enroll-form__note">No agent on this account yet.</p>
         ) : (
           <div className="enroll-table-wrap table-scroll">
             <table className="enroll-table">
@@ -230,7 +234,15 @@ export function BotsPage(): JSX.Element {
                       <td>
                         <BotKindBadge kind={enrollment.kind} />
                       </td>
-                      <td>{accountReachSummary(enrollment.reach)}</td>
+                      <td>
+                        <ul className="enroll-reach" data-testid="bot-reach">
+                          {accountReachRows(enrollment.reach).map((row) => (
+                            <li key={row} data-testid="bot-reach-row">
+                              {row}
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
                       <td>{statusLabel(enrollment.status)}</td>
                       <td>
                         <When
@@ -290,9 +302,10 @@ export function BotsPage(): JSX.Element {
           </h2>
           <p className="enroll-form__note">
             An agent token connects an agent with one URL and one token, on MCP, the REST API,
-            gh and git. It acts for one Grokbot or Musebot: your rights, cut down to its reach. The
-            token is shown once, when you create it.
+            gh and git. It acts for one agent: your rights, cut down to its reach. The token is
+            shown once, when you create it.
           </p>
+          <ConnectAgentDoc testId="bots-connect-doc" />
           {bots.map((enrollment) => (
             <AgentTokens key={enrollment.id} bot={enrollment} />
           ))}
@@ -315,7 +328,7 @@ function BotForm({
 }): JSX.Element {
   const [displayName, setDisplayName] = useState('');
   const [slug, setSlug] = useState('');
-  const [kind, setKind] = useState<BotKind>('grok');
+  const [kind, setKind] = useState('');
   const [choice, setChoice] = useState<ReachChoice>(preset ? 'repositories' : 'general');
   const [repoLines, setRepoLines] = useState(
     preset ? `${preset.owner}/${preset.name}` : ''
@@ -334,6 +347,11 @@ function BotForm({
       setFormError('Enter a display name and a slug.');
       return;
     }
+    const parsedKind = parseKind(kind);
+    if (parsedKind.error !== null) {
+      setFormError(parsedKind.error);
+      return;
+    }
     const built = reachFromChoice({
       choice,
       repoLines,
@@ -347,12 +365,14 @@ function BotForm({
       return;
     }
     setFormError(null);
-    onCreate({ slug: slugValue, display_name, kind, reach: built.reach });
+    const body: BotCreateRequest = { slug: slugValue, display_name, reach: built.reach };
+    if (parsedKind.kind !== null) body.kind = parsedKind.kind;
+    onCreate(body);
   }
 
   return (
     <form className="page__card enroll-form" data-testid="bot-form" onSubmit={onSubmit}>
-      <h2 className="page__card-title">Add one</h2>
+      <h2 className="page__card-title">Add an agent</h2>
       <div className="enroll-form__grid">
         <label className="enroll-form__field">
           Display name
@@ -373,20 +393,32 @@ function BotForm({
             disabled={pending}
           />
         </label>
-        <label className="enroll-form__field">
-          Kind
-          <select
-            data-testid="bot-kind-select"
-            value={kind}
-            disabled={pending}
-            onChange={(event) => {
-              if (isBotKind(event.target.value)) setKind(event.target.value);
-            }}
-          >
-            <option value="grok">Grokbot</option>
-            <option value="muse">Musebot</option>
-          </select>
-        </label>
+        <div className="enroll-form__stack">
+          <label className="enroll-form__field">
+            Kind (optional)
+            <input
+              data-testid="bot-kind-input"
+              value={kind}
+              onChange={(event) => setKind(event.target.value)}
+              list="bot-kind-suggestions"
+              placeholder="agent"
+              aria-describedby="bot-kind-note"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={32}
+              disabled={pending}
+            />
+          </label>
+          <datalist id="bot-kind-suggestions">
+            {KIND_SUGGESTIONS.map((suggestion) => (
+              <option key={suggestion} value={suggestion} />
+            ))}
+          </datalist>
+          <span className="enroll-form__hint" id="bot-kind-note">
+            {KIND_DEFAULT_NOTE}
+          </span>
+        </div>
         <label className="enroll-form__field">
           Reach
           <select
@@ -398,21 +430,29 @@ function BotForm({
             }}
           >
             <option value="general">General</option>
-            <option value="repositories">Selected repositories</option>
+            <option value="repositories">Repositories or owners</option>
             <option value="task">{oneTaskChoiceLabel()}</option>
           </select>
         </label>
         {choice === 'repositories' ? (
-          <label className="enroll-form__field enroll-form__span">
-            Repositories, one owner/name per line
-            <textarea
-              rows={4}
-              value={repoLines}
-              onChange={(event) => setRepoLines(event.target.value)}
-              spellCheck={false}
-              disabled={pending}
-            />
-          </label>
+          <div className="enroll-form__stack enroll-form__span">
+            <label className="enroll-form__field">
+              {REACH_LINES_LABEL}
+              <textarea
+                rows={4}
+                value={repoLines}
+                onChange={(event) => setRepoLines(event.target.value)}
+                placeholder={'acme/widgets\nacme/gadgets'}
+                aria-describedby="bot-reach-lines-note"
+                data-testid="bot-reach-lines"
+                spellCheck={false}
+                disabled={pending}
+              />
+            </label>
+            <span className="enroll-form__hint" id="bot-reach-lines-note">
+              {REACH_LINES_HINT}
+            </span>
+          </div>
         ) : null}
         {choice === 'task' ? (
           <>

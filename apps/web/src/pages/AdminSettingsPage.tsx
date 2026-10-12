@@ -8,6 +8,7 @@
 import { LogOut, Moon, Monitor, Sun, ToggleRight } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { apiDelete, apiGet, apiSend } from '../api/client';
 import { endpoints } from '../api/endpoints';
@@ -16,6 +17,7 @@ import { pillClass } from '../components/tone/tone';
 import { ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { InternalWikiPanel } from './InternalWikiPanel';
+import { ConnectAgentDoc } from './bots/ConnectAgentDoc';
 import {
   usePreferencesStore,
   type ThemePreference,
@@ -82,6 +84,20 @@ export function AdminSettingsPage(): JSX.Element {
             onSelect={setTheme}
           />
         </div>
+      </section>
+
+      <section
+        className="page__section"
+        aria-labelledby="connect-agent-section"
+        data-testid="settings-connect-agent"
+      >
+        <h2 className="page__section-title" id="connect-agent-section">
+          Connect an agent
+        </h2>
+        <ConnectAgentDoc testId="settings-connect-doc" />
+        <p className="page__note">
+          Enroll the agent and create its token on <Link to="/bots">Agents</Link>.
+        </p>
       </section>
 
       {isAdmin ? (

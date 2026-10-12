@@ -1,7 +1,10 @@
-// botModel.ts — labels and form reach for Grokbot and Musebot.
+// botModel.ts — labels and form reach for enrolled agents.
 //
 // Kind text comes from `kind`, never from `display_name`. The roster on a
 // repository says "This repo" because that response is already clipped to it.
+// A server older than this page may send a kind or a reach mode it does not
+// know about, or one this page does not: every helper here answers with text
+// for any value instead of throwing.
 
 import type {
   BotAccessTokenSummary,
@@ -14,10 +17,36 @@ import type {
 
 const TASK_WORD = 'Task';
 
-export function kindLabel(kind: BotKind): string {
+/** grok reads Grokbot, muse reads Musebot, any other kind reads as itself. */
+export function kindLabel(kind: BotKind | null | undefined): string {
   if (kind === 'grok') return 'Grokbot';
   if (kind === 'muse') return 'Musebot';
+  if (typeof kind !== 'string' || kind.trim() === '') return 'Unknown';
   return kind;
+}
+
+/** The kind rule the server applies. An empty field is left out and the server uses "agent". */
+export const KIND_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
+
+/** Offered beside the kind field; any other kind that matches the pattern is fine. */
+export const KIND_SUGGESTIONS: readonly string[] = ['grok', 'muse', 'claude', 'codex'];
+
+export const KIND_DEFAULT_NOTE = 'Leave it empty for "agent".';
+
+/** `kind: null` means leave the field out of the request. */
+export function parseKind(
+  raw: string
+): { kind: string | null; error: null } | { kind: null; error: string } {
+  const text = raw.trim();
+  if (text === '') return { kind: null, error: null };
+  if (!KIND_PATTERN.test(text)) {
+    return {
+      kind: null,
+      error:
+        'Kind starts with a lowercase letter, then up to 31 lowercase letters, digits, or hyphens.',
+    };
+  }
+  return { kind: text, error: null };
 }
 
 export function statusLabel(status: BotStatus): string {
@@ -49,29 +78,67 @@ export function textOrDash(value: string | null | undefined): string {
   return value;
 }
 
-/** Reach label on a repository roster: General, This repo, or Task #id / branch. */
-export function repoRosterReachLabel(reach: BotReach): string {
-  if (reach.mode === 'general') return 'General';
-  if (reach.mode === 'repositories') return 'This repo';
-  if (reach.mode === 'task') {
-    return reach.task_kind === 'branch' ? reach.task_id : taskMark(reach.task_id);
-  }
-  return 'Unknown reach';
+const UNKNOWN_REACH = 'Unknown reach';
+
+function record(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
 }
 
-/** Reach summary on the account list, where more than this repository can apply. */
-export function accountReachSummary(reach: BotReach): string {
-  if (reach.mode === 'general') return 'General';
-  if (reach.mode === 'repositories') {
-    if (reach.repos.length === 0) return 'No repositories';
-    return reach.repos.map((repo) => `${repo.owner}/${repo.name}`).join(', ');
+function text(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function repoText(value: unknown): string {
+  const repo = record(value);
+  const owner = text(repo?.owner);
+  const name = text(repo?.name);
+  return owner !== '' && name !== '' ? `${owner}/${name}` : '';
+}
+
+/** Branch name, or `Task #id` for an issue or pull. */
+function taskWhat(reach: Record<string, unknown>): string {
+  const id = typeof reach.task_id === 'number' ? String(reach.task_id) : text(reach.task_id);
+  return reach.task_kind === 'branch' ? id : taskMark(id);
+}
+
+/** Reach label on a repository roster: General, This repo, Whole owner, or Task #id / branch. */
+export function repoRosterReachLabel(reach: BotReach | unknown): string {
+  const value = record(reach);
+  if (value?.mode === 'general') return 'General';
+  if (value?.mode === 'repositories') return 'This repo';
+  if (value?.mode === 'owners') return 'Whole owner';
+  if (value?.mode === 'task') return taskWhat(value);
+  return UNKNOWN_REACH;
+}
+
+/**
+ * Reach on the account list, one line per repository or owner. An owners
+ * reach reads `owner/*`. A mode this page does not know reads as its name.
+ */
+export function accountReachRows(reach: BotReach | unknown): string[] {
+  const value = record(reach);
+  const mode = value?.mode;
+  if (value === null) return [UNKNOWN_REACH];
+  if (mode === 'general') return ['General'];
+  if (mode === 'repositories') {
+    const rows = (Array.isArray(value.repos) ? value.repos : [])
+      .map(repoText)
+      .filter((row) => row !== '');
+    return rows.length > 0 ? rows : ['No repositories'];
   }
-  if (reach.mode === 'task') {
-    const repo = `${reach.repo.owner}/${reach.repo.name}`;
-    const what = reach.task_kind === 'branch' ? reach.task_id : taskMark(reach.task_id);
-    return `${repo} · ${what}`;
+  if (mode === 'owners') {
+    const rows = (Array.isArray(value.owners) ? value.owners : [])
+      .map(text)
+      .filter((owner) => owner !== '')
+      .map((owner) => `${owner}/*`);
+    return rows.length > 0 ? rows : ['No owners'];
   }
-  return 'Unknown reach';
+  if (mode === 'task') {
+    const repo = repoText(value.repo);
+    const what = taskWhat(value);
+    return [repo === '' ? what : `${repo} · ${what}`];
+  }
+  return typeof mode === 'string' && mode !== '' ? [`${UNKNOWN_REACH}: ${mode}`] : [UNKNOWN_REACH];
 }
 
 export function addBotHref(owner: string, name: string): string {
@@ -84,27 +151,100 @@ export interface ParsedRepos {
   error: string | null;
 }
 
-/** One `owner/name` per line. Blank lines are skipped. */
-export function parseRepoLines(text: string): ParsedRepos {
-  const repos: BotRepoRef[] = [];
-  for (const raw of text.split(/\r?\n/)) {
+/** The server caps: 100 repositories, 20 owners. */
+export const REACH_REPOS_MAX = 100;
+export const REACH_OWNERS_MAX = 20;
+
+export const REACH_LINES_LABEL = 'Repositories, one per line';
+
+export const REACH_LINES_HINT =
+  'Write owner/name for one repository, or owner/* for every repository of that owner you can reach, including ones added later. One agent takes whole owners or a list of repositories, not both.';
+
+export const MIXED_REACH_ERROR =
+  'A reach is either whole owners (owner/*) or a list of repositories (owner/name), not both. Use one kind of line, and add a second agent for the rest.';
+
+type ReachLine = { owner: string; name: string | null };
+
+/** `owner/name`, or `owner/*` (name null). Null when the line is neither. */
+function parseReachLine(line: string): ReachLine | null {
+  const slash = line.indexOf('/');
+  const owner = slash > 0 ? line.slice(0, slash).trim() : '';
+  const name = slash >= 0 ? line.slice(slash + 1).trim() : '';
+  const bad = (part: string): boolean => part === '' || /[\s/*]/.test(part);
+  if (bad(owner)) return null;
+  if (name === '*') return { owner, name: null };
+  if (bad(name)) return null;
+  return { owner, name };
+}
+
+function reachLines(input: string): { lines: ReachLine[]; error: string | null } {
+  const lines: ReachLine[] = [];
+  for (const raw of input.split(/\r?\n/)) {
     const line = raw.trim();
     if (line === '') continue;
-    const slash = line.indexOf('/');
-    const owner = slash > 0 ? line.slice(0, slash).trim() : '';
-    const name = slash >= 0 ? line.slice(slash + 1).trim() : '';
-    if (owner === '' || name === '' || name.includes('/')) {
+    const parsed = parseReachLine(line);
+    if (parsed === null) {
       return {
-        repos: [],
-        error: `Use owner/name, one per line. ${line} is not owner/name.`,
+        lines: [],
+        error: `Use owner/name or owner/*, one per line. ${line} is neither.`,
       };
     }
-    repos.push({ owner, name });
+    lines.push(parsed);
   }
-  if (repos.length === 0) {
-    return { repos: [], error: 'Name at least one repository as owner/name.' };
+  if (lines.length === 0) {
+    return {
+      lines: [],
+      error: 'Name at least one repository as owner/name, or a whole owner as owner/*.',
+    };
+  }
+  return { lines, error: null };
+}
+
+/** One `owner/name` per line. Blank lines are skipped; `owner/*` is not a repository. */
+export function parseRepoLines(input: string): ParsedRepos {
+  const parsed = reachLines(input);
+  if (parsed.error !== null) return { repos: [], error: parsed.error };
+  const repos: BotRepoRef[] = [];
+  for (const line of parsed.lines) {
+    if (line.name === null) return { repos: [], error: `${line.owner}/* is a whole owner.` };
+    repos.push({ owner: line.owner, name: line.name });
   }
   return { repos, error: null };
+}
+
+/**
+ * The reach a block of lines asks for: all `owner/*` lines make an owners
+ * reach, all `owner/name` lines a repositories reach. Mixed lines are refused,
+ * because the API takes one reach mode per agent. Repeats are dropped.
+ */
+export function reachFromLines(
+  input: string
+): { reach: BotReach; error: null } | { reach: null; error: string } {
+  const parsed = reachLines(input);
+  if (parsed.error !== null) return { reach: null, error: parsed.error };
+  const owners = parsed.lines.filter((line) => line.name === null);
+  if (owners.length > 0 && owners.length < parsed.lines.length) {
+    return { reach: null, error: MIXED_REACH_ERROR };
+  }
+  if (owners.length > 0) {
+    const unique = [...new Set(owners.map((line) => line.owner))];
+    if (unique.length > REACH_OWNERS_MAX) {
+      return { reach: null, error: `Name at most ${REACH_OWNERS_MAX} owners.` };
+    }
+    return { reach: { mode: 'owners', owners: unique }, error: null };
+  }
+  const seen = new Set<string>();
+  const repos: BotRepoRef[] = [];
+  for (const line of parsed.lines) {
+    const key = `${line.owner}/${line.name ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    repos.push({ owner: line.owner, name: line.name ?? '' });
+  }
+  if (repos.length > REACH_REPOS_MAX) {
+    return { reach: null, error: `Name at most ${REACH_REPOS_MAX} repositories.` };
+  }
+  return { reach: { mode: 'repositories', repos }, error: null };
 }
 
 export function parseOwnerName(value: string | null): BotRepoRef | null {
@@ -123,10 +263,6 @@ export function isReachChoice(value: string): value is ReachChoice {
   return value === 'general' || value === 'repositories' || value === 'task';
 }
 
-export function isBotKind(value: string): value is BotKind {
-  return value === 'grok' || value === 'muse';
-}
-
 export function isTaskKind(value: string): value is BotTaskKind {
   return value === 'issue' || value === 'pull' || value === 'branch';
 }
@@ -143,9 +279,7 @@ export function reachFromChoice(input: {
     return { reach: { mode: 'general' }, error: null };
   }
   if (input.choice === 'repositories') {
-    const parsed = parseRepoLines(input.repoLines);
-    if (parsed.error) return { reach: null, error: parsed.error };
-    return { reach: { mode: 'repositories', repos: parsed.repos }, error: null };
+    return reachFromLines(input.repoLines);
   }
   const owner = input.taskOwner.trim();
   const name = input.taskName.trim();
@@ -165,12 +299,18 @@ export function reachFromChoice(input: {
 }
 
 export const GENERAL_REACH_NOTE =
-  'General reach is live: later repository grants widen it and lost grants cut it off on the next call. Tightening reach does not scrub a transcript a Grokbot or Musebot already has.';
+  'General reach is live: later repository grants widen it and lost grants cut it off on the next call. Tightening reach does not scrub a transcript an agent already has.';
 
 export const SETUP_WARNING =
-  'Pasting the script puts the key in that Grokbot or Musebot transcript, and it is only as private as that computer. Every Grokbot on one account shares that computer, its files, and its credentials. ' +
+  "Pasting the script puts the key in that agent's transcript, and it is only as private as that computer. Every Grokbot on one account shares that computer, its files, and its credentials. " +
   GENERAL_REACH_NOTE +
   ' The server returns this key only when you create or rotate one. Opening this page again cannot show it, and this page will not invent one.';
+
+/** The agent setup page, Markdown served by the API's docs route. */
+export const CONNECT_AGENT_DOC_HREF = '/api/v1/docs/connect-an-agent.md';
+
+export const CONNECT_AGENT_DOC_NOTE =
+  'Send this page and an agent token to an external agent to connect it.';
 
 // Agent tokens. A token acts for its bot: the owner's rights, cut down by the
 // bot's reach. The server returns the token once, on create.
@@ -184,7 +324,7 @@ export const TOKEN_ONCE_WARNING =
   'Copy this token now. You will not see it again: the server never returns it after this, and this page forgets it when you dismiss this panel or leave.';
 
 export const TOKEN_REACH_NOTE =
-  'The token acts with your rights, cut down to what this Grokbot or Musebot can reach. Anyone holding it can use it until it expires or is revoked.';
+  'The token acts with your rights, cut down to what this agent can reach. Anyone holding it can use it until it expires or is revoked.';
 
 export type AgentTokenStatus = 'active' | 'expired' | 'revoked';
 

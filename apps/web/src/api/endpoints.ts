@@ -343,7 +343,7 @@ export const endpoints = {
     return suffix ? `/api/v1/yield?${suffix}` : '/api/v1/yield';
   },
 
-  /** Account Grokbot and Musebot enrollments. */
+  /** Account agent enrollments. */
   bots: (): string => '/api/v1/bots',
   botKeys: (id: string): string =>
     `/api/v1/bots/${encodeURIComponent(id)}/keys`,

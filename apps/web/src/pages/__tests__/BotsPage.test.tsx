@@ -7,10 +7,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BotReach } from '../../api/types';
 import { BotsPage } from '../bots/BotsPage';
 import {
-  accountReachSummary,
+  MIXED_REACH_ERROR,
+  accountReachRows,
   addBotHref,
+  kindLabel,
+  parseKind,
   parseOwnerName,
   parseRepoLines,
+  reachFromLines,
   repoRosterReachLabel,
 } from '../bots/botModel';
 
@@ -25,21 +29,81 @@ describe('bot reach labels', () => {
     expect(repoRosterReachLabel(taskReach('issue', '17'))).toBe('Task #17');
     expect(repoRosterReachLabel(taskReach('pull', '3'))).toBe('Task #3');
     expect(repoRosterReachLabel(taskReach('branch', 'feature/login'))).toBe('feature/login');
-    expect(accountReachSummary({ mode: 'general' })).toBe('General');
+    expect(repoRosterReachLabel({ mode: 'owners', owners: ['ada'] })).toBe('Whole owner');
+    expect(accountReachRows({ mode: 'general' })).toEqual(['General']);
     expect(
-      accountReachSummary({
+      accountReachRows({
         mode: 'repositories',
         repos: [
           { owner: 'ada', name: 'widgets' },
           { owner: 'bob', name: 'other' },
         ],
       })
-    ).toBe('ada/widgets, bob/other');
-    expect(accountReachSummary({ mode: 'repositories', repos: [] })).toBe('No repositories');
-    expect(accountReachSummary(taskReach('issue', '17'))).toBe('ada/widgets · Task #17');
-    expect(accountReachSummary(taskReach('branch', 'feature/login'))).toBe(
-      'ada/widgets · feature/login'
-    );
+    ).toEqual(['ada/widgets', 'bob/other']);
+    expect(accountReachRows({ mode: 'repositories', repos: [] })).toEqual(['No repositories']);
+    expect(accountReachRows({ mode: 'owners', owners: ['acme', 'ada'] })).toEqual([
+      'acme/*',
+      'ada/*',
+    ]);
+    expect(accountReachRows(taskReach('issue', '17'))).toEqual(['ada/widgets · Task #17']);
+    expect(accountReachRows(taskReach('branch', 'feature/login'))).toEqual([
+      'ada/widgets · feature/login',
+    ]);
+  });
+
+  it('renders a reach mode or a kind it does not know without throwing', () => {
+    expect(accountReachRows({ mode: 'galaxy', stars: 3 })).toEqual(['Unknown reach: galaxy']);
+    expect(accountReachRows({ mode: 'owners' })).toEqual(['No owners']);
+    expect(accountReachRows({ mode: 'repositories', repos: 'nope' })).toEqual([
+      'No repositories',
+    ]);
+    expect(accountReachRows(null)).toEqual(['Unknown reach']);
+    expect(accountReachRows(undefined)).toEqual(['Unknown reach']);
+    expect(repoRosterReachLabel({ mode: 'galaxy' })).toBe('Unknown reach');
+    expect(repoRosterReachLabel(null)).toBe('Unknown reach');
+    expect(kindLabel('grok')).toBe('Grokbot');
+    expect(kindLabel('muse')).toBe('Musebot');
+    expect(kindLabel('claude')).toBe('claude');
+    expect(kindLabel('agent')).toBe('agent');
+    expect(kindLabel('')).toBe('Unknown');
+    expect(kindLabel(null)).toBe('Unknown');
+  });
+
+  it('checks a kind with the server rule, and leaves an empty kind out', () => {
+    expect(parseKind('')).toEqual({ kind: null, error: null });
+    expect(parseKind('  codex ')).toEqual({ kind: 'codex', error: null });
+    expect(parseKind('a')).toEqual({ kind: 'a', error: null });
+    expect(parseKind(`a${'b'.repeat(31)}`).kind).toBe(`a${'b'.repeat(31)}`);
+    expect(parseKind(`a${'b'.repeat(32)}`).error).toMatch(/up to 31/);
+    expect(parseKind('Claude').error).toMatch(/lowercase/);
+    expect(parseKind('9lives').error).toMatch(/lowercase letter/);
+    expect(parseKind('my_agent').error).not.toBeNull();
+  });
+
+  it('makes whole owners from owner/* lines and refuses a mix', () => {
+    expect(reachFromLines('acme/*\n\nada/*\nacme/*')).toEqual({
+      reach: { mode: 'owners', owners: ['acme', 'ada'] },
+      error: null,
+    });
+    expect(reachFromLines('acme/widgets\nacme/widgets\nada/gears')).toEqual({
+      reach: {
+        mode: 'repositories',
+        repos: [
+          { owner: 'acme', name: 'widgets' },
+          { owner: 'ada', name: 'gears' },
+        ],
+      },
+      error: null,
+    });
+    expect(reachFromLines('acme/*\nada/gears')).toEqual({ reach: null, error: MIXED_REACH_ERROR });
+    expect(reachFromLines('*/widgets').error).toMatch(/is neither/);
+    expect(reachFromLines('acme/wid*').error).toMatch(/is neither/);
+    expect(reachFromLines('').error).toMatch(/at least one/);
+    const owners = Array.from({ length: 21 }, (_, index) => `o${index}/*`).join('\n');
+    expect(reachFromLines(owners).error).toBe('Name at most 20 owners.');
+    const repos = Array.from({ length: 101 }, (_, index) => `ada/r${index}`).join('\n');
+    expect(reachFromLines(repos).error).toBe('Name at most 100 repositories.');
+    expect(parseRepoLines('acme/*').error).toMatch(/whole owner/);
   });
 
   it('parses owner/name lines and a preselected repository', () => {
@@ -48,6 +112,7 @@ describe('bot reach labels', () => {
       { owner: 'bob', name: 'other' },
     ]);
     expect(parseRepoLines('not-a-repo').error).toMatch(/owner\/name/);
+    expect(parseOwnerName('ada/*')).toBeNull();
     expect(parseRepoLines('   ').error).toMatch(/at least one/);
     expect(parseOwnerName('ada/widgets')).toEqual({ owner: 'ada', name: 'widgets' });
     expect(parseOwnerName('ada/widgets\nbob/other')).toBeNull();
@@ -88,6 +153,20 @@ describe('BotsPage', () => {
             reach: taskReach('branch', 'feature/login'),
             last_successful_access: null,
           }),
+          summary({
+            id: 'owners-1',
+            display_name: 'Ownerwind',
+            slug: 'owners',
+            kind: 'claude',
+            reach: { mode: 'owners', owners: ['acme', 'ada'] },
+          }),
+          summary({
+            id: 'future-1',
+            display_name: 'Futurewind',
+            slug: 'future',
+            kind: 'codex',
+            reach: { mode: 'galaxy' },
+          }),
         ],
       },
     });
@@ -99,7 +178,13 @@ describe('BotsPage', () => {
     expect(list).toHaveTextContent('Northwind');
     expect(list).toHaveTextContent('Southwind');
     const kinds = within(list).getAllByTestId('bot-kind');
-    expect(kinds.map((badge) => badge.textContent)).toEqual(['Grokbot', 'Musebot', 'Grokbot']);
+    expect(kinds.map((badge) => badge.textContent)).toEqual([
+      'Grokbot',
+      'Musebot',
+      'Grokbot',
+      'claude',
+      'codex',
+    ]);
     expect(kinds[0]).not.toHaveTextContent('Northwind');
     expect(list).toHaveTextContent('General');
     expect(list).toHaveTextContent('ada/widgets');
@@ -120,11 +205,23 @@ describe('BotsPage', () => {
     expect(within(held as HTMLElement).getByTestId('bot-suspend')).toBeDisabled();
     expect(within(held as HTMLElement).getByTestId('bot-revoke')).toBeEnabled();
 
-    const kind = screen.getByTestId('bot-kind-select');
-    expect(within(kind).getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'Grokbot',
-      'Musebot',
-    ]);
+    const ownerRow = rows.find((row) => row.textContent?.includes('Ownerwind'));
+    expect(
+      within(ownerRow as HTMLElement)
+        .getAllByTestId('bot-reach-row')
+        .map((item) => item.textContent)
+    ).toEqual(['acme/*', 'ada/*']);
+    const futureRow = rows.find((row) => row.textContent?.includes('Futurewind'));
+    expect(within(futureRow as HTMLElement).getByTestId('bot-reach')).toHaveTextContent(
+      'Unknown reach: galaxy'
+    );
+
+    const kind = screen.getByTestId('bot-kind-input');
+    expect(kind).toHaveValue('');
+    const suggestions = document.getElementById(kind.getAttribute('list') ?? '');
+    expect(
+      Array.from(suggestions?.querySelectorAll('option') ?? []).map((option) => option.value)
+    ).toEqual(['grok', 'muse', 'claude', 'codex']);
   });
 
   it('shows the key and script once, and does not invent one later', async () => {
@@ -135,7 +232,7 @@ describe('BotsPage', () => {
 
     const view = renderPage();
     expect(screen.queryByTestId('bot-setup')).not.toBeInTheDocument();
-    expect(await screen.findByText('No Grokbot or Musebot on this account yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No agent on this account yet.')).toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText('Display name'), 'North');
     await userEvent.type(screen.getByLabelText('Slug'), 'north');
@@ -146,7 +243,7 @@ describe('BotsPage', () => {
     expect(setup).toHaveTextContent('setup-script-body');
     const warning = screen.getByTestId('bot-setup-warning');
     expect(warning).toHaveTextContent(
-      'Pasting the script puts the key in that Grokbot or Musebot transcript'
+      "Pasting the script puts the key in that agent's transcript"
     );
     expect(warning).toHaveTextContent('only as private as that computer');
     expect(warning).toHaveTextContent(
@@ -163,7 +260,6 @@ describe('BotsPage', () => {
       {
         slug: 'north',
         display_name: 'North',
-        kind: 'grok',
         reach: { mode: 'general' },
       },
     ]);
@@ -217,10 +313,9 @@ describe('BotsPage', () => {
 
     const view = renderPage('/bots?repo=ada/widgets');
     expect(await screen.findByTestId('bot-reach-select')).toHaveValue('repositories');
-    expect(screen.getByLabelText('Repositories, one owner/name per line')).toHaveValue(
-      'ada/widgets'
-    );
+    expect(screen.getByLabelText('Repositories, one per line')).toHaveValue('ada/widgets');
 
+    await userEvent.type(screen.getByLabelText('Kind (optional)'), 'grok');
     await userEvent.type(screen.getByLabelText('Display name'), 'Ada');
     await userEvent.type(screen.getByLabelText('Slug'), 'ada');
     await userEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -242,7 +337,7 @@ describe('BotsPage', () => {
       'POST /api/v1/bots': receipt('task-key', 'task-script'),
     });
     renderPage('/bots');
-    await userEvent.selectOptions(screen.getByTestId('bot-kind-select'), 'muse');
+    await userEvent.type(screen.getByLabelText('Kind (optional)'), 'muse');
     await userEvent.selectOptions(screen.getByTestId('bot-reach-select'), 'task');
     await userEvent.type(screen.getByLabelText('Display name'), 'Issue');
     await userEvent.type(screen.getByLabelText('Slug'), 'issue');
@@ -282,7 +377,7 @@ describe('BotsPage', () => {
     await userEvent.type(screen.getByLabelText('Display name'), 'Nope');
     await userEvent.type(screen.getByLabelText('Slug'), 'nope');
     await userEvent.type(
-      screen.getByLabelText('Repositories, one owner/name per line'),
+      screen.getByLabelText('Repositories, one per line'),
       'not-a-repo'
     );
     await userEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -290,14 +385,65 @@ describe('BotsPage', () => {
     expect(postBodies(fetchSpy, '/api/v1/bots')).toEqual([]);
     expect(screen.queryByTestId('bot-setup')).not.toBeInTheDocument();
 
-    await userEvent.clear(screen.getByLabelText('Repositories, one owner/name per line'));
+    await userEvent.clear(screen.getByLabelText('Repositories, one per line'));
     await userEvent.type(
-      screen.getByLabelText('Repositories, one owner/name per line'),
+      screen.getByLabelText('Repositories, one per line'),
       'ada/widgets'
     );
     await userEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(await screen.findByTestId('bot-form-error')).toHaveTextContent('Slug is taken.');
     expect(screen.queryByTestId('bot-setup')).not.toBeInTheDocument();
+  });
+
+  it('posts whole owners, refuses mixed lines and a bad kind without posting', async () => {
+    const fetchSpy = mockFetch({
+      'GET /api/v1/bots': { bots: [] },
+      'POST /api/v1/bots': receipt('owners-key', 'owners-script'),
+    });
+
+    renderPage();
+    await userEvent.selectOptions(await screen.findByTestId('bot-reach-select'), 'repositories');
+    await userEvent.type(screen.getByLabelText('Display name'), 'Fam');
+    await userEvent.type(screen.getByLabelText('Slug'), 'fam');
+    const lines = screen.getByLabelText('Repositories, one per line');
+    await userEvent.type(lines, 'acme/*{enter}ada/widgets');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(MIXED_REACH_ERROR);
+
+    await userEvent.clear(lines);
+    await userEvent.type(lines, 'acme/*{enter}ada/*');
+    await userEvent.type(screen.getByLabelText('Kind (optional)'), 'Claude');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('lowercase letter');
+    expect(postBodies(fetchSpy, '/api/v1/bots')).toEqual([]);
+
+    await userEvent.clear(screen.getByLabelText('Kind (optional)'));
+    await userEvent.type(screen.getByLabelText('Kind (optional)'), 'claude');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await screen.findByText('owners-key');
+    expect(postBodies(fetchSpy, '/api/v1/bots')).toEqual([
+      {
+        slug: 'fam',
+        display_name: 'Fam',
+        kind: 'claude',
+        reach: { mode: 'owners', owners: ['acme', 'ada'] },
+      },
+    ]);
+  });
+
+  it('links the agent setup page beside the agent tokens', async () => {
+    mockFetch({
+      'GET /api/v1/bots': { bots: [summary()] },
+      'GET /api/v1/bots/bot-1/tokens': { tokens: [] },
+    });
+    renderPage();
+    const doc = await screen.findByTestId('bots-connect-doc');
+    const link = within(doc).getByRole('link', { name: 'Agent setup page' });
+    expect(link).toHaveAttribute('href', '/api/v1/docs/connect-an-agent.md');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(doc).toHaveTextContent(
+      'Send this page and an agent token to an external agent to connect it.'
+    );
   });
 
   it('shows an error when the account list cannot be loaded', async () => {
