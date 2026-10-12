@@ -889,3 +889,129 @@ button.pull-repo__count-link {
   gap: var(--space-1);
   align-items: center;
 }
+
+/* ------------------------------------------------------------ base order
+   Each open pull request hangs off the base commit it was opened against, on
+   one rail per base branch, the way a source control graph draws a branch off
+   the commit it forked from. Each item draws its own rail segment, so a gap
+   between bases can be dashed without breaking the line. */
+
+.pull-timeline__order {
+  margin: 0 0 var(--space-3) var(--space-3);
+}
+
+.pull-graph__line + .pull-graph__line {
+  margin-top: var(--space-3);
+}
+
+.pull-graph__ref {
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-3);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pull-graph__tip {
+  color: var(--color-fg-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+.pull-graph__rail {
+  --pull-graph-rail: var(--color-border-strong);
+  --pull-graph-x: 11px;
+  --pull-graph-gutter: 28px;
+  padding-left: var(--pull-graph-gutter);
+}
+
+.pull-graph__rail > li {
+  position: relative;
+}
+
+/* The rail: from the item above (across the list's gap) to this item's foot. */
+.pull-graph__rail > li::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--pull-graph-x) - var(--pull-graph-gutter));
+  top: calc(-1 * var(--space-2) - 1px);
+  bottom: -1px;
+  border-left: 2px solid var(--pull-graph-rail);
+}
+
+.pull-graph__rail > li:first-child::before {
+  top: 50%;
+}
+
+.pull-graph__rail > li:last-child::before {
+  bottom: 50%;
+}
+
+/* A pull request's branch leaves the rail at its row. */
+.pull-graph__rail > .pull-timeline__row::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--pull-graph-x) - var(--pull-graph-gutter));
+  top: 50%;
+  width: calc(var(--pull-graph-gutter) - var(--pull-graph-x) - 1px);
+  border-top: 2px solid var(--pull-graph-rail);
+}
+
+/* The base commit: a node on the rail, its subject, and how far behind. */
+.pull-graph__base {
+  min-width: 0;
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.pull-graph__base-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pull-graph__base::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--pull-graph-x) - var(--pull-graph-gutter) - 5px);
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-accent-primary);
+  border-radius: 50%;
+  background: var(--color-bg-0);
+  transform: translateY(-50%);
+}
+
+.pull-graph__base.is-current::after {
+  background: var(--color-accent-primary);
+}
+
+.pull-graph__base code {
+  font-family: var(--font-mono);
+}
+
+.pull-graph__summary {
+  color: var(--color-fg-primary);
+}
+
+.pull-graph__behind {
+  color: var(--color-fg-muted);
+}
+
+/* Far behind, or rewritten away: the pull request is likely to need replacing. */
+.pull-graph__base.is-beyond .pull-graph__behind,
+.pull-graph__base.is-off .pull-graph__behind {
+  color: var(--color-accent-warning);
+}
+
+.pull-graph__gap {
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.pull-graph__rail > .pull-graph__gap::before {
+  border-left-style: dashed;
+}

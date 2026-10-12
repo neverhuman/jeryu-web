@@ -1,8 +1,20 @@
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { AttentionItem, PullRequestSummary } from '../api/types';
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
+import { usePullBaseHistory, type BaseHistoryLookup } from '../hooks/usePullBaseHistory';
+import { useViewState } from '../hooks/useViewState';
+import {
+  PULL_ORDER_PARAM,
+  baseGraph,
+  basePositionLabel,
+  gapLabel,
+  parsePullOrder,
+  type BaseCommitNode,
+  type BaseLine,
+  type PullOrder,
+} from './pullBaseGraphModel';
 import { primaryAction } from './needsYou/needsYouModel';
 import { pullAttentionKey } from './pullAttentionModel';
 import type { GhostGroup } from './pullGhostsModel';
@@ -64,6 +76,12 @@ export function PullRequestTimeline({
   /** "Needs you" rows by `owner/name#number` (see `attentionByPull`). */
   attention?: ReadonlyMap<string, AttentionItem[]>;
 }): JSX.Element {
+  const view = useViewState();
+  const order = parsePullOrder(view.read(PULL_ORDER_PARAM));
+  // A sort of the same rows, so it replaces the address rather than pushing.
+  const setOrder = (next: PullOrder) =>
+    view.write({ [PULL_ORDER_PARAM]: next === 'base' ? 'base' : null }, 'replace');
+  const historyFor = usePullBaseHistory(pulls, order === 'base');
   const timeline = buildRepoGroups(pulls, {
     ladderFor: ladderFor ?? (() => UNKNOWN_LADDER),
     ghosts,
@@ -73,7 +91,29 @@ export function PullRequestTimeline({
     return <p className="pull-list__empty">{emptyMessage}</p>;
   }
   return (
-    <div className="pull-timeline" data-testid="pull-timeline">
+    <div
+      className={`pull-timeline${order === 'base' ? ' pull-timeline--base' : ''}`}
+      data-testid="pull-timeline"
+    >
+      <div className="pull-room__views pull-timeline__order" role="group" aria-label="Order">
+        <button
+          type="button"
+          aria-pressed={order === 'state'}
+          data-testid="pull-order-state"
+          onClick={() => setOrder('state')}
+        >
+          Pipeline
+        </button>
+        <button
+          type="button"
+          aria-pressed={order === 'base'}
+          data-testid="pull-order-base"
+          title="Each open pull request under the commit of its base it was opened against"
+          onClick={() => setOrder('base')}
+        >
+          By base
+        </button>
+      </div>
       <div className="pull-timeline__head" aria-hidden="true">
         <span />
         <span>Branch</span>
@@ -112,7 +152,14 @@ export function PullRequestTimeline({
       ) : null}
 
       {timeline.groups.map((group) => (
-        <RepoSection key={group.repo} group={group} showRepo={showRepo} attention={attention} />
+        <RepoSection
+          key={group.repo}
+          group={group}
+          showRepo={showRepo}
+          attention={attention}
+          order={order}
+          historyFor={historyFor}
+        />
       ))}
     </div>
   );
@@ -124,10 +171,14 @@ function RepoSection({
   group,
   showRepo,
   attention,
+  order,
+  historyFor,
 }: {
   group: RepoGroup;
   showRepo: boolean;
   attention: ReadonlyMap<string, AttentionItem[]>;
+  order: PullOrder;
+  historyFor: BaseHistoryLookup;
 }): JSX.Element {
   // "16 closed" in the heading opens History, where closed work lives.
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -144,17 +195,26 @@ function RepoSection({
           <RepoCounts group={group} onHistory={openHistory} />
         </h2>
       ) : null}
-      <ol className="pull-timeline__rows">
-        {group.rows.map((row) => (
-          <FlowRowView
-            key={flowKey(row)}
-            row={row}
-            repo={group.repo}
-            showRepo={showRepo}
-            attention={attention}
-          />
-        ))}
-      </ol>
+      {order === 'base' ? (
+        <BaseGraphView
+          group={group}
+          showRepo={showRepo}
+          attention={attention}
+          historyFor={historyFor}
+        />
+      ) : (
+        <ol className="pull-timeline__rows">
+          {group.rows.map((row) => (
+            <FlowRowView
+              key={flowKey(row)}
+              row={row}
+              repo={group.repo}
+              showRepo={showRepo}
+              attention={attention}
+            />
+          ))}
+        </ol>
+      )}
       {group.older.length > 0 ? (
         <details
           ref={history}
@@ -179,6 +239,123 @@ function RepoSection({
       ) : null}
     </section>
   );
+}
+
+/**
+ * A repository's open pull requests drawn off their bases, like a source
+ * control graph: one rail per base branch, a node for each commit some pull
+ * request was opened against, and the commits between said as a gap. Branches
+ * with no pull request and merged work follow, in pipeline order.
+ */
+function BaseGraphView({
+  group,
+  showRepo,
+  attention,
+  historyFor,
+}: {
+  group: RepoGroup;
+  showRepo: boolean;
+  attention: ReadonlyMap<string, AttentionItem[]>;
+  historyFor: BaseHistoryLookup;
+}): JSX.Element {
+  const first = group.rows.find((row) => row.kind === 'pr');
+  const repoId = first?.kind === 'pr' ? first.row.pr.repo.id : '';
+  const graph = baseGraph(group.rows, (ref) => historyFor(repoId, ref));
+  const flow = (row: FlowRow) => (
+    <FlowRowView
+      key={flowKey(row)}
+      row={row}
+      repo={group.repo}
+      showRepo={showRepo}
+      attention={attention}
+    />
+  );
+  return (
+    <div className="pull-graph" data-testid={`pull-graph-${group.repo}`}>
+      {graph.lines.map((line) => (
+        <section
+          key={line.ref}
+          className="pull-graph__line"
+          data-testid={`pull-graph-${group.repo}-${line.ref}`}
+        >
+          <BaseLineHead line={line} />
+          <ol className="pull-timeline__rows pull-graph__rail">
+            {line.nodes.map((node, index) =>
+              node.kind === 'gap' ? (
+                <li key={`gap-${index}`} className="pull-graph__gap">
+                  {gapLabel(node, line.ref)}
+                </li>
+              ) : (
+                <Fragment key={node.sha || `unknown-${index}`}>
+                  <BaseCommitRow node={node} line={line} repo={group.repo} />
+                  {node.rows.map(flow)}
+                </Fragment>
+              )
+            )}
+          </ol>
+        </section>
+      ))}
+      {graph.unbased.length > 0 ? (
+        <section className="pull-graph__line">
+          <h3 className="pull-graph__ref">No pull request yet</h3>
+          <ol className="pull-timeline__rows">{graph.unbased.map(flow)}</ol>
+        </section>
+      ) : null}
+      {graph.settled.length > 0 ? (
+        <section className="pull-graph__line">
+          <h3 className="pull-graph__ref">Merged</h3>
+          <ol className="pull-timeline__rows">{graph.settled.map(flow)}</ol>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function BaseLineHead({ line }: { line: BaseLine }): JSX.Element {
+  return (
+    <h3 className="pull-graph__ref">
+      <code>{line.ref}</code>
+      {line.stackedOn !== null ? <> · the branch of #{line.stackedOn}</> : null}
+      {line.tip ? (
+        <span className="pull-graph__tip">
+          {' '}
+          · tip <code>{shortSha(line.tip)}</code>
+        </span>
+      ) : null}
+    </h3>
+  );
+}
+
+/** The commit pull requests were opened against: its sha, subject and how far behind. */
+function BaseCommitRow({
+  node,
+  line,
+  repo,
+}: {
+  node: BaseCommitNode;
+  line: BaseLine;
+  repo: string;
+}): JSX.Element {
+  const where = basePositionLabel(node, line.ref);
+  return (
+    <li
+      className={`pull-graph__base is-${node.position}`}
+      data-testid={`pull-base-${repo}-${line.ref}-${shortSha(node.sha) || 'unknown'}`}
+      data-position={node.position}
+    >
+      {/* The text clips on its own: clipping the item would clip its node too. */}
+      <span className="pull-graph__base-text">
+        <span className="pull-timeline__sr">Opened against </span>
+        <code>{shortSha(node.sha) || 'unknown base'}</code>
+        {node.summary ? <span className="pull-graph__summary"> {node.summary}</span> : null}
+        {where ? <span className="pull-graph__behind"> · {where}</span> : null}
+      </span>
+    </li>
+  );
+}
+
+function shortSha(sha: string): string {
+  return sha.slice(0, 7);
 }
 
 /**

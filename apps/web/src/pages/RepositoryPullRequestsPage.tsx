@@ -12,6 +12,7 @@ import {
   parseDraftFilter,
   type PullDraftFilter,
 } from './pullDraftModel';
+import { PULL_ORDER_PARAM } from './pullBaseGraphModel';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
 import { fromPullRequestSummary, groupPullRequests } from './pullRoomModel';
@@ -38,6 +39,9 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
     const wantDrafts = next.drafts ?? drafts;
     if (wantView === 'board') out.view = wantView;
     if (wantDrafts !== 'all') out.drafts = wantDrafts;
+    // The timeline's own order survives a view or filter switch.
+    const order = search.get(PULL_ORDER_PARAM);
+    if (order) out[PULL_ORDER_PARAM] = order;
     return out;
   };
   const setView = (next: 'timeline' | 'board') =>

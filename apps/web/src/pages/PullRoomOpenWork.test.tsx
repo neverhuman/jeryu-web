@@ -12,6 +12,7 @@ vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: null }) }));
 vi.mock('../hooks/usePipeline', () => ({ useAttention: () => ({ data: undefined }) }));
 // Ghost rows wear red from the same list; here it names no todo.
 vi.mock('./needsYou/useNeedsYou', () => ({ useAttentionTodoIds: () => new Set<string>() }));
+vi.mock('../hooks/usePullBaseHistory', () => ({ usePullBaseHistory: () => () => undefined }));
 
 // A forge with 509 pull requests, 22 of them open in repositories whose names
 // sort last. The snapshot cuts every collection to a page, so the page the
