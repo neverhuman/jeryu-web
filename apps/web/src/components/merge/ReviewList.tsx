@@ -7,7 +7,8 @@
 // rendered from its Markdown. The review asking for changes starts open, and a
 // link to `#review-<id>` or `#changes-requested` opens that review and scrolls
 // to it, so a "Changes requested" row lands the reader on the words. A
-// findings table (Finding + Where columns) is laid out by ReviewFindingsTable.
+// findings table (Finding + Where columns) is laid out by ReviewFindingsTable,
+// its Where linking to that file of the diff when `fileHref` is given.
 
 import { useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -15,7 +16,8 @@ import { useLocation } from 'react-router-dom';
 import type { PullRequestReview } from '../../api/types';
 import { When } from '../../format/When';
 import { MarkdownSource } from '../browser/MarkdownSource';
-import { ReviewFindingsTable } from './ReviewFindingsTable';
+import { FindingHrefContext, ReviewFindingsTable } from './ReviewFindingsTable';
+import { repairTablePipes, type FindingLocation } from './reviewFindingsModel';
 import {
   isChangesRequestedState,
   openReviewIds,
@@ -31,9 +33,11 @@ const REVIEW_MARKDOWN = { table: ReviewFindingsTable };
 
 export interface ReviewListProps {
   reviews: readonly PullRequestReview[];
+  /** Where a finding's file is read; without it a Where is plain text. Keep it stable. */
+  fileHref?: (location: FindingLocation) => string;
 }
 
-export function ReviewList({ reviews }: ReviewListProps): JSX.Element | null {
+export function ReviewList({ reviews, fileHref }: ReviewListProps): JSX.Element | null {
   const { hash } = useLocation();
   const sorted = useMemo(() => sortReviews(reviews), [reviews]);
   const opened = useMemo(() => openReviewIds(reviews, hash), [reviews, hash]);
@@ -48,6 +52,7 @@ export function ReviewList({ reviews }: ReviewListProps): JSX.Element | null {
   if (sorted.length === 0) return null;
 
   return (
+    <FindingHrefContext.Provider value={fileHref ?? null}>
     <section
       className="review-list"
       aria-label="Reviews"
@@ -58,7 +63,7 @@ export function ReviewList({ reviews }: ReviewListProps): JSX.Element | null {
       <ul className="review-list__items">
         {sorted.map((review) => {
           const asking = isChangesRequestedState(review.state);
-          const body = (review.body_markdown ?? '').trim();
+          const body = repairTablePipes((review.body_markdown ?? '').trim());
           const notes = [
             review.stale ? 'on an earlier head' : null,
             review.effective ? null : 'no longer counts',
@@ -95,5 +100,6 @@ export function ReviewList({ reviews }: ReviewListProps): JSX.Element | null {
         })}
       </ul>
     </section>
+    </FindingHrefContext.Provider>
   );
 }

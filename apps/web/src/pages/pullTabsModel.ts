@@ -74,13 +74,17 @@ export function parsePullTail(tail: string): {
   return { prNumber, tab: activePullTab(segments[1] ?? null) };
 }
 
-/** Where one file of the diff is read: the Files tab, that file open. */
+/**
+ * Where one file of the diff is read: the Files tab, that file open, and in
+ * `view` when one is named (otherwise the reader's saved diff mode).
+ */
 export function pullFileHref(
   base: string,
   path: string,
-  line?: number | null
+  line?: number | null,
+  view?: 'unified' | 'split'
 ): string {
-  const query = `?path=${encodeURIComponent(path)}`;
+  const query = `?path=${encodeURIComponent(path)}${view ? `&view=${view}` : ''}`;
   return `${base}/files${query}${line ? `#L${line}` : ''}`;
 }
 

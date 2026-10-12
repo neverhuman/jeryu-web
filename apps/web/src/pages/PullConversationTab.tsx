@@ -9,7 +9,7 @@
 // Files, Checks and Commits of the pull request are tabs of their own, so
 // nothing here is below the fold of a nested scroller.
 
-import type { ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 
 import { MergeBox, ReviewList, ThreadList } from '../components/merge';
 import type { MergeBoxProps } from '../components/merge/MergeBox';
@@ -27,7 +27,7 @@ export interface PullConversationTabProps {
   description?: string | null;
   /** The review rows, newest first on the page; each body is read here. */
   reviews?: readonly PullRequestReview[];
-  /** The pull request's base path, for the links out of a thread. */
+  /** The pull request's base path, for the links out of a thread or a finding. */
   base: string;
   /** `owner/name` and the number, for the pipeline timeline. */
   repoFullName?: string | null;
@@ -48,6 +48,12 @@ export function PullConversationTab({
 }: PullConversationTabProps): JSX.Element {
   const anchorHref = (thread: ReviewThread): string | null =>
     thread.file_path ? pullFileHref(base, thread.file_path, thread.line) : null;
+  // A review finding opens its file in the unified diff, whatever mode was last used.
+  const findingHref = useCallback(
+    (location: { path: string; line: number | null }) =>
+      pullFileHref(base, location.path, location.line, 'unified'),
+    [base]
+  );
 
   return (
     <div className="pr-conversation" data-testid="pr-conversation-tab">
@@ -61,7 +67,7 @@ export function PullConversationTab({
         </section>
       ) : null}
 
-      <ReviewList reviews={reviews} />
+      <ReviewList reviews={reviews} fileHref={findingHref} />
 
       <MergeBox {...merge} />
 

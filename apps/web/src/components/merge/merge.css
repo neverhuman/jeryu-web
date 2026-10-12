@@ -866,8 +866,19 @@
   overflow: hidden;
 }
 
+.review-findings__where-link {
+  color: var(--color-accent-primary);
+}
+
+.review-findings__where-link:hover,
+.review-findings__where-link:focus-visible {
+  text-decoration: underline;
+}
+
+/* "more" sits at the bottom right of the finding it opens. */
 .review-findings__more {
-  margin-top: var(--space-1);
+  display: block;
+  margin: var(--space-1) 0 0 auto;
   padding: 0;
   border: 0;
   background: none;

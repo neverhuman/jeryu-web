@@ -177,8 +177,23 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   // Which file of the diff is open is a property of the URL, so a thread, a
   // review comment or a bookmark can point at one file.
   const [search, setSearch] = useSearchParams();
-  const diffMode = usePreferencesStore((s) => s.diffMode);
+  const savedDiffMode = usePreferencesStore((s) => s.diffMode);
   const setDiffMode = usePreferencesStore((s) => s.setDiffMode);
+  // `?view=unified|split` (a review finding's link) wins over the saved mode
+  // until the reader picks one, which saves it and drops the parameter.
+  const requestedView = search.get('view');
+  const diffMode: DiffViewerMode =
+    requestedView === 'unified' || requestedView === 'split' ? requestedView : savedDiffMode;
+  const chooseDiffMode = useCallback(
+    (mode: DiffViewerMode) => {
+      setDiffMode(mode);
+      if (!search.has('view')) return;
+      const next = new URLSearchParams(search);
+      next.delete('view');
+      setSearch(next, { replace: true });
+    },
+    [search, setSearch, setDiffMode]
+  );
 
   const requestedPath = search.get('path');
   // With no file named, the first changed file is the one on screen.
@@ -511,7 +526,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
             activeFile={activeFile}
             diffMode={diffMode}
             onSelectFile={setActiveFilePath}
-            onDiffModeChange={(mode: DiffViewerMode) => setDiffMode(mode)}
+            onDiffModeChange={chooseDiffMode}
           />
         ) : tab === 'checks' ? (
           <div data-testid="pr-checks-tab">

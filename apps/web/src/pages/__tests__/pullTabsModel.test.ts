@@ -69,4 +69,10 @@ describe('pullFileHref', () => {
       `${BASE}/files?path=src%2Flogin.rs`
     );
   });
+
+  it('names the diff mode when asked, before the line anchor', () => {
+    expect(pullFileHref(BASE, '.github/workflows/ci.yml', 44, 'unified')).toBe(
+      `${BASE}/files?path=.github%2Fworkflows%2Fci.yml&view=unified#L44`
+    );
+  });
 });
