@@ -8,6 +8,7 @@ import {
   parsePresenceItem,
   parsePresenceList,
   presenceUnsupported,
+  presenceView,
   repoAgentPresencePath,
   runPresenceState,
   type AgentPresenceItem,
@@ -153,6 +154,20 @@ describe('presenceUnsupported', () => {
     expect(presenceUnsupported(new ApiError(500, { code: 'internal', message: '' }))).toBe(false);
     expect(presenceUnsupported(new ApiError(403, { code: 'forbidden', message: '' }))).toBe(false);
     expect(presenceUnsupported(new Error('boom'))).toBe(false);
+  });
+});
+
+describe('presenceView', () => {
+  it('names each state of a read', () => {
+    const list = { items: [], total: 0 };
+    expect(presenceView({ data: undefined, error: null }).kind).toBe('waiting');
+    expect(presenceView({ data: list, error: null })).toEqual({ kind: 'ready', list });
+    expect(
+      presenceView({ data: undefined, error: new ApiError(404, { code: 'not_found', message: '' }) }).kind
+    ).toBe('absent');
+    expect(
+      presenceView({ data: undefined, error: new ApiError(500, { code: 'internal', message: '' }) }).kind
+    ).toBe('failed');
   });
 });
 

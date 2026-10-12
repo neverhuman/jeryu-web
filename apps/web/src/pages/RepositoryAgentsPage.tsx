@@ -7,7 +7,7 @@ import {
   livePresenceCount,
   mergePresenceWithRuns,
   presenceRunId,
-  presenceUnsupported,
+  presenceView,
   type PresenceRow,
 } from '../api/agentPresence';
 import { apiGet } from '../api/client';
@@ -112,7 +112,7 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
   // Agent presence: everyone at work here, jeryu's own runs among them. An
   // older server has no such route; the page then shows the runs alone.
   const presence = useRepoAgentPresence(repoId);
-  const presenceMissing = presence.isError && presenceUnsupported(presence.error);
+  const view = presenceView(presence);
   const presenceRows = useMemo(
     () => (presence.data ? mergePresenceWithRuns(presence.data.items, items) : null),
     [presence.data, items]
@@ -313,13 +313,13 @@ export function RepositoryAgentsPage(props: RepositoryAgentsPageProps = {}): JSX
             openRuns={new Set(activePanes.map((pane) => pane.runId))}
             onOpenRun={onOpenPresence}
           />
-        ) : presence.isPending && repoId ? (
+        ) : view.kind === 'waiting' && repoId ? (
           <section className="page__section agents__list-pane" aria-label="Agents at work">
             <LoadingState variant="message" title="Loading agents." />
           </section>
         ) : (
           <>
-            {presence.isError && !presenceMissing ? (
+            {view.kind === 'failed' ? (
               <p className="agents__presence-note" role="status" data-testid="agents-presence-error">
                 Could not load the other agents at work here; showing jeryu runs only.{' '}
                 <button type="button" onClick={() => void presence.refetch()}>

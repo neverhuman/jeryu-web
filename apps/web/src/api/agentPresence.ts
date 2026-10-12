@@ -186,6 +186,26 @@ export function presenceUnsupported(error: unknown): boolean {
   return error.status === 0 || error.status === 404 || error.status === 405 || error.status === 501;
 }
 
+/**
+ * Where a presence read stands, in one typed state a page switches on:
+ * `waiting` (first read in flight), `absent` (the server has no such route),
+ * `failed` (it has one and it failed), or `ready` with the list.
+ */
+export type PresenceView =
+  | { kind: 'waiting' }
+  | { kind: 'absent' }
+  | { kind: 'failed'; error: Error }
+  | { kind: 'ready'; list: AgentPresenceList };
+
+export function presenceView(query: {
+  data: AgentPresenceList | undefined;
+  error: Error | null;
+}): PresenceView {
+  if (query.data) return { kind: 'ready', list: query.data };
+  if (!query.error) return { kind: 'waiting' };
+  return presenceUnsupported(query.error) ? { kind: 'absent' } : { kind: 'failed', error: query.error };
+}
+
 /** Live means the agent is still there: active or idle. */
 export function isLivePresence(item: Pick<AgentPresenceItem, 'state'>): boolean {
   return item.state === 'active' || item.state === 'idle';
