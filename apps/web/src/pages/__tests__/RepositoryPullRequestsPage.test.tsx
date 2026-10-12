@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -160,7 +160,7 @@ describe('RepositoryPullRequestsPage', () => {
     expect(await screen.findByText('No pull requests')).toBeInTheDocument();
   });
 
-  it('shows reviewer and required context detail and filters merged PRs from the URL', async () => {
+  it('filters by state and text from the URL', async () => {
     mockFetch([
       ['/api/v1/repos?host=forge.example', {
         generated_at: '2026-06-05T00:00:00Z', total: 1,
@@ -174,7 +174,7 @@ describe('RepositoryPullRequestsPage', () => {
       }],
       ['/api/v1/repos/acme-widget/pulls?limit=500&page=1', {
         total: 2, items: [
-          pullSummary({ number: 31, title: 'Widget checks', repo: { id: 'acme-widget', host: 'forge.example', owner: 'acme', name: 'widget' }, review: { required_approvals: 1, approvals: 0, changes_requested: 0, unresolved_threads: 0, user_review_state: null, reviewers: [{ login: 'review-bot', verdict: 'pending' }] }, checks: { total: 1, passing: 0, failing: 1, pending: 0, skipped: 0 }, required_contexts: [{ name: 'widget-api/required', state: 'failing', details: 'test suite failed' }] }),
+          pullSummary({ number: 31, title: 'Widget checks', repo: { id: 'acme-widget', host: 'forge.example', owner: 'acme', name: 'widget' } }),
           pullSummary({ number: 32, title: 'Merged widget', state: 'merged', repo: { id: 'acme-widget', host: 'forge.example', owner: 'acme', name: 'widget' } }),
         ],
       }],
@@ -184,12 +184,14 @@ describe('RepositoryPullRequestsPage', () => {
     expect(await screen.findByText('Merged widget')).toBeInTheDocument();
     expect(screen.queryByText('Widget checks')).not.toBeInTheDocument();
 
-    renderPage('/repos/forge.example/acme%2Fwidget/pulls?q=Widget');
-    const row = await screen.findByTestId('repo-pr-31');
-    expect(row).toHaveTextContent('review-bot: pending');
-    expect(row).toHaveTextContent('widget-api/required: failing (test suite failed)');
-    expect(row.querySelector('a[href$="/pulls/31"]')).toBeTruthy();
-    expect(row.querySelector('a[href$="/pulls/31/checks"]')).toBeTruthy();
+    cleanup();
+    renderPage('/repos/forge.example/acme%2Fwidget/pulls?q=checks');
+    expect(await screen.findByText('Widget checks')).toBeInTheDocument();
+    expect(screen.queryByText('Merged widget')).not.toBeInTheDocument();
+
+    cleanup();
+    renderPage('/repos/forge.example/acme%2Fwidget/pulls?q=nothing-matches');
+    expect(await screen.findByText('No pull requests match "nothing-matches"')).toBeInTheDocument();
   });
 });
 

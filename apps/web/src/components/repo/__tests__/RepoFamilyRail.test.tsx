@@ -53,9 +53,9 @@ function makeStorage(): Storage {
 /** The shell at one width: the rail, its toggle or the header's select. */
 function atWidth(width: number): () => void {
   const original = window.matchMedia;
-  window.matchMedia = ((query: string) => {
-    const min = /min-width:\s*(\d+)px/.exec(query);
-    const max = /max-width:\s*(\d+)px/.exec(query);
+  window.matchMedia = ((media: string) => {
+    const min = media.match(/min-width:\s*(\d+)px/);
+    const max = media.match(/max-width:\s*(\d+)px/);
     const matches = min
       ? width >= Number(min[1])
       : max
@@ -63,7 +63,7 @@ function atWidth(width: number): () => void {
         : false;
     return {
       matches,
-      media: query,
+      media,
       onchange: null,
       addEventListener: () => {},
       removeEventListener: () => {},

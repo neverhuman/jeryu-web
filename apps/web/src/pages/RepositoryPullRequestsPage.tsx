@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import { fetchPullList } from '../api/pullLists';
-import type { PullRequestSummary } from '../api/types';
 import { ErrorState, LoadingState } from '../components/state';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import {
@@ -17,7 +16,6 @@ import { PULL_ORDER_PARAM } from './pullBaseGraphModel';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
 import { fromPullRequestSummary, groupPullRequests } from './pullRoomModel';
-import { repoRefOf, repoUrl } from './repoBrowserModel';
 
 import './page.css';
 import './PullRoomPage.css';
@@ -155,12 +153,9 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
           testId="repo-pulls-error"
         />
       ) : view === 'timeline' ? (
-        <>
-          <PullRequestRows pulls={shown} host={provider} fullName={fullName} />
-          <PullRequestTimeline pulls={shown} emptyMessage={shown.length ? '' : emptyMessage(drafts)} />
-        </>
+        <PullRequestTimeline pulls={shown} emptyMessage={emptyMessage(drafts, state, q)} />
       ) : (
-        <PullRequestListView lanes={lanes} emptyMessage={emptyMessage(drafts)} />
+        <PullRequestListView lanes={lanes} emptyMessage={emptyMessage(drafts, state, q)} />
       )}
     </div>
   );
@@ -169,39 +164,13 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
 type PullState = 'all' | 'open' | 'merged' | 'closed';
 const PULL_STATES: readonly PullState[] = ['all', 'open', 'merged', 'closed'];
 function parsePullState(value: string | null): PullState {
-  return PULL_STATES.includes(value as PullState) ? value as PullState : 'all';
-}
-
-type EnrichedPull = PullRequestSummary & {
-  review: PullRequestSummary['review'] & { reviewers?: Array<{ login: string; verdict: string; at?: string }> };
-  required_contexts?: Array<{ name: string; state: string; details?: string | null }>;
-};
-
-function PullRequestRows({ pulls, host, fullName }: { pulls: PullRequestSummary[]; host: string; fullName: string }): JSX.Element {
-  const ref = repoRefOf(host, fullName);
-  if (!pulls.length) return <></>;
-  return <div className="pull-list" data-testid="repo-pr-rows">
-    {pulls.map((summary) => {
-      const pr = summary as EnrichedPull;
-      const conversation = repoUrl(ref, 'pulls', `${pr.number}`);
-      const checksUrl = `${conversation}/checks`;
-      const reviewers = pr.review.reviewers ?? [];
-      const contexts = pr.required_contexts ?? [];
-      return <article key={pr.number} className="pull-list__row" data-testid={`repo-pr-${pr.number}`}>
-        <strong>#{pr.number}</strong>
-        <span>REVIEW </span><Link to={conversation}>{reviewers.length
-          ? reviewers.map((reviewer) => `${reviewer.login}: ${reviewer.verdict}`).join(', ')
-          : `${pr.review.approvals}/${pr.review.required_approvals} approvals`}</Link>
-        <span>CHECKS </span><Link to={checksUrl}>{contexts.length
-          ? contexts.map((context) => `${context.name}: ${context.state}${context.details ? ` (${context.details})` : ''}`).join(', ')
-          : `${pr.checks.failing ? 'failing' : pr.checks.pending ? 'pending' : 'passing'}`}</Link>
-      </article>;
-    })}
-  </div>;
+  return PULL_STATES.find((known) => known === value) ?? 'all';
 }
 
 /** The empty line says which filter is empty, not just "nothing here". */
-function emptyMessage(filter: PullDraftFilter): string {
+function emptyMessage(filter: PullDraftFilter, state: PullState, q: string): string {
+  if (q) return `No pull requests match "${q}"`;
+  if (state !== 'all') return `No ${state} pull requests`;
   if (filter === 'drafts') return 'No draft pull requests';
   if (filter === 'ready') return 'No pull requests ready for review';
   return 'No pull requests';
