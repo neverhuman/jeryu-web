@@ -885,6 +885,10 @@ test.describe('Pipeline visibility', () => {
     const viewport = page.viewportSize()!;
     expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
     expect(box.y).toBeGreaterThan(viewport.height / 2);
+    // On the bottom edge itself: the status bar it used to sit on renders only
+    // while the connection is in trouble, and its empty band stayed reserved.
+    await expect(page.locator('.app-shell__status')).toHaveCount(0);
+    expect(box.y + box.height).toBeGreaterThanOrEqual(viewport.height - 1);
 
     await dock.getByRole('button', { name: 'Live activity' }).click();
     await expect(dock.getByRole('log')).toContainText('Merged neverhuman/jeryu#99');

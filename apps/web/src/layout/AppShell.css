@@ -9,21 +9,31 @@
   grid-template-rows: var(--app-header-height) 1fr auto;
   grid-template-columns: var(--app-leftnav-width) minmax(0, 1fr);
   min-height: 100vh;
-  padding-bottom: var(--app-status-height);
+  /* The status bar renders only while something is wrong with the connection
+     (see StatusBar.tsx), so the shell reserves its height only while it is
+     there. With a fixed 28px the dock floated that far above the foot of the
+     viewport over an empty band whenever the connection was healthy. */
+  --app-status-reserved: 0px;
+  padding-bottom: var(--app-status-reserved);
+}
+
+.app-shell:has(> .app-shell__status) {
+  --app-status-reserved: var(--app-status-height);
 }
 
 /* The dock is pinned over the content (see LiveActivityDock.tsx), so the shell
    reserves the height of its collapsed line as well — only on the pages that
    have one, which is every page an admin opens but the Activity page. */
-.app-shell:has(.activity-dock) {
-  padding-bottom: calc(var(--app-status-height) + var(--app-dock-height));
+.app-shell:has(> .activity-dock) {
+  padding-bottom: calc(var(--app-status-reserved) + var(--app-dock-height));
 }
 
 :root {
   --app-header-height: 48px;
   --app-status-height: 28px;
-  /* One collapsed line of the live activity dock. */
-  --app-dock-height: 26px;
+  /* One collapsed line of the live activity dock, its top border included
+     (the header below is held to it). */
+  --app-dock-height: 33px;
   --app-leftnav-width: 240px;
 }
 
@@ -46,7 +56,7 @@
   position: sticky;
   top: var(--app-header-height);
   align-self: start;
-  height: calc(100vh - var(--app-header-height) - var(--app-status-height));
+  height: calc(100vh - var(--app-header-height) - var(--app-status-reserved));
   transition: width 0.2s ease, min-width 0.2s ease;
 }
 
@@ -601,10 +611,11 @@ a.global-header__live:hover {
 /* LiveActivityDock --------------------------------------------------- */
 
 .activity-dock {
-  /* Docked at the foot of the viewport, above the status bar and beside the
-     rail: opened, it grows upward from there over the page. */
+  /* Docked at the foot of the viewport — on the status bar while that is
+     shown, otherwise on the bottom edge — beside the rail: opened, it grows
+     upward from there over the page. */
   position: fixed;
-  bottom: var(--app-status-height);
+  bottom: var(--app-status-reserved);
   left: var(--app-leftnav-width);
   right: 0;
   z-index: var(--z-sticky);
@@ -617,6 +628,8 @@ a.global-header__live:hover {
 }
 
 .activity-dock__header {
+  box-sizing: border-box;
+  min-height: calc(var(--app-dock-height) - 1px);
   padding: var(--space-1) var(--space-4);
   display: flex;
   align-items: center;
