@@ -63,6 +63,20 @@ function ReusedList({
   );
 }
 
+function LateList({ ids }: { ids: string[] | null }): JSX.Element {
+  const rows = useListKeys<HTMLUListElement>();
+  if (ids === null) return <p>empty</p>;
+  return (
+    <ul ref={rows}>
+      {ids.map((id, index) => (
+        <li key={index} data-testid={`row-${id}`} data-list-key={id} {...listRowProps}>
+          {id}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Keys(): JSX.Element {
   const { shortcuts } = useKeyboardRegistry();
   return <p>{shortcuts.map((s) => s.combo).join(' ')}</p>;
@@ -148,6 +162,20 @@ describe('useListKeys', () => {
     fireEvent.keyDown(window, { key: 'x' });
     expect(onAction).toHaveBeenCalledTimes(1);
     expect(onAction).toHaveBeenCalledWith('b');
+  });
+
+  it('follows a reused row when the list mounts after an empty view', async () => {
+    const { rerender } = render(<LateList ids={null} />);
+    expect(screen.queryByTestId('row-a')).toBeNull();
+    rerender(<LateList ids={['a', 'b']} />);
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j' });
+    expect(screen.getByTestId('row-b')).toHaveAttribute('data-list-focused', 'true');
+    await act(async () => {
+      rerender(<LateList ids={['c', 'a', 'b']} />);
+    });
+    expect(screen.getByTestId('row-b')).toHaveAttribute('data-list-focused', 'true');
+    expect(screen.getByTestId('row-c')).not.toHaveAttribute('data-list-focused');
   });
 
   it('drops the ring when the focused row leaves and its node is reused', async () => {

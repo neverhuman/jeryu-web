@@ -20,7 +20,7 @@
 // while a row holds focus, and the registry entries are registered without
 // binding so the shortcut overlay still lists all four.
 
-import { useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefCallback } from 'react';
 
 import {
   isTypingInTextField,
@@ -126,12 +126,19 @@ function resyncFocused(host: HTMLElement, focusedKey: { current: string | null }
 /**
  * Attach the returned ref to the element that holds the rows. Every
  * `[data-list-row]` inside it is then reachable with `j`/`k`, whatever list or
- * lane it sits in, in the order the page renders them.
+ * lane it sits in, in the order the page renders them. The ref follows that
+ * element when it mounts later (an empty list that then has rows): the ring
+ * resync is bound to the element, not to the first render.
  */
 export function useListKeys<T extends HTMLElement = HTMLDivElement>(options: {
   enabled?: boolean;
-} = {}): RefObject<T | null> {
+} = {}): RefCallback<T> {
   const container = useRef<T | null>(null);
+  const [host, setHost] = useState<T | null>(null);
+  const setContainer = useCallback((node: T | null) => {
+    container.current = node;
+    setHost((current) => (current === node ? current : node));
+  }, []);
   const focusedKey = useRef<string | null>(null);
   const registerShortcut = useOptionalKeyboardRegistry()?.registerShortcut ?? null;
   const enabled = options.enabled !== false;
@@ -145,7 +152,7 @@ export function useListKeys<T extends HTMLElement = HTMLDivElement>(options: {
   }, [enabled, registerShortcut]);
 
   useEffect(() => {
-    if (!enabled) return () => {};
+    if (!enabled || !host) return () => {};
     const onKey = (event: KeyboardEvent): void => {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (isTypingInTextField(event.target)) return;
@@ -208,27 +215,23 @@ export function useListKeys<T extends HTMLElement = HTMLDivElement>(options: {
     window.addEventListener('focusin', onFocusIn);
 
     window.addEventListener('keydown', onKey);
-    const host = container.current;
     // `data-list-focused` is not observed: painting the ring must not resync.
-    let observer: MutationObserver | null = null;
-    if (host) {
-      observer = new MutationObserver(() => {
-        const current = container.current;
-        if (current) resyncFocused(current, focusedKey);
-      });
-      observer.observe(host, {
-        subtree: true,
-        childList: true,
-        attributes: true,
-        attributeFilter: [KEY],
-      });
-    }
+    const observer = new MutationObserver(() => {
+      const current = container.current;
+      if (current) resyncFocused(current, focusedKey);
+    });
+    observer.observe(host, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: [KEY],
+    });
     return () => {
-      observer?.disconnect();
+      observer.disconnect();
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('focusin', onFocusIn);
     };
-  }, [enabled]);
+  }, [enabled, host]);
 
-  return container;
+  return setContainer;
 }
