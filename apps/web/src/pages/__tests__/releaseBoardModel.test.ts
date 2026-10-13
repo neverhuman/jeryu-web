@@ -43,6 +43,7 @@ import {
   workSummary,
   homogeneityText,
   stageDelta,
+  stageSkewed,
   stageTargets,
   stepDeltas,
   stepDeltaText,
@@ -212,8 +213,12 @@ describe('stage track', () => {
     expect(stageCellClass(idle, false)).toBe(
       'release-board__cell release-board__cell--unknown release-board__cell--never-deployed'
     );
+    // Skew needs a person, so it is red; a stage that is bad for another reason keeps the failed tone.
     expect(stageCellClass(stage('cloud-app', 'prod'), true)).toBe(
-      'release-board__cell release-board__cell--failed release-board__cell--open'
+      'release-board__cell release-board__cell--human release-board__cell--open'
+    );
+    expect(stageCellClass(stage('website', 'production'), false)).toBe(
+      'release-board__cell release-board__cell--failed'
     );
     expect(noPromoteText(idle)).toMatch(/never deployed to/);
     expect(noPromoteText(stage('cloud-app', 'main'))).toBe("This is the lane's source; nothing promotes into it.");
@@ -395,6 +400,13 @@ describe('delta first, then the targets', () => {
     expect(same?.text).toBe('all 3 targets agree');
     expect(same && homogeneityText(same)).toBe('Homogeneous: all 3 targets run v1 · abc1234.');
     expect(stageTargets(stage('cloud-app', 'main'))).toBeNull();
+  });
+
+  it('calls a stage skewed when a target differs or the collector says skew', () => {
+    expect(stageSkewed(stage('cloud-app', 'prod'))).toBe(true);
+    expect(stageSkewed(stage('cloud-app', 'stage'))).toBe(false);
+    expect(stageSkewed({ ...stage('cloud-app', 'stage'), targets: [], status: 'skew' })).toBe(true);
+    expect(stageSkewed(stage('cloud-app', 'main'))).toBe(false);
   });
 
   it('gives each step its gap, comparing a parallel stage with its predecessor', () => {

@@ -98,7 +98,7 @@ export function neverDeployed(stage: BoardStage): boolean {
 
 /** The CSS modifiers of a stage cell. */
 export function stageCellClass(stage: BoardStage, open: boolean): string {
-  const classes = [toneClass('release-board__cell', stateTone(stage.state))];
+  const classes = [toneClass('release-board__cell', stageSkewed(stage) ? 'human' : stateTone(stage.state))];
   if (neverDeployed(stage)) classes.push('release-board__cell--never-deployed');
   if (open) classes.push('release-board__cell--open');
   return classes.join(' ');
@@ -183,6 +183,17 @@ export function stageTargets(stage: BoardStage): StageTargets | null {
     state,
     text,
   };
+}
+
+/**
+ * True when a stage's targets do not all run the same thing: a target marked
+ * behind, or — from a collector that sends no targets to count — a status that
+ * says "skew". Skew is drawn red with an alert icon: a promotion that reached
+ * only part of a stage does not finish on its own, so a person is needed.
+ */
+export function stageSkewed(stage: BoardStage): boolean {
+  if (stage.targets.some((target) => target.state === 'warn' || target.state === 'bad')) return true;
+  return /\bskew\b/i.test(stage.status);
 }
 
 /** The detail panel's first line: one build everywhere, or how it splits. */

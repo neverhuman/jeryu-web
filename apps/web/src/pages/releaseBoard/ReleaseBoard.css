@@ -204,6 +204,10 @@
   border-top-style: dashed;
 }
 
+.release-board__cell--human {
+  border-top-color: var(--color-accent-danger);
+}
+
 .release-board__cell--never-deployed {
   border-style: dashed;
   border-top-style: solid;
@@ -261,6 +265,22 @@
 .release-board__homogeneity {
   display: flex;
   flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Skew: a stage only partly on its build. Red, with the alert icon, because a
+   person has to finish the roll (tone.ts: red means a person is needed). */
+.release-board__targets--human {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent-danger);
+}
+
+.release-board__skew {
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-1);
 }
 

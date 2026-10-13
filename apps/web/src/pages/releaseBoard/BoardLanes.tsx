@@ -17,6 +17,7 @@
 // names its shift slots instead and links to them on /work ("2 workers").
 
 import { useId } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type { EnvironmentSummary } from '../../api/types/deployments';
@@ -26,6 +27,7 @@ import type {
   BoardStage,
   ReleaseBoard,
 } from '../../api/types/releaseBoard';
+import { pillClass as tonePillClass } from '../../components/tone/tone';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
 import { useViewState } from '../../hooks/useViewState';
 import {
@@ -52,6 +54,7 @@ import {
   stageConnector,
   stageDelta,
   stageOverlay,
+  stageSkewed,
   stageTargets,
   stateTone,
   stepDeltas,
@@ -309,6 +312,10 @@ function StageCell({
   const version = overlay ? overlay.version : (stage.version ?? 'unknown');
   const delta = stageDelta(stage);
   const targets = stageTargets(stage);
+  // Skew is red with the alert icon wherever it is said: in the collector's
+  // status when that is what the cell leads with, and on the targets line.
+  const skewed = stageSkewed(stage);
+  const skewInDelta = skewed && delta.text === stage.status;
   return (
     <button
       type="button"
@@ -321,15 +328,21 @@ function StageCell({
       <span className="release-board__stage-name">{stage.name}</span>
       <span className="release-board__version">{version}</span>
       <span>
-        <span className={pillClass(delta.state)} data-testid="release-board-delta">
+        <span
+          className={skewInDelta ? `${tonePillClass('human')} release-board__skew` : pillClass(delta.state)}
+          data-testid="release-board-delta"
+          data-skew={skewInDelta ? 'true' : undefined}
+        >
+          {skewInDelta ? <AlertTriangle aria-hidden="true" size={12} /> : null}
           {delta.text}
         </span>
       </span>
       {targets ? (
         <span
-          className={`release-board__targets release-board__targets--${stateTone(targets.state)}`}
+          className={`release-board__targets release-board__targets--${skewed && targets.differ > 0 ? 'human' : stateTone(targets.state)}`}
           data-testid="release-board-targets"
         >
+          {skewed && targets.differ > 0 ? <AlertTriangle aria-hidden="true" size={12} /> : null}
           {targets.text}
         </span>
       ) : null}

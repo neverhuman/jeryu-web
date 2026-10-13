@@ -141,6 +141,18 @@ describe('ReleasesPage — family release board', () => {
     // Homogeneity is its own line on the cell; how it is known lives in the detail.
     expect(within(prod).getByTestId('release-board-targets')).toHaveTextContent('4 of 5 targets differ');
     expect(prod).not.toHaveTextContent('known by');
+    // Skew is red with the alert icon, on the status pill and the targets line, and the cell rule is red.
+    const delta = within(prod).getByTestId('release-board-delta');
+    expect(delta).toHaveTextContent('skew · 1 behind');
+    expect(delta).toHaveClass('page__pill--human');
+    expect(delta).toHaveAttribute('data-skew', 'true');
+    expect(delta.querySelector('svg')).not.toBeNull();
+    expect(within(prod).getByTestId('release-board-targets')).toHaveClass('release-board__targets--human');
+    expect(prod).toHaveClass('release-board__cell--human');
+    // A stage whose targets all agree is not drawn as skew.
+    const stageCell = screen.getByTestId('release-board-stage-cloud-app-stage');
+    expect(within(stageCell).getByTestId('release-board-delta')).not.toHaveClass('page__pill--human');
+    expect(within(stageCell).getByTestId('release-board-delta').querySelector('svg')).toBeNull();
     const detail = screen.getByTestId('release-board-detail-cloud-app');
     expect(prod).toHaveAttribute('aria-controls', detail.id);
 
