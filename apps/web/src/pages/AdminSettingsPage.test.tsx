@@ -76,7 +76,9 @@ describe('AdminSettingsPage user list', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
-        <AdminSettingsPage />
+        <MemoryRouter>
+          <AdminSettingsPage />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
     const table = await screen.findByTestId('admin-users-table');
