@@ -40,11 +40,26 @@ export function recentBotActivity(
     .slice(0, limit);
 }
 
-/** A refusal (not a writer) or an unknown repository: show nothing. */
-function quiet(error: unknown): boolean {
-  return (
-    error instanceof ApiError && (error.status === 403 || error.status === 404)
-  );
+/**
+ * What the feed shows. `refused` is a refusal (not a writer) or an unknown
+ * repository, and shows nothing; `failed` is any other error.
+ */
+export type BotActivityFeed = 'loading' | 'refused' | 'failed' | 'ready';
+
+/** The feed's state from its query. */
+export function botActivityFeed(query: {
+  isPending: boolean;
+  isError: boolean;
+  error: unknown;
+}): BotActivityFeed {
+  if (query.isError) {
+    const { error } = query;
+    return error instanceof ApiError &&
+      (error.status === 403 || error.status === 404)
+      ? 'refused'
+      : 'failed';
+  }
+  return query.isPending ? 'loading' : 'ready';
 }
 
 /**
@@ -82,7 +97,8 @@ export function BotActivityList({
     retry: false
   });
 
-  if (activity.isError && quiet(activity.error)) return null;
+  const feed = botActivityFeed(activity);
+  if (feed === 'refused') return null;
   const names = new Map(
     (roster.data?.bots ?? []).map((bot) => [bot.id, bot.display_name])
   );
@@ -90,12 +106,12 @@ export function BotActivityList({
 
   return (
     <div className="bot-activity" data-testid={testId}>
-      {activity.isPending ? (
+      {feed === 'loading' ? (
         <LoadingState
           variant="message"
           title="Loading Grokbot and Musebot activity."
         />
-      ) : activity.isError ? (
+      ) : feed === 'failed' ? (
         <ErrorState
           title="Could not load Grokbot and Musebot activity."
           error={activity.error}

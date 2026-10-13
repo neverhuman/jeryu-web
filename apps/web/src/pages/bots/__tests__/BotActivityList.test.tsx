@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError, apiGet } from '../../../api/client';
 import type { BotActivityEvent } from '../../../api/types';
-import { BotActivityList, recentBotActivity } from '../BotActivityList';
+import {
+  BotActivityList,
+  botActivityFeed,
+  recentBotActivity
+} from '../BotActivityList';
 
 vi.mock('../../../api/client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../api/client')>()),
@@ -116,5 +120,44 @@ describe('BotActivityList', () => {
     expect(
       recentBotActivity(many, 'vm-1').every((e) => e.session_id === 'vm-1')
     ).toBe(true);
+  });
+});
+
+describe('botActivityFeed', () => {
+  const envelope = { code: 'forbidden', message: 'refused' };
+
+  it('is refused for a 403 or a 404, and failed for any other error', () => {
+    for (const status of [403, 404]) {
+      expect(
+        botActivityFeed({
+          isPending: false,
+          isError: true,
+          error: new ApiError(status, envelope)
+        })
+      ).toBe('refused');
+    }
+    expect(
+      botActivityFeed({
+        isPending: false,
+        isError: true,
+        error: new ApiError(500, envelope)
+      })
+    ).toBe('failed');
+    expect(
+      botActivityFeed({
+        isPending: false,
+        isError: true,
+        error: new Error('network')
+      })
+    ).toBe('failed');
+  });
+
+  it('is loading while pending, and ready once answered', () => {
+    expect(
+      botActivityFeed({ isPending: true, isError: false, error: null })
+    ).toBe('loading');
+    expect(
+      botActivityFeed({ isPending: false, isError: false, error: null })
+    ).toBe('ready');
   });
 });
