@@ -78,6 +78,7 @@ test.describe('Signed-out landing', () => {
         request.method() === 'POST' &&
         (path === '/api/v1/waitlist' ||
           path === '/api/v1/auth/signup' ||
+          path === '/api/v1/auth/signup/start' ||
           path === '/api/v1/auth/login')
       ) {
         posts.push({ path, body: request.postDataJSON() });

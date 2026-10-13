@@ -279,6 +279,28 @@
   text-align: right;
 }
 
+.admin-users__table .admin-users__detail td {
+  background: var(--color-bg-2);
+}
+
+.admin-users__reset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 480px;
+}
+
+.admin-users__reset-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-fg-secondary);
+}
+
+.admin-users__reset-to {
+  margin: 0;
+}
+
 .admin-grant-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(120px, 1fr));

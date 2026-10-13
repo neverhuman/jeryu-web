@@ -19,15 +19,25 @@ interface MutationStub {
 const SIGN_IN = 'pw-fixture-sign-in';
 const CURRENT_PW = 'pw-fixture-current';
 const NEW_PW = 'pw-fixture-new';
-const SIGN_UP = 'pw-fixture-sign-up';
+
+interface StartStub {
+  mutate: ReturnType<typeof vi.fn>;
+  isPending: boolean;
+  isSuccess: boolean;
+  error: unknown;
+}
 
 function mutation(): MutationStub {
   return { mutateAsync: vi.fn(), isPending: false, error: null };
 }
 
+function start(over: Partial<StartStub> = {}): StartStub {
+  return { mutate: vi.fn(), isPending: false, isSuccess: false, error: null, ...over };
+}
+
 const auth = {
   login: mutation(),
-  signup: mutation(),
+  signupStart: start(),
   changePassword: mutation(),
 };
 
@@ -57,7 +67,7 @@ function type(label: string, value: string): void {
 describe('AuthPage', () => {
   beforeEach(() => {
     auth.login = mutation();
-    auth.signup = mutation();
+    auth.signupStart = start();
     auth.changePassword = mutation();
   });
 
@@ -97,23 +107,40 @@ describe('AuthPage', () => {
     expect(screen.queryByTestId('where')).toBeNull();
   });
 
-  it('signs up without remember-me and lands other roles on the repositories index', async () => {
-    auth.signup.mutateAsync.mockResolvedValue({ role: 'user', mustChangePassword: false });
+  it('starts sign-up with an email address only, and no account is created yet', () => {
     renderPage({ initialMode: 'signup' });
     expect(screen.getByRole('tab', { name: 'Sign up' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.queryByLabelText('Remember me')).toBeNull();
-    type('Username', 'newcomer');
-    type('Password', SIGN_UP);
-    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(screen.queryByLabelText('Username')).toBeNull();
+    expect(screen.queryByLabelText('Password')).toBeNull();
+    type('Email', ' newcomer@example.com ');
+    fireEvent.click(screen.getByRole('button', { name: 'Send sign-up link' }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('where').textContent).toBe('/repos')
-    );
-    expect(auth.signup.mutateAsync).toHaveBeenCalledWith({
-      login: 'newcomer',
-      password: SIGN_UP,
-    });
+    expect(auth.signupStart.mutate).toHaveBeenCalledWith({ email: 'newcomer@example.com' });
     expect(auth.login.mutateAsync).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('where')).toBeNull();
+  });
+
+  it('says to check email once the link is on its way', () => {
+    auth.signupStart = start({ isSuccess: true });
+    renderPage({ initialMode: 'signup' });
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Check your email. A link to finish creating your account is on its way; it works for one day.'
+    );
+  });
+
+  it.each([
+    [
+      503,
+      'mail_unavailable',
+      'This forge cannot send email yet, so sign-up is closed. Ask an administrator for an account.',
+    ],
+    [429, 'rate_limited', 'Too many attempts. Try again later.'],
+    [422, 'invalid_input', 'Enter a whole email address, like name@example.com.'],
+  ])('says what a %i refusal of the sign-up link means', (status, code, copy) => {
+    auth.signupStart = start({ error: new ApiError(status, { code, message: 'server words' }) });
+    renderPage({ initialMode: 'signup' });
+    expect(screen.getByRole('alert')).toHaveTextContent(copy);
   });
 
   it('offers "Forgot password?" on Login only', () => {
@@ -129,7 +156,7 @@ describe('AuthPage', () => {
   it('switches tabs from Login to Sign up', () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Sign up' }));
-    expect(screen.getByRole('button', { name: 'Create account' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send sign-up link' })).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Login' }));
     expect(screen.getByRole('button', { name: 'Login' })).toBeTruthy();
   });

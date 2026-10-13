@@ -27,6 +27,23 @@ export interface AuthCredentials {
   rememberMe?: boolean;
 }
 
+/** Sign-up step one: mail a link to the address. */
+export interface SignupStartRequest {
+  email: string;
+}
+
+/** The forge's answer to a sign-up link request; the same whoever owns the address. */
+export interface SignupStartReceipt {
+  result: 'sent';
+}
+
+/** Sign-up step two: the mailed link's token, and the account to create. */
+export interface SignupRequest {
+  token: string;
+  login: string;
+  password: string;
+}
+
 export interface PasswordChangeRequest {
   currentPassword: string;
   newPassword: string;
@@ -39,7 +56,8 @@ interface AuthContextValue {
   isPending: boolean;
   error: Error | null;
   login: UseMutationResult<AuthUser, Error, AuthCredentials>;
-  signup: UseMutationResult<AuthUser, Error, AuthCredentials>;
+  signupStart: UseMutationResult<SignupStartReceipt, Error, SignupStartRequest>;
+  signup: UseMutationResult<AuthUser, Error, SignupRequest>;
   changePassword: UseMutationResult<AuthUser, Error, PasswordChangeRequest>;
   logout: UseMutationResult<unknown, Error, void>;
 }
@@ -64,8 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       apiSend<AuthUser>(endpoints.authLogin(), body),
     onSuccess: finish,
   });
+  const signupStart = useMutation({
+    mutationFn: (body: SignupStartRequest) =>
+      apiSend<SignupStartReceipt>(endpoints.authSignupStart(), body),
+  });
   const signup = useMutation({
-    mutationFn: (body: AuthCredentials) =>
+    mutationFn: (body: SignupRequest) =>
       apiSend<AuthUser>(endpoints.authSignup(), body),
     onSuccess: finish,
   });
@@ -104,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         isPending: me.isPending,
         error: me.error,
         login,
+        signupStart,
         signup,
         changePassword,
         logout,

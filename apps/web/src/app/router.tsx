@@ -53,6 +53,7 @@ import {
   ResetPasswordPage,
   VerifyEmailPage,
 } from '../pages/account/AccountRecoveryPages';
+import { CreateAccountPage } from '../pages/account/CreateAccountPage';
 import { WikiPage } from '../pages/wiki/WikiPage';
 import { YieldPage } from '../pages/yield';
 
@@ -145,4 +146,6 @@ export const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/verify-email', element: <VerifyEmailPage /> },
+  // Sign-up, step two: the mailed sign-up link lands here.
+  { path: '/create-account', element: <CreateAccountPage /> },
 ]);

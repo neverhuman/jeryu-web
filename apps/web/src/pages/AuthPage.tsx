@@ -1,4 +1,4 @@
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, Mail, UserPlus } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type Ref } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -7,17 +7,81 @@ import { ActionButton } from '../components/action/ActionButton';
 import { JeryuLogo } from '../components/brand/JeryuLogo';
 import { useAuth } from '../hooks/useAuth';
 import { homePathFor } from '../layout/HomeRedirect';
+import { RATE_LIMITED, UNREACHABLE } from './account/accountCopy';
 
 import './AuthPage.css';
 
 type Mode = 'login' | 'signup';
 
+/** What the forge said to a sign-up link request, in words for the visitor. */
+function signupStartProblem(error: Error): string {
+  if (!(error instanceof ApiError)) return UNREACHABLE;
+  if (error.status === 503) {
+    return 'This forge cannot send email yet, so sign-up is closed. Ask an administrator for an account.';
+  }
+  if (error.status === 429) return RATE_LIMITED;
+  if (error.status === 422) return 'Enter a whole email address, like name@example.com.';
+  return error.message;
+}
+
+/**
+ * Sign-up, step one: an address and nothing else. The forge mails a link to
+ * `/create-account`, where the username and password are chosen, so no account
+ * exists until someone has opened mail sent to that address. The answer is the
+ * same whether or not an account already has the address.
+ */
+function SignupStartForm({ firstFieldRef }: { firstFieldRef?: Ref<HTMLInputElement> }): JSX.Element {
+  const { signupStart } = useAuth();
+  const [email, setEmail] = useState('');
+  const submit = (event: FormEvent): void => {
+    event.preventDefault();
+    signupStart.mutate({ email: email.trim() });
+  };
+  return (
+    <form className="auth-form" onSubmit={submit}>
+      <label className="auth-form__field">
+        <span>Email</span>
+        <input
+          ref={firstFieldRef}
+          type="email"
+          name="email"
+          value={email}
+          onChange={(event) => setEmail(event.currentTarget.value)}
+          autoComplete="email"
+          maxLength={254}
+          required
+        />
+      </label>
+      {signupStart.isSuccess ? (
+        <p className="auth-form__sent" role="status">
+          Check your email. A link to finish creating your account is on its way; it works for
+          one day.
+        </p>
+      ) : null}
+      {signupStart.error ? (
+        <p className="auth-form__error" role="alert">
+          {signupStartProblem(signupStart.error)}
+        </p>
+      ) : null}
+      <ActionButton
+        type="submit"
+        variant="primary"
+        icon={<Mail size={14} />}
+        disabled={signupStart.isPending}
+      >
+        Send sign-up link
+      </ActionButton>
+    </form>
+  );
+}
+
 /**
  * AuthForm — the tabs + credential form shared by the boot LoginPanel and the
  * forced-password-change page. This component owns the accessibility contract
  * exercised by the e2e suite (tab roles `Login`/`Sign up`, labeled `Username`/
- * `Password`/`New password` inputs, submit buttons `Login`/`Create account`/
- * `Change password`) — keep those names/labels stable.
+ * `Password`/`New password`/`Email` inputs, submit buttons `Login`/`Send
+ * sign-up link`/`Change password`) — keep those names/labels stable. Sign-up
+ * finishes on `/create-account`, opened from the mailed link.
  */
 export function AuthForm({
   forcePasswordChange = false,
@@ -35,8 +99,7 @@ export function AuthForm({
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const active = mode === 'login' ? auth.login : auth.signup;
-  const error = forcePasswordChange ? auth.changePassword.error : active.error;
+  const error = forcePasswordChange ? auth.changePassword.error : auth.login.error;
 
   useEffect(() => {
     if (!forcePasswordChange) {
@@ -56,10 +119,7 @@ export function AuthForm({
       }
       return;
     }
-    const user =
-      mode === 'login'
-        ? await auth.login.mutateAsync({ login, password, rememberMe })
-        : await auth.signup.mutateAsync({ login, password });
+    const user = await auth.login.mutateAsync({ login, password, rememberMe });
     if (user && !user.mustChangePassword) {
       navigate(homePathFor(user), { replace: true });
     }
@@ -94,77 +154,77 @@ export function AuthForm({
           </button>
         </div>
       )}
-      <form className="auth-form" onSubmit={(event) => void submit(event)}>
-        {forcePasswordChange ? null : (
+      {!forcePasswordChange && mode === 'signup' ? (
+        <SignupStartForm firstFieldRef={firstFieldRef} />
+      ) : (
+        <form className="auth-form" onSubmit={(event) => void submit(event)}>
+          {forcePasswordChange ? null : (
+            <label className="auth-form__field">
+              <span>Username</span>
+              <input
+                ref={firstFieldRef}
+                value={login}
+                onChange={(event) => setLogin(event.currentTarget.value)}
+                autoComplete="username"
+                required
+              />
+            </label>
+          )}
           <label className="auth-form__field">
-            <span>Username</span>
+            <span>{forcePasswordChange ? 'Current password' : 'Password'}</span>
             <input
-              ref={firstFieldRef}
-              value={login}
-              onChange={(event) => setLogin(event.currentTarget.value)}
-              autoComplete="username"
-              required
-            />
-          </label>
-        )}
-        <label className="auth-form__field">
-          <span>{forcePasswordChange ? 'Current password' : 'Password'}</span>
-          <input
-            ref={forcePasswordChange ? firstFieldRef : undefined}
-            value={password}
-            onChange={(event) => setPassword(event.currentTarget.value)}
-            type="password"
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            minLength={12}
-            required
-          />
-        </label>
-        {forcePasswordChange ? (
-          <label className="auth-form__field">
-            <span>New password</span>
-            <input
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.currentTarget.value)}
+              ref={forcePasswordChange ? firstFieldRef : undefined}
+              value={password}
+              onChange={(event) => setPassword(event.currentTarget.value)}
               type="password"
-              autoComplete="new-password"
+              autoComplete="current-password"
               minLength={12}
               required
             />
           </label>
-        ) : null}
-        {!forcePasswordChange && mode === 'login' ? (
-          <label className="auth-form__check">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(event) => setRememberMe(event.currentTarget.checked)}
-            />
-            <span>Remember me</span>
-          </label>
-        ) : null}
-        {error ? (
-          <p className="auth-form__error">
-            {error instanceof ApiError ? error.message : 'Authentication failed.'}
-          </p>
-        ) : null}
-        <ActionButton
-          type="submit"
-          variant="primary"
-          icon={mode === 'login' ? <LogIn size={14} /> : <UserPlus size={14} />}
-          disabled={forcePasswordChange ? auth.changePassword.isPending : active.isPending}
-        >
-          {forcePasswordChange
-            ? 'Change password'
-            : mode === 'login'
-              ? 'Login'
-              : 'Create account'}
-        </ActionButton>
-        {!forcePasswordChange && mode === 'login' ? (
-          <Link className="auth-form__forgot" to="/forgot-password">
-            Forgot password?
-          </Link>
-        ) : null}
-      </form>
+          {forcePasswordChange ? (
+            <label className="auth-form__field">
+              <span>New password</span>
+              <input
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.currentTarget.value)}
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                required
+              />
+            </label>
+          ) : null}
+          {!forcePasswordChange ? (
+            <label className="auth-form__check">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(event) => setRememberMe(event.currentTarget.checked)}
+              />
+              <span>Remember me</span>
+            </label>
+          ) : null}
+          {error ? (
+            <p className="auth-form__error">
+              {error instanceof ApiError ? error.message : 'Authentication failed.'}
+            </p>
+          ) : null}
+          <ActionButton
+            type="submit"
+            variant="primary"
+            icon={<LogIn size={14} />}
+            disabled={forcePasswordChange ? auth.changePassword.isPending : auth.login.isPending}
+          >
+            {forcePasswordChange ? 'Change password' : 'Login'}
+          </ActionButton>
+          {!forcePasswordChange ? (
+            <Link className="auth-form__forgot" to="/forgot-password">
+              Forgot password?
+            </Link>
+          ) : null}
+        </form>
+      )}
     </>
   );
 }

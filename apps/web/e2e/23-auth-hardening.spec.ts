@@ -32,9 +32,9 @@ const splitRepos = [
 ];
 const loginFormCredential = 'auth-form-input-0001';
 const signupFormCredential = 'signup-form-input-0001';
+const signupLinkToken = 'signup-link-token-0001';
 const currentPasswordValue = 'initial-password-123';
 const replacementPasswordValue = 'replacement-password-456';
-const adminResetPasswordValue = 'initial-admin-reset-123';
 
 test.describe('Auth hardening browser proof', () => {
   test('signed-out visitor logs in and sees only granted split repositories @action:auth.login @action:authz.granted_repos_only', async ({
@@ -138,16 +138,23 @@ test.describe('Auth hardening browser proof', () => {
     await expect(page.getByTestId('repo-family-member-acme-web')).toBeVisible();
   });
 
-  test('new signup receives no repository visibility by default @action:auth.signup @action:authz.signup_no_repos', async ({ page }) => {
+  test('new signup proves its email first and receives no repository visibility by default @action:auth.signup @action:authz.signup_no_repos', async ({ page }) => {
     await mockBootstrap(page, { login: 'jepsont', auth: null });
     await mockAuthMe(page, null);
     await mockRepoList(page, []);
 
-    await page.route('**/api/v1/auth/signup', async (route, request) => {
-      expect(request.postDataJSON()).toEqual({
-        login: 'jepsont',
-        password: signupFormCredential,
+    const startBodies: unknown[] = [];
+    await page.route('**/api/v1/auth/signup/start', async (route, request) => {
+      startBodies.push(request.postDataJSON());
+      await route.fulfill({
+        status: 202,
+        contentType: 'application/json',
+        body: JSON.stringify({ result: 'sent' }),
       });
+    });
+    const signupBodies: unknown[] = [];
+    await page.route('**/api/v1/auth/signup', async (route, request) => {
+      signupBodies.push(request.postDataJSON());
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -160,6 +167,7 @@ test.describe('Auth hardening browser proof', () => {
       });
     });
 
+    // Step one: an address, and nothing else.
     await page.goto('/signup');
     await expect(page.locator('.marketing-scene')).toBeVisible({
       timeout: 10_000,
@@ -172,12 +180,31 @@ test.describe('Auth hardening browser proof', () => {
       'true'
     );
     await expect(page.getByLabel('Remember me')).toHaveCount(0);
+    await expect(page.getByLabel('Username')).toHaveCount(0);
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
+    await page.getByLabel('Email').fill('jepsont@example.com');
+    await page.getByRole('button', { name: 'Send sign-up link' }).click();
+    await expect(page.getByRole('status')).toContainText(
+      'Check your email. A link to finish creating your account is on its way; it works for one day.'
+    );
+    expect(startBodies).toEqual([{ email: 'jepsont@example.com' }]);
+    expect(signupBodies).toEqual([]);
+
+    // Step two: the mailed link opens the page that creates the account.
+    await page.goto(`/create-account?token=${signupLinkToken}`);
+    await expect(
+      page.getByRole('heading', { name: 'Finish creating your account' })
+    ).toBeVisible({ timeout: 10_000 });
     await page.getByLabel('Username').fill('jepsont');
-    await page.getByLabel('Password').fill(signupFormCredential);
+    await page.getByLabel('Password', { exact: true }).fill(signupFormCredential);
+    await page.getByLabel('Repeat password').fill(signupFormCredential);
     await page.getByRole('button', { name: 'Create account' }).click();
 
     await expect(page).toHaveURL(/\/repos$/, { timeout: 10_000 });
     await expect(page.getByText('No repositories match')).toBeVisible();
+    expect(signupBodies).toEqual([
+      { token: signupLinkToken, login: 'jepsont', password: signupFormCredential },
+    ]);
   });
 
   test('authenticated visitors are redirected away from auth routes', async ({
@@ -266,16 +293,19 @@ test.describe('Auth hardening browser proof', () => {
 
     const unsafeCsrfHeaders: string[] = [];
     await mockAdminUsers(page);
+    const resetBodies: unknown[] = [];
     await page.route(
       /\/api\/v1\/admin\/users\/[^/]+\/reset-password$/,
       async (route, request) => {
         unsafeCsrfHeaders.push(request.headers()['x-jeryu-csrf'] ?? '');
+        resetBodies.push(request.postDataJSON());
         await route.fulfill({
-          status: 200,
+          status: 202,
           contentType: 'application/json',
           body: JSON.stringify({
+            result: 'sent',
             login: 'jordanh',
-            password: adminResetPasswordValue,
+            email: 'jordanh@example.com',
           }),
         });
       }
@@ -301,8 +331,19 @@ test.describe('Auth hardening browser proof', () => {
     await expect(page.getByRole('heading', { name: 'Users', exact: true })).toBeVisible({
       timeout: 10_000,
     });
-    await page.getByRole('button', { name: 'Reset password' }).click();
-    await expect(page.getByText(adminResetPasswordValue)).toBeVisible();
+    const users = page.getByTestId('admin-users-table');
+    await expect(users.getByRole('row', { name: /jordanh/ })).toContainText('none');
+    await users.getByRole('button', { name: 'Reset password' }).click();
+    const resetForm = page.getByRole('form', { name: 'Reset the password of jordanh' });
+    await expect(resetForm).toContainText('They sign in with it and must choose a new password.');
+    await resetForm
+      .getByLabel('Where should the temporary password go?')
+      .fill('jordanh@example.com');
+    await resetForm.getByRole('button', { name: 'Email a temporary password' }).click();
+    await expect(page.getByTestId('reset-sent-jordanh')).toHaveText(
+      'Sent to jordanh@example.com. jordanh must choose a new password at next sign-in.'
+    );
+    expect(resetBodies).toEqual([{ email: 'jordanh@example.com' }]);
 
     const accessRegion = page.getByRole('region', { name: 'Repository access' });
     await accessRegion.getByRole('textbox', { name: 'Owner' }).fill('acme');
@@ -429,6 +470,8 @@ async function mockAdminUsers(page: Page): Promise<void> {
         {
           login: 'jordanh',
           role: 'user',
+          email: null,
+          emailVerified: false,
           created_at: '2026-07-03T00:00:00Z',
           updated_at: '2026-07-03T00:00:00Z',
         },

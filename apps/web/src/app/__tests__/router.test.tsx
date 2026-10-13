@@ -70,6 +70,17 @@ describe('router route table', () => {
   });
 });
 
+describe('signed-out pages outside the shell', () => {
+  // Pages a mailed link opens need no session, so they sit beside the shell
+  // rather than inside it, where a signed-out visit is sent to log in.
+  it.each(['/waitlist', '/forgot-password', '/reset-password', '/verify-email', '/create-account'])(
+    'registers %s at the top level',
+    (path) => {
+      expect(router.routes.map((r) => r.path)).toContain(path);
+    }
+  );
+});
+
 describe('releases board address', () => {
   /** The real `/releases` element, in front of a stand-in for the board path. */
   function follow(entry: string): string {

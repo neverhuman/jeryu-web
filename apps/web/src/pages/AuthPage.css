@@ -108,6 +108,13 @@
   font-size: var(--font-size-sm);
 }
 
+.auth-form__sent {
+  margin: 0;
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
 .auth-form__forgot {
   align-self: flex-start;
   font-size: var(--font-size-sm);

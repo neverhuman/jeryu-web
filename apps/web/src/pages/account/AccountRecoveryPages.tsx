@@ -17,6 +17,7 @@ import { ApiError, apiSend } from '../../api/client';
 import { endpoints } from '../../api/endpoints';
 import { MarketingHeader } from '../boot/MarketingHeader';
 import { MarketingScene } from '../boot/MarketingScene';
+import { RATE_LIMITED, UNREACHABLE } from './accountCopy';
 
 import '../boot/boot.css';
 import '../WaitlistPage.css';
@@ -25,10 +26,8 @@ import '../boot/WaitlistForm.css';
 /** The forge refuses a shorter password; the form says so before it asks. */
 export const PASSWORD_MIN_LENGTH = 12;
 
-const LIMITED = 'Too many attempts. Try again later.';
-const UNREACHABLE = 'The forge could not be reached. Try again.';
-
-function AccountFrame({
+/** The signed-out page around every account form a mailed link opens. */
+export function AccountFrame({
   label,
   title,
   intro,
@@ -60,7 +59,7 @@ function AccountFrame({
   );
 }
 
-function Status({ id, text }: { id: string; text: string | null }): JSX.Element | null {
+export function Status({ id, text }: { id: string; text: string | null }): JSX.Element | null {
   return text ? (
     <p className="waitlist__status" id={id} role="status">
       {text}
@@ -88,7 +87,7 @@ export function ForgotPasswordPage(): JSX.Element {
     phase === 'sent'
       ? 'If an account has verified that address, a reset link is on its way. It works for one hour.'
       : phase === 'limited'
-        ? LIMITED
+        ? RATE_LIMITED
         : phase === 'failed'
           ? UNREACHABLE
           : null;
@@ -195,7 +194,7 @@ export function ResetPasswordPage(): JSX.Element {
     );
   }
   const message =
-    problem ?? (phase === 'limited' ? LIMITED : phase === 'failed' ? UNREACHABLE : null);
+    problem ?? (phase === 'limited' ? RATE_LIMITED : phase === 'failed' ? UNREACHABLE : null);
   return (
     <AccountFrame
       label="Account recovery"
@@ -270,7 +269,7 @@ export function VerifyEmailPage(): JSX.Element {
       'This link no longer works',
       'A verification link works once, for one day. Send a new one from Settings, signed in.',
     ],
-    limited: ['Too many attempts', LIMITED],
+    limited: ['Too many attempts', RATE_LIMITED],
     failed: ['Something went wrong', UNREACHABLE],
   }[phase];
   return (

@@ -206,10 +206,17 @@ async fn exercise(driver: &WebDriver, fixture: &Fixture, artifacts: &Path) -> Re
     click(driver, ".waitlist-page__back").await?;
     assert_eq!(scene(driver, "1").await?, grid);
     // Direct routes must retain the same scene and restore it after leaving.
-    for route in ["/login", "/signup"] {
+    // Login asks for a password; sign-up starts with an email address alone.
+    for (route, field) in [
+        ("/login", "!!document.querySelector('input[type=password]')"),
+        (
+            "/signup",
+            "!!document.querySelector('input[type=email]') && !document.querySelector('input[type=password]')",
+        ),
+    ] {
         driver.goto(format!("{}{route}", fixture.url)).await?;
         assert_eq!(scene(driver, "0.1").await?, grid);
-        until(driver, "!!document.querySelector('input[type=password]')").await?;
+        until(driver, field).await?;
         driver
             .screenshot(&artifacts.join(format!("{}.png", route.trim_start_matches('/'))))
             .await?;

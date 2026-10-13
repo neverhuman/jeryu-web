@@ -1,8 +1,9 @@
 // LoginPanel.tsx — the auth box opened from the signed-out story screen.
 //
 // Reuses AuthForm (the shared credential form) so every accessibility/e2e
-// contract — `Login`/`Sign up` tabs, `Username`/`Password` labels, `Login`/
-// `Create account` buttons — is identical to the rest of the auth surface.
+// contract — `Login`/`Sign up` tabs, `Username`/`Password`/`Email` labels,
+// `Login`/`Send sign-up link` buttons — is identical to the rest of the auth
+// surface.
 // The heading is the accessible brand name; the glyph beside it is decorative.
 
 import type { Ref } from 'react';

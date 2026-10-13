@@ -13,7 +13,10 @@ export const endpoints = {
   bootstrap: (): string => '/api/v1/bootstrap',
   authMe: (): string => '/api/v1/auth/me',
   authLogin: (): string => '/api/v1/auth/login',
+  /** Spend a mailed sign-up link: `{token, login, password}` creates the account. */
   authSignup: (): string => '/api/v1/auth/signup',
+  /** Mail a sign-up link to an address; always 202, whoever owns it. */
+  authSignupStart: (): string => '/api/v1/auth/signup/start',
   /** Public waitlist. Does not create an account or a session. */
   waitlistJoin: (): string => '/api/v1/waitlist',
   authLogout: (): string => '/api/v1/auth/logout',

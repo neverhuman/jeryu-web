@@ -1,9 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
-import { apiPut } from '../api/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, apiGet, apiPut, apiSend } from '../api/client';
 import { AdminSettingsPage } from './AdminSettingsPage';
+
+// user-1 has a verified address, user-2 an unverified one, the rest none.
+const ADDRESSES: Record<number, { email: string; emailVerified: boolean }> = {
+  1: { email: 'one@example.com', emailVerified: true },
+  2: { email: 'two@example.com', emailVerified: false },
+};
 
 const accounts = Array.from({ length: 9 }, (_, index) => ({
   login: `user-${index}`,
@@ -11,6 +17,8 @@ const accounts = Array.from({ length: 9 }, (_, index) => ({
   // user-8 is a build login the instance config names as automation.
   kind: index === 8 ? 'service' : 'human',
   kind_source: index === 8 ? 'config' : 'default',
+  email: ADDRESSES[index]?.email ?? null,
+  emailVerified: ADDRESSES[index]?.emailVerified ?? false,
 }));
 
 vi.mock('../hooks/useAuth', () => ({
@@ -19,7 +27,8 @@ vi.mock('../hooks/useAuth', () => ({
     logout: { mutate: vi.fn(), isPending: false, error: null },
   }),
 }));
-vi.mock('../api/client', () => ({
+vi.mock('../api/client', async (importOriginal) => ({
+  ApiError: (await importOriginal<typeof import('../api/client')>()).ApiError,
   apiGet: vi.fn(async (url: string) =>
     url.endsWith('/grants')
       ? [
@@ -44,34 +53,138 @@ vi.mock('./InternalWikiPanel', () => ({
   InternalWikiPanel: () => <section aria-label="Internal wiki panel" />,
 }));
 
+function renderSettings(): void {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <AdminSettingsPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+async function openReset(login: string): Promise<HTMLElement> {
+  const table = await screen.findByTestId('admin-users-table');
+  const row = within(table).getByRole('row', { name: new RegExp(`^${login} `) });
+  fireEvent.click(within(row).getByRole('button', { name: 'Reset password' }));
+  return screen.getByRole('form', { name: `Reset the password of ${login}` });
+}
+
 describe('AdminSettingsPage user list', () => {
-  it('lays each account out as a table row with login, role and reset columns', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <AdminSettingsPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
+  beforeEach(() => {
+    vi.mocked(apiSend).mockReset();
+    vi.mocked(apiGet).mockClear();
+  });
+
+  it('lays each account out as a table row with login, role, kind, email and reset columns', async () => {
+    renderSettings();
 
     const table = await screen.findByTestId('admin-users-table');
     const headers = within(table).getAllByRole('columnheader');
-    expect(headers.map((cell) => cell.textContent)).toEqual(['User', 'Role', 'Kind', 'Actions']);
+    expect(headers.map((cell) => cell.textContent)).toEqual([
+      'User',
+      'Role',
+      'Kind',
+      'Email',
+      'Actions',
+    ]);
 
     const rows = within(table).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(9);
     rows.forEach((row, index) => {
       const cells = row.children;
-      expect(cells).toHaveLength(4);
+      expect(cells).toHaveLength(5);
       expect(cells[0]).toHaveTextContent(`user-${index}`);
       expect(cells[1]).toHaveTextContent(accounts[index].role);
       expect(within(cells[2] as HTMLElement).getByLabelText(`Kind of user-${index}`)).toHaveValue(
         accounts[index].kind,
       );
-      expect(within(cells[3] as HTMLElement).getByRole('button', { name: 'Reset password' }))
+      expect(within(cells[4] as HTMLElement).getByRole('button', { name: 'Reset password' }))
         .toBeInTheDocument();
     });
+    expect(rows[0].children[3]).toHaveTextContent('none');
+    expect(rows[1].children[3]).toHaveTextContent('one@example.com verified');
+    expect(rows[2].children[3]).toHaveTextContent('two@example.com unverified');
+  });
+
+  it('shows no Email column for a server that sends no addresses', async () => {
+    vi.mocked(apiGet).mockResolvedValueOnce(
+      accounts.map(({ login, role, kind, kind_source }) => ({ login, role, kind, kind_source })),
+    );
+    renderSettings();
+    const table = await screen.findByTestId('admin-users-table');
+    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'User',
+      'Role',
+      'Kind',
+      'Actions',
+    ]);
+  });
+
+  it('asks where the temporary password goes when the account has no address, then says it was sent', async () => {
+    vi.mocked(apiSend).mockResolvedValue({
+      result: 'sent',
+      login: 'user-3',
+      email: 'three@example.com',
+    });
+    renderSettings();
+    const form = await openReset('user-3');
+    expect(form).toHaveTextContent('They sign in with it and must choose a new password.');
+    const address = within(form).getByLabelText('Where should the temporary password go?');
+    expect(address).toBeRequired();
+    expect(address).toHaveValue('');
+    fireEvent.change(address, { target: { value: ' three@example.com ' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Sent to three@example.com. user-3 must choose a new password at next sign-in.',
+    );
+    expect(apiSend).toHaveBeenCalledWith('/api/v1/admin/users/user-3/reset-password', {
+      email: 'three@example.com',
+    });
+    // The users list is read again, so the new address shows in its row.
+    await vi.waitFor(() =>
+      expect(vi.mocked(apiGet).mock.calls.filter(([url]) => url === '/api/v1/admin/users'))
+        .toHaveLength(2),
+    );
+    expect(screen.queryByRole('form', { name: 'Reset the password of user-3' })).toBeNull();
+  });
+
+  it('offers an unverified address for correction and sends a verified one unasked', async () => {
+    vi.mocked(apiSend).mockResolvedValue({ result: 'sent', login: 'x', email: 'x' });
+    renderSettings();
+    const unverified = await openReset('user-2');
+    expect(within(unverified).getByLabelText('Where should the temporary password go?')).toHaveValue(
+      'two@example.com',
+    );
+    fireEvent.click(within(unverified).getByRole('button', { name: 'Cancel' }));
+
+    const verified = await openReset('user-1');
+    expect(within(verified).queryByRole('textbox')).toBeNull();
+    expect(verified).toHaveTextContent('Sends to one@example.com verified');
+    fireEvent.click(within(verified).getByRole('button', { name: 'Email a temporary password' }));
+    await vi.waitFor(() =>
+      expect(apiSend).toHaveBeenCalledWith('/api/v1/admin/users/user-1/reset-password', {}),
+    );
+  });
+
+  it.each([
+    [422, 'email_required', 'This account has no email address.'],
+    [409, 'conflict', 'another account has it, or this account already verified a different one'],
+    [503, 'mail_unavailable', 'This forge cannot send email yet.'],
+    [502, 'mail_failed', 'The mail server did not accept the message.'],
+    [429, 'rate_limited', 'Too many attempts. Try again later.'],
+    [422, 'invalid_input', 'email is not an address'],
+  ])('shows a %i %s refusal where the admin is looking', async (status, code, copy) => {
+    vi.mocked(apiSend).mockRejectedValue(
+      new ApiError(status, { code, message: 'email is not an address' }),
+    );
+    renderSettings();
+    const form = await openReset('user-2');
+    fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
+    expect(await within(form).findByRole('alert')).toHaveTextContent(copy);
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('tells people from automation and lets an admin mark a login as automation', async () => {
