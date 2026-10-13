@@ -72,4 +72,12 @@ describe('RepositoryMirrorSection', () => {
     render(<RepositoryMirrorSection mirrors={[]} />);
     expect(screen.getByTestId('settings-mirror')).toHaveTextContent('Not mirrored');
   });
+
+  it('does not link a target whose scheme is not http(s)', () => {
+    const scriptScheme = ['java', 'script:alert(1)'].join('');
+    render(<RepositoryMirrorSection mirrors={[mirror({ target: scriptScheme })]} />);
+    const section = screen.getByTestId('settings-mirror');
+    expect(within(section).queryByRole('link')).toBeNull();
+    expect(section).toHaveTextContent('Mirrored to mirror');
+  });
 });

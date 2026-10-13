@@ -58,6 +58,17 @@ export function statesOwnFamily(pathname: string): boolean {
   return REPO_DETAIL_PATH.test(pathname);
 }
 
+/** A repository address with its legacy `?family=` removed, everything else kept. */
+function dropFamilyParam(pathname: string, search: string, hash: string): string {
+  const params = new URLSearchParams(search);
+  if (!params.has(FAMILY_PARAM)) {
+    return `${pathname}${search ? `?${search}` : ''}${hash ? `#${hash}` : ''}`;
+  }
+  params.delete(FAMILY_PARAM);
+  const query = params.toString();
+  return `${pathname}${query ? `?${query}` : ''}${hash ? `#${hash}` : ''}`;
+}
+
 function splitHref(href: string): { pathname: string; search: string; hash: string } {
   const [beforeHash, ...hashParts] = href.split('#');
   const hash = hashParts.join('#');
@@ -79,10 +90,14 @@ export function familyFromPath(pathname: string): string | null {
 /**
  * The scope an address states, canonical, or null when it states none. An
  * empty `?family=` states none: a page clears the filter by dropping it.
+ * A repository address names its family by naming the repository, so a legacy
+ * `?family=` on it states nothing — otherwise that parameter cannot be cleared
+ * and the header keeps saying the page is outside the scope.
  */
 export function familyFromLocation(pathname: string, search: string): string | null {
   const fromPath = familyFromPath(pathname);
   if (fromPath) return canonicalFamily(fromPath);
+  if (statesOwnFamily(pathname)) return null;
   const fromQuery = new URLSearchParams(search).get(FAMILY_PARAM);
   const canonical = canonicalFamily(fromQuery);
   return canonical ? canonical : null;
@@ -100,7 +115,9 @@ export function familyFromHref(href: string): string | null {
  */
 export function withFamilyScope(href: string, family: string): string {
   const { pathname, search, hash } = splitHref(href);
-  if (statesOwnFamily(pathname)) return href;
+  // The repository is the scope. Do not add `?family=`, and drop a legacy one
+  // so Clear and the rail can leave the address the reader can share.
+  if (statesOwnFamily(pathname)) return dropFamilyParam(pathname, search, hash);
   const key = canonicalFamily(family);
   const params = new URLSearchParams(search);
   const pathBase = FAMILY_PATH_BASES.find((base) => pathname.startsWith(`${base}/family/`));

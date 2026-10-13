@@ -46,7 +46,6 @@ import {
   treePath,
 } from './repoBrowserModel';
 import { RepoCommitSummary } from './repositoryOverviewFacts';
-import { ClonePopover } from './repositoryOverviewParts';
 
 import '../components/browser/browser.css';
 import './page.css';
@@ -220,7 +219,6 @@ export function RepositoryBrowserPage({
           <Link to={`${front}/pulls`} className="repo-browser__fact">
             {openPullsLabel(summary.open_pull_requests)}
           </Link>
-          <ClonePopover httpUrl={summary.clone_http_url} sshUrl={summary.clone_ssh_url} />
         </div>
       </header>
 

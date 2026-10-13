@@ -6,6 +6,7 @@ import { When } from '../format/When';
 import {
   firstMirror,
   mirrorDirectionText,
+  mirrorHref,
   mirrorStateText,
   mirrorTitle,
   mirrorTone,
@@ -68,6 +69,7 @@ export function RepositoryMirrorSection({
 
   const tone = mirrorTone(mirror);
   const tagDrift = mirror.tagDrift ?? [];
+  const targetHref = mirrorHref(mirror.target);
   return (
     <section
       className={`page__section mirror-section mirror-section--${tone}`}
@@ -77,14 +79,18 @@ export function RepositoryMirrorSection({
     >
       <h2 className="page__section-title" id="mirror-title">Mirror</h2>
       <div className="mirror-section__summary">
-        <a
-          href={mirror.target}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mirror-section__target"
-        >
-          {mirrorTitle(mirror)}
-        </a>
+        {targetHref ? (
+          <a
+            href={targetHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mirror-section__target"
+          >
+            {mirrorTitle(mirror)}
+          </a>
+        ) : (
+          <span className="mirror-section__target">{mirrorTitle(mirror)}</span>
+        )}
         <span className={pillClass(tone)}>{mirrorStateText(mirror)}</span>
       </div>
       <dl className="mirror-section__facts">
