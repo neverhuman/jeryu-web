@@ -106,6 +106,7 @@ const endpointSamples = {
   eventsHistogram: [{ family: 'acme', range: '6h' }],
   usage: [{ family: 'acme', range: '24h' }],
   attention: [],
+  attentionAcks: [],
   pins: [],
   releaseBoards: [],
   releaseBoard: ['acme'],
@@ -175,6 +176,7 @@ describe('endpoint contract', () => {
       '/api/v1/events?repo=jeryu%2Fjeryu-web&pr=35',
     );
     expect(endpoints.attention()).toBe('/api/v1/attention');
+    expect(endpoints.attentionAcks()).toBe('/api/v1/attention/acks');
     expect(endpoints.pins()).toBe('/api/v1/pins');
   });
 

@@ -13,7 +13,7 @@
 // a copyable command when it happens off-site, else the link to where to act.
 // Whichever it is, the title still leads to the row's subject. A row about a
 // todo also offers admins "Acknowledge until…": the cause is known and the row
-// should stay quiet until then.
+// should stay quiet until then (`/api/v1/attention/acks`; the todo is untouched).
 
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
@@ -24,10 +24,9 @@ import { ActionPreviewDialog } from '../../components/action/ActionPreviewDialog
 import { FamilyPill } from '../../components/family/FamilyPills';
 import { toneClass, type Tone } from '../../components/tone/tone';
 import { CopyCommand } from '../../components/shellCommand/CopyCommand';
-import { useAttentionAction } from '../../hooks/useAttentionAction';
+import { useAttentionAck, useAttentionAction } from '../../hooks/useAttentionAction';
 import { LIST_ACTION_PROP, LIST_OPEN_PROP, listRowProps } from '../../hooks/useListKeys';
 import { useRepositories } from '../../hooks/useRepositories';
-import { useShiftTodoAction } from '../../hooks/useShift';
 import { untilInputDefault, untilRfc3339 } from '../shift/shiftModel';
 import { When } from '../../format/When';
 import {
@@ -148,7 +147,7 @@ export function AttentionRow({
           {action.label} →
         </Link>
       ) : null}
-      {target ? <Acknowledge item={item} target={target} /> : null}
+      {target ? <Acknowledge subject={subject} target={target} /> : null}
     </li>
   );
 }
@@ -223,21 +222,23 @@ function RunAction({
 /**
  * "Acknowledge until…": the row's cause is known and waiting on something
  * dated, so it goes quiet until that date instead of being read again every
- * morning. It parks the todo behind the row, which is what the queue reads.
+ * morning. It acknowledges every item of the row by id; the todo behind it,
+ * which is what the queue reads, is left as it is.
  */
 function Acknowledge({
-  item,
+  subject,
   target,
 }: {
-  item: AttentionItem;
+  subject: AttentionSubject;
   target: { family: string; id: string };
 }): JSX.Element {
-  const action = useShiftTodoAction();
+  const item = subject.primary;
+  const action = useAttentionAck();
   const [until, setUntil] = useState(() => untilInputDefault(new Date()));
   const at = untilRfc3339(until);
   const submit = (event: FormEvent): void => {
     event.preventDefault();
-    if (at) action.mutate({ ...target, action: 'acknowledge', until: at });
+    if (at) action.mutate({ itemIds: [item.id, ...subject.also.map((also) => also.id)], until: at });
   };
   return (
     <details className="needs-you__more">

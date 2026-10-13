@@ -3,7 +3,7 @@
 // Reads (families, todos, shifts, workers, history) need any logged-in user;
 // every mutation is admin-only server-side. Queue writes invalidate the todo
 // and shift lists so the Queue tab reflects the new queue commit, and the
-// pipeline reads with them: parking, closing or acknowledging a todo settles
+// pipeline reads with them: parking or closing a todo settles
 // what "Needs you" says about it.
 //
 // Every write carries an `Idempotency-Key` (§35.1.3). Filing keeps one key per

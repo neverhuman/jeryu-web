@@ -172,7 +172,6 @@ export type ShiftTodoActionKind =
   | 'close'
   | 'park'
   | 'edit'
-  | 'acknowledge'
   | 'claim'
   | 'assign'
   | 'unassign';
@@ -189,8 +188,8 @@ export interface ShiftTodoActionRequest {
    */
   force?: boolean;
   /**
-   * When the todo comes back: RFC 3339, UTC, to the second. `park` sets it on
-   * the todo; `acknowledge` keeps the todo's Needs-you row quiet until then.
+   * `park` only: when the todo comes back, RFC 3339, UTC, to the second.
+   * (Quieting a Needs-you row is `POST /api/v1/attention/acks`, not an action.)
    */
   until?: string;
   /** `edit` only, and only the parts being changed. */

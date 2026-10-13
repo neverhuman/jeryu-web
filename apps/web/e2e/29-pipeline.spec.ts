@@ -151,6 +151,11 @@ test.describe('Pipeline visibility', () => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockPipelineApi(page);
     const shift = await mockShiftApi(page);
+    const acks: unknown[] = [];
+    await page.route(/\/api\/v1\/attention\/acks$/, (route, request) => {
+      acks.push(request.postDataJSON());
+      return route.fulfill({ status: 201, contentType: 'application/json', body: '{}' });
+    });
 
     await page.goto('/needs-you');
     const blocked = page.getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66');
@@ -161,12 +166,11 @@ test.describe('Pipeline visibility', () => {
     await blocked.getByLabel('More for Allow PATCH of repo default_branch').click();
     await until.fill('2026-10-05T09:30');
     await blocked.getByRole('button', { name: 'Acknowledge' }).click();
-    await expect.poll(() => shift.posts.length).toBe(1);
-    expect(shift.posts[0].path).toBe(
-      '/api/v1/shift/todos/jeryu/20260919-130515-f8cc66/action'
-    );
-    const body = shift.posts[0].body as { action: string; until: string };
-    expect(body.action).toBe('acknowledge');
+    await expect.poll(() => acks.length).toBe(1);
+    // The row's item is hidden by its id; the todo is not written.
+    expect(shift.posts).toHaveLength(0);
+    const body = acks[0] as { item_id: string; until: string };
+    expect(body.item_id).toBe('todo-blocked:jeryu:20260919-130515-f8cc66');
     expect(body.until).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
 
     // A row about a release names no todo: there is nothing to acknowledge.

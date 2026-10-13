@@ -343,6 +343,8 @@ export const endpoints = {
   },
   /** "Needs you": what is waiting on a human right now (admin-only). */
   attention: (): string => '/api/v1/attention',
+  /** Hide attention items by id until a date (admin-only; `until: null` lists them again). */
+  attentionAcks: (): string => '/api/v1/attention/acks',
   /** What each deploy repo pins versus its dependencies' main (admin-only). */
   pins: (): string => '/api/v1/pins',
   /** Every family that has reported a release board (admin-only). */

@@ -351,11 +351,11 @@ describe('NeedsYouPage', () => {
     fireEvent.click(within(blocked).getByRole('button', { name: 'Acknowledge' }));
     await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1));
     const post = calls.find((c) => c.method === 'POST');
-    expect(post?.pathname).toBe(
-      '/api/v1/shift/todos/jeryu/20260919-130515-f8cc66/action'
-    );
+    // The forge has no `acknowledge` todo action: the row's item is hidden by
+    // its id, and the todo itself is left alone.
+    expect(post?.pathname).toBe('/api/v1/attention/acks');
     expect(post?.body).toEqual({
-      action: 'acknowledge',
+      item_id: 'todo-blocked:jeryu:20260919-130515-f8cc66',
       until: `${new Date('2026-10-05T09:30').toISOString().slice(0, 19)}Z`,
     });
     // A row about a release names no todo, so it is not acknowledged from here.

@@ -420,8 +420,8 @@ export function attentionHref(item: Pick<AttentionItem, 'kind' | 'href'>): strin
 }
 
 /**
- * The todo a row is about, when it is about one: what "Acknowledge until…"
- * writes to. Rows about a pull request, a release or the runners name no todo,
+ * The todo a row is about, when it is about one: rows about a todo offer
+ * "Acknowledge until…". Rows about a pull request, a release or the runners name no todo,
  * so they are not acknowledged from here.
  */
 export function acknowledgeTarget(
