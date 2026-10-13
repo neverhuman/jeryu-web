@@ -300,11 +300,19 @@ export function ladderUndecided(ladder: ReleaseLadder): string | null {
  * Why a capped compare could not decide, in a few words: `over 250 commits
  * since prod v2`. Null unless a pip is undecided because its compare hit the
  * server's cap and said how many commits it listed.
+ *
+ * Several channels can be capped at once. The sentence names the deepest of
+ * those that listed a count — how far production is behind, not how far dev is
+ * — because that is the release the row is waiting on.
  */
 export function ladderCapped(ladder: ReleaseLadder): string | null {
-  const pip = ladder.pips.find(
-    (candidate) => candidate.membership === 'unknown' && candidate.undecided === 'capped'
+  const capped = ladder.pips.filter(
+    (candidate) =>
+      candidate.membership === 'unknown' &&
+      candidate.undecided === 'capped' &&
+      Boolean(candidate.listed)
   );
+  const pip = capped[capped.length - 1];
   if (!pip?.listed) return null;
   return `over ${pip.listed} commits since ${pipAgainst(pip)}`;
 }

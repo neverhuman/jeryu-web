@@ -196,6 +196,20 @@ describe('releaseLadder', () => {
     expect(ladderDetail(ladder, 'merged')).toBe('over 250 commits since prod v6');
   });
 
+  it('names the deepest capped channel when several compares were capped', () => {
+    // Dev's compare is also capped. The sentence is about how far production
+    // is behind, not the shallowest channel whose page filled up.
+    const both = new Map<PipId, CompareResponse | null>([
+      ['dev', { ...compare([]), ahead_by: 300, commits: manyCommits(40), truncated: true }],
+      ['production', { ...compare([]), ahead_by: 262, commits: manyCommits(250), truncated: true }],
+    ]);
+    const ladder = releaseLadder(merged, four, both);
+    expect(ladder.pips[0]).toMatchObject({ membership: 'unknown', undecided: 'capped', listed: 40 });
+    expect(ladder.pips[3]).toMatchObject({ membership: 'unknown', undecided: 'capped', listed: 250 });
+    expect(ladderCapped(ladder)).toBe('over 250 commits since prod v6');
+    expect(ladderDetail(ladder, 'merged')).toBe('over 250 commits since prod v6');
+  });
+
   it('says which release a capped compare left undecided', () => {
     const capped = new Map<PipId, CompareResponse | null>([
       ['dev', { ...compare([]), truncated: true }],

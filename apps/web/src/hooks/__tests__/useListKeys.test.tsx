@@ -1,7 +1,7 @@
 // useListKeys.test.tsx — j/k move the focused row, o and Enter open it, x runs
 // its one action; the overlay learns all four keys.
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { KeyboardProvider, useKeyboardRegistry } from '../useKeyboard';
@@ -33,6 +33,32 @@ function List({
       <li data-testid="row-folded" hidden {...listRowProps}>
         folded
       </li>
+    </ul>
+  );
+}
+
+function ReusedList({
+  ids,
+  onAction,
+}: {
+  ids: string[];
+  onAction?: (id: string) => void;
+}): JSX.Element {
+  const rows = useListKeys<HTMLUListElement>();
+  return (
+    <ul ref={rows}>
+      {ids.map((id, index) => (
+        // Index identity on purpose: React reuses the DOM node when a row is
+        // prepended, which is the case the ring has to follow `data-list-key` through.
+        <li key={index} data-testid={`row-${id}`} data-list-key={id} {...listRowProps}>
+          <a href={`/${id}`} {...LIST_OPEN_PROP}>
+            {id}
+          </a>
+          <button type="button" {...LIST_ACTION_PROP} onClick={() => onAction?.(id)}>
+            Run
+          </button>
+        </li>
+      ))}
     </ul>
   );
 }
@@ -89,6 +115,54 @@ describe('useListKeys', () => {
     fireEvent.keyDown(input, { key: 'j' });
     expect(screen.getByTestId('row-first')).not.toHaveAttribute('data-list-focused');
     expect(input).toHaveFocus();
+  });
+
+  it('does not move the list while a dialog is open', () => {
+    const onAction = vi.fn();
+    render(
+      <>
+        <List onAction={onAction} />
+        <div role="dialog" aria-modal="true">
+          Shortcuts
+        </div>
+      </>
+    );
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'x' });
+    expect(screen.getByTestId('row-first')).not.toHaveAttribute('data-list-focused');
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('keeps the keyboard on the same row when a live list reuses its nodes', async () => {
+    const onAction = vi.fn();
+    const { rerender } = render(<ReusedList ids={['a', 'b']} onAction={onAction} />);
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j' });
+    expect(screen.getByTestId('row-b')).toHaveAttribute('data-list-focused', 'true');
+    await act(async () => {
+      rerender(<ReusedList ids={['c', 'a', 'b']} onAction={onAction} />);
+    });
+    expect(screen.getByTestId('row-b')).toHaveFocus();
+    expect(screen.getByTestId('row-b')).toHaveAttribute('data-list-focused', 'true');
+    expect(screen.getByTestId('row-a')).not.toHaveAttribute('data-list-focused');
+    fireEvent.keyDown(window, { key: 'x' });
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith('b');
+  });
+
+  it('drops the ring when the focused row leaves and its node is reused', async () => {
+    const onAction = vi.fn();
+    const { rerender } = render(<ReusedList ids={['a', 'b']} onAction={onAction} />);
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j' });
+    await act(async () => {
+      rerender(<ReusedList ids={['c', 'a']} onAction={onAction} />);
+    });
+    expect(screen.getByTestId('row-a')).not.toHaveAttribute('data-list-focused');
+    expect(screen.getByTestId('row-c')).not.toHaveAttribute('data-list-focused');
+    expect(screen.getByTestId('row-a')).not.toHaveFocus();
+    fireEvent.keyDown(window, { key: 'x' });
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   it('tells the shortcuts overlay about all four keys', () => {

@@ -8,6 +8,12 @@
 // `LIST_ACTION_PROP` spell them). Moving focuses the row itself, so the focused
 // row is the browser's own focus — a screen reader follows it, `Tab` carries on
 // from it, and `data-list-focused` draws the ring that says where the keys are.
+// A row may also carry `data-list-key`. The ring is an attribute React does not
+// own, so when a live list reuses a DOM node the hook follows that key to the
+// element that still is the row the reader moved to.
+//
+// None of the keys act while an `aria-modal` dialog is open: `j`/`k` would
+// otherwise pull focus onto a row behind the shortcuts overlay or a confirm.
 //
 // `j`/`k` are bound here rather than through `useKeyboardShortcut` because
 // Enter and `o` must stay the page's own keys everywhere else: they act only
@@ -33,6 +39,17 @@ export const LIST_ACTION_PROP = { 'data-list-action': '' } as const;
 
 const ROW = '[data-list-row]';
 const FOCUSED = 'data-list-focused';
+const KEY = 'data-list-key';
+
+function rowKey(row: HTMLElement): string | null {
+  const key = row.getAttribute(KEY);
+  return key ? key : null;
+}
+
+/** A dialog is up (shortcuts, a confirm). List keys must not reach behind it. */
+function modalOpen(): boolean {
+  return document.querySelector('[aria-modal="true"]') !== null;
+}
 
 const LIST_SHORTCUTS: KeyboardShortcutDescriptor[] = [
   { combo: 'j', label: 'Next row in a list', group: 'Lists' },
@@ -57,15 +74,53 @@ function visibleRows(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(ROW)).filter(reachable);
 }
 
-function focusRow(rows: HTMLElement[], index: number): void {
+function focusRow(
+  rows: HTMLElement[],
+  index: number,
+  focusedKey: { current: string | null },
+  takeFocus: boolean
+): void {
   for (const row of rows) row.removeAttribute(FOCUSED);
   const row = rows[index];
-  if (!row) return;
+  if (!row) {
+    focusedKey.current = null;
+    return;
+  }
   row.setAttribute(FOCUSED, 'true');
+  focusedKey.current = rowKey(row);
+  if (!takeFocus) return;
   row.focus({ preventScroll: true });
   if (typeof row.scrollIntoView === 'function') {
     row.scrollIntoView({ block: 'nearest' });
   }
+}
+
+/**
+ * The ring was painted on a DOM node. If that node has been reused for a
+ * different row, move the ring (and, unless a dialog holds focus, the focus)
+ * to the element that still carries the key the reader selected. If that row
+ * has left the list, drop the ring so the next key cannot act on another row.
+ */
+function resyncFocused(host: HTMLElement, focusedKey: { current: string | null }): void {
+  const key = focusedKey.current;
+  if (!key) return;
+  const rows = visibleRows(host);
+  const match = rows.find((row) => rowKey(row) === key);
+  if (!match) {
+    focusedKey.current = null;
+    for (const row of host.querySelectorAll<HTMLElement>(ROW)) row.removeAttribute(FOCUSED);
+    const active = document.activeElement;
+    if (
+      active instanceof HTMLElement &&
+      host.contains(active) &&
+      active.hasAttribute('data-list-row')
+    ) {
+      active.blur();
+    }
+    return;
+  }
+  if (match.getAttribute(FOCUSED) === 'true' && document.activeElement === match) return;
+  focusRow(rows, rows.indexOf(match), focusedKey, !modalOpen());
 }
 
 /**
@@ -77,6 +132,7 @@ export function useListKeys<T extends HTMLElement = HTMLDivElement>(options: {
   enabled?: boolean;
 } = {}): RefObject<T | null> {
   const container = useRef<T | null>(null);
+  const focusedKey = useRef<string | null>(null);
   const registerShortcut = useOptionalKeyboardRegistry()?.registerShortcut ?? null;
   const enabled = options.enabled !== false;
 
@@ -93,6 +149,7 @@ export function useListKeys<T extends HTMLElement = HTMLDivElement>(options: {
     const onKey = (event: KeyboardEvent): void => {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (isTypingInTextField(event.target)) return;
+      if (modalOpen()) return;
       const host = container.current;
       if (!host) return;
       const rows = visibleRows(host);
@@ -111,7 +168,7 @@ export function useListKeys<T extends HTMLElement = HTMLDivElement>(options: {
               ? 0
               : rows.length - 1
             : Math.min(rows.length - 1, Math.max(0, focused + step));
-        focusRow(rows, next);
+        focusRow(rows, next, focusedKey, true);
         return;
       }
 
@@ -135,15 +192,39 @@ export function useListKeys<T extends HTMLElement = HTMLDivElement>(options: {
       const host = container.current;
       if (!host) return;
       const active = document.activeElement;
-      if (active instanceof HTMLElement && active.hasAttribute('data-list-row')) return;
+      if (
+        active instanceof HTMLElement &&
+        host.contains(active) &&
+        active.hasAttribute('data-list-row')
+      ) {
+        focusedKey.current = rowKey(active);
+        return;
+      }
       for (const row of host.querySelectorAll<HTMLElement>(ROW)) {
         row.removeAttribute(FOCUSED);
       }
+      focusedKey.current = null;
     };
     window.addEventListener('focusin', onFocusIn);
 
     window.addEventListener('keydown', onKey);
+    const host = container.current;
+    // `data-list-focused` is not observed: painting the ring must not resync.
+    let observer: MutationObserver | null = null;
+    if (host) {
+      observer = new MutationObserver(() => {
+        const current = container.current;
+        if (current) resyncFocused(current, focusedKey);
+      });
+      observer.observe(host, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: [KEY],
+      });
+    }
     return () => {
+      observer?.disconnect();
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('focusin', onFocusIn);
     };

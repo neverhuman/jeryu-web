@@ -121,8 +121,11 @@ describe('ShiftQueuePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fix the cache key' }));
     fireEvent.change(screen.getByLabelText('Priority for 20260918-1832-k3f'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Move 20260918-1832-k3f to night' }));
-    // A worker is still running this one, so Release asks before it forces.
-    fireEvent.click(screen.getByRole('button', { name: 'Release 20260919-0900-q1q' }));
+    // A worker is still running this one, so Release asks before it forces,
+    // and `x` may open that confirm.
+    const liveRelease = screen.getByRole('button', { name: 'Release 20260919-0900-q1q' });
+    expect(liveRelease).toHaveAttribute('data-list-action', '');
+    fireEvent.click(liveRelease);
     await waitFor(() => expect(calls.filter((c) => c.method === 'POST')).toHaveLength(3));
     fireEvent.change(screen.getByLabelText('Reason for releasing 20260919-0900-q1q'), {
       target: { value: ' the slot is gone ' },
@@ -217,6 +220,9 @@ describe('ShiftQueuePage', () => {
     // Outlined: the page's one filled action stays "Open review pull request".
     const release = within(blocked).getByRole('button', { name: 'Release blk-1' });
     expect(release.className).not.toContain('action-button--primary');
+    // Nobody is running it, so a click releases at once. `x` must not: a click
+    // on the row focuses it, and the key would otherwise POST with no confirm.
+    expect(release).not.toHaveAttribute('data-list-action');
     // A short note needs no disclosure.
     expect(within(blocked).queryByRole('button', { name: 'Show full note' })).toBeNull();
     expect(within(blocked).queryByRole('button', { name: 'Block blk-1' })).toBeNull();

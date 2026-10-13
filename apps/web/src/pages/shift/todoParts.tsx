@@ -173,7 +173,9 @@ export function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element | null {
   const forces = (choice: TodoActionChoice): boolean =>
     choice.id === 'release' && todo.lease_live;
   const run = (choice: TodoActionChoice): void => {
-    // Release is one keystroke back to the queue; everything else confirms.
+    // Release is one click back to the queue; everything else confirms.
+    // `x` only presses an action that asks first, so this immediate release
+    // is a click, not the row's keyboard action.
     if (choice.id === 'release' && !forces(choice)) {
       setAsking(null);
       action.mutate({ family: todo.family, id: todo.id, action: 'release' });
@@ -181,12 +183,16 @@ export function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element | null {
     }
     setAsking((current) => (current === choice.id ? null : choice.id));
   };
+  // A live lease is the one release that asks first. Every other primary
+  // action asks too. The immediate release does not, so `x` must not press it:
+  // a click on the row focuses it, and the next `x` would otherwise POST.
+  const confirms = forces(primary) || primary.id !== 'release';
   const open = [primary, ...more].find((choice) => choice.id === asking) ?? null;
   return (
     <span className="shift__actions">
       <ActionButton
         variant={primary.variant}
-        {...LIST_ACTION_PROP}
+        {...(confirms ? LIST_ACTION_PROP : {})}
         disabled={action.isPending}
         onClick={() => run(primary)}
         aria-expanded={

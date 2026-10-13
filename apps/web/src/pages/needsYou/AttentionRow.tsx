@@ -77,6 +77,7 @@ export function AttentionRow({
     <li
       className={toneClass('needs-you__row', tone)}
       data-testid={`needs-you-item-${item.id}`}
+      data-list-key={item.id}
       {...listRowProps}
     >
       <FamilyPill family={family} picked={picked} onPick={onPick} />

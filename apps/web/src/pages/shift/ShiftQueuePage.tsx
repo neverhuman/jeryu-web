@@ -444,7 +444,7 @@ function TodoRow({
 
   return (
     <Fragment>
-      <tr data-testid={`shift-todo-${todo.id}`} {...listRowProps}>
+      <tr data-testid={`shift-todo-${todo.id}`} data-list-key={todo.id} {...listRowProps}>
         <td className="shift__family-cell">
           <FamilyPill family={todoFamily(todo)} picked={picked} onPick={onPick} />
         </td>
