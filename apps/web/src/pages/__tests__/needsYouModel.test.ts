@@ -247,15 +247,16 @@ describe('needsYouModel', () => {
     expect(safeApiPath(undefined)).toBeNull();
     expect(apiMethod(undefined)).toBe('POST');
     expect(apiMethod('post')).toBe('POST');
-    expect(apiMethod('PATCH')).toBeNull();
+    expect(apiMethod('PATCH')).toBe('PATCH');
     // Each of these falls back to the row's link rather than lying about an act.
-    for (const over of [{ path: '//evil.example/x' }, { path: '/work/shift' }, { method: 'PATCH' }]) {
+    for (const over of [{ path: '//evil.example/x' }, { path: '/work/shift' }, { method: 'TRACE' }]) {
       expect(primaryAction(api(over))).toEqual({
         type: 'link',
         label: 'Queue again',
         to: '/repos/jeryu/acme/web/pulls/7',
       });
     }
+    expect(primaryAction(api({ method: 'PATCH', path: '/api/v3/repos/acme/widgets/pulls/4' }))).toMatchObject({ type: 'api', method: 'PATCH' });
   });
 
   it('reads the second line as the next step, keeping the reason as the tooltip', () => {

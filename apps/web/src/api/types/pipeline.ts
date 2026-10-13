@@ -14,9 +14,9 @@ export type AttentionSeverity = 'critical' | 'action' | 'watch';
  * from a server that predates it, and from every act that happens off-site.
  */
 export interface AttentionApiAction {
-  /** `POST` (the default) or `DELETE`; the web offers no other method. */
+  /** `POST` (the default), `PATCH`, or `DELETE`. */
   method?: string | null;
-  /** The call's own path, under `/api/v1/`. */
+  /** The call's own path, under `/api/`. */
   path: string;
   /** The JSON body, when the call takes one. */
   body?: unknown;

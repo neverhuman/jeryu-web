@@ -260,7 +260,7 @@ export function attentionContext(item: AttentionItem): string {
   return [kindLabel(item.kind), item.family ?? '', where].filter(Boolean).join(' · ');
 }
 
-export type ApiMethod = 'POST' | 'DELETE';
+export type ApiMethod = 'POST' | 'PATCH' | 'DELETE';
 
 export type PrimaryAction =
   | {
@@ -316,6 +316,7 @@ export function safeApiPath(path: string | null | undefined): string | null {
 export function apiMethod(method: string | null | undefined): ApiMethod | null {
   const name = (method ?? 'POST').trim().toUpperCase();
   if (name === '' || name === 'POST') return 'POST';
+  if (name === 'PATCH') return 'PATCH';
   return name === 'DELETE' ? 'DELETE' : null;
 }
 

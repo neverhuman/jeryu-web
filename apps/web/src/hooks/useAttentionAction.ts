@@ -7,13 +7,13 @@
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
-import { ApiError, apiDelete, apiDeleteWithBody, apiSend } from '../api/client';
+import { ApiError, apiDelete, apiDeleteWithBody, apiPatch, apiSend } from '../api/client';
 
 import { newIdempotencyKey } from './idempotency';
 import { PIPELINE_KEY } from './usePipeline';
 
 export interface AttentionApiCall {
-  method: 'POST' | 'DELETE';
+  method: 'POST' | 'PATCH' | 'DELETE';
   path: string;
   body?: unknown;
 }
@@ -28,6 +28,7 @@ export function useAttentionAction(): UseMutationResult<unknown, ApiError, Atten
           ? apiDelete(path, opts)
           : apiDeleteWithBody<unknown>(path, body, opts);
       }
+      if (method === 'PATCH') return apiPatch<unknown>(path, body, opts);
       return apiSend<unknown>(path, body, opts);
     },
     onSuccess: () => {

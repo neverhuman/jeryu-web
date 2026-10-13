@@ -1,5 +1,6 @@
 import { Fragment, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAttentionAction } from '../hooks/useAttentionAction';
 
 import type { AttentionItem, PullRequestSummary } from '../api/types';
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
@@ -540,6 +541,7 @@ export function alreadyLandedStatus(base: string): string {
 /** One thing a pull request waits on a person for, and the one thing to do about it. */
 function PullWaiting({ item }: { item: AttentionItem }): JSX.Element {
   const action = primaryAction(item);
+  const mutation = useAttentionAction();
   return (
     <div className="pull-timeline__needs" data-testid={`pull-needs-${item.id}`}>
       <p className="pull-timeline__needs-text" title={item.reason ?? undefined}>
@@ -557,6 +559,11 @@ function PullWaiting({ item }: { item: AttentionItem }): JSX.Element {
         <Link className="pull-timeline__needs-open" to={action.to}>
           {action.label} →
         </Link>
+      ) : action?.type === 'api' ? (
+        <button className="pull-timeline__needs-open" type="button" disabled={mutation.isPending}
+          onClick={() => mutation.mutate({ method: action.method, path: action.path, body: action.body })}>
+          {mutation.isPending ? 'Working…' : action.label}
+        </button>
       ) : null}
     </div>
   );

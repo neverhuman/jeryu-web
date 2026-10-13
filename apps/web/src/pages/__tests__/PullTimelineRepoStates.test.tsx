@@ -67,6 +67,24 @@ describe('the Pull requests timeline', () => {
     expect(nine.querySelector('.pull-timeline__needs')).toBeNull();
   });
 
+  it('shows a superseded pull and its replacement on the In flight row', () => {
+    const attention = attentionByPull([
+      attentionItem({
+        id: 'pr-superseded:acme/widgets:7', kind: 'pr_superseded',
+        title: 'acme/widgets#7 was replaced by acme/widgets#8',
+        reason: 'The replacement is open. Close this pull request and point to #8.',
+        repo: 'acme/widgets', pr: 7, href: '/repos/jeryu/acme/widgets/pulls/7',
+        action: { label: 'Close it and point to the replacement', command: null,
+          api: { method: 'PATCH', path: '/api/v3/repos/acme/widgets/pulls/7', body: { state: 'closed' } } },
+      }),
+    ]);
+    render([pull(7, 'open', { repo: 'acme/widgets' }), pull(8, 'open', { repo: 'acme/widgets' })], undefined, attention);
+    const seven = screen.getByTestId('pull-timeline-acme/widgets-7');
+    expect(within(seven).getByTestId('pull-needs-pr-superseded:acme/widgets:7')).toHaveTextContent('#8');
+    expect(within(seven).getByRole('button', { name: /Close it and point to the replacement/ })).toBeInTheDocument();
+    expect(screen.getByTestId('pull-timeline-acme/widgets-8')).not.toHaveClass('needs-human');
+  });
+
   it('says a pull request already on its base needs closing, not merging', () => {
     const attention = attentionByPull([
       attentionItem({
