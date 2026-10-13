@@ -3,8 +3,8 @@
 This split member publishes source changes through pinned tags; `jeryu-deploy` remains the binary release authority.
 
 Version source: `VERSION` plus the split tag recorded in
-`repos.manifest.toml` when present. Release notes are recorded in
-`CHANGELOG.md`.
+`repos.manifest.toml` when present. The release generates its notes
+from the commits since the last release.
 
 `VERSION` is stamped by the release, not by hand: run
 `scripts/stamp-version.sh jeryu-web-vX.Y.Z-split.N` with the version about to

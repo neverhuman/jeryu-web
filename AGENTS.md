@@ -20,4 +20,7 @@ for split-family development.
 Durable guidance lives in `docs/`: `architecture.md`, `boundaries.md`,
 `generated-zones.md`, `testing.md`, `release.md`, and `audit-rubric.md`. The
 release control surface is `docs/release.md` with the version source in
-`VERSION` / `agent/standard-version.toml` and notes in `CHANGELOG.md`.
+`VERSION` / `agent/standard-version.toml`. Release notes are generated at release time
+into `CHANGELOG.md`.
+
+Do not edit CHANGELOG.md in a change: release notes are generated at release time from commit subjects and Todo: trailers.
