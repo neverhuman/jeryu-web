@@ -28,6 +28,8 @@ export interface YieldRow {
   merged: number;
   /** Merged todos that needed exactly one real attempt. */
   first_pass: number;
+  reworked: number;
+  rework_usd: number;
   spend_usd: number;
   author_usd: number;
   review_usd: number;
@@ -83,6 +85,7 @@ export interface YieldTodoRef {
   title: string;
   status: string;
   merged: boolean;
+  rework: boolean;
   spend_usd: number;
   attempts: number;
   /** Harness and model of the landing attempt. */

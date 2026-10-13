@@ -395,6 +395,8 @@ function ExperimentTable({ experiment }: { experiment: YieldExperiment }): JSX.E
             <th scope="col" className="yield__num">
               Merged
             </th>
+            <th scope="col" className="yield__num">Reworked</th>
+            <th scope="col" className="yield__num">Rework spend</th>
             <RateHeads />
             <th scope="col" className="yield__num">
               Spend
@@ -408,6 +410,8 @@ function ExperimentTable({ experiment }: { experiment: YieldExperiment }): JSX.E
               <td className="yield__num">{armShare(arm)}</td>
               <td className="yield__num">{arm.row.todos}</td>
               <td className="yield__num">{arm.row.merged}</td>
+              <td className="yield__num">{arm.row.reworked}</td>
+              <td className="yield__num">{formatUsd(arm.row.rework_usd)}</td>
               {arm.enough_data ? (
                 <RateCells row={arm.row} />
               ) : (
@@ -506,6 +510,7 @@ function TodoList({
                       {status.label}
                     </span>{' '}
                     {todoRefMeta(ref)}
+                    {ref.rework ? ' · rework' : ''}
                   </span>
                 </div>
                 <span className="yield__todo-spend">{formatUsd(ref.spend_usd)}</span>

@@ -378,6 +378,7 @@ function TodoTable({
             <TodoRow
               key={`${todo.family}/${todo.id}`}
               todo={todo}
+              relatedTodos={todos}
               refs={refsFor(todo.family)}
               isAdmin={isAdmin}
               initiallyOpen={focusIds.includes(todo.id)}
@@ -420,6 +421,7 @@ function FilterSelect({
 
 function TodoRow({
   todo,
+  relatedTodos,
   refs,
   isAdmin,
   initiallyOpen,
@@ -428,6 +430,7 @@ function TodoRow({
   onPick,
 }: {
   todo: ShiftTodo;
+  relatedTodos: ShiftTodo[];
   refs: RepoRefs;
   isAdmin: boolean;
   initiallyOpen: boolean;
@@ -528,7 +531,7 @@ function TodoRow({
       {open ? (
         <tr className="shift__detail" id={detailId}>
           <td colSpan={6 + (showCommits ? 1 : 0) + (isAdmin ? 1 : 0)}>
-            <TodoDetail todo={todo} isAdmin={isAdmin} />
+            <TodoDetail todo={todo} relatedTodos={relatedTodos} isAdmin={isAdmin} />
           </td>
         </tr>
       ) : null}

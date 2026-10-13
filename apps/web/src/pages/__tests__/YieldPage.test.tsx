@@ -83,6 +83,7 @@ describe('YieldPage', () => {
     mockYieldApi();
     renderAt('/yield', '/yield', <YieldPage />);
     const ready = await screen.findByTestId('yield-arm-claude-model-a');
+    expect(screen.getByRole('columnheader', { name: 'Reworked' })).toBeInTheDocument();
     expect(ready).toHaveTextContent('claude · model-a');
     expect(ready).toHaveTextContent('75%');
     expect(ready).toHaveTextContent('$5.00');

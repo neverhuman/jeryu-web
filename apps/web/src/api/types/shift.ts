@@ -59,6 +59,7 @@ export interface ShiftTodo {
   id: string;
   family: string;
   title: string;
+  reworks?: string[];
   body: string;
   repos: string[];
   mode: ShiftMode;
@@ -163,6 +164,7 @@ export interface ShiftTodoActionRequest {
   /** `edit` only, and only the parts being changed. */
   title?: string;
   body?: string;
+  reworks?: string[];
 }
 
 export type ShiftWorkerState = 'idle' | 'working' | 'stopping' | 'paused';

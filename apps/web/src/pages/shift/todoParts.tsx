@@ -85,10 +85,12 @@ export function TodoTrace({ todo, refs }: { todo: ShiftTodo; refs: RepoRefs }): 
 
 export function TodoDetail({
   todo,
+  relatedTodos = [],
   isAdmin,
   showNote = true,
 }: {
   todo: ShiftTodo;
+  relatedTodos?: ShiftTodo[];
   isAdmin: boolean;
   /** False where the note already stands above as why the todo is stuck. */
   showNote?: boolean;
@@ -97,6 +99,8 @@ export function TodoDetail({
   return (
     <div data-testid={`shift-todo-detail-${todo.id}`}>
       <pre>{todo.body || '(no body)'}</pre>
+      {todo.reworks?.length ? <p>Rework of {todo.reworks.map((id, i) => <Fragment key={id}>{i ? ', ' : ''}<Link to={todoHref(id)}>{id}</Link></Fragment>)}</p> : null}
+      {relatedTodos.some((candidate) => candidate.reworks?.includes(todo.id)) ? <p>Reworked by {relatedTodos.filter((candidate) => candidate.reworks?.includes(todo.id)).map((candidate, i) => <Fragment key={candidate.id}>{i ? ', ' : ''}<Link to={todoHref(candidate.id)}>{candidate.id}</Link></Fragment>)}</p> : null}
       {showNote && todo.note ? <p><strong>Note:</strong> {todo.note}</p> : null}
       {isAdmin ? <TodoAdjust todo={todo} /> : null}
       <p className="shift__muted">
@@ -259,6 +263,7 @@ function TodoActionForm({
   const [until, setUntil] = useState(() => untilInputDefault(new Date()));
   const [title, setTitle] = useState(todo.title);
   const [body, setBody] = useState(todo.body);
+  const [reworks, setReworks] = useState((todo.reworks ?? []).join(', '));
   const submit = (event: FormEvent): void => {
     event.preventDefault();
     switch (choice.id) {
@@ -276,7 +281,7 @@ function TodoActionForm({
         return;
       }
       case 'edit':
-        return onSubmit({ action: 'edit', title: title.trim(), body });
+        return onSubmit({ action: 'edit', title: title.trim(), body, reworks: reworks.split(',').map((id) => id.trim()).filter(Boolean) });
       default:
         return undefined;
     }
@@ -336,6 +341,9 @@ function TodoActionForm({
             onChange={(event) => setBody(event.target.value)}
             aria-label={`Body of ${todo.id}`}
           />
+          <label>Rework of todo IDs (comma separated)
+            <input value={reworks} onChange={(event) => setReworks(event.target.value)} />
+          </label>
         </>
       ) : null}
       {choice.id === 'done' ? <span>Mark {todo.id} done?</span> : null}

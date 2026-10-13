@@ -109,7 +109,7 @@ export function TodoPage(): JSX.Element {
       </div>
     );
   } else {
-    body = <TodoView todo={matches[0]} refs={refs} isAdmin={isAdmin} />;
+    body = <TodoView todo={matches[0]} relatedTodos={todos.data?.todos ?? []} refs={refs} isAdmin={isAdmin} />;
   }
 
   const shown = matches.length === 1 ? matches[0] : null;
@@ -164,10 +164,12 @@ function TodoMeta({ todo }: { todo: ShiftTodo }): JSX.Element {
 
 function TodoView({
   todo,
+  relatedTodos,
   refs,
   isAdmin,
 }: {
   todo: ShiftTodo;
+  relatedTodos: ShiftTodo[];
   refs: RepoRefs;
   isAdmin: boolean;
 }): JSX.Element {
@@ -228,7 +230,7 @@ function TodoView({
       </dl>
 
       <section className="shift__section shift__detail" aria-label="Details">
-        <TodoDetail todo={todo} isAdmin={isAdmin} showNote={!stuck} />
+        <TodoDetail todo={todo} relatedTodos={relatedTodos} isAdmin={isAdmin} showNote={!stuck} />
       </section>
     </>
   );
