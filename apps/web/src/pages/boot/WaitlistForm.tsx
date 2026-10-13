@@ -8,6 +8,8 @@ import { useState, type FormEvent } from 'react';
 
 import { ApiError, apiSend } from '../../api/client';
 import { endpoints } from '../../api/endpoints';
+import { useSignupPolicy } from '../../hooks/useSignupPolicy';
+import { JoinWaitlistLink } from '../account/JoinWaitlistLink';
 
 import './WaitlistForm.css';
 
@@ -126,5 +128,32 @@ export function WaitlistForm(): JSX.Element {
         We store this address to send an invitation. We do not open an account.
       </p>
     </form>
+  );
+}
+
+/**
+ * The waitlist slot on the landing pages. An operator who runs the waitlist on
+ * another site sets its address; the email is collected there, so this page
+ * links to it instead of keeping a second list. Without one, the forge's own
+ * form takes the address.
+ */
+export function WaitlistEntry(): JSX.Element {
+  const view = useSignupPolicy();
+  if (view.state === 'loading') {
+    return (
+      <p className="waitlist__status" role="status">
+        Finding the waitlist…
+      </p>
+    );
+  }
+  if (!view.waitlist) return <WaitlistForm />;
+  return (
+    <div className="waitlist" data-testid="waitlist-external">
+      <p className="waitlist__title">Join the waitlist</p>
+      <p className="waitlist__privacy">
+        The waitlist is kept on its own site: leave your email there for an invitation.
+      </p>
+      <JoinWaitlistLink waitlist={view.waitlist} className="waitlist__submit" />
+    </div>
   );
 }

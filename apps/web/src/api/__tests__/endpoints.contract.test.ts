@@ -25,6 +25,7 @@ const endpointSamples = {
   authLogin: [],
   authSignup: [],
   authSignupStart: [],
+  authSignupPolicy: [],
   waitlistJoin: [],
   authLogout: [],
   authPassword: [],

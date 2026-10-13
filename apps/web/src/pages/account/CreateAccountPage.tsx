@@ -3,6 +3,7 @@
 // so this page asks only for a username and a password.
 //
 // The server tells the outcomes apart, and so does the page:
+//   403 signup_closed                     sign-up closed since the link was sent: the waitlist
 //   signup_link_invalid / email_required  the link is spent or missing: start over
 //   409 conflict                          the username is taken; the link still works
 //   other 422                             the password was refused; the link still works
@@ -12,22 +13,41 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../../api/client';
 import { useAuth } from '../../hooks/useAuth';
+import { useSignupPolicy } from '../../hooks/useSignupPolicy';
 import { AccountFrame, PASSWORD_MIN_LENGTH, Status } from './AccountRecoveryPages';
-import { RATE_LIMITED, UNREACHABLE } from './accountCopy';
+import { JoinWaitlistLink } from './JoinWaitlistLink';
+import { INVITE_ONLY, RATE_LIMITED, UNREACHABLE } from './accountCopy';
 
-type Phase = 'idle' | 'saving' | 'invalid';
+type Phase = 'idle' | 'saving' | 'invalid' | 'closed';
 type Problem = { field: 'login' | 'password' | 'form'; text: string };
 
 const LINK_CODES = new Set(['signup_link_invalid', 'email_required']);
 
 /** Which refusal the forge gave, and what the person can do about it. */
-function refusal(error: unknown): Problem | 'invalid' {
+function refusal(error: unknown): Problem | 'invalid' | 'closed' {
   if (!(error instanceof ApiError)) return { field: 'form', text: UNREACHABLE };
+  if (error.code === 'signup_closed') return 'closed';
   if (error.status === 422 && LINK_CODES.has(error.code)) return 'invalid';
   if (error.status === 409) return { field: 'login', text: 'That username is taken. Choose another.' };
   if (error.status === 429) return { field: 'form', text: RATE_LIMITED };
   if (error.status === 422) return { field: 'password', text: error.message };
   return { field: 'form', text: error.message };
+}
+
+/** Sign-up closed after the link went out: the waitlist is the way in. */
+function SignupClosed(): JSX.Element {
+  const view = useSignupPolicy();
+  return (
+    <AccountFrame label="Create an account" title="Sign-up is closed" intro={INVITE_ONLY}>
+      {view.state === 'loading' ? (
+        <p className="waitlist__status" role="status">
+          Finding the waitlist…
+        </p>
+      ) : (
+        <JoinWaitlistLink waitlist={view.waitlist} className="waitlist__submit" />
+      )}
+    </AccountFrame>
+  );
 }
 
 /** `/create-account?token=…`: choose a username and password, then go in. */
@@ -59,8 +79,8 @@ export function CreateAccountPage(): JSX.Element {
       navigate('/', { replace: true });
     } catch (error) {
       const outcome = refusal(error);
-      if (outcome === 'invalid') {
-        setPhase('invalid');
+      if (outcome === 'invalid' || outcome === 'closed') {
+        setPhase(outcome);
         return;
       }
       setProblem(outcome);
@@ -68,6 +88,7 @@ export function CreateAccountPage(): JSX.Element {
     }
   };
 
+  if (phase === 'closed') return <SignupClosed />;
   if (phase === 'invalid') {
     return (
       <AccountFrame

@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '../../api/client';
+import type { useSignupPolicy } from '../../hooks/useSignupPolicy';
 import { AuthPage } from '../AuthPage';
 
 interface MutationStub {
@@ -45,6 +46,14 @@ vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => auth,
 }));
 
+type PolicyView = ReturnType<typeof useSignupPolicy>;
+const OPEN: PolicyView = { state: 'known', mode: 'email', waitlist: null };
+let policy: PolicyView = OPEN;
+
+vi.mock('../../hooks/useSignupPolicy', () => ({
+  useSignupPolicy: () => policy,
+}));
+
 function Where(): JSX.Element {
   return <p data-testid="where">{useLocation().pathname}</p>;
 }
@@ -68,6 +77,7 @@ describe('AuthPage', () => {
   beforeEach(() => {
     auth.login = mutation();
     auth.signupStart = start();
+    policy = OPEN;
     auth.changePassword = mutation();
   });
 
@@ -105,6 +115,48 @@ describe('AuthPage', () => {
 
     await waitFor(() => expect(auth.login.mutateAsync).toHaveBeenCalled());
     expect(screen.queryByTestId('where')).toBeNull();
+  });
+
+  it('while sign-up is closed, the tab is a link to an external waitlist, never a form', () => {
+    policy = {
+      state: 'known',
+      mode: 'closed',
+      waitlist: { href: 'https://waitlist.example.com/join', host: 'waitlist.example.com' },
+    };
+    renderPage({ initialMode: 'signup' });
+    expect(screen.getByTestId('signup-closed')).toHaveTextContent('JeRyū is invite-only for now.');
+    const link = screen.getByRole('link', { name: 'Join the waitlist' });
+    expect(link).toHaveAttribute('href', 'https://waitlist.example.com/join');
+    expect(link).toHaveAttribute('rel', 'noopener');
+    expect(link).toHaveAccessibleDescription('Opens waitlist.example.com, a separate site.');
+    expect(screen.queryByLabelText('Email')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Send sign-up link' })).toBeNull();
+  });
+
+  it('while sign-up is closed with no external waitlist, links to the forge\'s own form', () => {
+    policy = { state: 'known', mode: 'closed', waitlist: null };
+    renderPage({ initialMode: 'signup' });
+    expect(screen.getByRole('link', { name: 'Join the waitlist' })).toHaveAttribute(
+      'href',
+      '/waitlist'
+    );
+    expect(screen.queryByLabelText('Email')).toBeNull();
+  });
+
+  it('shows no form until the policy is known', () => {
+    policy = { state: 'loading' };
+    renderPage({ initialMode: 'signup' });
+    expect(screen.getByRole('status')).toHaveTextContent('Checking how to join');
+    expect(screen.queryByLabelText('Email')).toBeNull();
+  });
+
+  it('turns to the waitlist when the forge refuses a start with signup_closed', () => {
+    auth.signupStart = start({
+      error: new ApiError(403, { code: 'signup_closed', message: 'sign-up is closed' }),
+    });
+    renderPage({ initialMode: 'signup' });
+    expect(screen.getByRole('link', { name: 'Join the waitlist' })).toBeVisible();
+    expect(screen.queryByLabelText('Email')).toBeNull();
   });
 
   it('starts sign-up with an email address only, and no account is created yet', () => {

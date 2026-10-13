@@ -6,8 +6,10 @@ import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
 import { JeryuLogo } from '../components/brand/JeryuLogo';
 import { useAuth } from '../hooks/useAuth';
+import { useSignupPolicy } from '../hooks/useSignupPolicy';
 import { homePathFor } from '../layout/HomeRedirect';
-import { RATE_LIMITED, UNREACHABLE } from './account/accountCopy';
+import { JoinWaitlistLink } from './account/JoinWaitlistLink';
+import { INVITE_ONLY, RATE_LIMITED, UNREACHABLE } from './account/accountCopy';
 
 import './AuthPage.css';
 
@@ -76,12 +78,45 @@ function SignupStartForm({ firstFieldRef }: { firstFieldRef?: Ref<HTMLInputEleme
 }
 
 /**
+ * The Sign up tab. Sign-up is closed unless the forge says otherwise: then the
+ * tab is the way onto the waitlist, not a form. Open (`email`), it is the
+ * email-first form. A start the forge refuses with `signup_closed` (the policy
+ * changed since it was read) shows the waitlist too.
+ */
+function SignupPanel({ firstFieldRef }: { firstFieldRef?: Ref<HTMLInputElement> }): JSX.Element {
+  const view = useSignupPolicy();
+  const { signupStart } = useAuth();
+  const refusedClosed =
+    signupStart.error instanceof ApiError && signupStart.error.code === 'signup_closed';
+  if (view.state === 'loading') {
+    return (
+      <p className="auth-form__sent" role="status">
+        Checking how to join…
+      </p>
+    );
+  }
+  if (view.mode === 'email' && !refusedClosed) {
+    return <SignupStartForm firstFieldRef={firstFieldRef} />;
+  }
+  return (
+    <div className="auth-form" data-testid="signup-closed">
+      <p className="auth-form__sent">{INVITE_ONLY}</p>
+      <JoinWaitlistLink
+        waitlist={view.waitlist}
+        className="action-button action-button--primary auth-form__waitlist"
+      />
+    </div>
+  );
+}
+
+/**
  * AuthForm — the tabs + credential form shared by the boot LoginPanel and the
  * forced-password-change page. This component owns the accessibility contract
  * exercised by the e2e suite (tab roles `Login`/`Sign up`, labeled `Username`/
  * `Password`/`New password`/`Email` inputs, submit buttons `Login`/`Send
- * sign-up link`/`Change password`) — keep those names/labels stable. Sign-up
- * finishes on `/create-account`, opened from the mailed link.
+ * sign-up link`/`Change password`, the `Join the waitlist` link while sign-up
+ * is closed) — keep those names/labels stable. Open sign-up finishes on
+ * `/create-account`, opened from the mailed link.
  */
 export function AuthForm({
   forcePasswordChange = false,
@@ -155,7 +190,7 @@ export function AuthForm({
         </div>
       )}
       {!forcePasswordChange && mode === 'signup' ? (
-        <SignupStartForm firstFieldRef={firstFieldRef} />
+        <SignupPanel firstFieldRef={firstFieldRef} />
       ) : (
         <form className="auth-form" onSubmit={(event) => void submit(event)}>
           {forcePasswordChange ? null : (

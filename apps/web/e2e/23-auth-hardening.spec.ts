@@ -7,7 +7,7 @@
 
 import { expect, test, type Page, type Route } from './fixtures/test';
 
-import { mockBootstrap, mockRepoList } from './fixtures/mocks';
+import { mockBootstrap, mockRepoList, mockSignupPolicy } from './fixtures/mocks';
 
 test.describe.configure({ retries: 1 });
 
@@ -33,6 +33,7 @@ const splitRepos = [
 const loginFormCredential = 'auth-form-input-0001';
 const signupFormCredential = 'signup-form-input-0001';
 const signupLinkToken = 'signup-link-token-0001';
+const externalWaitlistUrl = 'https://waitlist.example.com/join';
 const currentPasswordValue = 'initial-password-123';
 const replacementPasswordValue = 'replacement-password-456';
 
@@ -138,10 +139,50 @@ test.describe('Auth hardening browser proof', () => {
     await expect(page.getByTestId('repo-family-member-acme-web')).toBeVisible();
   });
 
+  test('closed sign-up sends a visitor to the waitlist and never posts a sign-up @action:auth.signup_waitlist', async ({ page }) => {
+    await mockBootstrap(page, { login: 'jepsont', auth: null });
+    await mockAuthMe(page, null);
+    await mockSignupPolicy(page, { mode: 'closed', waitlistUrl: externalWaitlistUrl });
+    const signupPosts: string[] = [];
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (request.method() === 'POST' && path.startsWith('/api/v1/auth/signup')) {
+        signupPosts.push(path);
+      }
+    });
+
+    await page.goto('/signup');
+    await expect(page.getByRole('tab', { name: 'Sign up' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+      { timeout: 10_000 }
+    );
+    const closed = page.getByTestId('signup-closed');
+    await expect(closed).toContainText('JeRyū is invite-only for now.');
+    const join = closed.getByRole('link', { name: 'Join the waitlist' });
+    await expect(join).toHaveAttribute('href', externalWaitlistUrl);
+    await expect(join).toHaveAttribute('rel', 'noopener');
+    await expect(closed).toContainText('Opens waitlist.example.com, a separate site.');
+    await expect(page.getByLabel('Email')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Send sign-up link' })).toHaveCount(0);
+
+    // The landing waitlist page links to the same external list instead of a form.
+    await page.goto('/waitlist');
+    const external = page.getByTestId('waitlist-external');
+    await expect(external.getByRole('link', { name: 'Join the waitlist' })).toHaveAttribute(
+      'href',
+      externalWaitlistUrl,
+      { timeout: 10_000 }
+    );
+    await expect(page.getByLabel('Email')).toHaveCount(0);
+    expect(signupPosts).toEqual([]);
+  });
+
   test('new signup proves its email first and receives no repository visibility by default @action:auth.signup @action:authz.signup_no_repos', async ({ page }) => {
     await mockBootstrap(page, { login: 'jepsont', auth: null });
     await mockAuthMe(page, null);
     await mockRepoList(page, []);
+    await mockSignupPolicy(page, { mode: 'email', waitlistUrl: null });
 
     const startBodies: unknown[] = [];
     await page.route('**/api/v1/auth/signup/start', async (route, request) => {

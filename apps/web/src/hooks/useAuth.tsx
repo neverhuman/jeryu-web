@@ -11,8 +11,9 @@ import {
   type UseMutationResult,
 } from '@tanstack/react-query';
 
-import { apiGet, apiSend, setCsrfToken } from '../api/client';
+import { ApiError, apiGet, apiSend, setCsrfToken } from '../api/client';
 import { endpoints } from '../api/endpoints';
+import { SIGNUP_POLICY_QUERY_KEY } from './useSignupPolicy';
 
 export interface AuthUser {
   login: string;
@@ -85,6 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   const signupStart = useMutation({
     mutationFn: (body: SignupStartRequest) =>
       apiSend<SignupStartReceipt>(endpoints.authSignupStart(), body),
+    // The forge closed sign-up after the policy was read: read it again.
+    onError: (error) => {
+      if (error instanceof ApiError && error.code === 'signup_closed') {
+        void queryClient.invalidateQueries({ queryKey: SIGNUP_POLICY_QUERY_KEY });
+      }
+    },
   });
   const signup = useMutation({
     mutationFn: (body: SignupRequest) =>

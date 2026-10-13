@@ -1682,3 +1682,17 @@ export async function mockRepoAutomation(
     }
   );
 }
+
+/** The forge's sign-up policy: closed unless a spec opens it. */
+export async function mockSignupPolicy(
+  page: Page,
+  policy: { mode: 'closed' | 'email'; waitlistUrl: string | null }
+): Promise<void> {
+  await page.route('**/api/v1/auth/signup/policy', (route: Route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(policy),
+    })
+  );
+}

@@ -81,6 +81,10 @@ async fn respond(State(state): State<FixtureState>, request: Request) -> Respons
                 401,
                 json!({"error":{"code":"unauthorized","message":"login required"}}),
             ),
+            // Sign-up closed, no external waitlist: the forge's own form stays.
+            ("GET", "/api/v1/auth/signup/policy") => {
+                (200, json!({"mode":"closed","waitlistUrl":null}))
+            }
             ("POST", "/api/v1/waitlist") => match body["email"].as_str() {
                 Some("limited@example.test") => (
                     429,

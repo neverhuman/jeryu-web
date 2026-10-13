@@ -133,6 +133,28 @@ describe('CreateAccountPage', () => {
     }
   );
 
+  it('shows the waitlist when sign-up closed after the link went out', async () => {
+    serve((call) =>
+      call.path === '/api/v1/auth/signup/policy'
+        ? json({ mode: 'closed', waitlistUrl: 'https://waitlist.example.com/join' })
+        : json(
+            {
+              error: { code: 'signup_closed', message: 'sign-up is closed' },
+              waitlistUrl: 'https://waitlist.example.com/join',
+            },
+            403
+          )
+    );
+    open('/create-account?token=signup-1');
+    fill('newcomer', CHOSEN);
+    expect(await screen.findByRole('heading', { name: 'Sign-up is closed' })).toBeVisible();
+    expect(screen.getByText(/JeRyū is invite-only for now/)).toBeVisible();
+    expect(await screen.findByRole('link', { name: 'Join the waitlist' })).toHaveAttribute(
+      'href',
+      'https://waitlist.example.com/join'
+    );
+  });
+
   it('without a token it says it needs the email link', () => {
     const calls = serve(() => json({}));
     open('/create-account');

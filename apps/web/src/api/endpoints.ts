@@ -17,6 +17,8 @@ export const endpoints = {
   authSignup: (): string => '/api/v1/auth/signup',
   /** Mail a sign-up link to an address; always 202, whoever owns it. */
   authSignupStart: (): string => '/api/v1/auth/signup/start',
+  /** Whether sign-up is open (`email`) or `closed`, and where the waitlist is. No session needed. */
+  authSignupPolicy: (): string => '/api/v1/auth/signup/policy',
   /** Public waitlist. Does not create an account or a session. */
   waitlistJoin: (): string => '/api/v1/waitlist',
   authLogout: (): string => '/api/v1/auth/logout',

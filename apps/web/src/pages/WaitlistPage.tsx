@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { MarketingHeader } from './boot/MarketingHeader';
 import { MarketingScene } from './boot/MarketingScene';
-import { WaitlistForm } from './boot/WaitlistForm';
+import { WaitlistEntry } from './boot/WaitlistForm';
 
 import './boot/boot.css';
 import './WaitlistPage.css';
@@ -23,7 +23,7 @@ export function WaitlistPage(): JSX.Element {
               if you like. Joining the waitlist does not create an account.</p>
             <Link className="waitlist-page__back" to="/">← Back to the story</Link>
           </section>
-          <div className="waitlist-page__form"><WaitlistForm /></div>
+          <div className="waitlist-page__form"><WaitlistEntry /></div>
         </div>
       </MarketingScene>
     </main>

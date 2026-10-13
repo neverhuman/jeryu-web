@@ -120,3 +120,8 @@
   font-size: var(--font-size-sm);
   color: var(--color-fg-secondary);
 }
+
+.auth-form__waitlist {
+  justify-content: center;
+  text-decoration: none;
+}

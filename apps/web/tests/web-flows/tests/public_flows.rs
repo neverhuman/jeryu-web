@@ -206,12 +206,12 @@ async fn exercise(driver: &WebDriver, fixture: &Fixture, artifacts: &Path) -> Re
     click(driver, ".waitlist-page__back").await?;
     assert_eq!(scene(driver, "1").await?, grid);
     // Direct routes must retain the same scene and restore it after leaving.
-    // Login asks for a password; sign-up starts with an email address alone.
+    // Login asks for a password; closed sign-up is a link to the waitlist, no form.
     for (route, field) in [
         ("/login", "!!document.querySelector('input[type=password]')"),
         (
             "/signup",
-            "!!document.querySelector('input[type=email]') && !document.querySelector('input[type=password]')",
+            "document.querySelector('.auth-form__waitlist')?.getAttribute('href') === '/waitlist' && !document.querySelector('.boot__auth-panel input')",
         ),
     ] {
         driver.goto(format!("{}{route}", fixture.url)).await?;
