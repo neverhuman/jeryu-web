@@ -34,6 +34,7 @@ const loginFormCredential = 'auth-form-input-0001';
 const signupFormCredential = 'signup-form-input-0001';
 const signupLinkToken = 'signup-link-token-0001';
 const externalWaitlistUrl = 'https://waitlist.example.com/join';
+const shownOneTimeValue = 'one-time-shown-0001';
 const currentPasswordValue = 'initial-password-123';
 const replacementPasswordValue = 'replacement-password-456';
 
@@ -400,6 +401,63 @@ test.describe('Auth hardening browser proof', () => {
       accessRegion.getByTestId('repo-grants-table').getByRole('rowheader', { name: 'jordanh' })
     ).toBeVisible();
     expect(unsafeCsrfHeaders).toEqual(['csrf-admin', 'csrf-admin']);
+  });
+
+  test('admin reset with no mail shows the one-time password to hand over @action:admin.reset_password_shown', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { login: 'jeryu-admin', auth: null });
+    await mockAuthMe(page, {
+      login: 'jeryu-admin',
+      role: 'admin',
+      mustChangePassword: false,
+      csrfToken: 'csrf-admin',
+    });
+    await mockRepoList(page, []);
+    await mockAdminUsers(page);
+    const resetBodies: unknown[] = [];
+    await page.route(
+      /\/api\/v1\/admin\/users\/[^/]+\/reset-password$/,
+      async (route, request) => {
+        expect(request.headers()['x-jeryu-csrf']).toBe('csrf-admin');
+        resetBodies.push(request.postDataJSON());
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            result: 'shown',
+            login: 'jordanh',
+            password: shownOneTimeValue,
+            email: null,
+            mailError: 'mail server refused the message',
+          }),
+        });
+      }
+    );
+
+    await page.goto('/settings');
+    const users = page.getByTestId('admin-users-table');
+    await users.getByRole('button', { name: 'Reset password' }).click({ timeout: 10_000 });
+    const resetForm = page.getByRole('form', { name: 'Reset the password of jordanh' });
+    // No address: the forge may have no mail, so the field is optional.
+    await expect(
+      resetForm.getByLabel('Where should the temporary password go?')
+    ).not.toHaveAttribute('required', '');
+    await resetForm.getByRole('button', { name: 'Email a temporary password' }).click();
+
+    const shown = page.getByRole('region', { name: 'One-time password for jordanh' });
+    await expect(shown).toContainText('No email was sent');
+    await expect(shown).toContainText('Sending failed');
+    await expect(shown).toContainText(
+      'Give jordanh this one-time password; they must choose a new one at sign-in.'
+    );
+    await expect(shown.getByLabel('One-time password for jordanh')).toHaveValue(
+      shownOneTimeValue
+    );
+    await expect(shown.getByRole('button', { name: 'Copy' })).toBeVisible();
+    await shown.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(shown).toHaveCount(0);
+    expect(resetBodies).toEqual([{}]);
   });
 
   test('admin reviews repository grants and revokes one @action:admin.revoke_repo_success', async ({

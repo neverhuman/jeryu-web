@@ -2,10 +2,12 @@
 // its role, its kind, its email address, and a password reset that mails the
 // person a temporary password.
 //
-// A reset needs somewhere to send the password. An account with no address on
-// file gets one here; an unverified address can be corrected before sending; a
-// verified one is used read-only. The person signs in with the temporary
-// password and has to choose their own before anything else.
+// A reset mails the temporary password when it can. An account with no
+// address on file can be given one here (required only when the forge says it
+// needs one); an unverified address can be corrected; a verified one is used
+// read-only. A forge that cannot send mail, or whose send failed, hands the
+// one-time password to the admin instead, to pass on in person. The person
+// signs in with it and has to choose their own before anything else.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Fragment, useState, type FormEvent } from 'react';
@@ -33,12 +35,26 @@ export interface AdminUser {
   updated_at: string;
 }
 
-/** What the forge answers once the temporary password is in the mail. */
-export interface ResetReceipt {
+/** 202: the temporary password is in the mail. */
+export interface ResetSent {
   result: 'sent';
   login: string;
   email: string;
 }
+
+/**
+ * 200: no mail went out (none configured, or the send failed), so the forge
+ * shows the one-time password once, for the admin to hand over.
+ */
+export interface ResetShown {
+  result: 'shown';
+  login: string;
+  password: string;
+  email: string | null;
+  mailError?: string;
+}
+
+export type ResetReceipt = ResetSent | ResetShown;
 
 const USERS_KEY = ['admin', 'users'];
 
@@ -108,7 +124,7 @@ function resetProblem(error: Error): string {
   if (error.status === 429) return RATE_LIMITED;
   switch (error.code) {
     case 'email_required':
-      return 'This account has no email address. Enter the one the temporary password should go to.';
+      return 'This forge needs an address to send the temporary password to. Enter one.';
     case 'conflict':
       return 'That address cannot be used: another account has it, or this account already verified a different one.';
     case 'mail_unavailable':
@@ -136,15 +152,23 @@ function ResetPasswordForm({
   const reset = useMutation({
     mutationFn: (body: { email?: string }) =>
       apiSend<ResetReceipt>(endpoints.adminResetPassword(account.login), body),
+    // The answer can carry a one-time password: drop it from the mutation
+    // cache the moment this form is gone.
+    gcTime: 0,
     onSuccess: (receipt) => {
       onSent(receipt);
       void queryClient.invalidateQueries({ queryKey: USERS_KEY });
     },
   });
+  // Mail settings are the forge's: the address is optional until it says it
+  // needs one (422 email_required).
+  const addressRequired =
+    reset.error instanceof ApiError && reset.error.code === 'email_required';
   const submit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     // A verified address is the one on file; the server uses it unasked.
-    reset.mutate(verified ? {} : { email: email.trim() });
+    const typed = email.trim();
+    reset.mutate(verified || typed === '' ? {} : { email: typed });
   };
   const fieldId = `reset-email-${account.login}`;
   return (
@@ -160,14 +184,18 @@ function ResetPasswordForm({
         </p>
       ) : (
         <label className="admin-users__reset-field" htmlFor={fieldId}>
-          <span>Where should the temporary password go?</span>
+          <span>
+            Where should the temporary password go?
+            {addressRequired ? null : <span className="text-muted"> (optional)</span>}
+          </span>
           <input
             id={fieldId}
             className="form-input"
             type="email"
             name="email"
             autoComplete="off"
-            required
+            required={addressRequired}
+            aria-invalid={addressRequired || undefined}
             maxLength={254}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -189,6 +217,72 @@ function ResetPasswordForm({
         </p>
       ) : null}
     </form>
+  );
+}
+
+/**
+ * The one-time password, shown once because no mail went out. It lives only
+ * in this panel's parent state and is gone on Dismiss or when the page closes.
+ */
+function ShownPassword({
+  receipt,
+  onDismiss,
+}: {
+  receipt: ResetShown;
+  onDismiss: () => void;
+}): JSX.Element {
+  const [copied, setCopied] = useState<'idle' | 'copied' | 'refused'>('idle');
+  const copy = (): void => {
+    navigator.clipboard
+      .writeText(receipt.password)
+      .then(() => setCopied('copied'))
+      .catch(() => setCopied('refused'));
+  };
+  const fieldId = `reset-password-${receipt.login}`;
+  return (
+    <div
+      className="admin-users__shown"
+      role="region"
+      aria-label={`One-time password for ${receipt.login}`}
+      data-testid={`reset-shown-${receipt.login}`}
+    >
+      <p className="admin-users__shown-title">
+        <strong>No email was sent</strong>
+        {receipt.mailError ? (
+          <span className={pillClass('failed')}>Sending failed</span>
+        ) : null}
+      </p>
+      {receipt.mailError ? <p className="page__note">{receipt.mailError}</p> : null}
+      <p className="page__note">
+        Give {receipt.login} this one-time password; they must choose a new one at sign-in.
+      </p>
+      <div className="page__inline-actions">
+        <label className="sr-only" htmlFor={fieldId}>
+          One-time password for {receipt.login}
+        </label>
+        <input
+          id={fieldId}
+          className="form-input font-mono admin-users__password"
+          readOnly
+          value={receipt.password}
+          autoComplete="off"
+          spellCheck={false}
+          onFocus={(event) => event.currentTarget.select()}
+        />
+        <ActionButton type="button" onClick={copy}>
+          Copy
+        </ActionButton>
+        <ActionButton type="button" variant="ghost" onClick={onDismiss}>
+          Dismiss
+        </ActionButton>
+      </div>
+      {copied === 'copied' ? <p role="status">Copied.</p> : null}
+      {copied === 'refused' ? (
+        <p className="shift__error" role="alert">
+          The browser would not copy it. Select the password and copy it by hand.
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -277,10 +371,14 @@ export function AdminUsersPanel(): JSX.Element {
                     {sent?.login === account.login ? (
                       <tr className="admin-users__detail">
                         <td colSpan={columns}>
-                          <p role="status" data-testid={`reset-sent-${account.login}`}>
-                            Sent to <code>{sent.email}</code>. {sent.login} must choose a new
-                            password at next sign-in.
-                          </p>
+                          {sent.result === 'shown' ? (
+                            <ShownPassword receipt={sent} onDismiss={() => setSent(null)} />
+                          ) : (
+                            <p role="status" data-testid={`reset-sent-${account.login}`}>
+                              Sent to <code>{sent.email}</code>. {sent.login} must choose a new
+                              password at next sign-in.
+                            </p>
+                          )}
                         </td>
                       </tr>
                     ) : null}

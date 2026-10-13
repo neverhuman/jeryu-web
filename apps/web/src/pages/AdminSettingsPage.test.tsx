@@ -5,6 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, apiGet, apiPut, apiSend } from '../api/client';
 import { AdminSettingsPage } from './AdminSettingsPage';
 
+/** Named, never inline beside `password:`: the secret scanner is right to be strict. */
+const ONE_TIME_A = 'one-time-fixture-0001';
+const ONE_TIME_B = 'one-time-fixture-0002';
+
 // user-1 has a verified address, user-2 an unverified one, the rest none.
 const ADDRESSES: Record<number, { email: string; emailVerified: boolean }> = {
   1: { email: 'one@example.com', emailVerified: true },
@@ -131,8 +135,9 @@ describe('AdminSettingsPage user list', () => {
     renderSettings();
     const form = await openReset('user-3');
     expect(form).toHaveTextContent('They sign in with it and must choose a new password.');
-    const address = within(form).getByLabelText('Where should the temporary password go?');
-    expect(address).toBeRequired();
+    const address = within(form).getByLabelText(/Where should the temporary password go\?/);
+    // Optional until the forge says it needs one: it may have no mail at all.
+    expect(address).not.toBeRequired();
     expect(address).toHaveValue('');
     fireEvent.change(address, { target: { value: ' three@example.com ' } });
     fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
@@ -155,7 +160,7 @@ describe('AdminSettingsPage user list', () => {
     vi.mocked(apiSend).mockResolvedValue({ result: 'sent', login: 'x', email: 'x' });
     renderSettings();
     const unverified = await openReset('user-2');
-    expect(within(unverified).getByLabelText('Where should the temporary password go?')).toHaveValue(
+    expect(within(unverified).getByLabelText(/Where should the temporary password go\?/)).toHaveValue(
       'two@example.com',
     );
     fireEvent.click(within(unverified).getByRole('button', { name: 'Cancel' }));
@@ -170,7 +175,7 @@ describe('AdminSettingsPage user list', () => {
   });
 
   it.each([
-    [422, 'email_required', 'This account has no email address.'],
+    [422, 'email_required', 'This forge needs an address to send the temporary password to.'],
     [409, 'conflict', 'another account has it, or this account already verified a different one'],
     [503, 'mail_unavailable', 'This forge cannot send email yet.'],
     [502, 'mail_failed', 'The mail server did not accept the message.'],
@@ -185,6 +190,74 @@ describe('AdminSettingsPage user list', () => {
     fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
     expect(await within(form).findByRole('alert')).toHaveTextContent(copy);
     expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('makes the address required once the forge answers email_required', async () => {
+    vi.mocked(apiSend).mockRejectedValue(
+      new ApiError(422, { code: 'email_required', message: 'an email address is required' }),
+    );
+    renderSettings();
+    const form = await openReset('user-3');
+    fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
+    expect(await within(form).findByRole('alert')).toHaveTextContent('needs an address');
+    expect(apiSend).toHaveBeenCalledWith('/api/v1/admin/users/user-3/reset-password', {});
+    const address = within(form).getByLabelText(/Where should the temporary password go\?/);
+    expect(address).toBeRequired();
+    expect(address).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('shows the one-time password when no mail went out, with copy and dismiss', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    vi.mocked(apiSend).mockResolvedValue({
+      result: 'shown',
+      login: 'user-3',
+      password: ONE_TIME_A,
+      email: null,
+    });
+    renderSettings();
+    const form = await openReset('user-3');
+    fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
+
+    const panel = await screen.findByRole('region', { name: 'One-time password for user-3' });
+    expect(panel).toHaveTextContent('No email was sent');
+    expect(panel).not.toHaveTextContent('Sending failed');
+    expect(panel).toHaveTextContent(
+      'Give user-3 this one-time password; they must choose a new one at sign-in.',
+    );
+    const field = within(panel).getByLabelText('One-time password for user-3');
+    expect(field).toHaveValue(ONE_TIME_A);
+    expect(field).toHaveAttribute('readonly');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Copy' }));
+    expect(await within(panel).findByRole('status')).toHaveTextContent('Copied.');
+    expect(writeText).toHaveBeenCalledWith(ONE_TIME_A);
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('region', { name: 'One-time password for user-3' })).toBeNull();
+    expect(screen.queryByDisplayValue(ONE_TIME_A)).toBeNull();
+  });
+
+  it('says sending failed when the forge tried to mail it and could not', async () => {
+    vi.mocked(apiSend).mockResolvedValue({
+      result: 'shown',
+      login: 'user-2',
+      password: ONE_TIME_B,
+      email: 'two@example.com',
+      mailError: 'mail server refused the message',
+    });
+    renderSettings();
+    const form = await openReset('user-2');
+    fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
+    const panel = await screen.findByRole('region', { name: 'One-time password for user-2' });
+    expect(panel).toHaveTextContent('No email was sent');
+    expect(panel).toHaveTextContent('Sending failed');
+    expect(panel).toHaveTextContent('mail server refused the message');
+    expect(within(panel).getByLabelText('One-time password for user-2')).toHaveValue(
+      ONE_TIME_B,
+    );
+    expect(apiSend).toHaveBeenCalledWith('/api/v1/admin/users/user-2/reset-password', {
+      email: 'two@example.com',
+    });
   });
 
   it('tells people from automation and lets an admin mark a login as automation', async () => {
