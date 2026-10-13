@@ -273,7 +273,13 @@ function ShownPassword({
 }): JSX.Element {
   const [copied, setCopied] = useState<'idle' | 'copied' | 'refused'>('idle');
   const copy = (): void => {
-    navigator.clipboard
+    // Absent outside a secure context (plain http): say so, copy by hand.
+    const clipboard: Clipboard | undefined = navigator.clipboard;
+    if (clipboard === undefined) {
+      setCopied('refused');
+      return;
+    }
+    clipboard
       .writeText(receipt.password)
       .then(() => setCopied('copied'))
       .catch(() => setCopied('refused'));

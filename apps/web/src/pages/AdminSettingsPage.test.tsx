@@ -237,6 +237,25 @@ describe('AdminSettingsPage user list', () => {
     expect(screen.queryByDisplayValue(ONE_TIME_A)).toBeNull();
   });
 
+  it('falls back to copying by hand when the browser has no clipboard (plain http)', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    vi.mocked(apiSend).mockResolvedValue({
+      result: 'shown',
+      login: 'user-3',
+      password: ONE_TIME_A,
+      email: null,
+    });
+    renderSettings();
+    const form = await openReset('user-3');
+    fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
+    const panel = await screen.findByRole('region', { name: 'One-time password for user-3' });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Copy' }));
+    expect(await within(panel).findByRole('alert')).toHaveTextContent(
+      'The browser would not copy it. Select the password and copy it by hand.',
+    );
+    expect(within(panel).getByLabelText('One-time password for user-3')).toHaveValue(ONE_TIME_A);
+  });
+
   it('says sending failed when the forge tried to mail it and could not', async () => {
     vi.mocked(apiSend).mockResolvedValue({
       result: 'shown',

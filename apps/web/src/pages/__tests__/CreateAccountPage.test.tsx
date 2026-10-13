@@ -15,8 +15,9 @@ type Call = { method: string; path: string; body: unknown };
 /** Named, never inline beside `password:`: the secret scanner is right to be strict. */
 const CHOSEN = 'pw-fixture-chosen-0001';
 
-function serve(answer: (call: Call) => Response): Call[] {
+function serve(answer: (call: Call) => Response, signedInAs: string | null = null): Call[] {
   const calls: Call[] = [];
+  let session = signedInAs;
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : String(input), 'http://forge.test');
     const raw = init?.body;
@@ -26,8 +27,11 @@ function serve(answer: (call: Call) => Response): Call[] {
       body: typeof raw === 'string' ? JSON.parse(raw) : undefined,
     };
     if (call.path === '/api/v1/auth/me') {
-      return json({ error: { code: 'unauthorized', message: 'login required' } }, 401);
+      return session
+        ? json({ login: session, role: 'user', mustChangePassword: false, csrfToken: 'csrf-0' })
+        : json({ error: { code: 'unauthorized', message: 'login required' } }, 401);
     }
+    if (call.path === '/api/v1/auth/logout') session = null;
     calls.push(call);
     return answer(call);
   });
@@ -153,6 +157,20 @@ describe('CreateAccountPage', () => {
       'href',
       'https://waitlist.example.com/join'
     );
+  });
+
+  it('does not spend the link for a signed-in visitor, and offers to sign out first', async () => {
+    const calls = serve(() => json({}), 'already-here');
+    open('/create-account?token=signup-1');
+    expect(await screen.findByRole('heading', { name: "You're already signed in" })).toBeVisible();
+    expect(
+      screen.getByText("You're signed in as already-here. Sign out to create a different account.")
+    ).toBeVisible();
+    expect(screen.queryByLabelText('Username')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(await screen.findByLabelText('Username')).toBeVisible();
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(['POST /api/v1/auth/logout']);
   });
 
   it('without a token it says it needs the email link', () => {

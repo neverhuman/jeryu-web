@@ -2,6 +2,7 @@
 // external waitlist is a plain link to another site, and says which; without
 // one, the link opens the forge's own waitlist form.
 
+import { useId } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ExternalWaitlist } from '../../hooks/useSignupPolicy';
@@ -15,6 +16,7 @@ export function JoinWaitlistLink({
   waitlist: ExternalWaitlist | null;
   className: string;
 }): JSX.Element {
+  const hostId = useId();
   if (!waitlist) {
     return (
       <Link className={className} to="/waitlist">
@@ -24,10 +26,10 @@ export function JoinWaitlistLink({
   }
   return (
     <>
-      <a className={className} href={waitlist.href} rel="noopener noreferrer" aria-describedby="waitlist-host">
+      <a className={className} href={waitlist.href} rel="noopener noreferrer" aria-describedby={hostId}>
         Join the waitlist
       </a>
-      <p className="join-waitlist__host" id="waitlist-host">
+      <p className="join-waitlist__host" id={hostId}>
         Opens {waitlist.host}, a separate site.
       </p>
     </>

@@ -60,7 +60,7 @@ function SignupClosed(): JSX.Element {
 export function CreateAccountPage(): JSX.Element {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
-  const { signup } = useAuth();
+  const { signup, user, logout } = useAuth();
   const navigate = useNavigate();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
@@ -94,6 +94,26 @@ export function CreateAccountPage(): JSX.Element {
     }
   };
 
+  // Signed in already: spending the link would replace this session with the
+  // new account's, so the link is kept until they sign out.
+  if (user) {
+    return (
+      <AccountFrame
+        label="Create an account"
+        title="You're already signed in"
+        intro={`You're signed in as ${user.login}. Sign out to create a different account.`}
+      >
+        <button
+          type="button"
+          className="waitlist__submit"
+          disabled={logout.isPending}
+          onClick={() => logout.mutate()}
+        >
+          {logout.isPending ? 'Signing out…' : 'Sign out'}
+        </button>
+      </AccountFrame>
+    );
+  }
   if (phase === 'closed') return <SignupClosed />;
   if (phase === 'invalid') {
     return (
