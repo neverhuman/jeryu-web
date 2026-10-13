@@ -582,7 +582,7 @@ function PullWaiting({ item }: { item: AttentionItem }): JSX.Element {
           <ActionPreviewDialog
             open={confirming}
             title={`${action.label}?`}
-            description={action.confirm}
+            description={`${action.confirm} (${action.method} ${action.path})`}
             confirmLabel={action.label}
             confirmDisabled={mutation.isPending}
             onCancel={() => setConfirming(false)}

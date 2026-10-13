@@ -109,6 +109,7 @@ describe('the Pull requests timeline', () => {
     expect(attentionAction.mutate).not.toHaveBeenCalled();
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveTextContent('The forge acts straight away.');
+    expect(dialog).toHaveTextContent('PATCH /api/v3/repos/acme/widgets/pulls/7');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(attentionAction.mutate).not.toHaveBeenCalled();

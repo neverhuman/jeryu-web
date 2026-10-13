@@ -376,6 +376,21 @@ describe('TodoPage', () => {
     expect(await screen.findByRole('heading', { name: 'Jain side' })).toBeInTheDocument();
   });
 
+  it('names a rework only from the same family when two families share an id', async () => {
+    serveTodos([
+      todo({ id: '20260919-1100-dup', family: 'jeryu', title: 'Jeryu side' }),
+      todo({ id: '20260919-1100-same', family: 'jeryu', title: 'Jeryu rework', reworks: ['20260919-1100-dup'] }),
+      todo({ id: '20260919-1100-other', family: 'jain', title: 'Jain rework', reworks: ['20260919-1100-dup'] }),
+    ]);
+    renderTodo('/work/20260919-1100-dup?family=jeryu');
+    expect(await screen.findByRole('heading', { name: 'Jeryu side' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '20260919-1100-same' })).toHaveAttribute(
+      'href',
+      '/work/20260919-1100-same?family=jeryu'
+    );
+    expect(screen.queryByRole('link', { name: '20260919-1100-other' })).toBeNull();
+  });
+
   it('opens the one family a ?family= names', async () => {
     serveTodos([
       todo({ id: '20260919-1100-dup', family: 'jeryu', title: 'Jeryu side' }),

@@ -50,13 +50,15 @@ function checkHrefFor(check: {
 }
 
 function CheckPageLink({ href, children }: { href: string; children: string }): JSX.Element {
-  const external = !href.startsWith('/');
+  if (href.startsWith('/')) {
+    return (
+      <Link className="shift-landing__link" to={href}>
+        {children}
+      </Link>
+    );
+  }
   return (
-    <a
-      className="shift-landing__link"
-      href={href}
-      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-    >
+    <a className="shift-landing__link" href={href} target="_blank" rel="noopener noreferrer">
       {children}
     </a>
   );

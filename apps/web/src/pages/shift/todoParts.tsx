@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 
 import type { ShiftTodo, ShiftTodoActionRequest } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
+import { sameFamily } from '../../components/family/familyScope';
 import { CiProgress } from '../../components/ciProgress/CiProgress';
 import { LIST_ACTION_PROP } from '../../hooks/useListKeys';
 import { useServerNow } from '../../hooks/useServerNow';
@@ -31,6 +32,10 @@ import {
   type TodoActionId,
 } from './shiftModel';
 import { todoHref } from './workPaths';
+
+function reworkedBy(candidate: ShiftTodo, todo: ShiftTodo): boolean {
+  return sameFamily(candidate.family, todo.family) && Boolean(candidate.reworks?.includes(todo.id));
+}
 
 /** A family repo by name: a link to its code when this forge hosts it. */
 export function RepoName({ refs, repo }: { refs: RepoRefs; repo: string }): JSX.Element {
@@ -103,7 +108,7 @@ export function TodoDetail({
     <div data-testid={`shift-todo-detail-${todo.id}`}>
       <pre>{todo.body || '(no body)'}</pre>
       {todo.reworks?.length ? <p>Rework of {todo.reworks.map((id, i) => <Fragment key={id}>{i ? ', ' : ''}<Link to={todoHref(id)}>{id}</Link></Fragment>)}</p> : null}
-      {relatedTodos.some((candidate) => candidate.reworks?.includes(todo.id)) ? <p>Reworked by {relatedTodos.filter((candidate) => candidate.reworks?.includes(todo.id)).map((candidate, i) => <Fragment key={candidate.id}>{i ? ', ' : ''}<Link to={todoHref(candidate.id)}>{candidate.id}</Link></Fragment>)}</p> : null}
+      {relatedTodos.some((candidate) => reworkedBy(candidate, todo)) ? <p>Reworked by {relatedTodos.filter((candidate) => reworkedBy(candidate, todo)).map((candidate, i) => <Fragment key={`${candidate.family}/${candidate.id}`}>{i ? ', ' : ''}<Link to={todoHref(candidate.id, candidate.family)}>{candidate.id}</Link></Fragment>)}</p> : null}
       {showNote && todo.note ? <p><strong>Note:</strong> {todo.note}</p> : null}
       {isAdmin ? <TodoAdjust todo={todo} /> : null}
       <p className="shift__muted">
