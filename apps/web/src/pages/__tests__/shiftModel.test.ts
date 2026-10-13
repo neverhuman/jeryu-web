@@ -234,15 +234,13 @@ describe('slotLabel', () => {
     expect(attemptSummary(todo({ attempts: 2 }))).toEqual({ text: '2 attempts', failing: false });
   });
 
-  it('links a commit to the PR that carries it, else to the code', () => {
+  it('links a commit chip to the commit page', () => {
     const owners = repoRefs({ queue_repo: 'jeryu/jeryu-todo', repos: [] }, 'jeryu');
     const pr = { repo: 'jeryu-web', number: 35, state: 'open', url: '/repos/jeryu/jeryu/jeryu-web/pulls/35' };
-    expect(commitHref({ pr }, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/pulls/35');
-    expect(commitHref({ pr: { ...pr, repo: 'jeryu/jeryu-web' } }, owners, 'jeryu-web')).toBe(
-      '/repos/jeryu/jeryu/jeryu-web/pulls/35'
-    );
-    expect(commitHref({ pr }, owners, 'jeryu-deploy')).toBe('/repos/jeryu/jeryu/jeryu-deploy');
-    expect(commitHref({}, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web');
+    expect(commitHref({ commits: { 'jeryu-web': 'abc123' } }, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/commit/abc123');
+    expect(commitHref({ commits: { 'jeryu/jeryu-web': 'def456' } }, owners, 'jeryu-web')).toBe('/repos/jeryu/jeryu/jeryu-web/commit/def456');
+    expect(commitHref({ commits: { 'jeryu-deploy': '987654' } }, owners, 'jeryu-deploy')).toBe('/repos/jeryu/jeryu/jeryu-deploy/commit/987654');
+    expect(commitHref({ commits: {} }, owners, 'jeryu-web')).toBeNull();
     expect(todoPrHref({ pr }, owners)).toBe(pr.url);
     expect(todoPrHref({ pr: { ...pr, url: 'https://elsewhere.example/x' } }, owners)).toBe(
       '/repos/jeryu/jeryu/jeryu-web/pulls/35'
@@ -265,7 +263,7 @@ describe('slotLabel', () => {
     // An older server names no owner: the queue's owner is the best guess.
     expect(repoCodeHref(jain, 'jain-report')).toBe('/repos/forge.example/jain-split/jain-report');
     expect(repoCodeHref(jain, 'veox/jain-web')).toBe('/repos/forge.example/veox/jain-web');
-    expect(commitHref({}, jain, 'jain-elsewhere')).toBeNull();
+    expect(commitHref({ commits: { 'jain-elsewhere': 'abc' } }, jain, 'jain-elsewhere')).toBeNull();
   });
 
   it('offers a review PR only when it would carry something, and folds finished work', () => {

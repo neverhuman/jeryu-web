@@ -9,6 +9,19 @@ import type { ShiftTodoPr } from './pipeline';
 
 export type ShiftMode = 'now' | 'night';
 export type ShiftTodoStatus = 'open' | 'claimed' | 'done' | 'blocked' | 'handoff' | 'closed';
+export type ShiftLandingKind = 'landed' | 'gate_failed' | 'conflict' | 'push_race' | 'kept' | 'pending';
+export interface ShiftTodoLanding {
+  repo: string;
+  status: ShiftLandingKind | string;
+  sha?: string | null;
+  pr?: number | null;
+  target?: string | null;
+  rescue_branch?: string | null;
+  rescue_sha?: string | null;
+  commits_not_on_main?: number | null;
+  tests?: string[];
+  check?: string | null;
+}
 /**
  * Who the todo waits on. `worker_task` is the default: a worker picks it up.
  * `owner_task` is a person's own job, so marking it done is the first thing
@@ -75,6 +88,8 @@ export interface ShiftTodo {
   shift: string | null;
   change_set: string | null;
   commits: Record<string, string>;
+  /** Per-repository landing results; absent on older servers. */
+  landing?: ShiftTodoLanding[];
   merged: boolean;
   /**
    * Pipeline visibility contract v1 (server-derived, absent on older servers):

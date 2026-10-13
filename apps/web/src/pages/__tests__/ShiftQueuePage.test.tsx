@@ -44,7 +44,7 @@ describe('ShiftQueuePage', () => {
     const done = await screen.findByTestId('shift-todo-20260918-2201-a9z');
     expect(within(done).getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute(
       'href',
-      '/repos/jeryu/jeryu/jeryu-deploy'
+      '/repos/jeryu/jeryu/jeryu-deploy/commit/abcdef1234567890'
     );
     // Live todos stand in one table per state (queued is not in progress), finished fold away.
     expect(screen.getByRole('heading', { name: /^In progress · \d+$/ })).toBeInTheDocument();
@@ -224,7 +224,7 @@ describe('ShiftQueuePage', () => {
 
     const done = screen.getByTestId('shift-todo-20260918-2201-a9z');
     expect(within(done).getByRole('link', { name: 'Pull request #48' })).toHaveAttribute('href', pr.url);
-    expect(within(done).getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute('href', pr.url);
+    expect(within(done).getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-deploy/commit/abcdef1234567890');
     expect(within(done).getByRole('list', { name: /Pull request #48, Merged, Released not yet/ })).toBeInTheDocument();
     expect(within(done).getByText('$2.50')).toBeInTheDocument();
 
@@ -409,4 +409,3 @@ describe('ShiftQueuePage', () => {
     expect(screen.getByTestId('shift-todo-j-1')).toBeInTheDocument();
   });
 });
-

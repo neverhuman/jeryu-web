@@ -47,7 +47,7 @@ describe('TodoPage', () => {
     expect(screen.getByText('operator@node-0/w1')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute(
       'href',
-      '/repos/jeryu/jeryu/jeryu-deploy'
+      '/repos/jeryu/jeryu/jeryu-deploy/commit/abcdef1234567890'
     );
     // The work trace is a rail of twelve stages with exactly one of them current.
     const rail = screen.getByRole('list', { name: /^Work trace of 20260918-2201-a9z/ });
@@ -88,6 +88,30 @@ describe('TodoPage', () => {
       'href',
       '/work/20260918-1832-k3f'
     );
+  });
+
+  it('shows landing results for every row kind and keeps the full note collapsed', async () => {
+    serveTodos([todo({ id: '20261013-123954-a9904a', status: 'blocked', note: 'full gate explanation', landing: [
+      { repo: 'acme-api', status: 'landed', sha: '1234567890abcdef', pr: 14 },
+      { repo: 'acme-web', status: 'gate_failed', target: 'main', rescue_branch: 'rescue/work', rescue_sha: 'abcdef123456', commits_not_on_main: 2, tests: ['test one', 'test two', 'test three', 'test four'], check: 'required' },
+      { repo: 'globex/acme-api', status: 'conflict' },
+      { repo: 'acme-web', status: 'push_race' },
+      { repo: 'acme-web', status: 'kept' },
+      { repo: 'acme-api', status: 'pending' },
+    ] })]);
+    renderTodo('/work/20261013-123954-a9904a');
+    const landing = await screen.findByRole('region', { name: 'Landing' });
+    expect(within(landing).getByRole('link', { name: '12345678' })).toHaveAttribute('href', '/repos/jeryu/jeryu/acme-api/commit/1234567890abcdef');
+    expect(within(landing).getByRole('link', { name: 'PR #14' })).toBeInTheDocument();
+    expect(landing).toHaveTextContent('gate failed after rebasing onto main');
+    expect(within(landing).getByRole('link', { name: '2 commits not on main' })).toHaveAttribute('href', '/repos/jeryu/jeryu/acme-web/commits/rescue%2Fwork');
+    expect(landing).toHaveTextContent('test one, test two, test three +1 more');
+    expect(landing).toHaveTextContent('could not land because of a conflict');
+    expect(landing).toHaveTextContent('push raced with another update');
+    expect(landing).toHaveTextContent('work was kept for later');
+    expect(landing).toHaveTextContent('not landed yet');
+    expect(screen.getByText('Why this todo is stuck')).toBeInTheDocument();
+    expect(screen.getByText('full gate explanation').closest('details')).not.toHaveAttribute('open');
   });
 
   it('gives admins the row actions', async () => {

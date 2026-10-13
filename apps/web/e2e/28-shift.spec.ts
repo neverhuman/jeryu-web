@@ -9,8 +9,28 @@ import { expect, test } from './fixtures/test';
 import { mockBootstrap } from './fixtures/mocks';
 import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { NIGHT, mockShiftApi, mockWorkerPools } from './fixtures/shiftMocks';
+import { blockingViolations, persistAxeResult, persistRenderedEvidence, runAxe } from './fixtures/accessibility';
 
 test.describe('Work, one page', () => {
+
+  test('a blocked partial todo shows landed and rescued repositories with evidence @a11y', async ({ page }) => {
+    await mockBootstrap(page, { auth: { role: 'user' } });
+    await page.route('**/api/v1/shift/families', (route) => route.fulfill({ json: { families: [{ name: 'acme', queue_repo: 'acme/acme-web', repos: [{ name: 'acme-api', owner: 'acme' }, { name: 'acme-web', owner: 'acme' }], shift_tz: 'UTC', landing: 'shifts' }] } }));
+    await page.route('**/api/v1/shift/todos*', (route) => route.fulfill({ json: { generated_at: new Date().toISOString(), todos: [{ id: '20261013-123954-a9904a', family: 'acme', title: 'Land the API change', body: 'Body', repos: ['acme-api', 'acme-web'], mode: 'night', priority: 1, blocked_by: [], status: 'blocked', attempts: 1, requested_by: 'operator', filed_at: '2026-10-13T00:00:00Z', claim_by: null, lease_until: null, lease_live: false, shift: null, change_set: null, commits: {}, merged: false, note: 'gate rejected the rescued work', triaged: true, worked_by: [], landing: [{ repo: 'acme-api', status: 'landed', sha: '1234567890abcdef', pr: 17 }, { repo: 'acme-web', status: 'gate_failed', target: 'main', rescue_branch: 'rescue/20261013', rescue_sha: 'abcdef1234567890', commits_not_on_main: 2, tests: ['api contract', 'web build', 'lint', 'typecheck'], check: 'required' }] }] } }));
+    await page.route('**/api/v3/repos/acme/acme-web/commits/abcdef1234567890/check-runs', (route) => route.fulfill({ json: { check_runs: [{ name: 'required', conclusion: 'failure', details_url: 'https://node-a/checks/41' }] } }));
+    await page.goto('/work/20261013-123954-a9904a?family=acme');
+    const landing = page.getByRole('region', { name: 'Landing' });
+    await expect(landing).toContainText('12345678');
+    await expect(landing).toContainText('gate failed after rebasing onto main');
+    await expect(landing).toContainText('2 commits not on main');
+    await expect(landing).toContainText('api contract, web build, lint +1 more');
+    await expect(landing.getByRole('link', { name: 'required: failure' })).toHaveAttribute('href', 'https://node-a/checks/41');
+    const result = await runAxe(page);
+    await persistAxeResult('todo-landing-partial', result);
+    expect(blockingViolations(result)).toEqual([]);
+    const rendered = await persistRenderedEvidence(page, 'todo-landing-partial');
+    expect(rendered).toBeTruthy();
+  });
 
   test('Work is one page: composer, workers line, queue; old addresses land on it @action:shift.tabs @action:shift.queue_filter', async ({
     page,
@@ -179,7 +199,7 @@ test.describe('Work, one page', () => {
     );
     await expect(blocked.getByRole('list', { name: /blocked — needs a human/ })).toBeVisible();
 
-    // The landed todo links to the PR that carries it, from the trace and the commit chip.
+    // The trace links to its PR, and the commit chip links to the commit page.
     await page.getByTestId('shift-finished-todos').getByText('1 finished todo').click();
     const done = page.getByTestId('shift-todo-20260918-2200-bbb');
     await expect(done.getByRole('list', { name: /Pull request #41, Merged, Released not yet/ })).toBeVisible();
@@ -189,7 +209,7 @@ test.describe('Work, one page', () => {
     );
     await expect(done.getByRole('link', { name: /^jeryu-deploy@/ })).toHaveAttribute(
       'href',
-      '/repos/jeryu/jeryu/jeryu-deploy/pulls/41'
+      '/repos/jeryu/jeryu/jeryu-deploy/commit/abcdef1234567890abcdef1234567890abcdef12'
     );
 
     // The red count does not decide for itself what waits on a person: it is one

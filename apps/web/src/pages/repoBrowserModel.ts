@@ -19,6 +19,7 @@ export const REPO_TABS = [
   'blob',
   'code',
   'commit',
+  'commits',
   'pulls',
   'settings',
   'tree',

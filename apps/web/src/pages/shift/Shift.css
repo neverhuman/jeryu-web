@@ -103,6 +103,11 @@
   margin: 0;
 }
 
+.shift-landing__link {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .shift__detail {
   background: var(--color-bg-1);
 }
