@@ -309,7 +309,7 @@ function PeopleList({
 }): JSX.Element {
   if (people.length === 0) return <p className="enroll-form__note">{empty}</p>;
   return (
-    <ul className="team-bot__grant-list" data-testid="org-people">
+    <ul className="team-agent__grant-list" data-testid="org-people">
       {people.map((login) => (
         <li key={login}>
           <span>{login}</span>
@@ -347,7 +347,7 @@ function AddPerson({
     setLogin('');
   }
   return (
-    <form className="team-bot__grant-form" onSubmit={onSubmit}>
+    <form className="team-agent__grant-form" onSubmit={onSubmit}>
       <label className="enroll-form__field">
         {label}
         <input
@@ -433,6 +433,8 @@ function EnrollTeamBotForm({ org, teams }: { org: string; teams: Team[] }): JSX.
       void queryClient.invalidateQueries({ queryKey: ['account-bots'] });
     },
   });
+  const slugPart = slug.trim() === '' ? 'slug' : slug.trim();
+  const actingPreview = `${org}.${slugPart}[bot]`;
   function onSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (displayName.trim() === '' || slug.trim() === '' || team === '') return;
@@ -477,7 +479,7 @@ function EnrollTeamBotForm({ org, teams }: { org: string; teams: Team[] }): JSX.
         </label>
       </div>
       <p className="enroll-form__note">
-        It acts as <code>{`${org}.${slug.trim() || 'slug'}[bot]`}</code> and can do nothing until
+        It acts as <code>{actingPreview}</code> and can do nothing until
         a repository&apos;s administrator grants it. Its stewards issue its tokens on{' '}
         <Link to="/bots">Agents</Link>.
       </p>

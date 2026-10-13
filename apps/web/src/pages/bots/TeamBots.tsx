@@ -96,61 +96,61 @@ export function TeamBots({
         </p>
       ) : (
         <>
-          {bots.map((bot) => {
-            const revoked = bot.status === 'revoked';
+          {bots.map((agent) => {
+            const revoked = agent.status === 'revoked';
             const rowBusy =
-              (suspend.isPending && suspend.variables === bot.id) ||
-              (revoke.isPending && revoke.variables === bot.id);
+              (suspend.isPending && suspend.variables === agent.id) ||
+              (revoke.isPending && revoke.variables === agent.id);
             return (
               <article
-                key={bot.id}
-                className="page__card team-bot"
+                key={agent.id}
+                className="page__card team-agent"
                 data-testid="team-bot"
-                aria-labelledby={`team-bot-${bot.id}`}
+                aria-labelledby={`team-bot-${agent.id}`}
               >
-                <header className="team-bot__header">
-                  <h3 className="page__card-title" id={`team-bot-${bot.id}`}>
-                    {bot.display_name}
+                <header className="team-agent__header">
+                  <h3 className="page__card-title" id={`team-bot-${agent.id}`}>
+                    {agent.display_name}
                   </h3>
-                  <BotKindBadge kind={bot.kind} />
+                  <BotKindBadge kind={agent.kind} />
                 </header>
-                <dl className="team-bot__facts">
+                <dl className="team-agent__facts">
                   <dt>Acts as</dt>
                   <dd>
-                    <code data-testid="team-bot-acting-login">{bot.acting_login ?? bot.slug}</code>
+                    <code data-testid="team-bot-acting-login">{agent.acting_login ?? agent.slug}</code>
                   </dd>
                   <dt>Organization</dt>
-                  <dd>{bot.owner}</dd>
+                  <dd>{agent.owner}</dd>
                   <dt>Stewards</dt>
-                  <dd>{bot.steward_team ? `${bot.owner}/${bot.steward_team}` : 'None'}</dd>
+                  <dd>{agent.steward_team ? `${agent.owner}/${agent.steward_team}` : 'None'}</dd>
                   <dt>Status</dt>
-                  <dd>{statusLabel(bot.status)}</dd>
+                  <dd>{statusLabel(agent.status)}</dd>
                   <dt>Last successful access</dt>
                   <dd>
-                    <When at={bot.last_successful_access} label="Last successful access" />
+                    <When at={agent.last_successful_access} label="Last successful access" />
                   </dd>
                 </dl>
                 <div className="page__inline-actions">
                   <ActionButton
                     type="button"
-                    aria-label={`Suspend ${bot.display_name}`}
-                    disabled={rowBusy || bot.status !== 'active'}
-                    onClick={() => suspend.mutate(bot.id)}
+                    aria-label={`Suspend ${agent.display_name}`}
+                    disabled={rowBusy || agent.status !== 'active'}
+                    onClick={() => suspend.mutate(agent.id)}
                   >
                     Suspend
                   </ActionButton>
                   <ActionButton
                     type="button"
                     variant="human"
-                    aria-label={`Revoke ${bot.display_name}`}
+                    aria-label={`Revoke ${agent.display_name}`}
                     disabled={rowBusy || revoked}
-                    onClick={() => revoke.mutate(bot.id)}
+                    onClick={() => revoke.mutate(agent.id)}
                   >
                     Revoke
                   </ActionButton>
                 </div>
-                <TeamBotGrants bot={bot} />
-                {revoked ? null : <AgentTokens bot={bot} />}
+                <TeamBotGrants bot={agent} />
+                {revoked ? null : <AgentTokens bot={agent} />}
               </article>
             );
           })}
@@ -218,7 +218,7 @@ function TeamBotGrants({ bot }: { bot: BotSummary }): JSX.Element {
 
   const grants = list.data?.grants ?? [];
   return (
-    <div className="team-bot__grants" data-testid="team-bot-grants">
+    <div className="team-agent__grants" data-testid="team-bot-grants">
       <h4>Repository grants</h4>
       {list.isPending ? (
         <LoadingState variant="message" title="Loading grants." />
@@ -227,7 +227,7 @@ function TeamBotGrants({ bot }: { bot: BotSummary }): JSX.Element {
       ) : grants.length === 0 ? (
         <p className="enroll-form__note">No grant yet: it can read public repositories only.</p>
       ) : (
-        <ul className="team-bot__grant-list">
+        <ul className="team-agent__grant-list">
           {grants.map((row) => (
             <li key={`${row.owner}/${row.repo}`} data-testid="team-bot-grant">
               <span>
@@ -246,13 +246,13 @@ function TeamBotGrants({ bot }: { bot: BotSummary }): JSX.Element {
           ))}
         </ul>
       )}
-      <form className="team-bot__grant-form" onSubmit={onSubmit} data-testid="team-bot-grant-form">
+      <form className="team-agent__grant-form" onSubmit={onSubmit} data-testid="team-bot-grant-form">
         <label className="enroll-form__field">
           Repository
           <input
             value={repoName}
             onChange={(event) => setRepoName(event.target.value)}
-            placeholder="acme/widgets"
+            placeholder="owner/name"
             autoComplete="off"
             spellCheck={false}
             disabled={grant.isPending}
