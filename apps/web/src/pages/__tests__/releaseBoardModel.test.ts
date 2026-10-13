@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { EnvironmentSummary } from '../../api/types/deployments';
-import type { BoardStage, BoardState, BoardWork } from '../../api/types/releaseBoard';
+import type { BoardLane, BoardStage, BoardState, BoardWork } from '../../api/types/releaseBoard';
 import {
   ACME_BOARD,
   GLOBEX_BOARD,
@@ -41,6 +41,11 @@ import {
   withOpenStage,
   workShares,
   workSummary,
+  homogeneityText,
+  stageDelta,
+  stageTargets,
+  stepDeltas,
+  stepDeltaText,
 } from '../releaseBoard/model';
 
 const OBSERVED = ACME_BOARD.observed_at; // 2026-09-28T15:40:00Z
@@ -359,5 +364,51 @@ describe('unshipped', () => {
   it('ignores an entry that names no lane', () => {
     expect(openStageId(['prod', ':prod', 'cloud-app:'], 'cloud-app')).toBe('');
     expect(openStageId(['prod'], 'prod')).toBeNull();
+  });
+});
+
+describe('delta first, then the targets', () => {
+  const missing = (total: number) => ({ from: 'main', repo: 'acme/app', total, changes: [] });
+
+  it('reads the delta from `missing`, and falls back to the collector status without it', () => {
+    const prod = stage('cloud-app', 'prod');
+    expect(stageDelta(prod)).toEqual({ text: prod.status, state: prod.state });
+    expect(stageDelta({ ...prod, missing: missing(30) })).toEqual({ text: '30 behind main', state: 'warn' });
+    expect(stageDelta({ ...prod, missing: missing(0) })).toEqual({ text: 'same as main', state: 'ok' });
+    expect(stageDelta(stage('cloud-app', 'main')).text).toBe('source');
+  });
+
+  it('says whether every target runs the same build', () => {
+    const prod = stageTargets(stage('cloud-app', 'prod'));
+    expect(prod?.text).toBe('4 of 5 targets differ');
+    expect(prod?.builds.map((b) => [b.running, b.count])).toEqual([
+      ['v0.7.11 5c3af7f', 2],
+      ['v0.8.6 2bd40b4', 2],
+      ['v0.8.12 96d8374', 1],
+    ]);
+    expect(prod && homogeneityText(prod)).toBe('Not homogeneous: 3 different builds across 5 targets.');
+
+    const same = stageTargets({
+      ...stage('cloud-app', 'prod'),
+      targets: [1, 2, 3].map((n) => ({ name: `node-${n}`, running: 'v1 · abc1234', state: 'ok' as const })),
+    });
+    expect(same?.text).toBe('all 3 targets agree');
+    expect(same && homogeneityText(same)).toBe('Homogeneous: all 3 targets run v1 · abc1234.');
+    expect(stageTargets(stage('cloud-app', 'main'))).toBeNull();
+  });
+
+  it('gives each step its gap, comparing a parallel stage with its predecessor', () => {
+    const lane: BoardLane = structuredClone(ACME_BOARD.lanes[0]);
+    const byId = (id: string) => lane.stages.find((s) => s.id === id)!;
+    byId('dev').missing = missing(0);
+    byId('stage').missing = missing(0); // runs beside dev: compared with main
+    byId('prod').missing = missing(30);
+    const steps = stepDeltas(lane);
+    expect(steps.map((s) => `${s.from}>${s.to}:${stepDeltaText(s)}`)).toEqual([
+      'main>dev:level',
+      'main>stage:level',
+      'stage>prod:30 changes',
+    ]);
+    expect(stepDeltas(ACME_BOARD.lanes[0])).toEqual([]);
   });
 });

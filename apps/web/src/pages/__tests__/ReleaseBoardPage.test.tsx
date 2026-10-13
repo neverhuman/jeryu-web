@@ -138,17 +138,24 @@ describe('ReleasesPage — family release board', () => {
     open('/releases?family=acme');
     const prod = await screen.findByTestId('release-board-stage-cloud-app-prod');
     expect(prod).toHaveTextContent('v0.8.12 · 96d8374');
-    expect(prod).toHaveTextContent('known by reported');
+    // Homogeneity is its own line on the cell; how it is known lives in the detail.
+    expect(within(prod).getByTestId('release-board-targets')).toHaveTextContent('4 of 5 targets differ');
+    expect(prod).not.toHaveTextContent('known by');
     const detail = screen.getByTestId('release-board-detail-cloud-app');
     expect(prod).toHaveAttribute('aria-controls', detail.id);
 
     fireEvent.click(prod);
     expect(prod).toHaveAttribute('aria-expanded', 'true');
     expect(within(detail).getByRole('heading', { name: 'Cloud app · prod' })).toBeInTheDocument();
+    // The detail opens on whether the stage is deployed the same everywhere.
+    const homogeneity = within(detail).getByTestId('release-board-homogeneity');
+    expect(homogeneity).toHaveTextContent('Not homogeneous: 3 different builds across 5 targets.');
+    expect(homogeneity).toHaveTextContent('v0.7.11 5c3af7f on 2 targets');
+    expect(detail).toHaveTextContent('known by reported');
     const rows = within(detail).getAllByRole('row');
     expect(rows).toHaveLength(6); // header + five targets
     expect(within(detail).getByRole('rowheader', { name: 'node-b · prod worker' })).toBeInTheDocument();
-    expect(within(detail).getAllByText('behind')).toHaveLength(4);
+    expect(within(within(detail).getByRole('table')).getAllByText('behind')).toHaveLength(4);
     expect(within(detail).getByText('Promoting ships')).toBeInTheDocument();
     expect(within(detail).getByText(/a275def · deploy: report each deploy/)).toBeInTheDocument();
     expect(within(detail).getByText('a new, higher v* tag on the old commit')).toBeInTheDocument();
@@ -183,6 +190,8 @@ describe('ReleasesPage — family release board', () => {
         { sha: 'e4f5a6b', subject: 'Renumber merge settings' },
       ],
     };
+    const stageStage = board.lanes[0].stages.find((stage) => stage.id === 'stage')!;
+    stageStage.missing = { from: 'main', repo: 'acme/app', total: 0, changes: [] };
     prod.arrived = [
       {
         at: '2026-10-12T21:40:00Z',
@@ -196,6 +205,10 @@ describe('ReleasesPage — family release board', () => {
     serveBoards([board]);
     open('/releases/family/acme?stage=cloud-app%3Aprod');
     const changes = await screen.findByTestId('release-board-stage-changes');
+    // The delta leads the cell, and the lane says the gap of each step.
+    const cell = screen.getByTestId('release-board-stage-cloud-app-prod');
+    expect(within(cell).getByTestId('release-board-delta')).toHaveTextContent('3 behind main');
+    expect(screen.getByTestId('release-board-steps-cloud-app')).toHaveTextContent('stage → prod: 3 changes');
     const missing = within(changes).getByRole('region', { name: 'Not in prod yet' });
     expect(missing).toHaveTextContent('Not in prod yet: 3 changes on main');
     expect(within(missing).getByRole('link', { name: 'Add secure email password recovery' })).toHaveAttribute(

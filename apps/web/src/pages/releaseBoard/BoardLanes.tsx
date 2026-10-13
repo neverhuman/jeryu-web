@@ -4,9 +4,14 @@
 // "not used". Without columns a lane is a free track of stage cells (→ when a
 // stage follows the previous one, ‖ when it runs beside it). Either way a
 // never-deployed stage is dashed, lanes sharing a group sit under its name,
-// and pressing a cell opens its detail under the lane: every target and what
-// it runs, what promoting would ship, the rollback, and the promote command to
-// copy. One cell per lane is open at a time; pressing it again closes it.
+// and pressing a cell opens its detail under the lane.
+//
+// Delta first: a cell leads with how far the stage is from the lane's source
+// ("30 behind main"), and the line under the lane head gives each step's gap
+// ("stage → prod: 30 changes"). Homogeneity second: the cell's last line says
+// whether every target agrees, and the detail opens on that verdict, the
+// targets grouped by what they run, then every target, what promoting would
+// ship, the rollback, and the promote command to copy. One cell per lane is open at a time; pressing it again closes it.
 // Each lane is the anchor `#lane-<id>`, and a target that names its runners
 // links to them on /runners ("2 runners"); one run by an external worker pool
 // names its shift slots instead and links to them on /work ("2 workers").
@@ -34,6 +39,7 @@ import {
 import {
   boardColumns,
   connectorLabel,
+  homogeneityText,
   knownByText,
   laneGroups,
   laneLayout,
@@ -44,7 +50,12 @@ import {
   promoteWho,
   stageCellClass,
   stageConnector,
+  stageDelta,
   stageOverlay,
+  stageTargets,
+  stateTone,
+  stepDeltas,
+  stepDeltaText,
   targetStateText,
   withOpenStage,
   type StageOverlay,
@@ -174,6 +185,7 @@ function LaneView({
         ) : null}
         <span className="release-board__muted">{lane.source}</span>
       </div>
+      <StepStrip lane={lane} />
       {columns.length > 0 ? (
         <ColumnTrack
           lane={lane}
@@ -206,6 +218,28 @@ function LaneView({
         ) : null}
       </div>
     </section>
+  );
+}
+
+/** The gap between each stage and the one it is promoted from, in one line. */
+function StepStrip({ lane }: { lane: BoardLane }): JSX.Element | null {
+  const steps = stepDeltas(lane);
+  if (steps.length === 0) return null;
+  return (
+    <ol
+      className="release-board__steps"
+      aria-label={`${lane.name}: changes between stages`}
+      data-testid={`release-board-steps-${lane.id}`}
+    >
+      {steps.map((step) => (
+        <li
+          key={`${step.from}-${step.to}`}
+          className={`release-board__step-delta${step.count === 0 ? '' : ' release-board__step-delta--gap'}`}
+        >
+          {step.from} → {step.to}: <strong>{stepDeltaText(step)}</strong>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -273,7 +307,8 @@ function StageCell({
   onToggle: () => void;
 }): JSX.Element {
   const version = overlay ? overlay.version : (stage.version ?? 'unknown');
-  const knownBy = overlay ? overlay.knownBy : stage.known_by;
+  const delta = stageDelta(stage);
+  const targets = stageTargets(stage);
   return (
     <button
       type="button"
@@ -286,11 +321,18 @@ function StageCell({
       <span className="release-board__stage-name">{stage.name}</span>
       <span className="release-board__version">{version}</span>
       <span>
-        <span className={pillClass(stage.state)}>{stage.status}</span>
+        <span className={pillClass(delta.state)} data-testid="release-board-delta">
+          {delta.text}
+        </span>
       </span>
-      <span className="release-board__known">
-        known by <strong>{knownByText(knownBy)}</strong>
-      </span>
+      {targets ? (
+        <span
+          className={`release-board__targets release-board__targets--${stateTone(targets.state)}`}
+          data-testid="release-board-targets"
+        >
+          {targets.text}
+        </span>
+      ) : null}
       {overlay ? (
         <span className="release-board__overlay" data-testid="release-board-overlay">
           {overlay.note}
@@ -309,11 +351,36 @@ function StageDetail({
   stage: BoardStage;
   overlay: StageOverlay | null;
 }): JSX.Element {
+  const targets = stageTargets(stage);
+  const knownBy = overlay ? overlay.knownBy : stage.known_by;
   return (
     <div className="release-board__detail" data-testid="release-board-stage-detail">
       <h4 className="release-board__detail-title">
         {lane.name} · {stage.name}
       </h4>
+      {targets ? (
+        <div className="release-board__homogeneity" data-testid="release-board-homogeneity">
+          <p className={`release-board__verdict release-board__targets--${stateTone(targets.state)}`}>
+            {homogeneityText(targets)}
+          </p>
+          {targets.builds.length > 1 ? (
+            <ul className="release-board__list">
+              {targets.builds.map((build) => (
+                <li key={build.running}>
+                  <code>{build.running}</code> on {build.count} target{build.count === 1 ? '' : 's'}{' '}
+                  <span className={pillClass(build.state)}>{targetStateText(build.state)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : (
+        <p className="release-board__muted">No targets reported for this stage.</p>
+      )}
+      <p className="release-board__known">
+        {stage.status === 'source' ? null : <>Collector status <strong>{stage.status}</strong> · </>}
+        known by <strong>{knownByText(knownBy)}</strong>
+      </p>
       {overlay ? (
         <p className="release-board__muted">
           The forge reported <code>{overlay.version}</code> at{' '}

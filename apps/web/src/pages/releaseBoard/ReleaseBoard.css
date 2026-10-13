@@ -241,6 +241,45 @@
   color: var(--color-accent-info);
 }
 
+/* Homogeneity: the cell's second line and the detail's verdict. */
+.release-board__targets {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+}
+
+.release-board__targets--warn,
+.release-board__targets--failed {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent-warning);
+}
+
+.release-board__verdict {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.release-board__homogeneity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The lane's step deltas: "stage → prod: 30 changes". */
+.release-board__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+}
+
+.release-board__step-delta--gap strong {
+  color: var(--color-accent-warning);
+}
+
 /* ── Stage detail ─────────────────────────────────────────────────────── */
 
 .release-board__detail {

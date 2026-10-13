@@ -104,6 +104,142 @@ export function stageCellClass(stage: BoardStage, open: boolean): string {
   return classes.join(' ');
 }
 
+// ── Delta first, then the targets ────────────────────────────────────────
+//
+// A stage answers two separate questions, and the cell keeps them apart: how
+// far it is from the lane's source (the delta), and whether every target in it
+// runs the same thing (homogeneity). The collector's `status` chip says both
+// at once ("in sync · 30 behind"), so it is shown only when the snapshot
+// carries no `missing` to derive the delta from.
+
+export interface StageDelta {
+  text: string;
+  state: BoardState;
+}
+
+/** How far a stage is from the source: "same as main", "30 behind main". */
+export function stageDelta(stage: BoardStage): StageDelta {
+  if (stage.status === 'source') return { text: 'source', state: 'none' };
+  if (neverDeployed(stage)) return { text: stage.status, state: 'none' };
+  const missing = stage.missing;
+  if (!missing) return { text: stage.status, state: stage.state };
+  if (missing.total === 0) return { text: `same as ${missing.from}`, state: 'ok' };
+  return { text: `${missing.total} behind ${missing.from}`, state: 'warn' };
+}
+
+const STATE_RANK: Record<BoardState, number> = { ok: 0, none: 1, warn: 2, bad: 3 };
+
+/** The worse of two states; `none` (unknown) ranks above `ok`. */
+export function worseState(a: BoardState, b: BoardState): BoardState {
+  return STATE_RANK[b] > STATE_RANK[a] ? b : a;
+}
+
+export interface TargetBuild {
+  running: string;
+  count: number;
+  state: BoardState;
+}
+
+export interface StageTargets {
+  total: number;
+  /** Targets the collector marked behind (warn or bad). */
+  differ: number;
+  unknown: number;
+  /** What the targets run, most common first; one entry means homogeneous. */
+  builds: TargetBuild[];
+  state: BoardState;
+  /** "all 5 targets agree", "2 of 5 targets differ", "1 target unknown". */
+  text: string;
+}
+
+/** Whether a stage is deployed the same everywhere, or null when it has no targets. */
+export function stageTargets(stage: BoardStage): StageTargets | null {
+  const total = stage.targets.length;
+  if (total === 0) return null;
+  let differ = 0;
+  let unknown = 0;
+  let state: BoardState = 'ok';
+  const builds = new Map<string, TargetBuild>();
+  for (const target of stage.targets) {
+    if (target.state === 'warn' || target.state === 'bad') differ += 1;
+    if (target.state === 'none') unknown += 1;
+    state = worseState(state, target.state);
+    const running = target.running ?? 'unknown';
+    const build = builds.get(running) ?? { running, count: 0, state: 'ok' };
+    build.count += 1;
+    build.state = worseState(build.state, target.state);
+    builds.set(running, build);
+  }
+  const noun = (n: number): string => `${n} target${n === 1 ? '' : 's'}`;
+  let text: string;
+  if (differ > 0) text = `${differ} of ${noun(total)} differ${differ === 1 ? 's' : ''}`;
+  else if (unknown > 0) text = `${unknown} of ${noun(total)} unknown`;
+  else text = total === 1 ? '1 target agrees' : `all ${total} targets agree`;
+  return {
+    total,
+    differ,
+    unknown,
+    builds: Array.from(builds.values()).sort((a, b) => b.count - a.count),
+    state,
+    text,
+  };
+}
+
+/** The detail panel's first line: one build everywhere, or how it splits. */
+export function homogeneityText(targets: StageTargets): string {
+  const [only] = targets.builds;
+  if (targets.builds.length === 1 && only) {
+    return targets.total === 1
+      ? `Its one target runs ${only.running}.`
+      : `Homogeneous: all ${targets.total} targets run ${only.running}.`;
+  }
+  return `Not homogeneous: ${targets.builds.length} different builds across ${targets.total} targets.`;
+}
+
+export interface StepDelta {
+  from: string;
+  to: string;
+  /** Changes `to` lacks that `from` has; negative when `to` is ahead. */
+  count: number;
+}
+
+/**
+ * The gap between each stage and the one it is promoted from, from the two
+ * stages' `missing` against the same source. A stage that runs beside the
+ * previous one (`parallel`) is compared with that stage's own predecessor. A
+ * pair is left out when either side has no comparable delta.
+ */
+export function stepDeltas(lane: BoardLane): StepDelta[] {
+  const behind = (stage: BoardStage, source: string): number | null => {
+    if (stage.status === 'source' && stage.name === source) return 0;
+    return stage.missing && stage.missing.from === source ? stage.missing.total : null;
+  };
+  const source = lane.stages.find((stage) => stage.missing)?.missing?.from;
+  if (!source) return [];
+  const steps: StepDelta[] = [];
+  const upstream: (number | null)[] = [];
+  lane.stages.forEach((stage, index) => {
+    let up: number | null = index > 0 ? index - 1 : null;
+    if (stage.parallel && index > 0) up = upstream[index - 1] ?? null;
+    upstream.push(up);
+    if (up === null) return;
+    const from = lane.stages[up];
+    if (!from) return;
+    const a = behind(from, source);
+    const b = behind(stage, source);
+    if (a === null || b === null) return;
+    steps.push({ from: from.name, to: stage.name, count: b - a });
+  });
+  return steps;
+}
+
+/** "level", "30 changes", "2 ahead". */
+export function stepDeltaText(step: StepDelta): string {
+  if (step.count === 0) return 'level';
+  if (step.count < 0) return `${-step.count} ahead`;
+  return `${step.count} change${step.count === 1 ? '' : 's'}`;
+}
+
 // ── The open stage cell, in the URL ──────────────────────────────────────
 //
 // `?stage=` holds one `<lane>:<stage>` entry per lane with a cell open, so a

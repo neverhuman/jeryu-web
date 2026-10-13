@@ -107,7 +107,7 @@ test('a stage opens into its targets, what promoting ships and the command @acti
   const prod = page.getByTestId('release-board-stage-cloud-app-prod');
   await expect(prod).toContainText('v0.8.12 · 96d8374');
   await expect(prod).toContainText('skew · 1 behind');
-  await expect(prod).toContainText('known by reported');
+  await expect(prod.getByTestId('release-board-targets')).toHaveText('4 of 5 targets differ');
   await expect(prod).toHaveAttribute('aria-expanded', 'false');
 
   // Keyboard first: a stage is a real button.
@@ -203,7 +203,8 @@ test('a deployment the forge reported after the snapshot shows at once @action:r
     timeout: 15_000,
   });
   await expect(prod).toContainText('v0.8.13 · 1a2b3c4');
-  await expect(prod).toContainText('known by reported');
+  await prod.click();
+  await expect(page.getByTestId('release-board-detail-cloud-app')).toContainText('known by reported');
   await expect(page.getByTestId('release-board-stage-cloud-app-stage')).not.toContainText(
     'reported after this snapshot'
   );
