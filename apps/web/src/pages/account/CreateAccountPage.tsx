@@ -60,7 +60,7 @@ function SignupClosed(): JSX.Element {
 export function CreateAccountPage(): JSX.Element {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
-  const { signup, user, logout } = useAuth();
+  const { signup, user, logout, isPending: sessionPending } = useAuth();
   const navigate = useNavigate();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
@@ -94,6 +94,21 @@ export function CreateAccountPage(): JSX.Element {
     }
   };
 
+  // Until the session is known, no form: a link spent by a visitor who turns
+  // out to be signed in would replace their session (the forge does not stop it).
+  if (sessionPending) {
+    return (
+      <AccountFrame
+        label="Create an account"
+        title="Checking your session…"
+        intro="One moment: a signed-in visitor has to sign out before using a sign-up link."
+      >
+        <p className="waitlist__status" role="status">
+          Checking whether you are signed in…
+        </p>
+      </AccountFrame>
+    );
+  }
   // Signed in already: spending the link would replace this session with the
   // new account's, so the link is kept until they sign out.
   if (user) {

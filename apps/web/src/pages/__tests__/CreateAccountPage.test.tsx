@@ -63,8 +63,9 @@ function open(path: string): void {
   );
 }
 
-function fill(login: string, password: string, confirm = password): void {
-  fireEvent.change(screen.getByLabelText('Username'), { target: { value: login } });
+/** Waits for the session check, then fills and submits the form. */
+async function fill(login: string, password: string, confirm = password): Promise<void> {
+  fireEvent.change(await screen.findByLabelText('Username'), { target: { value: login } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
   fireEvent.change(screen.getByLabelText('Repeat password'), { target: { value: confirm } });
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
@@ -78,7 +79,7 @@ describe('CreateAccountPage', () => {
       json({ login: 'newcomer', role: 'user', mustChangePassword: false, csrfToken: 'csrf-1' })
     );
     open('/create-account?token=signup-1');
-    fill(' newcomer ', CHOSEN);
+    await fill(' newcomer ', CHOSEN);
     expect(await screen.findByTestId('home')).toHaveTextContent('signed in as newcomer');
     expect(calls).toEqual([
       {
@@ -89,12 +90,12 @@ describe('CreateAccountPage', () => {
     ]);
   });
 
-  it('checks length and the repeat before spending the link', () => {
+  it('checks length and the repeat before spending the link', async () => {
     const calls = serve(() => json({}));
     open('/create-account?token=signup-1');
-    fill('newcomer', 'short');
+    await fill('newcomer', 'short');
     expect(screen.getByRole('status')).toHaveTextContent('Use at least 12 characters.');
-    fill('newcomer', CHOSEN, `${CHOSEN}-other`);
+    await fill('newcomer', CHOSEN, `${CHOSEN}-other`);
     expect(screen.getByRole('status')).toHaveTextContent('The two passwords are not the same.');
     expect(calls).toEqual([]);
   });
@@ -102,7 +103,7 @@ describe('CreateAccountPage', () => {
   it('keeps the form when the username is taken, since the link still works', async () => {
     const calls = serve(() => refusal(409, 'conflict', 'login already exists'));
     open('/create-account?token=signup-1');
-    fill('taken', CHOSEN);
+    await fill('taken', CHOSEN);
     expect(await screen.findByRole('status')).toHaveTextContent(
       'That username is taken. Choose another.'
     );
@@ -114,7 +115,7 @@ describe('CreateAccountPage', () => {
   it('shows the server words when it refuses the password itself', async () => {
     serve(() => refusal(422, 'invalid_input', 'password must be at least 12 characters'));
     open('/create-account?token=signup-1');
-    fill('newcomer', CHOSEN);
+    await fill('newcomer', CHOSEN);
     expect(await screen.findByRole('status')).toHaveTextContent(
       'password must be at least 12 characters'
     );
@@ -126,7 +127,7 @@ describe('CreateAccountPage', () => {
     async (code) => {
       serve(() => refusal(422, code, 'that sign-up link is expired'));
       open('/create-account?token=old');
-      fill('newcomer', CHOSEN);
+      await fill('newcomer', CHOSEN);
       expect(
         await screen.findByRole('heading', { name: 'This link no longer works' })
       ).toBeVisible();
@@ -150,13 +151,28 @@ describe('CreateAccountPage', () => {
           )
     );
     open('/create-account?token=signup-1');
-    fill('newcomer', CHOSEN);
+    await fill('newcomer', CHOSEN);
     expect(await screen.findByRole('heading', { name: 'Sign-up is closed' })).toBeVisible();
     expect(screen.getByText(/JeRyū is invite-only for now/)).toBeVisible();
     expect(await screen.findByRole('link', { name: 'Join the waitlist' })).toHaveAttribute(
       'href',
       'https://waitlist.example.com/join'
     );
+  });
+
+  it('shows no form while the session check is pending', async () => {
+    let answerSession: (response: Response) => void = () => undefined;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      () => new Promise<Response>((resolve) => {
+        answerSession = resolve;
+      })
+    );
+    open('/create-account?token=signup-1');
+    expect(screen.getByRole('heading', { name: 'Checking your session…' })).toBeVisible();
+    expect(screen.queryByLabelText('Username')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Create account' })).toBeNull();
+    answerSession(json({ error: { code: 'unauthorized', message: 'login required' } }, 401));
+    expect(await screen.findByLabelText('Username')).toBeVisible();
   });
 
   it('does not spend the link for a signed-in visitor, and offers to sign out first', async () => {
@@ -173,10 +189,10 @@ describe('CreateAccountPage', () => {
     expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(['POST /api/v1/auth/logout']);
   });
 
-  it('without a token it says it needs the email link', () => {
+  it('without a token it says it needs the email link', async () => {
     const calls = serve(() => json({}));
     open('/create-account');
-    expect(screen.getByRole('heading', { name: 'This link no longer works' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'This link no longer works' })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(
       'This page needs the link from a sign-up email.'
     );
@@ -186,7 +202,7 @@ describe('CreateAccountPage', () => {
   it('says to wait when the forge rate-limits the attempt', async () => {
     serve(() => refusal(429, 'rate_limited', 'slow down'));
     open('/create-account?token=signup-1');
-    fill('newcomer', CHOSEN);
+    await fill('newcomer', CHOSEN);
     expect(await screen.findByRole('status')).toHaveTextContent('Too many attempts.');
   });
 });
