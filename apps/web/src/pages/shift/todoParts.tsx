@@ -8,13 +8,16 @@ import { Link } from 'react-router-dom';
 
 import type { ShiftTodo, ShiftTodoActionRequest } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
+import { CiProgress } from '../../components/ciProgress/CiProgress';
 import { LIST_ACTION_PROP } from '../../hooks/useListKeys';
-import { useShiftTodoAction } from '../../hooks/useShift';
+import { useServerNow } from '../../hooks/useServerNow';
+import { useShiftTodoAction, useShiftWorkers } from '../../hooks/useShift';
 import {
   SHIFT_PRIORITIES,
   formatCost,
   isLongNote,
   latestWorker,
+  liveAttempt,
   repoCodeHref,
   slotLabel,
   todoPrHref,
@@ -115,7 +118,7 @@ export function TodoDetail({
         ) : null}
         {todo.change_set ? ` · change set ${todo.change_set}` : ''}
       </p>
-      {todo.worked_by.length === 0 ? (
+      {todo.worked_by.length === 0 && !liveAttempt(todo) ? (
         <p className="shift__muted">No attempts yet.</p>
       ) : (
         <div className="table-scroll">
@@ -145,11 +148,43 @@ export function TodoDetail({
                   <td>{attempt.note}</td>
                 </tr>
               ))}
+              {liveAttempt(todo) ? <LiveAttemptRow todo={todo} /> : null}
             </tbody>
           </table>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The attempt a worker is running now, as the last row of the attempts table:
+ * an attempt reaches `worked_by` only once it ends. Elapsed time ticks on the
+ * forge's clock, and the stage (agent, gate, land) comes from the slot's own
+ * heartbeat. Rendered only for a claimed todo with a live lease, so only those
+ * pages read the workers list.
+ */
+function LiveAttemptRow({ todo }: { todo: ShiftTodo }): JSX.Element | null {
+  const workers = useShiftWorkers();
+  const nowMs = useServerNow(workers.data?.generated_at, workers.dataUpdatedAt, true);
+  const live = liveAttempt(todo, workers.data?.workers);
+  if (!live) return null;
+  return (
+    <tr data-testid={`shift-attempt-live-${todo.id}`}>
+      <td>{live.worker}</td>
+      <td>{live.model ?? '—'}</td>
+      <td>{live.startedAt ?? '—'}</td>
+      <td>
+        {live.startedAt ? (
+          <CiProgress startedAt={live.startedAt} nowMs={nowMs} variant="compact" />
+        ) : (
+          'running'
+        )}
+      </td>
+      <td>{live.stage ? `working · ${live.stage}` : 'working'}</td>
+      <td>—</td>
+      <td>{live.leaseUntil ? `lease until ${live.leaseUntil}` : ''}</td>
+    </tr>
   );
 }
 

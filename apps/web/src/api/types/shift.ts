@@ -94,6 +94,14 @@ export interface ShiftTodo {
    * has. Workers never claim a todo with an assignee. Absent on older servers.
    */
   assignee?: string | null;
+  /**
+   * When the attempt in progress began and which model runs it, as the
+   * claiming worker wrote them. Null unless the todo is claimed; absent on
+   * older servers and from older workers. (An attempt reaches `worked_by` only
+   * once it ends.)
+   */
+  claimed_at?: string | null;
+  claim_model?: string | null;
   worked_by: ShiftAttempt[];
 }
 

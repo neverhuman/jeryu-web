@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TodoPage } from '../shift/TodoPage';
 import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
-import { TODOS, todo } from './shiftTestData';
+import { TODOS, attempt, todo } from './shiftTestData';
 
 let role: 'admin' | 'user' = 'user';
 vi.mock('../../hooks/useAuth', () => ({
@@ -67,6 +67,32 @@ describe('TodoPage', () => {
     expect(within(trail).queryByRole('link', { name: 'jeryu' })).toBeNull();
     // Non-admins get no row actions.
     expect(screen.queryByRole('button', { name: /Block|Release/ })).toBeNull();
+  });
+
+  it('ends the attempts table with the attempt a worker is running now', async () => {
+    serveTodos([
+      todo({
+        id: '20260919-0900-q1q',
+        title: 'Claimed thing',
+        status: 'claimed',
+        claim_by: 'operator@node-0/w1',
+        lease_until: '2026-09-19T10:00:00Z',
+        lease_live: true,
+        claimed_at: '2026-09-19T08:40:00Z',
+        claim_model: 'claude-opus-5[1m]',
+        worked_by: [attempt({ outcome: 'retry', note: 'gate failed in api' })],
+      }),
+    ]);
+    renderTodo('/work/20260919-0900-q1q');
+    const live = await screen.findByTestId('shift-attempt-live-20260919-0900-q1q');
+    const rows = within(screen.getByRole('table', { name: /^Attempts for / })).getAllByRole('row');
+    expect(rows[rows.length - 1]).toBe(live);
+    expect(live).toHaveTextContent('operator@node-0/w1');
+    expect(live).toHaveTextContent('claude-opus-5[1m]');
+    expect(live).toHaveTextContent('2026-09-19T08:40:00Z');
+    // The stage is the slot's own heartbeat (WORKERS: node-0/w1 is in `agent`).
+    expect(await within(live).findByText('working · agent')).toBeInTheDocument();
+    expect(live).toHaveTextContent('lease until 2026-09-19T10:00:00Z');
   });
 
   it('says why a blocked todo is stuck once, and links its blockers to their pages', async () => {

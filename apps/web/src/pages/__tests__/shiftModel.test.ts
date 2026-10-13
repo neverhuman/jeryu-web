@@ -40,6 +40,7 @@ import {
   todoActions,
   untilInputDefault,
   untilRfc3339,
+  liveAttempt,
 } from '../shift/shiftModel';
 import { SHIFTS, TODOS, WORKERS, attempt, todo } from './shiftTestData';
 
@@ -373,5 +374,38 @@ describe('todo actions', () => {
     const started = untilInputDefault(new Date('2026-10-04T12:00:00Z'));
     expect(started).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
     expect(untilRfc3339(started)).toBe('2026-10-05T12:00:00Z');
+  });
+});
+
+describe('liveAttempt', () => {
+  const claimed = todo({
+    id: '20260919-0900-q1q',
+    status: 'claimed',
+    claim_by: 'operator@node-0/w1',
+    lease_until: '2026-09-19T10:00:00Z',
+    lease_live: true,
+    claimed_at: '2026-09-19T08:40:00Z',
+    claim_model: 'claude-opus-5[1m]',
+  });
+
+  it('is the claim the worker wrote, with the stage its slot reports', () => {
+    expect(liveAttempt(claimed, WORKERS.workers)).toEqual({
+      worker: 'operator@node-0/w1',
+      model: 'claude-opus-5[1m]',
+      startedAt: '2026-09-19T08:40:00Z',
+      leaseUntil: '2026-09-19T10:00:00Z',
+      stage: 'agent',
+    });
+  });
+
+  it('has no stage when no working slot names this todo, and no model from an older worker', () => {
+    const older = { ...claimed, claimed_at: undefined, claim_model: undefined };
+    const elsewhere = WORKERS.workers.map((w) => ({ ...w, todo_id: 'another' }));
+    expect(liveAttempt(older, elsewhere)).toMatchObject({ model: null, startedAt: null, stage: null });
+  });
+
+  it('is nothing once the lease lapsed or the todo is not claimed', () => {
+    expect(liveAttempt({ ...claimed, lease_live: false }, WORKERS.workers)).toBeNull();
+    expect(liveAttempt({ ...claimed, status: 'open' }, WORKERS.workers)).toBeNull();
   });
 });
