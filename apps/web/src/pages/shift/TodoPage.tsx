@@ -45,6 +45,7 @@ import { todoFacts, workTrace } from './workTraceModel';
 import { WORK_PATH, queueHref, todoHref } from './workPaths';
 import { todoFamily } from './workPageModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { LandingSection } from './todoLanding';
 
 import '../page.css';
 import './Shift.css';
@@ -192,7 +193,17 @@ function TodoView({
   const commits = Object.entries(todo.commits);
   return (
     <>
-      {stuck && todo.note ? <WhyStuck id={todo.id} note={todo.note} /> : null}
+      {todo.landing ? <LandingSection todo={todo} refs={refs} /> : null}
+      {stuck && todo.note ? (
+        todo.landing ? (
+          <details className="shift__why-details">
+            <summary>Why this todo is stuck</summary>
+            <WhyStuck id={todo.id} note={todo.note} />
+          </details>
+        ) : (
+          <WhyStuck id={todo.id} note={todo.note} />
+        )
+      ) : null}
       <WorkTrace
         stages={workTrace(todoFacts(todo))}
         subject={todo.id}

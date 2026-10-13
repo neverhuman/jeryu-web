@@ -316,15 +316,15 @@ export function attemptSummary(todo: Pick<ShiftTodo, 'attempts' | 'worked_by'>):
   return { text, failing: outcome !== '' && outcome !== 'done' };
 }
 
-/** Where a commit chip leads: the PR that carries it, else the repo's code, else nowhere. */
+/** Where a commit chip leads: that commit's page, or nowhere when unresolved. */
 export function commitHref(
-  todo: Pick<ShiftTodo, 'pr'>,
+  todo: Pick<ShiftTodo, 'commits'>,
   refs: RepoRefs,
   repo: string
 ): string | null {
-  const pr = todo.pr;
-  if (pr && bareRepo(pr.repo) === bareRepo(repo)) return todoPrHref(todo, refs);
-  return repoCodeHref(refs, repo);
+  const ref = refs(repo);
+  const sha = todo.commits[repo] ?? Object.entries(todo.commits).find(([name]) => bareRepo(name) === bareRepo(repo))?.[1];
+  return ref && sha ? repoUrl(ref, 'commit', encodeURIComponent(sha)) : null;
 }
 
 /** SPA path of the todo's shift PR (the server's `url` is already an app path). */
@@ -618,8 +618,6 @@ export function isLongNote(note: string): boolean {
   // ~72ch per line in the queue's first column.
   return note.length > NOTE_CLAMP_LINES * 72;
 }
-
-
 /** The attempt a worker is running now, which `worked_by` gains only once it ends. */
 export interface LiveAttempt {
   worker: string;

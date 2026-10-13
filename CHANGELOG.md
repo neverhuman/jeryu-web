@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Work todo pages show per-repository landing results, direct commit and saved-branch links, failing tests and the rescue commit's check result; the full stuck note is collapsed below the section. Commit chips now open their commit pages.
 - A repository's Agents tab lists everyone at work on it, from `GET /api/v1/repos/{id}/agent-presence`:
   CLI sessions of any vendor, queue workers, reviewers, gates and jeryu's own runs, one row each,
   live first. A row shows agent and model, what it is doing, who started it, branch and checkout,
