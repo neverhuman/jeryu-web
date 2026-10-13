@@ -16,6 +16,7 @@ import { AppShell } from '../layout/AppShell';
 import { HomeRedirect } from '../layout/HomeRedirect';
 import { ActivityPage } from '../pages/activity';
 import { BotsPage } from '../pages/bots/BotsPage';
+import { OrganizationsPage } from '../pages/orgs/OrganizationsPage';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { FleetPage } from '../pages/FleetPage';
 import { ForgeLinkRedirect } from '../pages/ForgeLinkRedirect';
@@ -116,6 +117,8 @@ export const router = createBrowserRouter([
       // the account controls are.
       { path: HELP_PATH.slice(1), element: <HelpPage /> },
       { path: 'bots', element: <BotsPage /> },
+      // Organizations, their owners and teams, and the team agents they own.
+      { path: 'orgs', element: <OrganizationsPage /> },
       // The internal wiki: the repository chosen in Settings, read as pages.
       { path: 'wiki', element: <WikiPage /> },
       { path: 'wiki/*', element: <WikiPage /> },

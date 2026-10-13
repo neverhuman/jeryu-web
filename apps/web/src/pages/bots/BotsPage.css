@@ -259,3 +259,55 @@
   border-top: 1px solid var(--color-border-subtle);
   padding-top: var(--space-3);
 }
+
+/* Team agents (ADR 0008): one card per agent, its facts, grants and tokens. */
+.team-bot {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.team-bot__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.team-bot__facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.team-bot__facts dt {
+  color: var(--color-fg-muted);
+}
+
+.team-bot__facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.team-bot__grant-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.team-bot__grant-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.team-bot__grant-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}

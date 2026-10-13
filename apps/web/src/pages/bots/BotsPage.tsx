@@ -23,6 +23,7 @@ import { ErrorState, LoadingState } from '../../components/state';
 import { When } from '../../format/When';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { AgentTokens } from './AgentTokens';
+import { TeamBots } from './TeamBots';
 import { BotKindBadge } from './BotKindBadge';
 import { ConnectAgentDoc } from './ConnectAgentDoc';
 import {
@@ -65,6 +66,7 @@ function upsertBot(
     const bots = current?.bots ?? [];
     const exists = bots.some((row) => row.id === bot.id);
     return {
+      ...current,
       bots: exists ? bots.map((row) => (row.id === bot.id ? bot : row)) : [bot, ...bots],
     };
   });
@@ -147,6 +149,7 @@ export function BotsPage(): JSX.Element {
   }
 
   const bots = list.data?.bots ?? [];
+  const teamBots = list.data?.team_bots;
 
   return (
     <div className="page" data-testid="enroll-page">
@@ -310,6 +313,14 @@ export function BotsPage(): JSX.Element {
             <AgentTokens key={enrollment.id} bot={enrollment} />
           ))}
         </section>
+      ) : null}
+
+      {/* An older server sends no team_bots: say nothing about team agents. */}
+      {teamBots !== undefined ? (
+        <TeamBots
+          bots={teamBots}
+          onChanged={() => void queryClient.invalidateQueries({ queryKey: ACCOUNT_BOTS_KEY })}
+        />
       ) : null}
     </div>
   );

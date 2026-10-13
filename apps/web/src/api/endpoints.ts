@@ -385,6 +385,18 @@ export const endpoints = {
 
   /** Account agent enrollments. */
   bots: (): string => '/api/v1/bots',
+  botGrants: (id: string): string => `/api/v1/bots/${encodeURIComponent(id)}/grants`,
+  botGrant: (id: string, owner: string, repo: string): string =>
+    `/api/v1/bots/${encodeURIComponent(id)}/grants/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+  botTokensRevokeIssued: (): string => '/api/v1/bots/tokens/revoke-issued',
+  orgs: (): string => '/api/v1/orgs',
+  org: (org: string): string => `/api/v1/orgs/${encodeURIComponent(org)}`,
+  orgOwner: (org: string, login: string): string =>
+    `/api/v1/orgs/${encodeURIComponent(org)}/owners/${encodeURIComponent(login)}`,
+  orgTeams: (org: string): string => `/api/v1/orgs/${encodeURIComponent(org)}/teams`,
+  orgTeamMember: (org: string, team: string, login: string): string =>
+    `/api/v1/orgs/${encodeURIComponent(org)}/teams/${encodeURIComponent(team)}/members/${encodeURIComponent(login)}`,
+  orgBots: (org: string): string => `/api/v1/orgs/${encodeURIComponent(org)}/bots`,
   botKeys: (id: string): string =>
     `/api/v1/bots/${encodeURIComponent(id)}/keys`,
   botSuspend: (id: string): string =>

@@ -34,10 +34,20 @@ export type BotReach =
       task_id: string;
     };
 
+/** A person's own bot, or an organization's team bot (ADR 0008). */
+export type BotOwnerKind = 'user' | 'organization';
+
 /** One account enrollment, as `GET /api/v1/bots` and the repo roster return it. */
 export interface BotSummary {
   id: string;
+  /** The person's login, or the organization's for a team bot. */
   owner: string;
+  /** Absent from an older server: read it as `user`. */
+  owner_kind?: BotOwnerKind;
+  /** The organization team whose members steward a team bot. */
+  steward_team?: string | null;
+  /** The login the bot acts as: its owner, or `<org>.<slug>[bot]` for a team bot. */
+  acting_login?: string;
   slug: string;
   display_name: string;
   kind: BotKind;
@@ -56,6 +66,38 @@ export interface BotSummary {
 
 export interface BotListResponse {
   bots: BotSummary[];
+  /** Team bots the caller stewards. Absent from an older server. */
+  team_bots?: BotSummary[];
+}
+
+/** A team bot's own right on one repository. Never `admin`. */
+export type BotRepoAccess = 'read' | 'write';
+
+/** One row of `GET /api/v1/bots/:id/grants`, and the `PUT` answer. */
+export interface BotRepoGrant {
+  bot_id: string;
+  owner: string;
+  repo: string;
+  access: BotRepoAccess;
+  granted_by: string;
+  granted_at: string;
+}
+
+export interface BotRepoGrantListResponse {
+  grants: BotRepoGrant[];
+}
+
+/** `POST /api/v1/orgs/:org/bots`. No enrollment key comes back. */
+export interface TeamBotCreateRequest {
+  steward_team: string;
+  slug: string;
+  display_name: string;
+  kind?: BotKind;
+  reach?: BotReach;
+}
+
+export interface TeamBotCreateResponse {
+  bot: BotSummary;
 }
 
 /** `POST /api/v1/bots` and `POST /api/v1/bots/:id/keys`. */
@@ -103,6 +145,8 @@ export interface BotAccessTokenSummary {
   token_id: string;
   bot_id: string;
   label: string | null;
+  /** Who issued it; absent on tokens from before team bots. */
+  issued_by?: string | null;
   created_at: string;
   expires_at: string;
   last_used_at: string | null;

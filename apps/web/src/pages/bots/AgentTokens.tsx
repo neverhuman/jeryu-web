@@ -53,6 +53,9 @@ export function AgentTokens({ bot }: { bot: BotSummary }): JSX.Element {
   const [issued, setIssued] = useState<BotAccessTokenReceipt | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const tokensKey = agentTokensKey(bot.id);
+  // A team agent's tokens are issued by several stewards; each one ends when
+  // the steward who issued it leaves.
+  const teamBot = bot.owner_kind === 'organization';
 
   const list = useQuery({
     queryKey: tokensKey,
@@ -130,6 +133,7 @@ export function AgentTokens({ bot }: { bot: BotSummary }): JSX.Element {
             <thead>
               <tr>
                 <th scope="col">Label</th>
+                {teamBot ? <th scope="col">Issued by</th> : null}
                 <th scope="col">Created</th>
                 <th scope="col">Expires</th>
                 <th scope="col">Last used</th>
@@ -148,6 +152,9 @@ export function AgentTokens({ bot }: { bot: BotSummary }): JSX.Element {
                     <th scope="row">
                       <span className="enroll-table__name">{name}</span>
                     </th>
+                    {teamBot ? (
+                      <td data-testid="agent-token-issuer">{token.issued_by ?? 'Unknown'}</td>
+                    ) : null}
                     <td>
                       <When at={token.created_at} label="Created" />
                     </td>
