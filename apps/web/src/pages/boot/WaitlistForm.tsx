@@ -9,7 +9,7 @@ import { useState, type FormEvent } from 'react';
 import { ApiError, apiSend } from '../../api/client';
 import { endpoints } from '../../api/endpoints';
 import { useSignupPolicy } from '../../hooks/useSignupPolicy';
-import { JoinWaitlistLink } from '../account/JoinWaitlistLink';
+import { JoinWaitlistLink, SignupPolicyUnreadable } from '../account/JoinWaitlistLink';
 
 import './WaitlistForm.css';
 
@@ -144,6 +144,17 @@ export function WaitlistEntry(): JSX.Element {
       <p className="waitlist__status" role="status">
         Finding the waitlist…
       </p>
+    );
+  }
+  if (view.state === 'unreadable') {
+    return (
+      <div className="waitlist">
+        <SignupPolicyUnreadable
+          retrying={view.retrying}
+          retry={view.retry}
+          className="waitlist__submit"
+        />
+      </div>
     );
   }
   if (!view.waitlist) return <WaitlistForm />;

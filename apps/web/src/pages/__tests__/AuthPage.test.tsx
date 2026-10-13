@@ -127,7 +127,7 @@ describe('AuthPage', () => {
     expect(screen.getByTestId('signup-closed')).toHaveTextContent('JeRyū is invite-only for now.');
     const link = screen.getByRole('link', { name: 'Join the waitlist' });
     expect(link).toHaveAttribute('href', 'https://waitlist.example.com/join');
-    expect(link).toHaveAttribute('rel', 'noopener');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveAccessibleDescription('Opens waitlist.example.com, a separate site.');
     expect(screen.queryByLabelText('Email')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Send sign-up link' })).toBeNull();
@@ -141,6 +141,17 @@ describe('AuthPage', () => {
       '/waitlist'
     );
     expect(screen.queryByLabelText('Email')).toBeNull();
+  });
+
+  it('says so, with a retry, when the policy cannot be read', () => {
+    const retry = vi.fn();
+    policy = { state: 'unreadable', retrying: false, retry };
+    renderPage({ initialMode: 'signup' });
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not check whether sign-up is open.');
+    expect(screen.queryByText(/invite-only/)).toBeNull();
+    expect(screen.queryByLabelText('Email')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
   it('shows no form until the policy is known', () => {

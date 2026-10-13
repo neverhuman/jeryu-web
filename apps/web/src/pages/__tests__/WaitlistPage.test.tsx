@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -41,6 +41,23 @@ describe('WaitlistPage', () => {
     expect(await screen.findByLabelText('Email')).toBeVisible();
   });
 
+  it('says the waitlist could not be checked when the forge errors, and tries again', async () => {
+    let answers = 0;
+    policyAnswers(() => {
+      answers += 1;
+      return answers <= 2
+        ? json({ error: { code: 'unavailable', message: 'down' } }, 503)
+        : json({ mode: 'closed', waitlistUrl: null });
+    });
+    renderPage();
+    expect(
+      await screen.findByRole('alert', {}, { timeout: 4_000 })
+    ).toHaveTextContent('Could not check whether sign-up is open.');
+    expect(screen.queryByLabelText('Email')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByLabelText('Email')).toBeVisible();
+  });
+
   it('links to the operator\'s waitlist instead of taking the address here', async () => {
     policyAnswers(() =>
       json({ mode: 'closed', waitlistUrl: 'https://waitlist.example.com/join' })
@@ -48,7 +65,7 @@ describe('WaitlistPage', () => {
     renderPage();
     const link = await screen.findByRole('link', { name: 'Join the waitlist' });
     expect(link).toHaveAttribute('href', 'https://waitlist.example.com/join');
-    expect(link).toHaveAttribute('rel', 'noopener');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.getByTestId('waitlist-external')).toHaveTextContent(
       'Opens waitlist.example.com, a separate site.'
     );

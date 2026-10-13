@@ -60,6 +60,33 @@ describe('useSignupPolicy', () => {
     );
   });
 
+  it('says the policy is unreadable after a 5xx, retries once, and asks again on retry', async () => {
+    let answers = 0;
+    const paths = answer(() => {
+      answers += 1;
+      return answers <= 2
+        ? json({ error: { code: 'unavailable', message: 'down' } }, 503)
+        : json({ mode: 'email', waitlistUrl: null });
+    });
+    const { result } = renderHook(() => useSignupPolicy(), { wrapper });
+    await waitFor(() => expect(result.current.state).toBe('unreadable'), { timeout: 4_000 });
+    // The app's default: one retry before giving up.
+    expect(paths).toHaveLength(2);
+    const view = result.current;
+    if (view.state !== 'unreadable') throw new Error('expected an unreadable policy');
+    view.retry();
+    await waitFor(() =>
+      expect(result.current).toEqual({ state: 'known', mode: 'email', waitlist: null })
+    );
+  });
+
+  it('does not retry an older forge\'s 404', async () => {
+    const paths = answer(() => json({ error: { code: 'not_found', message: 'no route' } }, 404));
+    const { result } = renderHook(() => useSignupPolicy(), { wrapper });
+    await waitFor(() => expect(result.current.state).toBe('known'));
+    expect(paths).toHaveLength(1);
+  });
+
   it('treats a mode it does not know as closed', async () => {
     answer(() => json({ mode: 'everyone', waitlistUrl: null }));
     const { result } = renderHook(() => useSignupPolicy(), { wrapper });
@@ -71,13 +98,27 @@ describe('useSignupPolicy', () => {
 
 describe('externalWaitlist', () => {
   it.each([
-    ['https://waitlist.example.com', 'waitlist.example.com'],
-    ['http://waitlist.example.com:8080/x#y', 'waitlist.example.com:8080'],
-  ])('names the host of %s', (raw, host) => {
-    expect(externalWaitlist(raw)).toEqual({ href: raw, host });
+    ['https://waitlist.example.com', 'https://waitlist.example.com/', 'waitlist.example.com'],
+    [
+      'http://waitlist.example.com:8080/x#y',
+      'http://waitlist.example.com:8080/x#y',
+      'waitlist.example.com:8080',
+    ],
+  ])('names the host of %s', (raw, href, host) => {
+    expect(externalWaitlist(raw)).toEqual({ href, host });
   });
 
-  it.each([null, undefined, '', 'ftp://waitlist.example.com', '/waitlist', 'https://'])(
+  it.each([
+    null,
+    undefined,
+    '',
+    'ftp://waitlist.example.com',
+    '/waitlist',
+    'https://',
+    // Reads like waitlist.example.com, opens evil.example: refused.
+    'https://waitlist.example.com@evil.example/join',
+    'https://user:pass@waitlist.example.com/join',
+  ])(
     'keeps the forge\'s own form for %s',
     (raw) => {
       expect(externalWaitlist(raw)).toBeNull();

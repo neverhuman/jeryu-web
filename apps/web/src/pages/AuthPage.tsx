@@ -8,7 +8,7 @@ import { JeryuLogo } from '../components/brand/JeryuLogo';
 import { useAuth } from '../hooks/useAuth';
 import { useSignupPolicy } from '../hooks/useSignupPolicy';
 import { homePathFor } from '../layout/HomeRedirect';
-import { JoinWaitlistLink } from './account/JoinWaitlistLink';
+import { JoinWaitlistLink, SignupPolicyUnreadable } from './account/JoinWaitlistLink';
 import { INVITE_ONLY, RATE_LIMITED, UNREACHABLE } from './account/accountCopy';
 
 import './AuthPage.css';
@@ -95,14 +95,25 @@ function SignupPanel({ firstFieldRef }: { firstFieldRef?: Ref<HTMLInputElement> 
       </p>
     );
   }
-  if (view.mode === 'email' && !refusedClosed) {
+  if (view.state === 'unreadable' && !refusedClosed) {
+    return (
+      <div className="auth-form" data-testid="signup-policy-unreadable">
+        <SignupPolicyUnreadable
+          retrying={view.retrying}
+          retry={view.retry}
+          className="action-button action-button--default auth-form__waitlist"
+        />
+      </div>
+    );
+  }
+  if (view.state === 'known' && view.mode === 'email' && !refusedClosed) {
     return <SignupStartForm firstFieldRef={firstFieldRef} />;
   }
   return (
     <div className="auth-form" data-testid="signup-closed">
       <p className="auth-form__sent">{INVITE_ONLY}</p>
       <JoinWaitlistLink
-        waitlist={view.waitlist}
+        waitlist={view.state === 'known' ? view.waitlist : null}
         className="action-button action-button--primary auth-form__waitlist"
       />
     </div>

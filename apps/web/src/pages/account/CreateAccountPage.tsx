@@ -15,7 +15,7 @@ import { ApiError } from '../../api/client';
 import { useAuth } from '../../hooks/useAuth';
 import { useSignupPolicy } from '../../hooks/useSignupPolicy';
 import { AccountFrame, PASSWORD_MIN_LENGTH, Status } from './AccountRecoveryPages';
-import { JoinWaitlistLink } from './JoinWaitlistLink';
+import { JoinWaitlistLink, SignupPolicyUnreadable } from './JoinWaitlistLink';
 import { INVITE_ONLY, RATE_LIMITED, UNREACHABLE } from './accountCopy';
 
 type Phase = 'idle' | 'saving' | 'invalid' | 'closed';
@@ -43,6 +43,12 @@ function SignupClosed(): JSX.Element {
         <p className="waitlist__status" role="status">
           Finding the waitlist…
         </p>
+      ) : view.state === 'unreadable' ? (
+        <SignupPolicyUnreadable
+          retrying={view.retrying}
+          retry={view.retry}
+          className="waitlist__submit"
+        />
       ) : (
         <JoinWaitlistLink waitlist={view.waitlist} className="waitlist__submit" />
       )}

@@ -54,7 +54,45 @@ export interface ResetShown {
   mailError?: string;
 }
 
-export type ResetReceipt = ResetSent | ResetShown;
+/** An answer this page cannot read: the reset may still have happened. */
+export interface ResetUnreadable {
+  result: 'unreadable';
+  login: string;
+}
+
+export type ResetReceipt = ResetSent | ResetShown | ResetUnreadable;
+
+function field(body: object, name: string): unknown {
+  const fields: Record<string, unknown> = { ...body };
+  return fields[name];
+}
+
+/**
+ * Which answer the forge gave, read from its shape and never from the status
+ * alone. A forge from before mailed resets answers `{login, password}` with no
+ * `result`: that is a shown password with no mail tried.
+ */
+export function readResetReceipt(login: string, body: unknown): ResetReceipt {
+  if (typeof body !== 'object' || body === null) return { result: 'unreadable', login };
+  const result = field(body, 'result');
+  const email = field(body, 'email');
+  const password = field(body, 'password');
+  const mailError = field(body, 'mailError');
+  if (result === 'sent' && typeof email === 'string' && email !== '') {
+    return { result: 'sent', login, email };
+  }
+  const shown = result === 'shown' || (result === undefined && typeof password === 'string');
+  if (shown && typeof password === 'string' && password !== '') {
+    return {
+      result: 'shown',
+      login,
+      password,
+      email: typeof email === 'string' ? email : null,
+      ...(typeof mailError === 'string' && mailError !== '' ? { mailError } : {}),
+    };
+  }
+  return { result: 'unreadable', login };
+}
 
 const USERS_KEY = ['admin', 'users'];
 
@@ -151,7 +189,9 @@ function ResetPasswordForm({
   const [email, setEmail] = useState(account.email ?? '');
   const reset = useMutation({
     mutationFn: (body: { email?: string }) =>
-      apiSend<ResetReceipt>(endpoints.adminResetPassword(account.login), body),
+      apiSend<unknown>(endpoints.adminResetPassword(account.login), body).then((answer) =>
+        readResetReceipt(account.login, answer)
+      ),
     // The answer can carry a one-time password: drop it from the mutation
     // cache the moment this form is gone.
     gcTime: 0,
@@ -373,6 +413,11 @@ export function AdminUsersPanel(): JSX.Element {
                         <td colSpan={columns}>
                           {sent.result === 'shown' ? (
                             <ShownPassword receipt={sent} onDismiss={() => setSent(null)} />
+                          ) : sent.result === 'unreadable' ? (
+                            <p className="shift__error" role="alert">
+                              The forge answered in an unexpected shape; the password may have
+                              changed — reset again.
+                            </p>
                           ) : (
                             <p role="status" data-testid={`reset-sent-${account.login}`}>
                               Sent to <code>{sent.email}</code>. {sent.login} must choose a new

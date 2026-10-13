@@ -260,6 +260,35 @@ describe('AdminSettingsPage user list', () => {
     });
   });
 
+  it('reads the old {login, password} answer of a forge from before mailed resets as a shown password', async () => {
+    vi.mocked(apiSend).mockResolvedValue({ login: 'user-3', password: ONE_TIME_A });
+    renderSettings();
+    const form = await openReset('user-3');
+    fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
+    const panel = await screen.findByRole('region', { name: 'One-time password for user-3' });
+    expect(panel).toHaveTextContent('No email was sent');
+    expect(panel).not.toHaveTextContent('Sending failed');
+    expect(within(panel).getByLabelText('One-time password for user-3')).toHaveValue(ONE_TIME_A);
+    expect(screen.queryByText(/Sent to/)).toBeNull();
+  });
+
+  it.each([
+    ['an empty body', null],
+    ['sent with no address', { result: 'sent', login: 'user-3', email: '' }],
+    ['shown with no password', { result: 'shown', login: 'user-3', email: null }],
+    ['a result it does not know', { result: 'queued', login: 'user-3' }],
+  ])('says so when the forge answers %s', async (_label, answer) => {
+    vi.mocked(apiSend).mockResolvedValue(answer);
+    renderSettings();
+    const form = await openReset('user-3');
+    fireEvent.click(within(form).getByRole('button', { name: 'Email a temporary password' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The forge answered in an unexpected shape; the password may have changed — reset again.',
+    );
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('region', { name: /One-time password/ })).toBeNull();
+  });
+
   it('tells people from automation and lets an admin mark a login as automation', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(

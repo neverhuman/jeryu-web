@@ -162,7 +162,7 @@ test.describe('Auth hardening browser proof', () => {
     await expect(closed).toContainText('JeRyū is invite-only for now.');
     const join = closed.getByRole('link', { name: 'Join the waitlist' });
     await expect(join).toHaveAttribute('href', externalWaitlistUrl);
-    await expect(join).toHaveAttribute('rel', 'noopener');
+    await expect(join).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(closed).toContainText('Opens waitlist.example.com, a separate site.');
     await expect(page.getByLabel('Email')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Send sign-up link' })).toHaveCount(0);
@@ -458,6 +458,46 @@ test.describe('Auth hardening browser proof', () => {
     await shown.getByRole('button', { name: 'Dismiss' }).click();
     await expect(shown).toHaveCount(0);
     expect(resetBodies).toEqual([{}]);
+  });
+
+  test('admin reset against a forge from before mailed resets shows its {login, password} answer @action:admin.reset_password_shown', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { login: 'jeryu-admin', auth: null });
+    await mockAuthMe(page, {
+      login: 'jeryu-admin',
+      role: 'admin',
+      mustChangePassword: false,
+      csrfToken: 'csrf-admin',
+    });
+    await mockRepoList(page, []);
+    await mockAdminUsers(page);
+    await page.route(
+      /\/api\/v1\/admin\/users\/[^/]+\/reset-password$/,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ login: 'jordanh', password: shownOneTimeValue }),
+        });
+      }
+    );
+
+    await page.goto('/settings');
+    const users = page.getByTestId('admin-users-table');
+    await users.getByRole('button', { name: 'Reset password' }).click({ timeout: 10_000 });
+    await page
+      .getByRole('form', { name: 'Reset the password of jordanh' })
+      .getByRole('button', { name: 'Email a temporary password' })
+      .click();
+
+    const shown = page.getByRole('region', { name: 'One-time password for jordanh' });
+    await expect(shown).toContainText('No email was sent');
+    await expect(shown).not.toContainText('Sending failed');
+    await expect(shown.getByLabel('One-time password for jordanh')).toHaveValue(
+      shownOneTimeValue
+    );
+    await expect(page.getByText(/Sent to/)).toHaveCount(0);
   });
 
   test('admin reviews repository grants and revokes one @action:admin.revoke_repo_success', async ({
