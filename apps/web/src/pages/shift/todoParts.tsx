@@ -8,13 +8,16 @@ import { Link } from 'react-router-dom';
 
 import type { ShiftTodo, ShiftTodoActionRequest } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
+import { CiProgress } from '../../components/ciProgress/CiProgress';
 import { LIST_ACTION_PROP } from '../../hooks/useListKeys';
-import { useShiftTodoAction } from '../../hooks/useShift';
+import { useServerNow } from '../../hooks/useServerNow';
+import { useShiftTodoAction, useShiftWorkers } from '../../hooks/useShift';
 import {
   SHIFT_PRIORITIES,
   formatCost,
   isLongNote,
   latestWorker,
+  liveAttempt,
   repoCodeHref,
   slotLabel,
   todoPrHref,
@@ -119,7 +122,7 @@ export function TodoDetail({
         ) : null}
         {todo.change_set ? ` · change set ${todo.change_set}` : ''}
       </p>
-      {todo.worked_by.length === 0 ? (
+      {todo.worked_by.length === 0 && !liveAttempt(todo) ? (
         <p className="shift__muted">No attempts yet.</p>
       ) : (
         <div className="table-scroll">
@@ -149,11 +152,43 @@ export function TodoDetail({
                   <td>{attempt.note}</td>
                 </tr>
               ))}
+              {liveAttempt(todo) ? <LiveAttemptRow todo={todo} /> : null}
             </tbody>
           </table>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The attempt a worker is running now, as the last row of the attempts table:
+ * an attempt reaches `worked_by` only once it ends. Elapsed time ticks on the
+ * forge's clock, and the stage (agent, gate, land) comes from the slot's own
+ * heartbeat. Rendered only for a claimed todo with a live lease, so only those
+ * pages read the workers list.
+ */
+function LiveAttemptRow({ todo }: { todo: ShiftTodo }): JSX.Element | null {
+  const workers = useShiftWorkers();
+  const nowMs = useServerNow(workers.data?.generated_at, workers.dataUpdatedAt, true);
+  const live = liveAttempt(todo, workers.data?.workers);
+  if (!live) return null;
+  return (
+    <tr data-testid={`shift-attempt-live-${todo.id}`}>
+      <td>{live.worker}</td>
+      <td>{live.model ?? '—'}</td>
+      <td>{live.startedAt ?? '—'}</td>
+      <td>
+        {live.startedAt ? (
+          <CiProgress startedAt={live.startedAt} nowMs={nowMs} variant="compact" />
+        ) : (
+          'running'
+        )}
+      </td>
+      <td>{live.stage ? `working · ${live.stage}` : 'working'}</td>
+      <td>—</td>
+      <td>{live.leaseUntil ? `lease until ${live.leaseUntil}` : ''}</td>
+    </tr>
   );
 }
 
@@ -177,7 +212,9 @@ export function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element | null {
   const forces = (choice: TodoActionChoice): boolean =>
     choice.id === 'release' && todo.lease_live;
   const run = (choice: TodoActionChoice): void => {
-    // Release is one keystroke back to the queue; everything else confirms.
+    // Release is one click back to the queue; everything else confirms.
+    // `x` only presses an action that asks first, so this immediate release
+    // is a click, not the row's keyboard action.
     if (choice.id === 'release' && !forces(choice)) {
       setAsking(null);
       action.mutate({ family: todo.family, id: todo.id, action: 'release' });
@@ -185,12 +222,16 @@ export function TodoActions({ todo }: { todo: ShiftTodo }): JSX.Element | null {
     }
     setAsking((current) => (current === choice.id ? null : choice.id));
   };
+  // A live lease is the one release that asks first. Every other primary
+  // action asks too. The immediate release does not, so `x` must not press it:
+  // a click on the row focuses it, and the next `x` would otherwise POST.
+  const confirms = forces(primary) || primary.id !== 'release';
   const open = [primary, ...more].find((choice) => choice.id === asking) ?? null;
   return (
     <span className="shift__actions">
       <ActionButton
         variant={primary.variant}
-        {...LIST_ACTION_PROP}
+        {...(confirms ? LIST_ACTION_PROP : {})}
         disabled={action.isPending}
         onClick={() => run(primary)}
         aria-expanded={

@@ -272,12 +272,17 @@
             {
               "name": "node-a",
               "running": "9e6b8857 / b88562f",
-              "state": "ok"
+              "state": "ok",
+              "slots": [{ "family": "globex", "host": "node-a" }]
             },
             {
               "name": "build-1",
               "running": "9e6b8857 / b88562f",
-              "state": "ok"
+              "state": "ok",
+              "slots": [
+                { "family": "globex", "host": "build-1" },
+                { "family": "globex", "host": "build-2" }
+              ]
             },
             {
               "name": "edge-1",

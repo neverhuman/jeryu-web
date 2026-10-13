@@ -619,3 +619,33 @@ export function isLongNote(note: string): boolean {
   return note.length > NOTE_CLAMP_LINES * 72;
 }
 
+
+/** The attempt a worker is running now, which `worked_by` gains only once it ends. */
+export interface LiveAttempt {
+  worker: string;
+  model: string | null;
+  startedAt: string | null;
+  leaseUntil: string | null;
+  /** prepare | agent | gate | land | record, from the slot's heartbeat. */
+  stage: string | null;
+}
+
+/**
+ * The attempt in progress on a claimed todo whose lease is live, or null. The
+ * stage comes from the one slot that says it is working this todo; a slot whose
+ * heartbeat names another todo (it lost the lease) says nothing about this one.
+ */
+export function liveAttempt(
+  todo: ShiftTodo,
+  workers: readonly ShiftWorker[] = []
+): LiveAttempt | null {
+  if (todo.status !== 'claimed' || !todo.lease_live || !todo.claim_by) return null;
+  const slot = workers.find((w) => w.state === 'working' && w.todo_id === todo.id);
+  return {
+    worker: todo.claim_by,
+    model: todo.claim_model ?? null,
+    startedAt: todo.claimed_at ?? null,
+    leaseUntil: todo.lease_until,
+    stage: slot?.stage ? String(slot.stage) : null,
+  };
+}

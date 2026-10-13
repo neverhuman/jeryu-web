@@ -56,6 +56,8 @@ describe('familyFromLocation', () => {
     expect(familyFromLocation('/work', '?todo=7')).toBeNull();
     // A page clears its filter by dropping the parameter; an empty one is the same.
     expect(familyFromLocation('/work', '?family=')).toBeNull();
+    // A repository address does not state a scope through a legacy query.
+    expect(familyFromLocation('/repos/acme/acme/widget-web', '?family=globex')).toBeNull();
   });
 
   it('reads a link the same way', () => {
@@ -108,6 +110,17 @@ describe('withFamilyScope', () => {
     );
     expect(withFamilyScope('/repos/acme/acme/widget-web/pulls?tab=2', 'acme')).toBe(
       '/repos/acme/acme/widget-web/pulls?tab=2'
+    );
+    // A legacy `?family=` is not how this address states its scope, so setting
+    // or clearing the scope takes the parameter off.
+    expect(withFamilyScope('/repos/acme/acme/widget-web?family=globex', 'acme')).toBe(
+      '/repos/acme/acme/widget-web'
+    );
+    expect(withFamilyScope('/repos/acme/acme/widget-web/pulls?family=globex&tab=2', '')).toBe(
+      '/repos/acme/acme/widget-web/pulls?tab=2'
+    );
+    expect(withFamilyScope('/repos/acme/acme/widget-web?family=globex#files', '')).toBe(
+      '/repos/acme/acme/widget-web#files'
     );
     expect(statesOwnFamily('/repos/acme/acme/widget-web')).toBe(true);
     expect(statesOwnFamily('/repos/family/acme')).toBe(false);

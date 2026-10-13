@@ -207,7 +207,7 @@ describe('every needs-you count', () => {
     // The page's own strip, and its chip, count Work's share: all three.
     const strip = await screen.findByTestId('needs-you-here-work');
     expect(within(strip).getByText('3')).toBeInTheDocument();
-    expect(strip).toHaveAttribute('aria-label', '3 waiting on you in Work');
+    expect(strip).toHaveAttribute('aria-label', '3 blocked in Work');
     expect(await screen.findByTestId('shift-needs-human')).toHaveTextContent('3 in Work');
 
     vi.restoreAllMocks();
@@ -295,7 +295,7 @@ describe('every needs-you count', () => {
       } else {
         const strip = await screen.findByTestId(`needs-you-here-${area}`);
         expect(within(strip).getByText(item.title)).toBeInTheDocument();
-        expect(strip).toHaveAttribute('aria-label', `1 waiting on you in ${AREA_LABEL[area]}`);
+        expect(strip).toHaveAttribute('aria-label', `1 blocked in ${AREA_LABEL[area]}`);
         // Only that area's row: another page's row is not repeated here.
         expect(within(strip).getAllByRole('listitem')).toHaveLength(1);
       }

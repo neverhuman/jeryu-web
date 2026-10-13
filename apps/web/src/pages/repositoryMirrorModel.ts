@@ -5,6 +5,20 @@ import type { Tone } from '../components/tone/tone';
 
 export type MirrorSectionTone = Tone;
 
+/**
+ * A mirror target is a link only when it is an http(s) URL. Anything else
+ * (`javascript:`, `data:`, a value that is not a URL) stays text.
+ */
+export function mirrorHref(target: string): string | null {
+  try {
+    const url = new URL(target);
+    if (url.protocol === 'https:' || url.protocol === 'http:') return target;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function mirrorProviderName(target: string): string {
   try {
     const host = new URL(target).hostname.toLowerCase();

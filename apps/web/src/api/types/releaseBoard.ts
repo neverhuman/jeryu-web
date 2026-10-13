@@ -106,6 +106,18 @@ export interface BoardTarget {
    * `GET /api/v1/control-plane/runners`. Absent from an older collector.
    */
   runners?: string[];
+  /**
+   * The shift slots (worker pools) that run this target, as they report to
+   * `POST /api/v1/shift/heartbeat`. A pool has no `runnerId`, so these link to
+   * /work rather than /runners. Absent from an older collector.
+   */
+  slots?: BoardTargetSlot[];
+}
+
+/** Every slot of `family` on `host`: one worker pool serving a target. */
+export interface BoardTargetSlot {
+  family: string;
+  host: string;
 }
 
 export type WorkPartKey = 'live' | 'merged' | 'stranded' | 'untraceable' | 'blocked' | 'open';

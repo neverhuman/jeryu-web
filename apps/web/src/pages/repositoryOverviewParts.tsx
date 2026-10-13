@@ -1,11 +1,12 @@
 // repositoryOverviewParts.tsx — presentational sub-sections for
 // RepositoryOverviewPage (W-FE-09).
 //
-// ClonePopover renders the "Clone" button in the overview strip together with
-// the popover that holds the HTTPS / SSH clone URLs and their copy +
-// open-in-new-tab affordances. It closes on outside-click or Escape. Extracted
-// from the page module to keep each file under the size budget; the styling
-// lives in `../components/browser/browser.css`, imported by the page.
+// ClonePopover renders the "Clone" button in the repository shell header
+// together with the popover that holds the HTTPS / SSH clone URLs and their
+// copy + open-in-new-tab affordances. It closes on outside-click or Escape.
+// The file browser does not render a second one. Extracted from the page
+// module to keep each file under the size budget; the styling lives in
+// `../components/browser/browser.css`, imported by the page.
 
 import { Check, Copy, ExternalLink, Link as LinkIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';

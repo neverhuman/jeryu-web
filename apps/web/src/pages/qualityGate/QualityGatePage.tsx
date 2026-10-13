@@ -126,7 +126,7 @@ function QualityGateOverviewBody({
   const latest = countsLatestHeads(data.rules);
   // The window totals are recounted from the rows on screen, so the tiles and
   // the repository table never describe different fleets.
-  const window = scope.active ? windowOf(repos) : data;
+  const windowTotals = scope.active ? windowOf(repos) : data;
 
   return (
     <>
@@ -138,15 +138,15 @@ function QualityGateOverviewBody({
           <Tile
             testId="quality-gate-tile-fail-rate"
             label="Fail rate"
-            value={percent(window.fail_rate, window.heads_scored)}
-            detail={`of ${window.heads_scored} scored head${
-              window.heads_scored === 1 ? '' : 's'
+            value={percent(windowTotals.fail_rate, windowTotals.heads_scored)}
+            detail={`of ${windowTotals.heads_scored} scored head${
+              windowTotals.heads_scored === 1 ? '' : 's'
             }`}
           />
           <Tile
             testId="quality-gate-tile-would-block"
             label="Would have blocked"
-            value={String(window.heads_failed)}
+            value={String(windowTotals.heads_failed)}
             detail="heads, had the gate been required"
           />
           <Tile
@@ -161,7 +161,7 @@ function QualityGateOverviewBody({
           />
         </div>
         <p className="quality-gate__summary">
-          {windowSummary(data.window_days, window.heads_scored, window.heads_failed)}
+          {windowSummary(data.window_days, windowTotals.heads_scored, windowTotals.heads_failed)}
         </p>
         {top ? (
           <Link

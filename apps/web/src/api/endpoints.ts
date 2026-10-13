@@ -22,6 +22,8 @@ export const endpoints = {
   authToken: (id: string): string =>
     `/api/v1/auth/tokens/${encodeURIComponent(id)}`,
   adminUsers: (): string => '/api/v1/admin/users',
+  adminUserKind: (login: string): string =>
+    `/api/v1/admin/users/${encodeURIComponent(login)}/kind`,
   adminResetPassword: (login: string): string =>
     `/api/v1/admin/users/${encodeURIComponent(login)}/reset-password`,
   adminRepoGrants: (owner: string, repo: string): string =>
@@ -261,6 +263,8 @@ export const endpoints = {
   },
   shiftTodoAction: (family: string, id: string): string =>
     `/api/v1/shift/todos/${encodeURIComponent(family)}/${encodeURIComponent(id)}/action`,
+  shiftTodoPeople: (family: string, id: string): string =>
+    `/api/v1/shift/todos/${encodeURIComponent(family)}/${encodeURIComponent(id)}/people`,
   shiftWorkers: (): string => '/api/v1/shift/workers',
   shiftWorkersHistory: (hours: number): string =>
     `/api/v1/shift/workers/history?hours=${hours}`,

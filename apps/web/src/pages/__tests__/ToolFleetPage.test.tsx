@@ -53,6 +53,7 @@ function toolOrder(): string[] {
 }
 
 describe('ToolFleetPage URL view state', () => {
+  // Coverage on the gate runner spent the whole 5s default in these keystrokes.
   it('round-trips the filters and the sort through the URL', async () => {
     const user = userEvent.setup();
     const router = open(ADOPTION_PATH);
@@ -85,7 +86,7 @@ describe('ToolFleetPage URL view state', () => {
       'aria-sort',
       'descending'
     );
-  });
+  }, 20_000);
 
   it('sorts from a shared link, and a second press turns the column round', async () => {
     const user = userEvent.setup();

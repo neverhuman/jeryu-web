@@ -26,6 +26,7 @@ import {
   type AutomationTone,
 } from '../../pages/repoAutomationModel';
 import { When } from '../../format/When';
+import { mirrorHref } from '../../pages/repositoryMirrorModel';
 
 import './repoAutomation.css';
 
@@ -206,16 +207,22 @@ export function RepoAutomationPanel({
           </p>
         ) : (
           <ul className="repo-automation__list">
-            {view.mirrors.map((mirror) => (
+            {view.mirrors.map((mirror) => {
+              const href = mirrorHref(mirror.target);
+              return (
               <li key={mirror.target} className={toneClass(mirrorTone(mirror))}>
-                <a
-                  className="repo-automation__name"
-                  href={mirror.target}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {mirror.target}
-                </a>
+                {href ? (
+                  <a
+                    className="repo-automation__name"
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {mirror.target}
+                  </a>
+                ) : (
+                  <span className="repo-automation__name">{mirror.target}</span>
+                )}
                 <span className="page__pill">{mirror.direction}</span>
                 <span className="repo-automation__state">
                   {mirror.refs.join(', ')}
@@ -235,7 +242,8 @@ export function RepoAutomationPanel({
                   </span>
                 ) : null}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>

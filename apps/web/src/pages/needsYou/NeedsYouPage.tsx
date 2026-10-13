@@ -124,7 +124,7 @@ export function NeedsYouPage(): JSX.Element {
             <details className="needs-you__watch" data-testid="needs-you-watch">
               <summary>
                 {watch.subjects.length} thing{watch.subjects.length === 1 ? '' : 's'} worth a look, none
-                waiting on you
+                blocked
               </summary>
               <AttentionList
                 group={watch}

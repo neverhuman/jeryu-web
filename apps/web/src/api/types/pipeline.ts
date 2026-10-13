@@ -64,6 +64,8 @@ export interface AttentionItem {
   shift: string | null;
   /** Set on `shift_budget_spent` only; absent on every other kind. */
   budget?: AttentionBudget | null;
+  /** Set on a todo item when a person has taken the todo on (attention v1.4). */
+  assignee?: string | null;
   /** In-app path to the place to act. */
   href: string | null;
   action: AttentionAction | null;

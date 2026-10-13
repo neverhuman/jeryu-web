@@ -39,6 +39,9 @@ import {
   releaseLaneHref,
   runnerCountLabel,
   runnersHref,
+  slotCountLabel,
+  slotsHref,
+  slotsTitle,
 } from '../releaseBoard/links';
 import { errorResponse, json } from './shiftPageHelpers';
 
@@ -54,6 +57,28 @@ describe('release board links', () => {
     );
     expect(runnerCountLabel(1)).toBe('1 runner');
     expect(runnerCountLabel(3)).toBe('3 runners');
+  });
+
+  it('spells the shift slots of a target as the workers panel, filtered', () => {
+    expect(slotsHref([{ family: 'globex', host: 'build-1' }])).toBe(
+      '/work?family=globex&host=build-1#workers'
+    );
+    expect(
+      slotsHref([
+        { family: 'globex', host: 'build-1' },
+        { family: 'globex', host: 'build-2' },
+      ])
+    ).toBe('/work?family=globex&host=build-1%2Cbuild-2#workers');
+    // Across families only the hosts can be filtered on honestly.
+    expect(
+      slotsHref([
+        { family: 'globex', host: 'build-1' },
+        { family: 'acme', host: 'node-a' },
+      ])
+    ).toBe('/work?host=build-1%2Cnode-a#workers');
+    expect(slotCountLabel(1)).toBe('1 worker');
+    expect(slotCountLabel(4)).toBe('4 workers');
+    expect(slotsTitle([{ family: 'globex', host: 'build-1' }])).toBe('globex · build-1');
   });
 
   it('reads the lane a hash names', () => {

@@ -1,6 +1,8 @@
-// endpoints.contract.test.ts — pins the paths the client calls to the routes
-// the server actually serves, so a rename on either side fails here rather
-// than as a 404 in the deployed bundle.
+// endpoints.contract.test.ts — pins the paths the client calls to a
+// hand-maintained copy of the server's routes
+// (src/test/fixtures/server-route-index.json). A client path that is not in
+// that copy fails here. The copy is not generated from the server, so a rename
+// that happens only on the server stays invisible until the copy is updated.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -28,6 +30,7 @@ const endpointSamples = {
   authTokens: [],
   authToken: ['token-1'],
   adminUsers: [],
+  adminUserKind: ['alex'],
   adminResetPassword: ['alex'],
   adminRepoGrants: ['acme', 'widget-api'],
   adminRepoGrant: ['acme', 'widget-api', 'alex'],
@@ -87,6 +90,7 @@ const endpointSamples = {
   shiftFamilies: [],
   shiftTodos: [{ family: 'acme', status: 'open' }],
   shiftTodoAction: ['acme', '20261003-021037-4e604d'],
+  shiftTodoPeople: ['acme', '20260101-000000-aaaaaa'],
   shiftWorkers: [],
   shiftWorkersHistory: [6],
   shiftShifts: ['acme'],
@@ -185,14 +189,14 @@ describe('endpoint contract', () => {
     }
   });
 
-  it('keeps every endpoint builder on a server route', () => {
+  it('keeps every endpoint builder on a route in the checked-in index', () => {
     const serverRoutes = routeIndex.routes;
     expect(serverRoutes).not.toContain('/api/v1/repos/{id}/settings');
     for (const { name, path } of endpointCalls()) {
       const pathname = pathnameOf(path);
       expect(
         serverRoutes.some((template) => routeMatches(template, pathname)),
-        `${String(name)} built ${pathname}, but the server route index does not publish it`,
+        `${String(name)} built ${pathname}, but the checked-in server route index does not list it`,
       ).toBe(true);
     }
   });

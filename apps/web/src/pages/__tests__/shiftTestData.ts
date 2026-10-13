@@ -64,6 +64,8 @@ export function todo(overrides: Partial<ShiftTodo> = {}): ShiftTodo {
     merged: false,
     note: '',
     triaged: true,
+    // A server with assignees sends the key, null when nobody has the todo.
+    assignee: null,
     worked_by: [],
     ...overrides,
   };

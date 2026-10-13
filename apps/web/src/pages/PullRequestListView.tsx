@@ -31,6 +31,7 @@ export function PullRequestCard({
     <article
       className={`pull-card is-${item.checkPosture}`}
       data-testid={`pull-card-${item.repo}-${item.number}`}
+      data-list-key={`${item.repo}#${item.number}`}
       {...listRowProps}
     >
       <div className="pull-card__top">
