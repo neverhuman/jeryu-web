@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TodoPage } from '../shift/TodoPage';
 import { errorResponse, json, mockShiftApi, renderAt } from './shiftPageHelpers';
-import { TODOS, attempt, todo } from './shiftTestData';
+import { FAMILIES, TODOS, attempt, todo } from './shiftTestData';
 
 let role: 'admin' | 'user' = 'user';
 vi.mock('../../hooks/useAuth', () => ({
@@ -216,6 +216,41 @@ describe('TodoPage', () => {
     expect(landing).toHaveTextContent('not landed yet');
     expect(screen.getByText('Why this todo is stuck')).toBeInTheDocument();
     expect(screen.getByText('full gate explanation').closest('details')).not.toHaveAttribute('open');
+  });
+
+  it('treats an empty landing list as no landing and keeps the stuck note in place', async () => {
+    serveTodos([todo({ id: '20261013-empty-land', status: 'blocked', note: 'still stuck', landing: [] })]);
+    renderTodo('/work/20261013-empty-land');
+    expect(await screen.findByText('still stuck')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Landing' })).toBeNull();
+    expect(screen.queryByText('Why this todo is stuck')).toBeNull();
+    expect(screen.getByText('still stuck').closest('details')).toBeNull();
+  });
+
+  it('does not label an unhosted landing pull with a number that opens a different pull', async () => {
+    mockShiftApi((req) => {
+      if (req.pathname === '/api/v1/shift/families') {
+        return json({
+          families: [{ ...FAMILIES.families[0], queue_repo: '', repos: [{ name: 'orphan', order: 1, owner: null }] }],
+        });
+      }
+      if (req.pathname === '/api/v1/shift/todos') {
+        return json({
+          generated_at: '2026-09-19T09:00:00Z',
+          todos: [todo({
+            id: '20261013-unhosted-pr',
+            status: 'open',
+            pr: { repo: 'orphan', number: 12, state: 'open', url: '/repos/jeryu/jeryu/jeryu-web/pulls/12' },
+            landing: [{ repo: 'orphan', status: 'landed', sha: 'abcdef1234567890', pr: 99 }],
+          })],
+        });
+      }
+      return undefined;
+    });
+    renderTodo('/work/20261013-unhosted-pr');
+    expect(await screen.findByRole('region', { name: 'Landing' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'PR #99' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'PR #12' })).toBeNull();
   });
 
   it('gives admins the row actions', async () => {

@@ -191,11 +191,12 @@ function TodoView({
   const attempts = attemptSummary(todo);
   const prHref = todoPrHref(todo, refs);
   const commits = Object.entries(todo.commits);
+  const hasLanding = (todo.landing?.length ?? 0) > 0;
   return (
     <>
-      {todo.landing ? <LandingSection todo={todo} refs={refs} /> : null}
+      {hasLanding ? <LandingSection todo={todo} refs={refs} /> : null}
       {stuck && todo.note ? (
-        todo.landing ? (
+        hasLanding ? (
           <details className="shift__why-details">
             <summary>Why this todo is stuck</summary>
             <WhyStuck id={todo.id} note={todo.note} />
