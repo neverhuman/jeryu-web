@@ -22,6 +22,7 @@ import { Link } from 'react-router-dom';
 import type { ShiftWorker } from '../../api/types';
 import { EmptyState, LoadingState } from '../../components/state';
 import { useShiftWorkers, useShiftWorkersHistory } from '../../hooks/useShift';
+import { SESSIONS_PATH } from '../SessionsPage';
 import { ShiftError } from './shiftCommon';
 import { ShiftCapacityChart, ShiftTimeline } from './ShiftCharts';
 import { splitWorkers } from './shiftModel';
@@ -264,6 +265,7 @@ function WorkersTable({ workers }: { workers: ShiftWorker[] }): JSX.Element {
             <th scope="col">Family</th>
             <th scope="col">State</th>
             <th scope="col">Todo</th>
+            <th scope="col">Session</th>
             <th scope="col">Lease</th>
             <th scope="col">Last seen</th>
           </tr>
@@ -288,6 +290,19 @@ function WorkersTable({ workers }: { workers: ShiftWorker[] }): JSX.Element {
               </td>
               <td>
                 {w.todo_id ? <Link to={todoHref(w.todo_id)}>{w.todo_id}</Link> : '—'}
+              </td>
+              <td>
+                {w.session_id ? (
+                  <Link
+                    to={SESSIONS_PATH}
+                    className="shift__mono"
+                    title={w.run_id ? `agent run ${w.run_id}` : undefined}
+                  >
+                    {w.session_id}
+                  </Link>
+                ) : (
+                  '—'
+                )}
               </td>
               <td>{w.lease_until ? <When at={w.lease_until} now={now} /> : '—'}</td>
               <td><When at={w.last_seen} now={now} /></td>

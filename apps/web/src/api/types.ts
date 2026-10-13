@@ -22,6 +22,7 @@ export type * from './types/yield';
 export type * from './types/search';
 export type * from './types/automation';
 export type * from './types/bots';
+export type * from './types/sessions';
 
 // Live agent terminal types (defined in ./agentTerminal).
 export type { AgentTtyFrame, AgentControl, AgentControlClientMessage, RepoAgentSummary, RepoAgentRunsResponse, CreateSessionResponse } from './agentTerminal';

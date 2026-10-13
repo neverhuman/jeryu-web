@@ -65,11 +65,15 @@ function parts(at: number, options: Intl.DateTimeFormatOptions): string | null {
   }
 }
 
-/** The reader's zone as they name it: `CEST`, else its IANA id, else `UTC`. */
-export function zoneLabel(): string {
+/**
+ * The reader's zone as they name it at `at`, now unless given: `CEST`, else
+ * its IANA id, else `UTC`. A clock change renames the zone, so an instant past
+ * one is named by the zone it falls in.
+ */
+export function zoneLabel(at?: string | number | Date | null): string {
   try {
     const found = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
-      .formatToParts(new Date())
+      .formatToParts(new Date(instantOf(at) ?? Date.now()))
       .find((part) => part.type === 'timeZoneName');
     if (found) return found.value;
     return new Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';

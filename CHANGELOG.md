@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Settings → Agent providers signs a subscription in at the provider, with no secret pasted:
+  name the provider and an account label, enter the code it shows on the provider's page, and
+  the page reads the sign-in at the provider's interval until the account is connected, then
+  lists it. A pending sign-in can be cancelled; one that ends otherwise says how. The provider's
+  page is a link only when it is an http(s) URL. It needs deploy's
+  `POST /api/v1/me/provider-connections/login` and a provider that signs in there.
+- The subscription sign-in names the time its code must be entered by, in the zone that time
+  falls in, with how long is left, rather than only the day. A cancel shows the server's own
+  answer, and a read sent before it can no longer bring the sign-in back to pending. A sign-in
+  the server no longer has (it restarted, say) is shown as gone and stays gone, whatever pending
+  answer comes after; it is no longer read, its code is withdrawn, and only Sign in opens another.
 - Work todo pages show per-repository landing results, direct commit and saved-branch links, failing tests and the rescue commit's check result; the full stuck note is collapsed below the section. Commit chips now open their commit pages.
 - A repository's Agents tab lists everyone at work on it, from `GET /api/v1/repos/{id}/agent-presence`:
   CLI sessions of any vendor, queue workers, reviewers, gates and jeryu's own runs, one row each,
@@ -36,6 +47,29 @@
   change by week; a breakdown by model, agent, experiment arm, family, repository, requester or
   week; and the costliest and scrapped todos, each linking to its page. The window (7, 28 or 90
   days) and the cut stay in the address; the family is the shell's scope.
+- Sessions (`/sessions`, `g o`, and "Your sessions" on every repository's Agents tab) lists
+  your agent sessions across repositories, newest first: the repository, provider and model,
+  the state of the VM and of its agent and shell, who started it (you, or one of your Grokbots
+  or Musebots), the todo it works for, and the branch it started from when that is not the
+  default branch. It says whether the session runner can take another
+  one, opens a session in its repository's Agents tab, and stops a running one after a
+  confirmation, through whichever terminal still runs. Running is the default; Finished and All
+  are a choice away.
+- Sessions says when the session node's certificate runs out, and calls it out within six hours
+  of its end or once it has passed: the server refuses a session whose lease would outlive it.
+- New Session on the Agents tab starts Codex, Claude or Grok (the providers a session node
+  runs), with an optional model recorded on the session. A session's pane is named by its
+  session id rather than an empty branch.
+- New Session takes an optional prompt, sent trimmed as the session's `task`: the agent's CLI
+  starts headless on it, or interactive when it is left empty. The field counts UTF-8 bytes, as
+  the server does, and holds New Session while the prompt is over 8000.
+- The Workers table on the Work page shows the Firecracker session each slot works in, when its
+  worker reports one, linked to Sessions.
+- A repository's Agents tab names a Firecracker session's row and pane by its session id (a VM
+  session has no branch of its own), and says who started it.
+- Settings, Agent providers keeps a connection whose credential needs a new sign-in on the list,
+  marked "Sign in again", instead of dropping it: a refresh that could not confirm the
+  credential stops using it until it is connected again.
 - A release-board target run by an external worker pool links to it: a target
   with `slots: [{family, host}]` shows "3 workers" beside its name on
   `/releases`, pointing at `/work?family=&host=#workers`. The workers panel

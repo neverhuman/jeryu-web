@@ -6,6 +6,8 @@
 //   - `apiPut<T>(url, body, opts)`  — PUT, JSON, optional `Idempotency-Key`.
 //   - `apiPatch<T>(url, body, opts)` — PATCH with the same headers.
 //   - `apiDelete(url, opts)`        — DELETE; returns void on 204.
+//   - `apiDeleteReceipt<T>(url, opts)` — HTTP removal request with no body
+//     that parses the typed JSON receipt the route answers with.
 //   - `apiDeleteWithBody<T>(url, body, opts)` — HTTP removal request that
 //     carries a JSON confirmation payload and parses a typed JSON receipt.
 //
@@ -264,6 +266,18 @@ export function apiDelete(
   opts?: ApiRequestOptions
 ): Promise<void> {
   return sendNoContent('DELETE', url, opts);
+}
+
+/**
+ * Removal request with no body that parses a typed JSON receipt, for a route
+ * that answers with what the removal left (a cancelled sign-in's view, say)
+ * rather than with 204.
+ */
+export function apiDeleteReceipt<T>(
+  url: string,
+  opts?: ApiRequestOptions
+): Promise<T> {
+  return send<T>('DELETE', url, undefined, opts);
 }
 
 /**

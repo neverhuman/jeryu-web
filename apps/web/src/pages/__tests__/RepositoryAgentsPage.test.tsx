@@ -46,6 +46,138 @@ describe('RepositoryAgentsPage — New Session', () => {
     });
   });
 
+  it('starts the chosen provider with its model, from the providers a node runs', async () => {
+    const fetchSpy = mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+      'POST /api/v1/repos/repo-1/sessions': {
+        ...createdResponse('run-grok'),
+        branch: '',
+        session_id: 'vm-run-grok',
+      },
+    });
+
+    renderPage();
+
+    const select = await screen.findByTestId('new-session-agent');
+    expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Codex',
+      'Claude',
+      'Grok',
+    ]);
+    await userEvent.selectOptions(select, 'grok');
+    await userEvent.type(screen.getByTestId('new-session-model'), 'grok-4');
+    await userEvent.click(screen.getByTestId('new-session-button'));
+
+    await waitFor(() => {
+      expect(postedBodies(fetchSpy)).toEqual([{ provider: 'grok', model: 'grok-4' }]);
+    });
+    // A VM session has no branch of its own: its pane is named by session.
+    expect(await screen.findByText('grok · vm-run-grok')).toBeInTheDocument();
+    expect(screen.getByTestId('agents-all-sessions')).toHaveAttribute('href', '/sessions');
+  });
+
+  it('starts the agent on the prompt typed, trimmed, and describes the field by its hint', async () => {
+    const fetchSpy = mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+      'POST /api/v1/repos/repo-1/sessions': createdResponse('run-prompt'),
+    });
+
+    renderPage();
+
+    const field = await screen.findByLabelText('Prompt');
+    expect(field).toBe(screen.getByTestId('new-session-task'));
+    expect(field.tagName).toBe('TEXTAREA');
+    expect(field).toHaveAccessibleDescription(
+      'Optional. The agent starts on this prompt; leave it empty to start an interactive session. 8000 bytes left'
+    );
+
+    await userEvent.type(field, '  Fix the flaky parser test.{Enter}Then run the suite.  ');
+    expect(screen.getByTestId('new-session-task-count')).toHaveTextContent('7954 bytes left');
+    await userEvent.click(screen.getByTestId('new-session-button'));
+
+    await waitFor(() => {
+      expect(postedBodies(fetchSpy)).toEqual([
+        { provider: 'codex', task: 'Fix the flaky parser test.\nThen run the suite.' },
+      ]);
+    });
+    expect(await screen.findByTestId('agent-terminal')).toHaveAttribute('data-run-id', 'run-prompt');
+  });
+
+  it('holds New Session while the prompt is over 8000 bytes, and says by how much', async () => {
+    const fetchSpy = mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': { items: [] },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+      'POST /api/v1/repos/repo-1/sessions': createdResponse('run-long'),
+    });
+    const twoByte = '\u00e9'; // é: one character, two bytes of UTF-8
+
+    renderPage();
+
+    const field = await screen.findByTestId('new-session-task');
+    const button = screen.getByTestId('new-session-button');
+    const count = screen.getByTestId('new-session-task-count');
+
+    // 4000 two-byte characters are 8000 bytes: exactly the limit, allowed.
+    await userEvent.click(field);
+    await userEvent.paste(twoByte.repeat(4000));
+    expect(count).toHaveTextContent('0 bytes left');
+    expect(button).toBeEnabled();
+    expect(field).not.toHaveAttribute('aria-invalid');
+
+    // One more is 8002 bytes: New Session is held, and the field says why.
+    await userEvent.paste(twoByte);
+    expect(button).toBeDisabled();
+    expect(count).toBeVisible();
+    expect(count).toHaveTextContent(
+      '2 bytes over the limit of 8000: shorten the prompt to start a session.'
+    );
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAccessibleDescription(/2 bytes over the limit of 8000/);
+    await userEvent.click(button);
+    expect(postedTo(fetchSpy)).toEqual([]);
+
+    // Back at the limit, it starts, with every byte of the prompt.
+    await userEvent.type(field, '{Backspace}');
+    expect(button).toBeEnabled();
+    await userEvent.click(button);
+    await waitFor(() => {
+      expect(postedBodies(fetchSpy)).toEqual([{ provider: 'codex', task: twoByte.repeat(4000) }]);
+    });
+  });
+
+  it('names a listed VM session by its session id and says who started it', async () => {
+    mockFetch({
+      'GET /api/v1/repos?host=jeryu': listResponse(),
+      'GET /api/v1/repos/repo-1/agent-runs': {
+        items: [
+          {
+            run_id: 'ar-7',
+            branch: '',
+            runner: 'node-a',
+            status: 'running',
+            tty_live: true,
+            shell_run_id: 'ar-8',
+            agent: 'claude',
+            session_id: 'vm-ar-7',
+            owner: 'alice',
+            started_by: 'bot/atlas',
+            dispatch_state: 'running',
+          },
+        ],
+      },
+      'GET /api/v1/repos/repo-1/bots': { bots: [] },
+    });
+    renderPage();
+    const row = await screen.findByTestId('agent-row-ar-7');
+    const session = within(row).getByText('vm-ar-7');
+    expect(session.closest('span')).toHaveAttribute('title', 'started by bot/atlas');
+  });
+
   it('shows an error state when the session create fails', async () => {
     mockFetch({
       'GET /api/v1/repos?host=jeryu': listResponse(),
@@ -600,6 +732,13 @@ function postedTo(spy: ReturnType<typeof vi.spyOn>): string[] {
   return calls
     .filter(([, init]) => (init?.method ?? 'GET').toUpperCase() === 'POST')
     .map(([url]) => String(url));
+}
+
+function postedBodies(spy: ReturnType<typeof vi.spyOn>): unknown[] {
+  const calls = spy.mock.calls as Array<[unknown, RequestInit | undefined]>;
+  return calls
+    .filter(([, init]) => (init?.method ?? 'GET').toUpperCase() === 'POST')
+    .map(([, init]) => JSON.parse(String(init?.body)));
 }
 
 function createdResponse(runId: string): Record<string, unknown> {

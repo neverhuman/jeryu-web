@@ -63,6 +63,22 @@ export interface RepoAgentSummary {
   workcell_id?: string | null;
   /** RFC3339 timestamp of the latest change. */
   updated_at?: string | null;
+  /** A Firecracker session run: its `vm-…` id. Absent on a host run. */
+  session_id?: string | null;
+  /** The session's owner login. */
+  owner?: string | null;
+  /** Who started the session: `user/<login>` or `bot/<slug>`. */
+  started_by?: string | null;
+  /** The session's dispatch state, e.g. `running` or `stopped`. */
+  dispatch_state?: string | null;
+}
+
+/**
+ * How a run is named in a pane: its agent and its branch, or for a VM session
+ * (which has no branch of its own) its session id.
+ */
+export function runLabel(run: Pick<RepoAgentSummary, 'agent' | 'branch' | 'session_id' | 'run_id'>): string {
+  return `${run.agent ?? 'agent'} · ${run.branch || run.session_id || run.run_id}`;
 }
 
 /** Wire shape of `GET /api/v1/repos/{id}/agent-runs`. */
@@ -77,6 +93,8 @@ export interface RepoAgentRunsResponse {
 export interface CreateSessionResponse {
   /** The created agent run id (scope `agent_run.{run_id}`). */
   run_id: string;
+  /** The Firecracker session (`vm-…`) the run belongs to. */
+  session_id?: string;
   /** The isolated working branch the session operates on. */
   branch: string;
   /** Commit the branch was cut from. */

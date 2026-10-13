@@ -236,6 +236,10 @@ export interface ShiftHeartbeat {
   planned_slots?: number | null;
   schedule?: ShiftSchedule | null;
   version?: string | null;
+  /** The Firecracker session the slot works in (`vm-…`), as it reported it. */
+  session_id?: string | null;
+  /** That session's agent run. */
+  run_id?: string | null;
   kind?: ShiftWorkerKind | string | null;
   /** A few words behind `state`, e.g. why a pool member is paused. */
   detail?: string | null;

@@ -51,8 +51,10 @@ describe('the required browser lane', () => {
   });
 
   it('verifies the action matrix against the report that run writes', () => {
+    // The port-isolation check runs first: a second gate on the same host
+    // must never share this run's SPA server.
     expect(scripts['test:e2e:ci']).toBe(
-      'npm run test:e2e:required && npm run test:e2e:matrix'
+      'npm run test:e2e:ports && npm run test:e2e:required && npm run test:e2e:matrix'
     );
   });
 

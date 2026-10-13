@@ -17,12 +17,14 @@
 }
 
 /* ── Header row ─────────────────────────────────────────────────────────── */
+/* It wraps: the prompt takes a row of its own under the title and controls. */
 .agents .page__header {
   flex: 0 0 auto;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem 1rem;
   padding: 0.6rem 1rem;
   border-bottom: 1px solid var(--color-border-subtle);
   background: var(--color-bg-1);
@@ -62,6 +64,22 @@
   cursor: pointer;
 }
 
+.agents__all-sessions {
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.agents__model-input {
+  width: 11rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-2);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
 .agents__new-session {
   display: inline-flex;
   align-items: center;
@@ -89,6 +107,61 @@
 .agents__new-session-error {
   padding: 0.5rem 1rem;
   min-height: 0;
+}
+
+/* ── Prompt: what the agent starts on, under the New Session controls ───── */
+.agents__task {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.agents__task-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.agents__task-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}
+
+.agents__task-input {
+  width: 100%;
+  max-height: 12rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-2);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  resize: vertical;
+}
+
+.agents__task-input[aria-invalid='true'] {
+  border-color: var(--color-accent-danger);
+}
+
+.agents__task-notes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.agents__task-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.agents__task-count.is-over {
+  color: var(--color-accent-danger);
+  font-weight: var(--font-weight-semibold);
 }
 
 /* ── Session count badge next to "New Session" ──────────────────────────── */
@@ -531,4 +604,42 @@
     max-height: 60%;
     padding: 0.5rem 0.75rem;
   }
+}
+
+.agents__bot-activity-heading {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.bot-activity__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bot-activity__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.bot-activity__bot {
+  font-weight: 600;
+}
+
+.bot-activity__action {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-xs);
+}
+
+.bot-activity__session {
+  font-family: var(--font-family-mono, monospace);
+  font-size: var(--font-size-xs);
 }

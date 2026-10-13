@@ -73,6 +73,20 @@ describe('WorkersPanel', () => {
     expect(screen.getByRole('button', { name: '7d' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('links a slot to the Firecracker session it works in', async () => {
+    const inSession = { ...WORKERS.workers[0], session_id: 'vm-ar-9', run_id: 'ar-9' };
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/workers'
+        ? json({ ...WORKERS, workers: [inSession, WORKERS.workers[1]] })
+        : undefined
+    );
+    renderWorkers();
+    const row = await screen.findByTestId('shift-worker-node-0-w1');
+    const session = within(row).getByRole('link', { name: 'vm-ar-9' });
+    expect(session).toHaveAttribute('href', '/sessions');
+    expect(session).toHaveAttribute('title', 'agent run ar-9');
+  });
+
   it('folds supervisor slots out of the table and the timeline until asked for', async () => {
     const supervisor = { ...WORKERS.workers[0], slot: 'supervisor', state: 'idle', stage: null, todo_id: null };
     mockShiftApi((req) => {

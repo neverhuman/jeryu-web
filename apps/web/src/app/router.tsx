@@ -31,6 +31,8 @@ import { NeedsYouPage } from '../pages/needsYou';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RepositoriesPage } from '../pages/RepositoriesPage';
 import { SearchPage } from '../pages/search/SearchPage';
+import { SessionPage } from '../pages/SessionPage';
+import { SessionsPage } from '../pages/SessionsPage';
 import { RepositoryAgentsPage } from '../pages/RepositoryAgentsPage';
 import { RepositoryFamilyPage } from '../pages/RepositoryFamilyPage';
 import { RepositoryPullRequestsPage } from '../pages/RepositoryPullRequestsPage';
@@ -79,6 +81,10 @@ export const router = createBrowserRouter([
         path: 'repos/:provider/*',
         element: <RepoRouter />,
       },
+      // Your agent sessions across repositories.
+      { path: 'sessions', element: <SessionsPage /> },
+      // One session: its VM, what it started from, both terminals' controls.
+      { path: 'sessions/:sessionId', element: <SessionPage /> },
       // Work is one page: add work, who is working, the queue of every family.
       { path: 'work', element: <ShiftQueuePage /> },
       // One todo's own page; Needs you, Activity and the queue link here.

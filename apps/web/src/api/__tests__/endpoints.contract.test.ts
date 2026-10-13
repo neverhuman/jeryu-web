@@ -121,6 +121,13 @@ const endpointSamples = {
   repoBots: ['repo-1'],
   repoBotActivity: ['repo-1'],
   repoJankuraiScores: ['repo-1', 'main'],
+  providerConnections: [],
+  providerConnection: ['pc-1'],
+  providerLogins: [],
+  providerLogin: ['login-1'],
+  mySessions: [{ state: 'running', repo: 'acme/widget-api', limit: 20 }],
+  mySession: ['vm-ar-1'],
+  runnerStatus: [],
 } satisfies { [Name in keyof Endpoints]: Parameters<Endpoints[Name]> };
 
 /** Every builder called with placeholder arguments. */

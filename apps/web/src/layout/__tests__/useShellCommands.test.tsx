@@ -31,6 +31,7 @@ describe('useShellCommands', () => {
       'nav.help',
       'nav.settings',
       'nav.bots',
+      'nav.sessions',
       'nav.work-add',
       'nav.activity-wall',
       'help.shortcuts',
@@ -64,6 +65,7 @@ describe('useShellCommands', () => {
       'nav.help',
       'nav.settings',
       'nav.bots',
+      'nav.sessions',
       'help.shortcuts',
       'family.switch',
       'family.all',
@@ -131,6 +133,7 @@ describe('useShellCommands', () => {
       'g h': '/help',
       'g s': '/settings',
       'g b': '/bots',
+      'g o': '/sessions',
     });
   });
 

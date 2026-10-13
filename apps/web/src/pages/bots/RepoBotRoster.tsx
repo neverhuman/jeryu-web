@@ -3,7 +3,8 @@
 // `GET /api/v1/repos/{id}/bots` is already clipped to this repository, so a
 // repository reach reads "This repo" and an owners reach "Whole owner". The
 // query key includes the repo id so one repository cannot show another's
-// enrollments.
+// enrollments. Below the roster, the repository's writers see what those bots
+// did recently (`BotActivityList`).
 
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -13,6 +14,7 @@ import { endpoints } from '../../api/endpoints';
 import type { BotListResponse } from '../../api/types';
 import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { When } from '../../format/When';
+import { BotActivityList } from './BotActivityList';
 import { BotKindBadge } from './BotKindBadge';
 import { addBotHref, repoRosterReachLabel, textOrDash } from './botModel';
 
@@ -79,6 +81,11 @@ export function RepoBotRoster({
           ))}
         </ul>
       )}
+      <h3 className="agents__bot-activity-heading">Recent activity</h3>
+      <BotActivityList
+        repo={repoId}
+        emptyTitle="No Grokbot or Musebot activity on this repo yet"
+      />
     </section>
   );
 }

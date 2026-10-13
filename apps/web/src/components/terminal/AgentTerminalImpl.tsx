@@ -1,21 +1,24 @@
-// AgentTerminalImpl.tsx — live agent terminal surface (SSE + REST transport).
+// AgentTerminalImpl.tsx — live agent terminal surface over one WebSocket.
 //
 // On mount:
 //   1. Dynamically imports xterm and boots it into the container div.
-//   2. Opens an SSE connection to GET /api/v1/agent-runs/{runId}/tty/stream
-//      for live TTY output.
-//   3. Operator keystrokes are sent via POST /api/v1/agent-runs/{runId}/control.
+//   2. Opens GET /api/v1/agent-runs/{runId}/attach (WebSocket): retained output
+//      replays, then live output streams.
+//   3. Keystrokes, resizes, and Ctrl-C go up the same socket. Only the client
+//      holding the control lease can type; the others watch.
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-import { connectTtyStream, type AgentTtyConnection, type AgentStreamEvent } from './agentTtyTransport';
-import { sendInput, sendInterrupt, sendResize } from './agentControlTransport';
+import { connectAttach, type AttachConnection, type AttachStatus } from './agentAttachTransport';
+import type { AgentStreamEvent } from './agentTtyTransport';
 
 export interface AgentTerminalImplProps {
   runId: string;
   onBytes?: (totalBytes: number) => void;
-  onSseStatus?: (status: 'connecting' | 'open' | 'closed' | 'error') => void;
+  onSseStatus?: (status: AttachStatus) => void;
   onExit?: (exitCode: number) => void;
+  /** True while this terminal holds the control lease and can type. */
+  onControl?: (controller: boolean) => void;
   resizeDebounceMs?: number;
 }
 
@@ -39,6 +42,7 @@ export function AgentTerminalImpl({
   onBytes,
   onSseStatus,
   onExit,
+  onControl,
   resizeDebounceMs = 150,
 }: AgentTerminalImplProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -57,6 +61,8 @@ export function AgentTerminalImpl({
   useEffect(() => { onSseStatusRef.current = onSseStatus; }, [onSseStatus]);
   const onExitRef = useRef(onExit);
   useEffect(() => { onExitRef.current = onExit; }, [onExit]);
+  const onControlRef = useRef(onControl);
+  useEffect(() => { onControlRef.current = onControl; }, [onControl]);
 
   // Named function expression so the retry path can re-schedule itself
   // without closing over the outer `flush` binding before it is declared.
@@ -108,7 +114,9 @@ export function AgentTerminalImpl({
       return;
     }
 
-    if (evt.stream === 'stdout' || evt.stream === 'stderr') {
+    // Terminal output: a PTY run says `pty`; pipe runs say stdout/stderr.
+    // Only `event` frames are metadata.
+    if (evt.stream !== 'event') {
       if (evt.text) {
         enqueueText(sanitizeTty(evt.text));
       } else if (evt.bytes_b64) {
@@ -135,14 +143,13 @@ export function AgentTerminalImpl({
     let dataSub: { dispose(): void } | null = null;
     let ro: ResizeObserver | null = null;
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
-    let sseConn: AgentTtyConnection | null = null;
-
-    // Start SSE immediately — don't wait for xterm to load.
-    sseConn = connectTtyStream(
-      runId,
-      (evt) => handleStreamEvent(evt),
-      (status) => onSseStatusRef.current?.(status),
-    );
+    // Attach immediately — don't wait for xterm to load.
+    const conn: AttachConnection = connectAttach(runId, {
+      onEvent: (evt) => handleStreamEvent(evt),
+      onStatus: (status) => onSseStatusRef.current?.(status),
+      onControl: (controller) => onControlRef.current?.(controller),
+      onGap: () => enqueueText('\r\n\x1b[33m── output skipped; terminal may be incomplete ──\x1b[0m\r\n'),
+    });
 
     // Load xterm asynchronously.
     (async () => {
@@ -183,15 +190,15 @@ export function AgentTerminalImpl({
 
         // Send the initial PTY resize so the backend knows our dimensions
         // before any content is rendered.
-        void sendResize(runId, term.cols, term.rows);
+        conn.resize(term.cols, term.rows);
 
-        // Keystrokes → REST control.
+        // Keystrokes → the socket (the server ignores them without the lease).
         dataSub = term.onData((data: string) => {
           if (data.length === 1 && data.charCodeAt(0) === ETX) {
-            void sendInterrupt(runId);
+            conn.interrupt();
             return;
           }
-          void sendInput(runId, data);
+          conn.sendKeys(data);
         });
 
         // Resize → debounced fit + REST resize.
@@ -201,13 +208,13 @@ export function AgentTerminalImpl({
             safeFit(fit);
             const t = termRef.current;
             if (t) {
-              void sendResize(runId, t.cols, t.rows);
+              conn.resize(t.cols, t.rows);
             }
           }, resizeDebounceMs);
         });
         ro.observe(container);
 
-        // Flush any SSE events that arrived before xterm was ready.
+        // Flush any events that arrived before xterm was ready.
         if (rafRef.current === null && pendingRef.current.length > 0) {
           rafRef.current = requestAnimationFrame(flush);
         }
@@ -220,7 +227,7 @@ export function AgentTerminalImpl({
 
     return () => {
       disposed = true;
-      sseConn?.close();
+      conn.close();
       dataSub?.dispose();
       ro?.disconnect();
       if (resizeTimer) clearTimeout(resizeTimer);

@@ -627,3 +627,43 @@ test('Settings links the agent setup page in a new tab @action:settings.connect_
   await expect(page).toHaveURL(/\/bots$/);
   await expect(page.getByTestId('enroll-page')).toBeVisible();
 });
+
+test('the repository roster shows what its bots did, newest first, with the session each worked @action:bots.activity', async ({
+  page,
+}) => {
+  await seedRoster(page);
+  await mockAccountBots(page, []);
+  const bot = summary({ display_name: 'Atlas', slug: 'atlas' });
+  await page.route(/\/api\/v1\/repos\/[^/]+\/bots(?:\?.*)?$/, async (route, request) => {
+    if (request.method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    await fulfillJson(route, 200, { bots: [bot] });
+  });
+  const at = (ago: number) => new Date(Date.now() - ago).toISOString();
+  await page.route(/\/api\/v1\/repos\/[^/]+\/bot-activity(?:\?.*)?$/, async (route) => {
+    await fulfillJson(route, 200, {
+      events: [
+        { id: 'e-1', bot_id: bot.id, key_id: 'k-1', repo: `${REPO.owner}/${REPO.name}`, session_id: 'vm-ar-7',
+          action: `POST /api/v1/repos/${REPO.owner}%2F${REPO.name}/sessions`, outcome: '201', scope: 'http',
+          created_at: at(120_000) },
+        { id: 'e-2', bot_id: bot.id, key_id: 'k-1', repo: `${REPO.owner}/${REPO.name}`, session_id: 'vm-ar-7',
+          action: 'session.send_input', outcome: 'ok', scope: 'mcp', created_at: at(60_000) },
+      ],
+    });
+  });
+
+  const shell = new AppShellPage(page);
+  await shell.goto(`${REPO_PATH}/agents`);
+  await shell.assertShellLoaded(15_000);
+  const rows = page.getByTestId('bot-activity-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toContainText('session.send_input');
+  await expect(rows.first()).toContainText('Atlas');
+  await expect(rows.first().getByRole('link', { name: 'vm-ar-7' })).toHaveAttribute(
+    'href',
+    '/sessions/vm-ar-7'
+  );
+  await expect(rows.nth(1)).toContainText('201');
+});

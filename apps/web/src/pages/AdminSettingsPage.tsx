@@ -16,6 +16,8 @@ import { ActionButton } from '../components/action/ActionButton';
 import { pillClass } from '../components/tone/tone';
 import { ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
+import { AccessTokensPanel } from './AccessTokensPanel';
+import { AgentProvidersPanel } from './AgentProvidersPanel';
 import { InternalWikiPanel } from './InternalWikiPanel';
 import { EmailSection } from './account/EmailSection';
 import { ConnectAgentDoc } from './bots/ConnectAgentDoc';
@@ -110,6 +112,10 @@ export function AdminSettingsPage(): JSX.Element {
           <RepoAccessPanel />
         </>
       ) : null}
+
+      <AgentProvidersPanel />
+
+      <AccessTokensPanel />
 
       <SessionPanel login={user?.login ?? null} />
     </div>

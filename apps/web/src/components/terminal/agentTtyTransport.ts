@@ -7,7 +7,8 @@
 /** A single decoded TTY event from the SSE stream. */
 export interface AgentStreamEvent {
   seq: number;
-  stream: 'stdout' | 'stderr' | 'event';
+  /** `pty` for a PTY run, `stdout`/`stderr` for pipes, `event` for metadata. */
+  stream: 'pty' | 'stdout' | 'stderr' | 'event';
   text: string | null;
   bytes_b64: string | null;
   exit_code: number | null;

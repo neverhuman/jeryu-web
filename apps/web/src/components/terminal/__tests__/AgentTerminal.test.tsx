@@ -1,7 +1,7 @@
 // AgentTerminal.test.tsx — component-level wiring test for the live terminal.
 //
 // Drives the REAL transport path of the SSE + REST architecture: a stubbed
-// `EventSource` feeds `AgentStreamEvent` frames through `connectTtyStream`
+// A scripted `WebSocket` feeds attach frames (`tty` events) into the terminal.
 // → the rAF write loop → `term.write`, and operator input flows out via
 // POST /api/v1/agent-runs/{id}/control (captured by a `fetch` spy). xterm
 // itself is mocked so we can assert the exact bytes handed to `write` and
@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentTerminal } from '../AgentTerminal';
 import { textToBase64 } from '../agentTtyDecode';
 import { useRealtimeStore } from '../../../stores/realtimeStore';
+import { setCsrfToken } from '../../../api/client';
 
 // ── xterm mocks ────────────────────────────────────────────────────────────
 vi.mock('@xterm/xterm', () => {
@@ -81,18 +82,29 @@ function resetLastTerm(): void {
   (Terminal as unknown as { last: MockTerminal | null }).last = null;
 }
 
-// ── scriptable EventSource double ───────────────────────────────────────────
-class FakeEventSource {
-  static instances: FakeEventSource[] = [];
+// ── scriptable WebSocket double ─────────────────────────────────────────────
+class FakeWebSocket {
+  static OPEN = 1;
+  static instances: FakeWebSocket[] = [];
+  readyState = 0;
+  binaryType = 'blob';
   onopen: (() => void) | null = null;
-  onmessage: ((msg: { data: string }) => void) | null = null;
-  onerror: (() => void) | null = null;
+  onmessage: ((msg: { data: unknown }) => void) | null = null;
+  onclose: ((event?: { code: number }) => void) | null = null;
+  sent: Array<string | Uint8Array> = [];
   closed = false;
   constructor(public url: string) {
-    FakeEventSource.instances.push(this);
+    FakeWebSocket.instances.push(this);
+  }
+  send(frame: string | Uint8Array): void {
+    this.sent.push(frame);
   }
   close(): void {
     this.closed = true;
+  }
+  open(): void {
+    this.readyState = FakeWebSocket.OPEN;
+    this.onopen?.();
   }
 }
 
@@ -111,7 +123,7 @@ const CONTROL_PATH = `/api/v1/agent-runs/${RUN_ID}/control`;
 
 interface SseEventOpts {
   seq: number;
-  stream?: 'stdout' | 'stderr' | 'event';
+  stream?: 'pty' | 'stdout' | 'stderr' | 'event';
   text?: string | null;
   bytesB64?: string | null;
   exitCode?: number | null;
@@ -119,18 +131,48 @@ interface SseEventOpts {
 
 function sseFrame(opts: SseEventOpts): string {
   return JSON.stringify({
-    seq: opts.seq,
-    stream: opts.stream ?? 'stdout',
-    text: opts.text ?? null,
-    bytes_b64: opts.bytesB64 ?? null,
-    exit_code: opts.exitCode ?? null,
+    type: 'tty',
+    event: {
+      seq: opts.seq,
+      stream: opts.stream ?? 'stdout',
+      text: opts.text ?? null,
+      bytes_b64: opts.bytesB64 ?? null,
+      exit_code: opts.exitCode ?? null,
+    },
   });
 }
 
-function emit(source: FakeEventSource, frame: string): void {
+function emit(source: FakeWebSocket, frame: string | Record<string, unknown>): void {
+  const data = typeof frame === 'string' ? frame : JSON.stringify(frame);
   act(() => {
-    source.onmessage?.({ data: frame });
+    source.onmessage?.({ data });
   });
+}
+
+/** Keystrokes the terminal sent up the socket, as text. */
+function sentKeys(source: FakeWebSocket): string[] {
+  return source.sent
+    // ArrayBuffer.isView, not instanceof: jsdom's TextEncoder returns a typed
+    // array from another realm.
+    .filter((frame): frame is Uint8Array => ArrayBuffer.isView(frame))
+    .map((frame) => new TextDecoder().decode(frame));
+}
+
+/** JSON control commands the terminal sent up the socket. */
+function socketControls(source: FakeWebSocket, kind: string): Array<Record<string, unknown>> {
+  const commands: Array<Record<string, unknown>> = [];
+  for (const frame of source.sent) {
+    if (typeof frame !== 'string') continue;
+    const parsed: unknown = JSON.parse(frame);
+    if (!isRecord(parsed) || parsed.type !== 'control') continue;
+    const command = parsed.command;
+    if (isRecord(command) && command.kind === kind) commands.push(command);
+  }
+  return commands;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 let fetchSpy: ReturnType<typeof vi.spyOn>;
@@ -156,14 +198,14 @@ function decode(bytes: Uint8Array): string {
 }
 
 async function mountAndStream(): Promise<{
-  source: FakeEventSource;
+  source: FakeWebSocket;
   term: () => MockTerminal;
 }> {
   render(<AgentTerminal runId={RUN_ID} />);
-  const source = FakeEventSource.instances[0];
-  expect(source.url).toContain(`/api/v1/agent-runs/${RUN_ID}/tty/stream`);
+  const source = FakeWebSocket.instances[0];
+  expect(source.url).toContain(`/api/v1/agent-runs/${RUN_ID}/attach?after_seq=0&control=true`);
   act(() => {
-    source.onopen?.();
+    source.open();
   });
   // Wait for the lazy xterm surface + the dynamic import to finish.
   await screen.findByTestId('agent-terminal-surface');
@@ -175,10 +217,10 @@ async function mountAndStream(): Promise<{
 }
 
 beforeEach(() => {
-  FakeEventSource.instances = [];
+  FakeWebSocket.instances = [];
   rafCallbacks = [];
   resetLastTerm();
-  vi.stubGlobal('EventSource', FakeEventSource as unknown as typeof EventSource);
+  vi.stubGlobal('WebSocket', FakeWebSocket as unknown as typeof WebSocket);
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -204,6 +246,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -249,25 +292,140 @@ describe('AgentTerminal live wiring', () => {
     expect(decode(term().writes[0])).toBe('keep\n');
   });
 
-  it('sends a send_input control with the typed text when the operator types', async () => {
-    const { term } = await mountAndStream();
-    term().dataHandler?.('x');
-    const inputs = controlsOfKind('send_input');
-    expect(inputs).toHaveLength(1);
-    expect(inputs[0].text).toBe('x');
+  it('sends typed keys up the socket as raw bytes, with no REST call', async () => {
+    const { source, term } = await mountAndStream();
+    term().dataHandler?.('x\u00e9');
+    expect(sentKeys(source)).toEqual(['x\u00e9']);
+    expect(sentControls()).toHaveLength(0);
   });
 
-  it('promotes a Ctrl-C keystroke (ETX) to an interrupt control', async () => {
-    const { term } = await mountAndStream();
+  it('promotes a Ctrl-C keystroke (ETX) to an interrupt control on the socket', async () => {
+    const { source, term } = await mountAndStream();
     term().dataHandler?.('\x03');
-    expect(controlsOfKind('interrupt')).toHaveLength(1);
-    expect(controlsOfKind('send_input')).toHaveLength(0);
+    expect(socketControls(source, 'interrupt')).toHaveLength(1);
+    expect(sentKeys(source)).toHaveLength(0);
   });
 
-  it('sends an interrupt when the Ctrl-C toolbar button is clicked', async () => {
+  it('sends the initial terminal size as a resize control', async () => {
+    const { source } = await mountAndStream();
+    const resizes = socketControls(source, 'resize_pty');
+    expect(resizes.length).toBeGreaterThanOrEqual(1);
+    expect(resizes[0].cols).toBeGreaterThan(0);
+  });
+
+  it('sends a CSRF-protected interrupt when the Ctrl-C toolbar button is clicked', async () => {
+    setCsrfToken('csrf-test-token');
     await mountAndStream();
     fireEvent.click(screen.getByTestId('agent-terminal-interrupt'));
-    expect(controlsOfKind('interrupt')).toHaveLength(1);
+    await waitFor(() => expect(controlsOfKind('interrupt')).toHaveLength(1));
+    const [, init] = fetchSpy.mock.calls.at(-1) as [unknown, RequestInit];
+    expect(new Headers(init.headers).get('X-Jeryu-CSRF')).toBe('csrf-test-token');
+    setCsrfToken(null);
+  });
+
+  it('shows whether this terminal holds the control lease', async () => {
+    const { source } = await mountAndStream();
+    emit(source, { type: 'attached', controller: true });
+    expect(await screen.findByTestId('agent-terminal-control')).toHaveTextContent('In control');
+    emit(source, { type: 'control_lost', control_epoch: 1 });
+    expect(screen.getByTestId('agent-terminal-control')).toHaveTextContent('Read-only');
+  });
+
+  it('reconnects from the last seen sequence and stops after the run ends', async () => {
+    // Fake timers only after mounting: the testing library's own waitFor
+    // polling runs on real timers.
+    const { source } = await mountAndStream();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      emit(source, sseFrame({ seq: 7, text: 'x' }));
+      act(() => source.onclose?.());
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      const second = FakeWebSocket.instances[1];
+      expect(second.url).toContain('after_seq=7');
+      act(() => second.open());
+      emit(second, { type: 'ended', state: 'succeeded' });
+      act(() => second.onclose?.());
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+      expect(FakeWebSocket.instances).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops reconnecting once the server keeps refusing the upgrade', async () => {
+    const { source } = await mountAndStream();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      // A live socket drops: that is a reconnect, not a refusal.
+      act(() => source.onclose?.({ code: 1006 }));
+      // Three upgrades in a row that never open: the third stops the loop.
+      for (const index of [1, 2, 3]) {
+        act(() => {
+          vi.advanceTimersByTime(30_000);
+        });
+        act(() => FakeWebSocket.instances[index].onclose?.({ code: 1006 }));
+      }
+      act(() => {
+        vi.advanceTimersByTime(120_000);
+      });
+      expect(FakeWebSocket.instances).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(screen.getByTestId('agent-terminal-status')).toHaveTextContent('No access');
+    expect(screen.getByTestId('agent-terminal-refused')).toBeInTheDocument();
+  });
+
+  it('stops at once on a denying close code', async () => {
+    const { source } = await mountAndStream();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      act(() => source.onclose?.({ code: 4403 }));
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(FakeWebSocket.instances).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(screen.getByTestId('agent-terminal-refused')).toBeInTheDocument();
+  });
+
+  it('stops for good when the server revokes the sign-in', async () => {
+    const { source } = await mountAndStream();
+    emit(source, { type: 'attached', controller: true });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      emit(source, { type: 'auth_revoked' });
+      act(() => source.onclose?.({ code: 1000 }));
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(FakeWebSocket.instances).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(screen.getByTestId('agent-terminal-signed-out')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-terminal-status')).toHaveTextContent('Signed out');
+    expect(screen.queryByTestId('agent-terminal-control')).not.toBeInTheDocument();
+  });
+
+  it('shows a refused Ctrl-C instead of swallowing it', async () => {
+    await mountAndStream();
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 'forbidden', message: 'admin role required' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    fireEvent.click(screen.getByTestId('agent-terminal-interrupt'));
+    expect(await screen.findByTestId('agent-terminal-control-error')).toHaveTextContent(
+      'admin role required',
+    );
   });
 
   it('surfaces the exit pill and writes the exit line on an exit_code event', async () => {
@@ -277,6 +435,14 @@ describe('AgentTerminal live wiring', () => {
     expect(pill).toHaveTextContent('exit 0');
     runRaf();
     expect(decode(term().writes[0])).toContain('process exited with code 0');
+  });
+
+  it('writes PTY frames: a host PTY run streams as pty, not stdout', async () => {
+    const { source, term } = await mountAndStream();
+    emit(source, sseFrame({ seq: 1, stream: 'pty', text: 'pty bytes' }));
+    emit(source, sseFrame({ seq: 2, stream: 'pty', bytesB64: btoa('raw pty') }));
+    runRaf();
+    expect(term().writes.map(decode).join('')).toBe('pty bytesraw pty');
   });
 
   it('streams agent bytes WITHOUT touching the rolling event buffer', async () => {

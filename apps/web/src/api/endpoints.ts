@@ -30,6 +30,13 @@ export const endpoints = {
   authTokens: (): string => '/api/v1/auth/tokens',
   authToken: (id: string): string =>
     `/api/v1/auth/tokens/${encodeURIComponent(id)}`,
+  /** The caller's agent provider connections (connect once, used by every run). */
+  providerConnections: (): string => '/api/v1/me/provider-connections',
+  providerConnection: (id: string): string =>
+    `/api/v1/me/provider-connections/${encodeURIComponent(id)}`,
+  providerLogins: (): string => '/api/v1/me/provider-connections/login',
+  providerLogin: (id: string): string =>
+    `/api/v1/me/provider-connections/login/${encodeURIComponent(id)}`,
   adminUsers: (): string => '/api/v1/admin/users',
   adminUserKind: (login: string): string =>
     `/api/v1/admin/users/${encodeURIComponent(login)}/kind`,
@@ -261,6 +268,19 @@ export const endpoints = {
   repoAgentRuns: (id: string): string => `/api/v1/repos/${encodeURIComponent(id)}/agent-runs`,
   repoSessions: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/sessions`,
+  /** The caller's Firecracker sessions across repositories, newest first. */
+  mySessions: (params?: { state?: string; repo?: string; limit?: number }): string => {
+    const qs = new URLSearchParams();
+    if (params?.state) qs.set('state', params.state);
+    if (params?.repo) qs.set('repo', params.repo);
+    if (params?.limit !== undefined) qs.set('limit', String(params.limit));
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/me/sessions?${suffix}` : '/api/v1/me/sessions';
+  },
+  /** One of the caller's sessions, by its session, agent run or shell run id. */
+  mySession: (id: string): string => `/api/v1/me/sessions/${encodeURIComponent(id)}`,
+  /** Whether the session runner can take a session now. */
+  runnerStatus: (): string => '/api/v1/runner/status',
   shiftFamilies: (): string => '/api/v1/shift/families',
   shiftTodos: (params?: Record<string, string | undefined>): string => {
     const qs = new URLSearchParams();
@@ -372,7 +392,7 @@ export const endpoints = {
   /** Reach is already clipped to this repository. */
   repoBots: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/bots`,
-  /** Optional activity feed. The roster does not render it. */
+  /** Every bot's activity in this repository, oldest first (writers only). */
   repoBotActivity: (id: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/bot-activity`,
 } as const;

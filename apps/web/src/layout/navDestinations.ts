@@ -30,6 +30,7 @@ import {
   Share2,
   ShieldCheck,
   Siren,
+  SquareTerminal,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,6 +38,7 @@ import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
 import { HELP_PATH } from '../pages/helpPath';
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
+import { SESSIONS_PATH } from '../pages/SessionsPage';
 import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { WORK_PATH } from '../pages/shift/workPaths';
 import { YIELD_PATH } from '../pages/yield/yieldModel';
@@ -312,6 +314,18 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     paletteIcon: 'bot',
     shortcut: 'g b',
     keywords: ['agents', 'agent', 'tokens', 'grokbot', 'musebot', 'enrollment', 'reach', 'grok', 'muse'],
+    group: 'account',
+  },
+  {
+    // Your own agent sessions, across repositories; each repository's Agents
+    // tab, where sessions start, links here too.
+    id: 'nav.sessions',
+    label: 'Sessions',
+    path: SESSIONS_PATH,
+    icon: SquareTerminal,
+    paletteIcon: 'square-terminal',
+    shortcut: 'g o',
+    keywords: ['sessions', 'agents', 'vm', 'firecracker', 'claude', 'codex', 'grok', 'terminal'],
     group: 'account',
   },
 ];

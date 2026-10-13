@@ -22,12 +22,13 @@
     "test:e2e:required": "npm run build && JERYU_PLAYWRIGHT_E2E_MODE=ui-mocked playwright test --project=chromium --grep \"@action:|@a11y\" --grep-invert @bff",
     "test:e2e:bff": "JERYU_PLAYWRIGHT_E2E_MODE=bff-only playwright test --grep @bff",
     "test:e2e:matrix": "node scripts/verify-e2e-action-matrix.mjs",
-    "test:e2e:ci": "npm run test:e2e:required && npm run test:e2e:matrix",
+    "test:e2e:ci": "npm run test:e2e:ports && npm run test:e2e:required && npm run test:e2e:matrix",
     "test:e2e:headed": "playwright test --headed",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "ux-qa": "node ../../ux-qa/ux-qa-check.mjs build && node ../../ux-qa/ux-qa-check.mjs test",
-    "perf": "lhci autorun --config=./perf/lighthouse.config.cjs"
+    "perf": "lhci autorun --config=./perf/lighthouse.config.cjs",
+    "test:e2e:ports": "node scripts/check-e2e-port-isolation.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.102.8",

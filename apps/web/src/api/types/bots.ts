@@ -113,7 +113,25 @@ export interface BotAccessTokenListResponse {
   tokens: BotAccessTokenSummary[];
 }
 
-/** `GET /api/v1/repos/:id/bot-activity`. The roster does not render this. */
+/**
+ * One thing a Grokbot or Musebot did. A request (`scope` `http`) is its
+ * method and path, with the status as the outcome; an MCP session tool
+ * (`scope` `mcp`) is the tool's name, with `ok` or `error`.
+ */
+export interface BotActivityEvent {
+  id: string;
+  bot_id: string;
+  key_id: string;
+  repo: string | null;
+  /** The session it worked, named only when it is the bot's owner's. */
+  session_id: string | null;
+  action: string;
+  outcome: string;
+  scope: string;
+  created_at: string;
+}
+
+/** `GET /api/v1/repos/:id/bot-activity` and `GET /api/v1/bots/:id/activity`, oldest first. */
 export interface BotActivityResponse {
-  events: unknown[];
+  events: BotActivityEvent[];
 }

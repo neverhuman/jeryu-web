@@ -33,13 +33,18 @@ const bffBaseURL = process.env.JERYU_PLAYWRIGHT_API_URL ?? 'http://127.0.0.1:878
 const bffHealthURL = `${bffBaseURL.replace(/\/$/, '')}/health`;
 const bffBind = new URL(bffBaseURL).host;
 const externalApi = process.env.JERYU_PLAYWRIGHT_EXTERNAL_API === '1';
-// Both SPA servers take their port from `JERYU_PLAYWRIGHT_WEB_PORT` when it is
-// set (one mode uses one of them), so two gates on the same host never share a
-// server and satisfy each other's readiness probe.
-const previewPort = process.env.JERYU_PLAYWRIGHT_WEB_PORT ?? '4173';
-const previewBaseURL = `http://127.0.0.1:${previewPort}`;
-const vitePort = process.env.JERYU_PLAYWRIGHT_WEB_PORT ?? '5175';
-const viteBaseURL = `http://127.0.0.1:${vitePort}`;
+// Race-free ports. Each Vite server binds port 0, so the kernel hands it a
+// free port at bind time: there is no pick-then-bind window two gates on one
+// host could race through. Playwright reads the bound port from Vite's own
+// "Local:" line (`webServer.wait`), stores the named capture in process.env,
+// and starts workers only after that; each worker re-reads this config and
+// sees the port. A colour code before the port is tolerated.
+const boundPort = (name: string): RegExp =>
+  new RegExp(`Local:\\s+(?:\\x1b\\[[0-9;]*m)*http://127\\.0\\.0\\.1:(?:\\x1b\\[[0-9;]*m)*(?<${name}>\\d+)`);
+const previewPort = process.env.JERYU_PLAYWRIGHT_PREVIEW_PORT;
+const previewBaseURL = previewPort ? `http://127.0.0.1:${previewPort}` : undefined;
+const vitePort = process.env.JERYU_PLAYWRIGHT_WEB_PORT;
+const viteBaseURL = vitePort ? `http://127.0.0.1:${vitePort}` : undefined;
 const baseURL = useUiOnly || useViteDev
   ? viteBaseURL
   : useUiMocked
@@ -62,11 +67,11 @@ const apiWebServer = {
 };
 
 const viteWebServer = {
-  // Vite dev server. Cwd is the `web/` package dir; `npm run dev` runs
-  // Vite bound to a dedicated strict port so unrelated dev servers cannot
-  // satisfy Playwright's readiness probe.
-  command: `npm run dev -- --port ${vitePort} --strictPort`,
-  url: viteBaseURL,
+  // Vite dev server on a kernel-assigned port (see `boundPort`), so no
+  // unrelated dev server can satisfy Playwright's readiness probe.
+  command: 'npx vite --host 127.0.0.1 --port 0 --strictPort',
+  wait: { stdout: boundPort('jeryu_playwright_web_port') },
+  stdout: 'pipe' as const,
   timeout: 60_000,
   reuseExistingServer: !process.env.CI,
   cwd: '.',
@@ -75,8 +80,9 @@ const viteWebServer = {
 const previewWebServer = {
   // Vite preview serves the already-built dist tree. The e2e lane builds
   // first, then starts this server with no backend proxy.
-  command: `npm run preview -- --strictPort --port ${previewPort}`,
-  url: previewBaseURL,
+  command: 'npx vite preview --host 127.0.0.1 --port 0 --strictPort',
+  wait: { stdout: boundPort('jeryu_playwright_preview_port') },
+  stdout: 'pipe' as const,
   timeout: 60_000,
   reuseExistingServer: false,
   cwd: '.',

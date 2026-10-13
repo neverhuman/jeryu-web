@@ -51,6 +51,10 @@
   font-size: 12px;
 }
 
+.shift__mono {
+  font-family: var(--font-family-mono, monospace);
+}
+
 .shift__row-toggle {
   background: none;
   border: 0;

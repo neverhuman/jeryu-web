@@ -78,6 +78,14 @@ async function mockUnhandledApi(page: Page): Promise<void> {
   // After the catch-all, so it wins: every spec that boots the shell sees the
   // footer name a build, and a spec that re-arms the catch-all keeps it.
   await mockVersion(page);
+  // Settings reads the viewer's agent provider connections; none by default.
+  await page.route('**/api/v1/me/provider-connections', (route: Route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ connections: [] }),
+    })
+  );
 }
 
 export interface ViewerOverride {

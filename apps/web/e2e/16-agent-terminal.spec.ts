@@ -1,8 +1,9 @@
-// 16-agent-terminal.spec.ts — per-run live terminal via SSE + REST.
+// 16-agent-terminal.spec.ts — per-run live terminal over the attach WebSocket.
 //
 // Mocks:
-//   - GET /api/v1/agent-runs/{id}/tty/stream → SSE with scripted TTY events
-//   - POST /api/v1/agent-runs/{id}/control → captures control commands
+//   - GET /api/v1/agent-runs/{id}/attach (WebSocket) → in-page double that
+//     replays scripted tty frames and records every frame the terminal sends
+//   - POST /api/v1/agent-runs/{id}/control → the toolbar's REST interrupt
 //   - Standard bootstrap / repos / agent-runs mocks
 //
 // Asserts that each shipped terminal control remains visible and usable in the
@@ -29,70 +30,104 @@ interface CapturedControl {
 }
 
 /**
- * Install browser-bound terminal mocks. Playwright route interception is not
- * reliable for native EventSource in all Chromium builds, so the stream is a
- * small in-page EventSource double while REST controls still use page.route.
+ * Install browser-bound terminal mocks. The attach socket is a small in-page
+ * WebSocket double that replays scripted output and records every frame the
+ * terminal sends; the toolbar's REST interrupt still goes through page.route.
  */
 async function installMocks(page: Page): Promise<{
   controls: CapturedControl[];
-  streamCount: () => number;
+  routeControls: () => Promise<void>;
+  streamCount: () => Promise<number>;
+  sentKeys: () => Promise<string[]>;
+  sentControls: (kind: string) => Promise<CapturedControl[]>;
 }> {
   const controls: CapturedControl[] = [];
   await page.addInitScript(() => {
-    const win = window as typeof window & { __ttyStreamCount?: number };
-    win.__ttyStreamCount = 0;
+    const win = window as typeof window & {
+      __attachCount?: number;
+      __attachSent?: Array<{ binary: boolean; text: string }>;
+    };
+    win.__attachCount = 0;
+    win.__attachSent = [];
     const encode = (text: string): string => {
       const bytes = new TextEncoder().encode(text);
       let binary = '';
       for (const byte of bytes) binary += String.fromCharCode(byte);
       return btoa(binary);
     };
-    class MockEventSource {
+    class MockWebSocket {
+      static OPEN = 1;
+      readyState = 0;
+      binaryType = 'blob';
       onopen: ((event: Event) => void) | null = null;
       onmessage: ((event: MessageEvent) => void) | null = null;
-      onerror: ((event: Event) => void) | null = null;
+      onclose: ((event: CloseEvent) => void) | null = null;
       private closed = false;
 
       constructor(public readonly url: string) {
-        win.__ttyStreamCount = (win.__ttyStreamCount ?? 0) + 1;
-        const connection = win.__ttyStreamCount;
-        const prompt =
-          connection === 1 ? '$ cargo test\r\n' : '$ recovered run\r\n';
-        const events = [
-          { seq: 1 + (connection - 1) * 10, stream: 'stdout', text: null, bytes_b64: encode(prompt), exit_code: null },
-          { seq: 2 + (connection - 1) * 10, stream: 'stdout', text: null, bytes_b64: encode('PASS all tests\r\n'), exit_code: null },
-          { seq: 3 + (connection - 1) * 10, stream: 'stdout', text: null, bytes_b64: encode('$ '), exit_code: null },
+        win.__attachCount = (win.__attachCount ?? 0) + 1;
+        const connection = win.__attachCount;
+        const prompt = connection === 1 ? '$ cargo test\r\n' : '$ recovered run\r\n';
+        const frames = [
+          { type: 'attached', controller: true, control_epoch: 1 },
+          ...['$ cargo test\r\n', 'PASS all tests\r\n', '$ '].map((text, index) => ({
+            type: 'tty',
+            event: {
+              seq: 1 + index + (connection - 1) * 10,
+              stream: 'stdout',
+              text: null,
+              bytes_b64: encode(index === 0 ? prompt : text),
+              exit_code: null,
+            },
+          })),
         ];
         setTimeout(() => {
           if (this.closed) return;
+          this.readyState = MockWebSocket.OPEN;
           this.onopen?.(new Event('open'));
-          events.forEach((event, index) => {
+          frames.forEach((frame, index) => {
             setTimeout(() => {
               if (!this.closed) {
-                this.onmessage?.(
-                  new MessageEvent('message', { data: JSON.stringify(event) })
-                );
+                this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(frame) }));
               }
             }, index * 10);
           });
-          setTimeout(() => {
-            if (!this.closed) this.onerror?.(new Event('error'));
-          }, 40);
         }, 0);
+      }
+
+      send(frame: string | ArrayBufferView): void {
+        const binary = typeof frame !== 'string';
+        const text = binary ? new TextDecoder().decode(frame as ArrayBufferView) : frame;
+        win.__attachSent?.push({ binary, text });
       }
 
       close(): void {
         this.closed = true;
       }
     }
-    Object.defineProperty(window, 'EventSource', {
-      configurable: true,
-      value: MockEventSource,
-    });
+    // Route only the attach socket to the double; the app's own realtime
+    // socket (/api/v1/ws) keeps the browser implementation.
+    const RealWebSocket = window.WebSocket;
+    class RoutingWebSocket {
+      static CONNECTING = 0;
+      static OPEN = 1;
+      static CLOSING = 2;
+      static CLOSED = 3;
+      constructor(url: string | URL, protocols?: string | string[]) {
+        if (String(url).includes('/attach')) {
+          return new MockWebSocket(String(url)) as unknown as RoutingWebSocket;
+        }
+        return new RealWebSocket(url, protocols) as unknown as RoutingWebSocket;
+      }
+    }
+    Object.defineProperty(window, 'WebSocket', { configurable: true, value: RoutingWebSocket });
   });
 
-  // Mock the REST control endpoint.
-  await page.route('**/api/v1/agent-runs/*/control', async (route, request) => {
+  // Mock the REST control endpoint (the toolbar Ctrl-C button). Playwright
+  // prefers the most recently registered route, so this is installed after
+  // the shell mocks, from `routeControls()`.
+  const routeControls = (): Promise<void> =>
+    page.route('**/api/v1/agent-runs/*/control', async (route, request) => {
     if (request.method() !== 'POST') {
       await route.continue();
       return;
@@ -109,20 +144,29 @@ async function installMocks(page: Page): Promise<{
       body: JSON.stringify({
         accepted: true,
         agent_run_id: RUN_ID,
-        command: 'send_input',
+        command: 'interrupt',
         control_seq: controls.length,
       }),
     });
   });
 
+  type Sent = Array<{ binary: boolean; text: string }>;
+  const sent = (): Promise<Sent> =>
+    page.evaluate(() => (window as typeof window & { __attachSent?: Sent }).__attachSent ?? []);
   return {
     controls,
+    routeControls,
     streamCount: () =>
       page.evaluate(
-        () =>
-          ((window as typeof window & { __ttyStreamCount?: number })
-            .__ttyStreamCount ?? 0)
+        () => (window as typeof window & { __attachCount?: number }).__attachCount ?? 0
       ),
+    sentKeys: async () => (await sent()).filter((f) => f.binary).map((f) => f.text),
+    sentControls: async (kind: string) =>
+      (await sent())
+        .filter((f) => !f.binary)
+        .map((f) => JSON.parse(f.text) as { type: string; command?: CapturedControl })
+        .filter((f) => f.type === 'control' && f.command?.kind === kind)
+        .map((f) => f.command as CapturedControl),
   };
 }
 
@@ -148,53 +192,63 @@ async function gotoTerminal(page: Page): Promise<AppShellPage> {
   return shell;
 }
 
-test('renders streamed TTY text from the SSE stream @action:terminal.stream', async ({ page }) => {
-  await installMocks(page);
+test('renders streamed TTY text from the attach socket @action:terminal.stream', async ({ page }) => {
+  const mocks = await installMocks(page);
   await gotoTerminal(page);
 
-  await expect(page.getByTestId('agent-terminal')).toBeVisible();
   await expect(page.getByTestId('agent-terminal-interrupt')).toBeVisible();
+  await expect(page.locator('.xterm-rows')).toContainText('PASS all tests');
+  await expect(page.getByTestId('agent-terminal-control')).toHaveText('In control');
+  expect(await mocks.streamCount()).toBe(1);
 });
 
-test('typing sends input controls via REST POST @action:terminal.input', async ({ page }) => {
-  await installMocks(page);
+test('typing sends raw keystrokes up the attach socket @action:terminal.input', async ({ page }) => {
+  const mocks = await installMocks(page);
   await gotoTerminal(page);
 
   await page.locator('.xterm-helper-textarea').focus();
   await page.keyboard.type('ls');
 
-  await expect(page.getByTestId('agent-terminal')).toBeVisible();
+  await expect.poll(async () => (await mocks.sentKeys()).join('')).toBe('ls');
+  expect(mocks.controls).toHaveLength(0);
 });
 
 test('Ctrl-C button and Control+C keystroke both send interrupt @action:terminal.interrupt', async ({
   page,
 }) => {
-  await installMocks(page);
+  const mocks = await installMocks(page);
   await gotoTerminal(page);
+  await mocks.routeControls();
 
-  // (1) The explicit toolbar button.
+  // (1) The explicit toolbar button (REST, CSRF-protected).
   await page.getByTestId('agent-terminal-interrupt').click();
-  await expect(page.getByTestId('agent-terminal-interrupt')).toBeVisible();
+  await expect.poll(() => mocks.controls.filter((c) => c.kind === 'interrupt').length).toBe(1);
 
-  // (2) A Control+C keystroke in the terminal is promoted to interrupt too.
+  // (2) A Control+C keystroke in the terminal is an interrupt on the socket.
   await page.locator('.xterm-helper-textarea').focus();
   await page.keyboard.press('Control+C');
-  await expect(page.getByTestId('agent-terminal')).toBeVisible();
+  await expect.poll(async () => (await mocks.sentControls('interrupt')).length).toBe(1);
 });
 
 test('a viewport resize drives a resize_pty control @action:terminal.resize', async ({ page }) => {
-  await installMocks(page);
+  const mocks = await installMocks(page);
   await gotoTerminal(page);
+  await expect.poll(async () => (await mocks.sentControls('resize_pty')).length).toBeGreaterThan(0);
+  const before = (await mocks.sentControls('resize_pty')).length;
 
   await page.setViewportSize({ width: 700, height: 900 });
 
-  await expect(page.getByTestId('agent-terminal')).toBeVisible();
+  await expect
+    .poll(async () => (await mocks.sentControls('resize_pty')).length)
+    .toBeGreaterThan(before);
 });
 
-test('recovers after SSE disconnect (reconnect) @action:terminal.reconnect', async ({ page }) => {
-  await installMocks(page);
+test('recovers after a reload by re-attaching @action:terminal.reconnect', async ({ page }) => {
+  const mocks = await installMocks(page);
   await gotoTerminal(page);
 
   await page.reload();
   await expect(page.getByTestId('agent-terminal')).toBeVisible();
+  await expect(page.locator('.xterm-rows')).toContainText('PASS all tests');
+  expect(await mocks.streamCount()).toBe(1);
 });

@@ -13,21 +13,21 @@ import {
 
 import { ApiError } from '../api/client';
 import { createSession } from '../api/sessions';
-import type { CreateSessionResponse } from '../api/types';
+import type { CreateSessionResponse, StartSessionRequest } from '../api/types';
 
 export function useCreateSession(
   repoId: string | null
-): UseMutationResult<CreateSessionResponse, ApiError, string> {
+): UseMutationResult<CreateSessionResponse, ApiError, StartSessionRequest> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (agentId: string) => {
+    mutationFn: async (request: StartSessionRequest) => {
       if (!repoId) {
         throw new ApiError(0, {
           code: 'invalid_state',
           message: 'Repository not resolved yet.',
         });
       }
-      return createSession(repoId, agentId);
+      return createSession(repoId, request);
     },
     onSuccess: () => {
       if (repoId) {
@@ -35,6 +35,7 @@ export function useCreateSession(
           queryKey: ['repo-agent-runs', repoId],
         });
       }
+      queryClient.invalidateQueries({ queryKey: ['me', 'sessions'] });
     },
   });
 }

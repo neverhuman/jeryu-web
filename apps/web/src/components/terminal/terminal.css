@@ -136,3 +136,12 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.agent-terminal__error {
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  border-bottom: 1px solid var(--color-accent-danger);
+  background: var(--color-accent-danger-bg);
+  color: var(--color-accent-danger);
+  font-size: var(--font-size-xs);
+}
