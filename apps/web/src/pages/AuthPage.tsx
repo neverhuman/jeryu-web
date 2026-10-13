@@ -1,6 +1,6 @@
 import { LogIn, UserPlus } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type Ref } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
@@ -159,6 +159,11 @@ export function AuthForm({
               ? 'Login'
               : 'Create account'}
         </ActionButton>
+        {!forcePasswordChange && mode === 'login' ? (
+          <Link className="auth-form__forgot" to="/forgot-password">
+            Forgot password?
+          </Link>
+        ) : null}
       </form>
     </>
   );

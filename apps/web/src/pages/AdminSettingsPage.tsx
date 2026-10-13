@@ -17,6 +17,7 @@ import { pillClass } from '../components/tone/tone';
 import { ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { InternalWikiPanel } from './InternalWikiPanel';
+import { EmailSection } from './account/EmailSection';
 import { ConnectAgentDoc } from './bots/ConnectAgentDoc';
 import {
   usePreferencesStore,
@@ -49,6 +50,8 @@ export function AdminSettingsPage(): JSX.Element {
           <span className={pillClass('unknown')}>Theme preferences</span>
         </div>
       </PageHeader>
+
+      <EmailSection />
 
       <section className="page__section" aria-labelledby="theme-section">
         <h2 className="page__section-title" id="theme-section">

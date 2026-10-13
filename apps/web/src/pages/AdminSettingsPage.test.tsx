@@ -38,6 +38,8 @@ vi.mock('../api/client', () => ({
   apiPut: vi.fn(),
   apiDelete: vi.fn(),
 }));
+// The Email section has its own tests (AccountRecoveryPages.test.tsx).
+vi.mock('./account/EmailSection', () => ({ EmailSection: () => null }));
 vi.mock('./InternalWikiPanel', () => ({
   InternalWikiPanel: () => <section aria-label="Internal wiki panel" />,
 }));

@@ -116,6 +116,16 @@ describe('AuthPage', () => {
     expect(auth.login.mutateAsync).not.toHaveBeenCalled();
   });
 
+  it('offers "Forgot password?" on Login only', () => {
+    renderPage();
+    expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute(
+      'href',
+      '/forgot-password'
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Sign up' }));
+    expect(screen.queryByRole('link', { name: 'Forgot password?' })).toBeNull();
+  });
+
   it('switches tabs from Login to Sign up', () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Sign up' }));

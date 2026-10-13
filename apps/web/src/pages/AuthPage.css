@@ -107,3 +107,9 @@
   color: var(--color-accent-danger);
   font-size: var(--font-size-sm);
 }
+
+.auth-form__forgot {
+  align-self: flex-start;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-secondary);
+}

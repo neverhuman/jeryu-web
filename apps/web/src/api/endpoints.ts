@@ -18,6 +18,15 @@ export const endpoints = {
   waitlistJoin: (): string => '/api/v1/waitlist',
   authLogout: (): string => '/api/v1/auth/logout',
   authPassword: (): string => '/api/v1/auth/password',
+  /** The account's recovery address and whether it is verified (GET, PUT). */
+  authEmail: (): string => '/api/v1/auth/email',
+  /** Spend a mailed verification link. No session needed. */
+  authEmailVerify: (): string => '/api/v1/auth/email/verify',
+  authEmailVerifyResend: (): string => '/api/v1/auth/email/verify/resend',
+  /** Mail a reset link to a verified address; always 202, whoever asks. */
+  authPasswordForgot: (): string => '/api/v1/auth/password/forgot',
+  /** Spend a mailed reset link and set the new password. No session needed. */
+  authPasswordReset: (): string => '/api/v1/auth/password/reset',
   authTokens: (): string => '/api/v1/auth/tokens',
   authToken: (id: string): string =>
     `/api/v1/auth/tokens/${encodeURIComponent(id)}`,

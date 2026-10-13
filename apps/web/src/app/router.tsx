@@ -46,6 +46,11 @@ import {
 import { RepoRouter } from '../pages/RepoRouter';
 import { ShiftQueuePage, TodoPage } from '../pages/shift';
 import { WaitlistPage } from '../pages/WaitlistPage';
+import {
+  ForgotPasswordPage,
+  ResetPasswordPage,
+  VerifyEmailPage,
+} from '../pages/account/AccountRecoveryPages';
 import { WikiPage } from '../pages/wiki/WikiPage';
 import { YieldPage } from '../pages/yield';
 
@@ -130,4 +135,8 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '/waitlist', element: <WaitlistPage /> },
+  // Where account emails lead: no session needed, so outside the shell.
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage /> },
+  { path: '/verify-email', element: <VerifyEmailPage /> },
 ]);
