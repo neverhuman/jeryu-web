@@ -299,7 +299,6 @@ test.describe('Work, one page', () => {
       action: 'edit',
       title: 'Decide the next split tag',
       body: 'Pick the split tag the next bump uses.',
-      reworks: [],
     });
   });
 

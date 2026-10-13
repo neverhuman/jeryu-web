@@ -408,6 +408,11 @@
   white-space: nowrap;
 }
 
+.pull-timeline__needs-error {
+  color: var(--color-accent-danger);
+  font-size: var(--font-size-sm);
+}
+
 .pull-room__needs-off {
   margin: 0 0 var(--space-3);
   font-size: var(--font-size-sm);

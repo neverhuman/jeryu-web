@@ -306,9 +306,10 @@ export function primaryAction(item: AttentionItem): PrimaryAction {
 }
 
 /**
- * Only a same-origin v1 API path is called, and only `POST` or `DELETE`:
- * anything else is not an act this page knows how to make, so the row falls
- * back to its command or its link rather than offering a button that lies.
+ * Only a same-origin `/api/` path is called, including `/api/v3`, and only
+ * `POST`, `PATCH`, or `DELETE` (`apiMethod`). Anything else is not an act
+ * this page knows how to make, so the row falls back to its command or its
+ * link rather than offering a button that lies.
  */
 export function safeApiPath(path: string | null | undefined): string | null {
   const trimmed = (path ?? '').trim();

@@ -321,8 +321,19 @@ function TodoActionForm({
         if (at) onSubmit({ action: 'park', until: at });
         return;
       }
-      case 'edit':
-        return onSubmit({ action: 'edit', title: title.trim(), body, reworks: reworks.split(',').map((id) => id.trim()).filter(Boolean) });
+      case 'edit': {
+        const nextReworks = reworks.split(',').map((id) => id.trim()).filter(Boolean);
+        const currentReworks = todo.reworks ?? [];
+        const reworksChanged =
+          nextReworks.length !== currentReworks.length ||
+          nextReworks.some((id, index) => id !== currentReworks[index]);
+        return onSubmit({
+          action: 'edit',
+          title: title.trim(),
+          body,
+          ...(reworksChanged ? { reworks: nextReworks } : {}),
+        });
+      }
       default:
         return undefined;
     }

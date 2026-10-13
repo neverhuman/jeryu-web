@@ -233,7 +233,16 @@ function FamilyQueue({
       { replace: true }
     );
   };
-  const tableProps = { refsFor, isAdmin, focusIds, picked: family, onPick: onFamily };
+  // Backlinks read the whole queue. The rows on screen are filtered, and a
+  // rework sitting outside that filter is still a rework of the todo shown.
+  const tableProps = {
+    refsFor,
+    isAdmin,
+    focusIds,
+    picked: family,
+    onPick: onFamily,
+    relatedTodos: all,
+  };
 
   return (
     <>
@@ -346,6 +355,7 @@ interface RowFamilyProps {
 
 function TodoTable({
   todos,
+  relatedTodos,
   refsFor,
   isAdmin,
   focusIds,
@@ -353,6 +363,8 @@ function TodoTable({
   onPick,
 }: {
   todos: ShiftTodo[];
+  /** Every todo the backlink may name, not only the rows in this table. */
+  relatedTodos: ShiftTodo[];
   isAdmin: boolean;
   focusIds: string[];
 } & RowFamilyProps): JSX.Element {
@@ -378,7 +390,7 @@ function TodoTable({
             <TodoRow
               key={`${todo.family}/${todo.id}`}
               todo={todo}
-              relatedTodos={todos}
+              relatedTodos={relatedTodos}
               refs={refsFor(todo.family)}
               isAdmin={isAdmin}
               initiallyOpen={focusIds.includes(todo.id)}

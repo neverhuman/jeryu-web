@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAttentionAction } from '../hooks/useAttentionAction';
 
 import type { AttentionItem, PullRequestSummary } from '../api/types';
+import { ActionPreviewDialog } from '../components/action/ActionPreviewDialog';
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { usePullBaseHistory, type BaseHistoryLookup } from '../hooks/usePullBaseHistory';
 import { useViewState } from '../hooks/useViewState';
@@ -542,6 +543,7 @@ export function alreadyLandedStatus(base: string): string {
 function PullWaiting({ item }: { item: AttentionItem }): JSX.Element {
   const action = primaryAction(item);
   const mutation = useAttentionAction();
+  const [confirming, setConfirming] = useState(false);
   return (
     <div className="pull-timeline__needs" data-testid={`pull-needs-${item.id}`}>
       <p className="pull-timeline__needs-text" title={item.reason ?? undefined}>
@@ -560,10 +562,36 @@ function PullWaiting({ item }: { item: AttentionItem }): JSX.Element {
           {action.label} →
         </Link>
       ) : action?.type === 'api' ? (
-        <button className="pull-timeline__needs-open" type="button" disabled={mutation.isPending}
-          onClick={() => mutation.mutate({ method: action.method, path: action.path, body: action.body })}>
-          {mutation.isPending ? 'Working…' : action.label}
-        </button>
+        <>
+          <button
+            className="pull-timeline__needs-open"
+            type="button"
+            disabled={mutation.isPending}
+            onClick={() => {
+              mutation.reset();
+              setConfirming(true);
+            }}
+          >
+            {mutation.isPending ? 'Working…' : action.label}
+          </button>
+          {mutation.error ? (
+            <span className="pull-timeline__needs-error" role="alert">
+              {mutation.error.message}
+            </span>
+          ) : null}
+          <ActionPreviewDialog
+            open={confirming}
+            title={`${action.label}?`}
+            description={action.confirm}
+            confirmLabel={action.label}
+            confirmDisabled={mutation.isPending}
+            onCancel={() => setConfirming(false)}
+            onConfirm={() => {
+              setConfirming(false);
+              mutation.mutate({ method: action.method, path: action.path, body: action.body });
+            }}
+          />
+        </>
       ) : null}
     </div>
   );

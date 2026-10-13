@@ -28,8 +28,13 @@ export interface YieldRow {
   merged: number;
   /** Merged todos that needed exactly one real attempt. */
   first_pass: number;
-  reworked: number;
-  rework_usd: number;
+  /**
+   * Merged todos that were themselves rework. Absent when the server predates
+   * the field, which is unknown rather than zero.
+   */
+  reworked?: number;
+  /** Spend of those reworked todos. Absent on a server that predates the field. */
+  rework_usd?: number;
   spend_usd: number;
   author_usd: number;
   review_usd: number;
@@ -85,7 +90,8 @@ export interface YieldTodoRef {
   title: string;
   status: string;
   merged: boolean;
-  rework: boolean;
+  /** True when this todo is a rework. Absent on a server that predates the field. */
+  rework?: boolean;
   spend_usd: number;
   attempts: number;
   /** Harness and model of the landing attempt. */

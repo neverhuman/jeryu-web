@@ -1,6 +1,17 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const attentionAction = vi.hoisted(() => ({
+  mutate: vi.fn(),
+  reset: vi.fn(),
+  error: null as { message: string } | null,
+  isPending: false,
+}));
+
+vi.mock('../../hooks/useAttentionAction', () => ({
+  useAttentionAction: () => attentionAction,
+}));
 
 import type { AttentionItem, PullRequestSummary, ShiftTodo } from '../../api/types';
 import { PullRequestTimeline } from '../PullRequestTimeline';
@@ -18,6 +29,13 @@ import { renderAt } from './shiftPageHelpers';
 const sha = (c: string) => c.repeat(40);
 
 describe('the Pull requests timeline', () => {
+  beforeEach(() => {
+    attentionAction.mutate.mockClear();
+    attentionAction.reset.mockClear();
+    attentionAction.error = null;
+    attentionAction.isPending = false;
+  });
+
   it('marks a pull request that waits on a person on its own row, with what to do', () => {
     const attention = attentionByPull([
       attentionItem({
@@ -67,7 +85,7 @@ describe('the Pull requests timeline', () => {
     expect(nine.querySelector('.pull-timeline__needs')).toBeNull();
   });
 
-  it('shows a superseded pull and its replacement on the In flight row', () => {
+  it('shows a superseded pull and its replacement on the In flight row', async () => {
     const attention = attentionByPull([
       attentionItem({
         id: 'pr-superseded:acme/widgets:7', kind: 'pr_superseded',
@@ -81,8 +99,52 @@ describe('the Pull requests timeline', () => {
     render([pull(7, 'open', { repo: 'acme/widgets' }), pull(8, 'open', { repo: 'acme/widgets' })], undefined, attention);
     const seven = screen.getByTestId('pull-timeline-acme/widgets-7');
     expect(within(seven).getByTestId('pull-needs-pr-superseded:acme/widgets:7')).toHaveTextContent('#8');
-    expect(within(seven).getByRole('button', { name: /Close it and point to the replacement/ })).toBeInTheDocument();
+    const close = within(seven).getByRole('button', { name: /Close it and point to the replacement/ });
+    expect(close).toBeInTheDocument();
     expect(screen.getByTestId('pull-timeline-acme/widgets-8')).not.toHaveClass('needs-human');
+
+    // The button opens the confirm step. It does not call the forge yet.
+    await userEvent.click(close);
+    expect(attentionAction.reset).toHaveBeenCalled();
+    expect(attentionAction.mutate).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('The forge acts straight away.');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(attentionAction.mutate).not.toHaveBeenCalled();
+
+    await userEvent.click(close);
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Close it and point to the replacement',
+      })
+    );
+    expect(attentionAction.mutate).toHaveBeenCalledTimes(1);
+    expect(attentionAction.mutate).toHaveBeenCalledWith({
+      method: 'PATCH',
+      path: '/api/v3/repos/acme/widgets/pulls/7',
+      body: { state: 'closed' },
+    });
+  });
+
+  it('words a refused timeline action on the row', () => {
+    attentionAction.error = { message: 'closing needs write access' };
+    const attention = attentionByPull([
+      attentionItem({
+        id: 'pr-superseded:acme/widgets:7',
+        kind: 'pr_superseded',
+        title: 'acme/widgets#7 was replaced by acme/widgets#8',
+        repo: 'acme/widgets',
+        pr: 7,
+        action: {
+          label: 'Close it and point to the replacement',
+          command: null,
+          api: { method: 'PATCH', path: '/api/v3/repos/acme/widgets/pulls/7', body: { state: 'closed' } },
+        },
+      }),
+    ]);
+    render([pull(7, 'open', { repo: 'acme/widgets' })], undefined, attention);
+    expect(screen.getByRole('alert')).toHaveTextContent('closing needs write access');
   });
 
   it('says a pull request already on its base needs closing, not merging', () => {

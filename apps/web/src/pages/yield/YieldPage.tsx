@@ -410,7 +410,9 @@ function ExperimentTable({ experiment }: { experiment: YieldExperiment }): JSX.E
               <td className="yield__num">{armShare(arm)}</td>
               <td className="yield__num">{arm.row.todos}</td>
               <td className="yield__num">{arm.row.merged}</td>
-              <td className="yield__num">{arm.row.reworked}</td>
+              <td className="yield__num">
+                {typeof arm.row.reworked === 'number' ? arm.row.reworked : '—'}
+              </td>
               <td className="yield__num">{formatUsd(arm.row.rework_usd)}</td>
               {arm.enough_data ? (
                 <RateCells row={arm.row} />
@@ -510,7 +512,7 @@ function TodoList({
                       {status.label}
                     </span>{' '}
                     {todoRefMeta(ref)}
-                    {ref.rework ? ' · rework' : ''}
+                    {ref.rework === true ? ' · rework' : ''}
                   </span>
                 </div>
                 <span className="yield__todo-spend">{formatUsd(ref.spend_usd)}</span>
