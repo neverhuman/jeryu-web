@@ -166,6 +166,57 @@ describe('ReleasesPage — family release board', () => {
     expect(detail).toBeEmptyDOMElement();
   });
 
+  it("says what a stage is missing from main and what its recent moves brought, with todo links", async () => {
+    const board = structuredClone(ACME_BOARD);
+    const prod = board.lanes[0].stages.find((stage) => stage.id === 'prod')!;
+    prod.missing = {
+      from: 'main',
+      repo: 'acme/app',
+      total: 3,
+      changes: [
+        {
+          sha: 'a1b2c3d',
+          subject: 'Recover a password through a verified email address',
+          todo: '20261013-001451-f21832',
+          todo_title: 'Add secure email password recovery',
+        },
+        { sha: 'e4f5a6b', subject: 'Renumber merge settings' },
+      ],
+    };
+    prod.arrived = [
+      {
+        at: '2026-10-12T21:40:00Z',
+        from: '5c3af7f',
+        to: '96d8374',
+        repo: 'acme/app',
+        total: 1,
+        changes: [{ sha: '96d8374', subject: 'Show the attempt running now', todo: '20261013-121500-a1b2c3' }],
+      },
+    ];
+    serveBoards([board]);
+    open('/releases/family/acme?stage=cloud-app%3Aprod');
+    const changes = await screen.findByTestId('release-board-stage-changes');
+    const missing = within(changes).getByRole('region', { name: 'Not in prod yet' });
+    expect(missing).toHaveTextContent('Not in prod yet: 3 changes on main');
+    expect(within(missing).getByRole('link', { name: 'Add secure email password recovery' })).toHaveAttribute(
+      'href',
+      '/work/20261013-001451-f21832'
+    );
+    expect(within(missing).getByRole('link', { name: 'a1b2c3d' }).getAttribute('href')).toMatch(
+      /^\/repos\/[^/]+\/acme\/app\/commit\/a1b2c3d$/
+    );
+    expect(missing).toHaveTextContent('and 1 more');
+    const arrived = within(changes).getByRole('region', { name: 'New in prod' });
+    expect(arrived).toHaveTextContent('5c3af7f → 96d8374 · 1 change');
+    // A work item with no title in the snapshot is named by its id.
+    expect(within(arrived).getByRole('link', { name: '20261013-121500-a1b2c3' })).toHaveAttribute(
+      'href',
+      '/work/20261013-121500-a1b2c3'
+    );
+    // `missing` replaces the bare `ships` lines; they would say the same twice.
+    expect(screen.queryByText('Promoting ships')).toBeNull();
+  });
+
   // The URL contract (README §6): the open stage cell and the picked tab are
   // in the query string, so a board under an open detail panel is a link.
   // Both are view switches, so both push and Back undoes them.

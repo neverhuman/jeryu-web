@@ -93,8 +93,43 @@ export interface BoardStage {
   promote?: BoardPromote;
   /** What promoting into this stage would ship. */
   ships?: string[];
+  /**
+   * What the stage named `from` (usually main) holds that this one does not:
+   * what promoting would bring, and what testing here does not cover. Absent
+   * from an older collector.
+   */
+  missing?: BoardStageChanges;
+  /** This stage's recent moves, newest first: what each one brought here. */
+  arrived?: BoardStageMove[];
   rollback?: string;
   forge?: BoardForgeLink;
+}
+
+/** One commit, with the work item (`Todo:` trailer) it belongs to. */
+export interface BoardChange {
+  sha: string;
+  subject: string;
+  todo?: string;
+  todo_title?: string;
+}
+
+/** Commits one stage holds that another lacks, oldest first; `total` counts them all. */
+export interface BoardStageChanges {
+  from: string;
+  /** `owner/name` on the forge. */
+  repo: string;
+  total: number;
+  changes: BoardChange[];
+}
+
+/** One move of a stage: when the collector first saw it at `to`, and what it brought. */
+export interface BoardStageMove {
+  at: string;
+  from: string;
+  to: string;
+  repo: string;
+  total: number;
+  changes: BoardChange[];
 }
 
 export interface BoardTarget {

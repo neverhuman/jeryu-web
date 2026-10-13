@@ -292,6 +292,26 @@
   font-variant-numeric: tabular-nums;
 }
 
+.release-board__changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.release-board__changes > section,
+.release-board__move {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--color-accent-primary);
+}
+
+.release-board__changes > section .release-board__move {
+  padding-left: 0;
+  border-left: 0;
+}
+
 .release-board__ships {
   display: flex;
   flex-direction: column;

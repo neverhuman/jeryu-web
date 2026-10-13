@@ -50,6 +50,7 @@ import {
   type StageOverlay,
 } from './model';
 import { When } from '../../format/When';
+import { StageChanges } from './StageChanges';
 
 export function BoardLanes({
   board,
@@ -370,7 +371,9 @@ function StageDetail({
           </table>
         </div>
       ) : null}
-      {stage.ships ? (
+      <StageChanges stageName={stage.name} missing={stage.missing} arrived={stage.arrived} />
+      {/* `missing` says the same with todos and links; an older collector sends only `ships`. */}
+      {stage.ships && !stage.missing ? (
         <div className="release-board__ships">
           <p className="release-board__label">
             {stage.ships.length > 0
