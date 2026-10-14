@@ -31,12 +31,46 @@ import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
 
+interface NavGroup {
+  title: string;
+  items: { id: string; label: string }[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: 'Account',
+    items: [
+      { id: 'settings-email', label: 'Email' },
+      { id: 'settings-theme', label: 'Theme' },
+      { id: 'settings-session', label: 'Session' },
+    ],
+  },
+  {
+    title: 'Agents and access',
+    items: [
+      { id: 'settings-connect-agent', label: 'Connect an agent' },
+      { id: 'settings-providers', label: 'Agent providers' },
+      { id: 'settings-tokens', label: 'Access tokens' },
+    ],
+  },
+];
+
+const ADMIN_NAV_GROUP: NavGroup = {
+  title: 'Administration',
+  items: [
+    { id: 'settings-wiki', label: 'Internal wiki' },
+    { id: 'settings-users', label: 'Users' },
+    { id: 'settings-repo-access', label: 'Repository access' },
+  ],
+};
+
 export function AdminSettingsPage(): JSX.Element {
   usePageTitle('Settings');
   const theme = usePreferencesStore((s) => s.theme);
   const setTheme = usePreferencesStore((s) => s.setTheme);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const groups = isAdmin ? [...NAV_GROUPS, ADMIN_NAV_GROUP] : NAV_GROUPS;
 
   return (
     <div className="page" data-testid="settings-page">
@@ -54,71 +88,83 @@ export function AdminSettingsPage(): JSX.Element {
         </div>
       </PageHeader>
 
-      <EmailSection />
+      <div className="settings-layout">
+        <nav className="settings-nav" aria-label="Settings sections" data-testid="settings-nav">
+          {groups.map((group) => (
+            <div key={group.title} className="settings-nav__group">
+              <p className="settings-nav__title">{group.title}</p>
+              <ul>
+                {group.items.map((item) => (
+                  <li key={item.id}>
+                    <a href={`#${item.id}`}>{item.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+        <div className="settings-content">
+          <div id="settings-account" className="settings-group">
+            <h2 className="settings-group__title">Account</h2>
+            <div id="settings-email">
+              <EmailSection />
+            </div>
+            <section className="page__section" aria-labelledby="theme-section" id="settings-theme">
+              <h2 className="page__section-title" id="theme-section">
+                Theme
+              </h2>
+              <div className="page__inline-actions" role="radiogroup">
+                <ThemeButton value="system" current={theme} label="System" icon={<Monitor size={14} />} onSelect={setTheme} />
+                <ThemeButton value="light" current={theme} label="Light" icon={<Sun size={14} />} onSelect={setTheme} />
+                <ThemeButton value="dark" current={theme} label="Dark" icon={<Moon size={14} />} onSelect={setTheme} />
+                <ThemeButton value="high-contrast" current={theme} label="High contrast" icon={<ToggleRight size={14} />} onSelect={setTheme} />
+              </div>
+            </section>
+            <div id="settings-session">
+              <SessionPanel login={user?.login ?? null} />
+            </div>
+          </div>
 
-      <section className="page__section" aria-labelledby="theme-section">
-        <h2 className="page__section-title" id="theme-section">
-          Theme
-        </h2>
-        <div className="page__inline-actions" role="radiogroup">
-          <ThemeButton
-            value="system"
-            current={theme}
-            label="System"
-            icon={<Monitor size={14} />}
-            onSelect={setTheme}
-          />
-          <ThemeButton
-            value="light"
-            current={theme}
-            label="Light"
-            icon={<Sun size={14} />}
-            onSelect={setTheme}
-          />
-          <ThemeButton
-            value="dark"
-            current={theme}
-            label="Dark"
-            icon={<Moon size={14} />}
-            onSelect={setTheme}
-          />
-          <ThemeButton
-            value="high-contrast"
-            current={theme}
-            label="High contrast"
-            icon={<ToggleRight size={14} />}
-            onSelect={setTheme}
-          />
+          <div id="settings-access" className="settings-group">
+            <h2 className="settings-group__title">Agents and access</h2>
+            <section
+              className="page__section"
+              aria-labelledby="connect-agent-section"
+              data-testid="settings-connect-agent"
+              id="settings-connect-agent"
+            >
+              <h2 className="page__section-title" id="connect-agent-section">
+                Connect an agent
+              </h2>
+              <ConnectAgentDoc testId="settings-connect-doc" />
+              <p className="page__note">
+                Enroll the agent and create its token on <Link to="/bots">Agents</Link>.
+              </p>
+            </section>
+            <div id="settings-providers">
+              <AgentProvidersPanel />
+            </div>
+            <div id="settings-tokens">
+              <AccessTokensPanel />
+            </div>
+          </div>
+
+          {isAdmin ? (
+            <div id="settings-admin" className="settings-group">
+              <h2 className="settings-group__title">Administration</h2>
+              <div id="settings-wiki">
+                <InternalWikiPanel />
+              </div>
+              <div id="settings-users">
+                <AdminUsersPanel />
+              </div>
+              <div id="settings-repo-access">
+                <RepoAccessPanel />
+              </div>
+            </div>
+          ) : null}
         </div>
-      </section>
-
-      <section
-        className="page__section"
-        aria-labelledby="connect-agent-section"
-        data-testid="settings-connect-agent"
-      >
-        <h2 className="page__section-title" id="connect-agent-section">
-          Connect an agent
-        </h2>
-        <ConnectAgentDoc testId="settings-connect-doc" />
-        <p className="page__note">
-          Enroll the agent and create its token on <Link to="/bots">Agents</Link>.
-        </p>
-      </section>
-
-      {isAdmin ? (
-        <>
-          <InternalWikiPanel />
-          <AdminUsersPanel />
-          <RepoAccessPanel />
-        </>
-      ) : null}
-
-      <AgentProvidersPanel />
-
-      <AccessTokensPanel />
-
-      <SessionPanel login={user?.login ?? null} />
+      </div>
     </div>
   );
 }
@@ -192,6 +238,11 @@ function RepoAccessPanel(): JSX.Element {
     onSuccess: refresh,
   });
   const rows = grants.data ?? [];
+  const grantHint = !hasRepo
+    ? 'Name an owner and a repository above to grant access.'
+    : login.trim() === ''
+      ? 'Enter a user to grant access.'
+      : null;
 
   return (
     <section className="page__section" aria-labelledby="repo-access">
@@ -275,8 +326,10 @@ function RepoAccessPanel(): JSX.Element {
       >
         <div className="admin-grant-grid">
           <label>
-            User
-            <input value={login} onChange={(event) => setLogin(event.currentTarget.value)} />
+            <span>
+              User <span aria-hidden="true">*</span>
+            </span>
+            <input required aria-required="true" value={login} onChange={(event) => setLogin(event.currentTarget.value)} />
           </label>
           <div className="admin-grant-access">
             <span>Access</span>
@@ -304,6 +357,7 @@ function RepoAccessPanel(): JSX.Element {
           >
             Grant access
           </ActionButton>
+          {grantHint ? <span className="page__note">{grantHint}</span> : null}
           {grant.isSuccess ? <span className="page__pill page__pill--success">Granted</span> : null}
         </div>
         {grant.error ? <ErrorState title="Could not grant access" error={grant.error} /> : null}

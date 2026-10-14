@@ -211,9 +211,13 @@ export function AgentProvidersPanel(): JSX.Element {
             </select>
           </label>
           <label className="admin-wiki__field">
-            Account label
+            <span>
+              Account label <span aria-hidden="true">*</span>
+            </span>
             <input
               value={account}
+              required
+              aria-required="true"
               placeholder="team-key"
               maxLength={128}
               onChange={(event) => setAccount(event.currentTarget.value)}
@@ -236,8 +240,12 @@ export function AgentProvidersPanel(): JSX.Element {
             </select>
           </label>
           <label className="admin-wiki__field">
-            Secret
+            <span>
+              Secret <span aria-hidden="true">*</span>
+            </span>
             <input
+              required
+              aria-required="true"
               type="password"
               value={secret}
               autoComplete="new-password"
@@ -261,6 +269,15 @@ export function AgentProvidersPanel(): JSX.Element {
           >
             Connect
           </ActionButton>
+          {!connect.isPending && (account.trim() === '' || secret.trim() === '') ? (
+            <span className="page__note">
+              {account.trim() === '' && secret.trim() === ''
+                ? 'Enter an account label and a secret to connect.'
+                : account.trim() === ''
+                  ? 'Enter an account label to connect.'
+                  : 'Enter a secret to connect.'}
+            </span>
+          ) : null}
           {connect.isSuccess ? (
             <span className="page__pill page__pill--success" role="status">
               Connected {providerLabel(connect.data.provider)}

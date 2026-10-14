@@ -53,10 +53,10 @@ describe('AgentProvidersPanel', () => {
     const form = screen.getByRole('form', { name: 'Connect a provider' });
     const connect = within(form).getByRole('button', { name: 'Connect' });
     expect(connect).toBeDisabled();
-    fireEvent.change(within(form).getByLabelText('Account label'), {
+    fireEvent.change(within(form).getByLabelText(/Account label/), {
       target: { value: ' team-key ' },
     });
-    const secret = within(form).getByLabelText('Secret');
+    const secret = within(form).getByLabelText(/Secret/);
     expect(secret).toHaveAttribute('type', 'password');
     fireEvent.change(secret, { target: { value: CANARY } });
     fireEvent.click(connect);

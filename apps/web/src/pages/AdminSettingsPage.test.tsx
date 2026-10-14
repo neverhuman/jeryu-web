@@ -113,9 +113,21 @@ describe('AdminSettingsPage user list', () => {
   });
 
   it('shows no Email column for a server that sends no addresses', async () => {
-    vi.mocked(apiGet).mockResolvedValueOnce(
-      accounts.map(({ login, role, kind, kind_source }) => ({ login, role, kind, kind_source })),
-    );
+    const bare = accounts.map(({ login, role, kind, kind_source }) => ({
+      login,
+      role,
+      kind,
+      kind_source,
+    }));
+    const fallback = vi.mocked(apiGet).getMockImplementation();
+    let served = false;
+    vi.mocked(apiGet).mockImplementation(((url: string, ...rest: unknown[]) => {
+      if (url === '/api/v1/admin/users' && !served) {
+        served = true;
+        return Promise.resolve(bare);
+      }
+      return (fallback as (...args: unknown[]) => unknown)(url, ...rest);
+    }) as typeof apiGet);
     renderSettings();
     const table = await screen.findByTestId('admin-users-table');
     expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
@@ -124,6 +136,7 @@ describe('AdminSettingsPage user list', () => {
       'Kind',
       'Actions',
     ]);
+    vi.mocked(apiGet).mockImplementation(fallback as typeof apiGet);
   });
 
   it('asks where the temporary password goes when the account has no address, then says it was sent', async () => {

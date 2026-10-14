@@ -182,10 +182,15 @@ export function AccessTokensPanel(): JSX.Element {
       >
         <div className="page__inline-actions">
           <label className="admin-wiki__field">
-            Token name
+            <span>
+              Token name <span aria-hidden="true">*</span>
+            </span>
             <input
               value={name}
-              placeholder="laptop CLI"
+              required
+              aria-required="true"
+              aria-describedby={ready || create.isPending ? undefined : 'token-create-hint'}
+              placeholder="e.g. laptop CLI"
               maxLength={64}
               onChange={(event) => setName(event.currentTarget.value)}
             />
@@ -205,6 +210,11 @@ export function AccessTokensPanel(): JSX.Element {
           <ActionButton type="submit" actionId="tokens.create" variant="primary" disabled={!ready}>
             Create token
           </ActionButton>
+          {name.trim() === '' ? (
+            <span className="page__note" id="token-create-hint">
+              Enter a token name to create a token.
+            </span>
+          ) : null}
         </div>
         {create.error ? <ErrorState title="Could not create the token" error={create.error} /> : null}
         {revoke.error ? <ErrorState title="Could not revoke the token" error={revoke.error} /> : null}

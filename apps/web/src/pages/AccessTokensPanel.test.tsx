@@ -52,9 +52,12 @@ describe('AccessTokensPanel', () => {
     const form = screen.getByRole('form', { name: 'Create an access token' });
     const create = within(form).getByRole('button', { name: 'Create token' });
     expect(create).toBeDisabled();
-    fireEvent.change(within(form).getByLabelText('Token name'), {
+    expect(within(form).getByLabelText(/Token name/)).toBeRequired();
+    expect(within(form).getByText('Enter a token name to create a token.')).toBeInTheDocument();
+    fireEvent.change(within(form).getByLabelText(/Token name/), {
       target: { value: ' laptop CLI ' },
     });
+    expect(within(form).queryByText('Enter a token name to create a token.')).toBeNull();
     fireEvent.change(within(form).getByLabelText('Expires after'), { target: { value: '30' } });
     const before = Date.now();
     fireEvent.click(create);
@@ -85,7 +88,7 @@ describe('AccessTokensPanel', () => {
     vi.mocked(apiSend).mockRejectedValue(new Error('token name is taken'));
     mount();
     const form = await screen.findByRole('form', { name: 'Create an access token' });
-    fireEvent.change(within(form).getByLabelText('Token name'), { target: { value: 'ci' } });
+    fireEvent.change(within(form).getByLabelText(/Token name/), { target: { value: 'ci' } });
     fireEvent.click(within(form).getByRole('button', { name: 'Create token' }));
     expect(await screen.findByText('Could not create the token')).toBeInTheDocument();
     expect(screen.queryByTestId('access-token-created')).not.toBeInTheDocument();
