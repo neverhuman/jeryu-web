@@ -27,6 +27,7 @@ import {
   Layers,
   LifeBuoy,
   Rocket,
+  Route,
   ServerCog,
   Share2,
   ShieldCheck,
@@ -36,6 +37,7 @@ import {
 } from 'lucide-react';
 
 import { DEPENDENCIES_PATH } from '../pages/DependenciesPage';
+import { FLOW_PATH } from '../pages/flow/flowModel';
 import { HELP_PATH } from '../pages/helpPath';
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
@@ -113,6 +115,33 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     shortcut: 'g a',
     keywords: ['activity', 'events', 'log', 'feed', 'live', 'pipeline', 'notifications', 'alerts'],
     // The pipeline event feed is admin-only, as is the dock that shows it.
+    adminOnly: true,
+    group: 'primary',
+  },
+  {
+    // Where the work is on the delivery line: the stations, their waits, the
+    // loops back and the one station that holds the most waiting.
+    id: 'nav.flow',
+    label: 'Flow',
+    path: FLOW_PATH,
+    icon: Route,
+    paletteIcon: 'route',
+    shortcut: 'g f',
+    keywords: [
+      'flow',
+      'line',
+      'station',
+      'wip',
+      'queue time',
+      'cycle time',
+      'bottleneck',
+      'rework',
+      'hold',
+      'x-factor',
+    ],
+    useWhen:
+      'Use this when work is slow and nobody knows where it sits: it names the station holding the most waiting.',
+    // `/api/v1/flow` is admin-only, like the event log it is projected from.
     adminOnly: true,
     group: 'primary',
   },
@@ -204,7 +233,6 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     paletteIcon: 'server-cog',
     badge: 'system',
     shortcut: 'g u',
-    aliases: ['g f'],
     // `runners` is the page's name; the rest is what a reader might type for it.
     keywords: ['runners', 'workers', 'utilization', 'saturation', 'health'],
     useWhen:

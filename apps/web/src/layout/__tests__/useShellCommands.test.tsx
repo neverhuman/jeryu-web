@@ -17,6 +17,7 @@ describe('useShellCommands', () => {
     expect(ids).toEqual([
       'nav.needs-you',
       'nav.activity',
+      'nav.flow',
       'nav.work',
       'nav.in-flight',
       'nav.releases',
@@ -120,6 +121,7 @@ describe('useShellCommands', () => {
     expect(shortcuts).toEqual({
       'g n': '/needs-you',
       'g a': '/activity',
+      'g f': '/flow',
       'g w': '/work',
       'g p': '/in-flight',
       'g l': '/releases',

@@ -63,10 +63,11 @@ describe('LeftNav', () => {
     expect(screen.getByTestId('version-line')).toHaveTextContent('jeryu 5.0.0 · web 2d4a869');
   });
 
-  it('keeps six daily destinations in the order the work flows', () => {
+  it('keeps seven daily destinations in the order the work flows', () => {
     expect(PRIMARY_NAV.map((item) => item.label)).toEqual([
       'Needs you',
       'Activity',
+      'Flow',
       'Work',
       'In flight',
       'Releases',

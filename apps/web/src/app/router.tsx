@@ -34,6 +34,7 @@ import { RepositoriesPage } from '../pages/RepositoriesPage';
 import { SearchPage } from '../pages/search/SearchPage';
 import { SessionPage } from '../pages/SessionPage';
 import { SessionsPage } from '../pages/SessionsPage';
+import { FlowPage } from '../pages/flow';
 import { ScorecardPage } from '../pages/scorecard';
 import { RepositoryAgentsPage } from '../pages/RepositoryAgentsPage';
 import { RepositoryFamilyPage } from '../pages/RepositoryFamilyPage';
@@ -102,6 +103,8 @@ export const router = createBrowserRouter([
       { path: 'yield', element: <YieldPage /> },
       // Outcome delivery scorecard: speed, quality, recovery and economics.
       { path: 'scorecard', element: <ScorecardPage /> },
+      // The delivery line: what is at each station, and which one holds the waiting.
+      { path: 'flow', element: <FlowPage /> },
       // The same graph, laid out by dependency depth and coloured by pin staleness.
       { path: DEPENDENCIES_PATH.slice(1), element: <DependenciesPage /> },
       // Quality gate: how the jankurai/proof score behaves, rule -> head -> findings.

@@ -1,0 +1,257 @@
+/* Flow.css — the delivery line laid out as stations, with the rework loops
+ * under it.
+ *
+ * Nine cards left to right while the words fit, a vertical list once they do
+ * not, so the line reads on a phone without shrinking any label. The arcs are
+ * one SVG band under the cards and step aside at the same width the cards
+ * stack, where the loops are a list of sentences instead. */
+
+.flow__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.flow__segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.flow__segment {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: none;
+  color: var(--color-fg-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.flow__segment[aria-pressed='true'] {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+}
+
+.flow__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The previous answer, while the next window is read. */
+.flow__body--updating {
+  opacity: 0.6;
+}
+
+.flow__updating,
+.flow__hint,
+.flow__footnote {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.flow-line {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.flow-line__cards {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-line__cell {
+  min-width: 0;
+  display: flex;
+}
+
+.flow-line__arcs {
+  display: block;
+  width: 100%;
+  height: 64px;
+}
+
+.flow-line__arc-path {
+  fill: none;
+  stroke: var(--color-accent-warning);
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+
+.flow-line__arc-count {
+  fill: var(--color-fg-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.flow-line__rework-list,
+.flow-line__no-rework {
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.flow-line__no-rework {
+  padding-left: 0;
+}
+
+.flow-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: var(--space-2);
+  background: var(--color-bg-1);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-card:hover,
+.flow-card.is-active {
+  border-color: var(--color-accent-primary);
+}
+
+/* Red is a hold: a person is the next step at this station. */
+.flow-card--human {
+  border-color: var(--color-accent-danger);
+  background: var(--color-accent-danger-bg);
+}
+
+.flow-card--warn {
+  border-color: var(--color-accent-warning);
+}
+
+.flow-card--ok {
+  border-color: var(--color-accent-success);
+}
+
+/* The station the line waits on, outlined so it is found at a glance. */
+.flow-card--bottleneck {
+  outline: 2px solid var(--color-accent-warning);
+  outline-offset: 1px;
+}
+
+.flow-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.flow-card__label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.flow-card__flag {
+  color: var(--color-accent-warning);
+  font-size: var(--font-size-xs);
+}
+
+.flow-card__wip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  color: var(--color-fg-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.flow-card__wip-part--held strong {
+  color: var(--color-accent-danger);
+}
+
+.flow-card__row {
+  color: var(--color-fg-secondary);
+}
+
+.flow-card__note {
+  color: var(--color-fg-muted);
+}
+
+/* Queue time then process time, on one shared scale across the line. */
+.flow-card__bars {
+  display: flex;
+  gap: 1px;
+  height: 6px;
+  background: var(--color-bg-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.flow-card__bar--queue {
+  background: var(--color-accent-warning);
+}
+
+.flow-card__bar--process {
+  background: var(--color-accent-primary);
+}
+
+.flow-lots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-lots__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-sm);
+}
+
+.flow-lots__link {
+  font-weight: 600;
+}
+
+.flow-lots__waited,
+.flow-lots__eta,
+.flow-lots__slowest,
+.flow-lots__empty,
+.flow-lots__footnote {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.flow-lots__empty,
+.flow-lots__footnote {
+  margin: var(--space-2) 0 0;
+}
+
+@media (max-width: 1100px) {
+  .flow-line__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .flow-line__arcs {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .flow-line__cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

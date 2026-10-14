@@ -8,6 +8,7 @@ import type { PipelineEventsQuery, PipelineHistogramQuery } from './types/pipeli
 import type { SearchQuery } from './types/search';
 import type { ScorecardQuery } from './types/scorecard';
 import type { UsageQuery } from './types/usage';
+import type { FlowQuery } from './types/flow';
 import type { YieldQuery } from './types/yield';
 
 export const endpoints = {
@@ -392,6 +393,15 @@ export const endpoints = {
     if (query.repo) qs.set('repo', query.repo);
     const suffix = qs.toString();
     return suffix ? `/api/v1/scorecard?${suffix}` : '/api/v1/scorecard';
+  },
+
+  /** Where work sits on the delivery line, over a window (admin-only). */
+  flow: (query: FlowQuery): string => {
+    const qs = new URLSearchParams();
+    if (query.family) qs.set('family', query.family);
+    if (query.days) qs.set('days', String(query.days));
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/flow?${suffix}` : '/api/v1/flow';
   },
 
   /** Account agent enrollments. */

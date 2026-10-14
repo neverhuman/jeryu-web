@@ -59,7 +59,8 @@ describe('NAV_DESTINATIONS', () => {
     const aliases = Object.fromEntries(
       NAV_DESTINATIONS.filter((d) => d.aliases?.length).map((d) => [d.shortcut, d.aliases])
     );
-    expect(aliases).toEqual({ 'g n': ['g d'], 'g p': ['g m'], 'g u': ['g f'] });
+    // `g f` is Flow's own chord now, so Runners keeps `g u` alone.
+    expect(aliases).toEqual({ 'g n': ['g d'], 'g p': ['g m'] });
   });
 
   it('points every destination at a route the router serves', () => {

@@ -19,3 +19,14 @@ export function minutesWords(totalSeconds: number): string {
   const minutes = Math.max(1, Math.ceil(totalSeconds / 60));
   return durationWords(minutes * 60);
 }
+
+/**
+ * The same, with days once the span is longer than one ("1.0 d", "2.1 d"):
+ * for a cycle time or a wait that runs past an hour count a reader can hold.
+ */
+export function spanWords(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const day = 24 * 60 * 60;
+  if (seconds < day) return durationWords(seconds);
+  return `${(seconds / day).toFixed(1)} d`;
+}

@@ -101,6 +101,7 @@ import { useWallIdle, wallClockText, wallDateText } from './wallModel';
 import { BurstRow } from './BurstRow';
 import { StageRunRow } from './StageRunRow';
 import { ActivityHistogram } from './ActivityHistogram';
+import { FlowLineStrip } from '../../components/flow/LineStrip';
 import { ActivitySkeleton } from './ActivitySkeleton';
 import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
@@ -162,6 +163,16 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   );
   const query = useMemo(() => filtersToQuery(filters), [filters]);
   const feed = useActivityFeed(query);
+  // The line strip above the band is scoped the way the feed is, except that a
+  // repository moves on its family's line: `/api/v1/flow` scopes by family, so
+  // a pinned repository asks for the family it belongs to, and a repository
+  // whose family nothing names gets the whole line rather than an invented one.
+  const stripRepos = useRepositories({}, { enabled: pinned });
+  const stripFamily = pinned
+    ? ((stripRepos.data?.repositories ?? []).find(
+        (summary) => `${summary.id.owner}/${summary.id.name}` === repo
+      )?.family ?? '')
+    : filters.family;
   // Only a frame that can become a row is worth a tail fetch: a release board
   // snapshot or a usage report shares the scope but never reaches this list.
   usePipelineNudge(feed.base.isSuccess, activityTailKey(query), {
@@ -398,6 +409,13 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           {wall ? null : <RowLegend />}
         </PageHeader>
       )}
+
+      {/* Where the work is on the line, above when it happened: the same strip
+          the Flow page heads its Live mode with, scoped to this page's family
+          (a repository's station counts are its family's line — the flow API
+          scopes by family). A reader who may not read `/api/v1/flow` is shown
+          no strip at all, and the wall has no room for one. */}
+      {wall ? null : <FlowLineStrip family={stripFamily} />}
 
       {/* The band is a filter on the feed, so it sits above the chips it sets.
           On the wall it has no chips to set and goes under the counters, at the

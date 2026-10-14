@@ -116,6 +116,7 @@ const endpointSamples = {
   qualityGateDispute: ['finding-1'],
   yieldReport: [{ family: 'acme', since: '2026-10-01', until: '2026-10-10', by: 'experiment' }],
   scorecard: [{ window: '30d', family: 'acme', repo: 'acme/widget-api' }],
+  flow: [{ family: 'acme', days: 28 }],
   bots: [],
   botGrants: ['bot-1'],
   botGrant: ['bot-1', 'acme', 'widgets'],

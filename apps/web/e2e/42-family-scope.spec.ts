@@ -40,6 +40,7 @@ async function mockShiftFamilies(page: Page): Promise<void> {
 const DESTINATIONS = [
   { label: 'Needs you', scoped: '/needs-you?family=acme', bare: '/needs-you' },
   { label: 'Activity', scoped: '/activity?family=acme', bare: '/activity' },
+  { label: 'Flow', scoped: '/flow?family=acme', bare: '/flow' },
   { label: 'Work', scoped: '/work?family=acme', bare: '/work' },
   { label: 'In flight', scoped: '/in-flight?family=acme', bare: '/in-flight' },
   // The release board states the family as a path segment, not a parameter.
@@ -66,7 +67,8 @@ const CHORDS = [
   { key: 'm', scoped: '/in-flight?family=acme' },
   { key: 'l', scoped: '/releases/family/acme' },
   { key: 'r', scoped: '/repos?family=acme' },
-  { key: 'f', scoped: '/runners?family=acme' },
+  { key: 'u', scoped: '/runners?family=acme' },
+  { key: 'f', scoped: '/flow?family=acme' },
   { key: 'i', scoped: '/intelligence?family=acme' },
   { key: 'c', scoped: '/scorecard?family=acme' },
   { key: 't', scoped: '/shared-tools/findings?family=acme' },

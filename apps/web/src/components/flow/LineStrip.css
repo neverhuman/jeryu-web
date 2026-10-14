@@ -1,0 +1,225 @@
+/* LineStrip.css — the delivery line as one strip of stations.
+ *
+ * Nine cells left to right while they fit, a vertical list once they do not:
+ * the labels are HTML, so the words never shrink below reading size on a
+ * phone. The route itself is the SVG rail behind them. Tones carry the site's
+ * one promise — red only where a person is the next step. */
+
+.line-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: var(--space-3);
+  background: var(--color-bg-1);
+}
+
+.line-strip__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.line-strip__title {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.line-strip__route-words {
+  color: var(--color-fg-muted);
+  font-weight: 400;
+}
+
+.line-strip__bottleneck {
+  margin: 0;
+  color: var(--color-accent-warning);
+  font-size: var(--font-size-xs);
+}
+
+.line-strip__bottleneck--none {
+  color: var(--color-fg-muted);
+}
+
+.line-strip__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+}
+
+.line-strip__total-label {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.line-strip__total-value {
+  margin: 0;
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.line-strip__total-detail {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.line-strip__route {
+  position: relative;
+}
+
+.line-strip__rail {
+  display: block;
+  width: 100%;
+  height: 12px;
+}
+
+.line-strip__rail-line {
+  fill: var(--color-border-subtle);
+}
+
+.line-strip__rail-node {
+  fill: var(--color-border-strong);
+}
+
+.line-strip__rail-node.is-human {
+  fill: var(--color-accent-danger);
+}
+
+.line-strip__rail-node.is-warn {
+  fill: var(--color-accent-warning);
+}
+
+.line-strip__rail-node.is-ok {
+  fill: var(--color-accent-success);
+}
+
+.line-strip__stations {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line-strip__item {
+  min-width: 0;
+}
+
+.line-strip__station {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  padding: var(--space-1);
+  background: var(--color-bg-2);
+  color: var(--color-fg-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.line-strip__station:hover,
+.line-strip__station.is-active {
+  border-color: var(--color-accent-primary);
+}
+
+.line-strip__station--human {
+  border-color: var(--color-accent-danger);
+  background: var(--color-accent-danger-bg);
+}
+
+.line-strip__station--warn {
+  border-color: var(--color-accent-warning);
+}
+
+.line-strip__station--ok {
+  border-color: var(--color-accent-success);
+}
+
+/* The one station holding the most waiting, outlined so it is found without
+   reading every cell. */
+.line-strip__station--bottleneck {
+  outline: 2px solid var(--color-accent-warning);
+  outline-offset: 1px;
+}
+
+.line-strip__label {
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.line-strip__counts {
+  display: flex;
+  gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.line-strip__count--waiting {
+  color: var(--color-fg-secondary);
+}
+
+.line-strip__count--active {
+  color: var(--color-accent-success);
+}
+
+/* Held work is the only red: a person is the next step. */
+.line-strip__count--held {
+  color: var(--color-accent-danger);
+  font-weight: 600;
+}
+
+.line-strip__unknown,
+.line-strip__flag {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+}
+
+.line-strip__flag {
+  color: var(--color-accent-warning);
+}
+
+.line-strip--compact {
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+
+/* Narrower than the nine labels: the line becomes a vertical list, which is
+   how it reads on a phone. */
+@media (max-width: 900px) {
+  .line-strip__stations {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .line-strip__rail {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .line-strip__stations {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .line-strip__station {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+}

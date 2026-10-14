@@ -20,6 +20,7 @@ export type * from './types/mergeQueue';
 export type * from './types/qualityGate';
 export type * from './types/yield';
 export type * from './types/scorecard';
+export type * from './types/flow';
 export type * from './types/search';
 export type * from './types/automation';
 export type * from './types/bots';

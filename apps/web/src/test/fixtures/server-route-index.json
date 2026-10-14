@@ -43,6 +43,7 @@
     "/api/v1/events",
     "/api/v1/events/histogram",
     "/api/v1/fleet/tool-adoption",
+    "/api/v1/flow",
     "/api/v1/me/provider-connections",
     "/api/v1/me/provider-connections/login",
     "/api/v1/me/provider-connections/login/{id}",
