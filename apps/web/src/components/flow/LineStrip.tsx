@@ -207,6 +207,15 @@ export interface FlowLineStripProps {
   testId?: string;
 }
 
+type StripFailure = 'permission' | 'unsupported' | 'unexpected';
+
+/** Only these two expected API states deliberately omit the optional strip. */
+function stripFailure(error: Error): StripFailure {
+  if (isPipelineForbidden(error)) return 'permission';
+  if (isPipelineUnavailable(error)) return 'unsupported';
+  return 'unexpected';
+}
+
 /**
  * The strip for a page that has no Flow report of its own. It reads
  * `/api/v1/flow` and, if that read is refused or the server predates it,
@@ -221,15 +230,19 @@ export function FlowLineStrip({
   const report = useFlow(family ? { family } : {});
   if (report.isPending) return null;
   if (report.isError) {
-    if (isPipelineForbidden(report.error)) return null;
-    if (isPipelineUnavailable(report.error)) return null;
-    return (
-      <ErrorState
-        title="Could not load the delivery line."
-        error={report.error}
-        onRetry={() => void report.refetch()}
-      />
-    );
+    switch (stripFailure(report.error)) {
+      case 'permission':
+      case 'unsupported':
+        return null;
+      case 'unexpected':
+        return (
+          <ErrorState
+            title="Could not load the delivery line."
+            error={report.error}
+            onRetry={() => void report.refetch()}
+          />
+        );
+    }
   }
   return (
     <LineStrip
