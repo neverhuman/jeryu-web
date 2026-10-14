@@ -80,6 +80,7 @@ describe('useSubmitReview', () => {
     invalidateAfterPrChange(client, 'r1');
     expect(invalidate.mock.calls.map(([filter]) => filter?.queryKey)).toEqual([
       ['repo-pulls', 'r1'],
+      ['pull-owner-paths', 'r1'],
       ['control-plane', 'status'],
       ['releases'],
       ['deployments'],
