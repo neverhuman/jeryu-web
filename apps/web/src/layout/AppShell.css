@@ -675,6 +675,10 @@ a.global-header__live:hover {
 
 .activity-dock__needs-you {
   display: inline-flex;
+  flex: 0 0 auto;
+  /* "89 need you" stays one piece: a long latest event ellipsizes instead
+     of wrapping this pill and making the bar two rows tall. */
+  white-space: nowrap;
   text-decoration: none;
 }
 
