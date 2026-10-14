@@ -384,8 +384,8 @@ export function histogramBody(range = '24h'): Record<string, unknown> {
     { todos: 2, gates: 2, reviews: 1 },
   ];
   const buckets = Array.from({ length: hours }, (_, i) => ({
-    at: new Date(Date.now() - (hours - 1 - i) * 3_600_000).toISOString(),
-    groups: shape[i % shape.length],
+    start: new Date(Date.now() - (hours - 1 - i) * 3_600_000).toISOString(),
+    by_group: shape[i % shape.length],
     failures: i % 3 === 1 ? 2 : 0,
     needs_human: i % 4 === 2 ? 1 : 0,
   }));

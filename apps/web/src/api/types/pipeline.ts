@@ -136,13 +136,15 @@ export interface PipelineEventsResponse {
 
 /**
  * One bucket of the event histogram: how many events of each group landed in
- * it, how many of those failed, and how many flagged a person. `groups` is
- * open: a key this build does not stack is ignored rather than drawn.
+ * it, how many of those failed, and how many flagged a person. `by_group` is
+ * open: a key this build does not stack (the server's `other`) is ignored
+ * rather than drawn.
  */
 export interface PipelineHistogramBucket {
-  /** Start of the bucket, RFC 3339. */
-  at: string;
-  groups?: Record<string, number> | null;
+  /** Start of the bucket, RFC 3339; the next bucket's start is its end. */
+  start: string;
+  total?: number | null;
+  by_group?: Record<string, number> | null;
   failures?: number | null;
   needs_human?: number | null;
 }
@@ -170,9 +172,13 @@ export interface PipelineHistogramResponse {
   totals?: PipelineHistogramTotals | null;
 }
 
-/** Query of `GET /api/v1/events/histogram`. `range` is `6h`, `24h` or `7d`. */
+/**
+ * Query of `GET /api/v1/events/histogram`. `range` is `6h`, `24h` or `7d`;
+ * a longer window is `hours` (up to 720, the log's retention) instead.
+ */
 export interface PipelineHistogramQuery {
   range?: string;
+  hours?: number;
   family?: string;
   repo?: string;
 }

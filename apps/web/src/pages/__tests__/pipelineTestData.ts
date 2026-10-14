@@ -344,14 +344,14 @@ export const HISTOGRAM: PipelineHistogramResponse = {
   to: '2026-10-04T13:00:00Z',
   bucket_seconds: 3600,
   buckets: [
-    { at: '2026-10-04T10:00:00Z', groups: { todos: 4, gates: 2 }, failures: 0, needs_human: 0 },
+    { start: '2026-10-04T10:00:00Z', by_group: { todos: 4, gates: 2 }, failures: 0, needs_human: 0 },
     {
-      at: '2026-10-04T11:00:00Z',
-      groups: { todos: 2, gates: 6, reviews: 1, pulls: 1, merges: 1, releases: 1, deploys: 1 },
+      start: '2026-10-04T11:00:00Z',
+      by_group: { todos: 2, gates: 6, reviews: 1, pulls: 1, merges: 1, releases: 1, deploys: 1 },
       failures: 2,
       needs_human: 1,
     },
-    { at: '2026-10-04T12:00:00Z', groups: { todos: 1, gates: 1 }, failures: 0, needs_human: 0 },
+    { start: '2026-10-04T12:00:00Z', by_group: { todos: 1, gates: 1 }, failures: 0, needs_human: 0 },
   ],
 };
 

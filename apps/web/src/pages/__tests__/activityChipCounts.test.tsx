@@ -64,7 +64,7 @@ describe('chipCounts', () => {
 
   it('counts zero for a chip no bucket mentions, and for no buckets at all', () => {
     const quiet = chipCounts(
-      histogramBuckets({ buckets: [{ at: '2026-10-04T10:00:00Z', groups: { todos: 2 } }] })
+      histogramBuckets({ buckets: [{ start: '2026-10-04T10:00:00Z', by_group: { todos: 2 } }] })
     );
     expect(quiet.todos).toBe(2);
     expect(quiet.gates).toBe(0);
@@ -111,7 +111,7 @@ describe('Activity chip counts', () => {
   it('mutes a chip with nothing behind it and still lets it filter', async () => {
     mockPipelineApi((req) =>
       req.pathname === '/api/v1/events/histogram'
-        ? json({ buckets: [{ at: '2026-10-04T10:00:00Z', groups: { todos: 3 } }] })
+        ? json({ buckets: [{ start: '2026-10-04T10:00:00Z', by_group: { todos: 3 } }] })
         : undefined
     );
     renderPage();
@@ -132,8 +132,8 @@ describe('Activity chip counts', () => {
         ? json({
             buckets: [
               {
-                at: '2026-10-04T10:00:00Z',
-                groups: { todos: req.search.includes('range=6h') ? 40 : 2 },
+                start: '2026-10-04T10:00:00Z',
+                by_group: { todos: req.search.includes('range=6h') ? 40 : 2 },
               },
             ],
           })

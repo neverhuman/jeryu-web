@@ -1,5 +1,5 @@
 // ActivityHistogram.tsx — the volume band above the Activity feed: the last
-// 6 h / 24 h / 7 d of pipeline events as one stacked bar per bucket.
+// 6 h / 24 h / 7 d / 30 d of pipeline events as one stacked bar per bucket.
 //
 // Follows the repo's chart style (ShiftCharts, GraphSvg): a fixed viewBox
 // scaled to the container, a CSS class per mark so both themes come from
@@ -7,7 +7,8 @@
 //
 // The band is a filter, not decoration: a bar's group, or its legend button,
 // sets the same chip the row of chips below sets, and clicking the active one
-// again goes back to All. The legend buttons are the keyboard path to that —
+// again goes back to All. A picked group is drawn alone on its own scale.
+// The legend buttons are the keyboard path to that —
 // the marks inside the SVG are not focus stops.
 
 import { useSearchParams } from 'react-router-dom';
@@ -26,6 +27,7 @@ import {
   histogramSummary,
   parseRange,
   rangeHours,
+  rangeQuery,
   type HistogramRangeId,
 } from './histogramModel';
 
@@ -46,7 +48,7 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   const [params, setParams] = useSearchParams();
   const reduced = usePrefersReducedMotion();
   const range = parseRange(params);
-  const query = { range, ...(repo ? { repo } : family ? { family } : {}) };
+  const query = { ...rangeQuery(range), ...(repo ? { repo } : family ? { family } : {}) };
   const histogram = useEventsHistogram(query);
   const current = activeChip(parseActivityFilters(params));
   const activeGroup = activeGroupId(current);
@@ -62,8 +64,10 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
     width: WIDTH,
     height: PLOT,
     spanHours: rangeHours(range),
+    only: activeGroup,
   });
   const rangeLabel = HISTOGRAM_RANGES.find((candidate) => candidate.id === range)?.label ?? range;
+  const onlyLabel = HISTOGRAM_GROUPS.find((group) => group.id === activeGroup)?.label;
 
   const setChip = (chipId: string): void => {
     const chip = ACTIVITY_CHIPS.find((candidate) => candidate.id === chipId);
@@ -85,6 +89,7 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
       <div className="activity-volume__head">
         <h2 className="activity-volume__title">
           Volume · {rangeLabel}
+          {onlyLabel ? ` · ${onlyLabel} only` : null}
           {geometry.events > 0 ? <span className="activity-volume__count"> {geometry.events} events</span> : null}
         </h2>
         <div className="activity-volume__ranges" role="group" aria-label="Range">
@@ -122,9 +127,7 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
               {bar.segments.map((segment) => (
                 <rect
                   key={segment.groupId}
-                  className={`activity-volume__seg is-${segment.groupId}${
-                    activeGroup && activeGroup !== segment.groupId ? ' is-dimmed' : ''
-                  }`}
+                  className={`activity-volume__seg is-${segment.groupId}`}
                   x={bar.x}
                   y={segment.y}
                   width={bar.width}

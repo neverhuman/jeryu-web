@@ -977,10 +977,6 @@
     opacity 150ms linear;
 }
 
-.activity-volume__seg.is-dimmed {
-  opacity: 0.25;
-}
-
 .activity-volume__seg.is-todos { fill: var(--color-accent-primary); }
 .activity-volume__seg.is-gates { fill: var(--color-accent-info); }
 .activity-volume__seg.is-reviews { fill: var(--color-accent-secondary); }

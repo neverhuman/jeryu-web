@@ -4,13 +4,14 @@
 
 import type {
   PipelineHistogramBucket,
+  PipelineHistogramQuery,
   PipelineHistogramResponse,
 } from '../../api/types';
 import type { ActivityTotals } from './activityModel';
 import { tickText } from '../../format/when';
 import { ACTIVITY_CHIPS, type ActivityChip } from './activityModel';
 
-export type HistogramRangeId = '6h' | '24h' | '7d';
+export type HistogramRangeId = '6h' | '24h' | '7d' | '30d';
 
 export interface HistogramRange {
   id: HistogramRangeId;
@@ -22,6 +23,8 @@ export const HISTOGRAM_RANGES: readonly HistogramRange[] = [
   { id: '6h', label: '6h', hours: 6 },
   { id: '24h', label: '24h', hours: 24 },
   { id: '7d', label: '7d', hours: 24 * 7 },
+  // The log keeps a month, so this is as far back as the band can reach.
+  { id: '30d', label: '30d', hours: 24 * 30 },
 ];
 
 export const DEFAULT_RANGE: HistogramRangeId = '24h';
@@ -34,6 +37,14 @@ export function parseRange(params: URLSearchParams): HistogramRangeId {
 
 export function rangeHours(id: HistogramRangeId): number {
   return HISTOGRAM_RANGES.find((range) => range.id === id)?.hours ?? 24;
+}
+
+/**
+ * The window part of the histogram query. The server names 6h, 24h and 7d as
+ * a `range`; anything longer is asked for in `hours`, which it buckets by day.
+ */
+export function rangeQuery(id: HistogramRangeId): Pick<PipelineHistogramQuery, 'range' | 'hours'> {
+  return id === '30d' ? { hours: rangeHours(id) } : { range: id };
 }
 
 /** The URL params a range button sets, keeping every other filter. */
@@ -93,17 +104,17 @@ function count(value: unknown): number {
 export function histogramBuckets(response: PipelineHistogramResponse | undefined): HistogramBucket[] {
   const raw: PipelineHistogramBucket[] = response?.buckets ?? [];
   const buckets = raw
-    .filter((bucket) => typeof bucket?.at === 'string' && !Number.isNaN(Date.parse(bucket.at)))
+    .filter((bucket) => typeof bucket?.start === 'string' && !Number.isNaN(Date.parse(bucket.start)))
     .map((bucket) => {
       const counts: Record<string, number> = {};
       let total = 0;
       for (const group of HISTOGRAM_GROUPS) {
-        const n = count(bucket.groups?.[group.id]);
+        const n = count(bucket.by_group?.[group.id]);
         counts[group.id] = n;
         total += n;
       }
       return {
-        at: bucket.at,
+        at: bucket.start,
         counts,
         failures: count(bucket.failures),
         needsHuman: count(bucket.needs_human),
@@ -176,9 +187,20 @@ const MIN_BAR = 2;
 
 export function histogramGeometry(
   buckets: HistogramBucket[],
-  options: { width: number; height: number; spanHours: number }
+  options: { width: number; height: number; spanHours: number; only?: string | null }
 ): HistogramGeometry {
   const { width, height, spanHours } = options;
+  const only = options.only ? HISTOGRAM_GROUPS.find((group) => group.id === options.only) : undefined;
+  // One group picked: draw that group alone, scaled to its own busiest bucket,
+  // so a thin series (Deploys) is read on its own axis, not under the gates.
+  // Failures and needs-a-person are counted per bucket, not per group, so
+  // neither is drawn over a single group.
+  if (only) {
+    buckets = buckets.map((bucket) => {
+      const value = bucket.counts[only.id] ?? 0;
+      return { ...bucket, counts: { [only.id]: value }, total: value, failures: 0, needsHuman: 0 };
+    });
+  }
   const max = Math.max(1, ...buckets.map((bucket) => bucket.total));
   const slot = buckets.length > 0 ? width / buckets.length : width;
   const barWidth = Math.max(1, slot - BAR_GAP);

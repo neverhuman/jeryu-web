@@ -14,6 +14,7 @@ import {
   histogramGeometry,
   histogramSummary,
   parseRange,
+  rangeQuery,
 } from '../activity/histogramModel';
 import { mockPipelineApi } from './pipelinePageHelpers';
 import { HISTOGRAM } from './pipelineTestData';
@@ -27,6 +28,7 @@ describe('histogramModel', () => {
   it('reads the range from the URL and keeps the other filters when it changes', () => {
     expect(parseRange(new URLSearchParams(''))).toBe('24h');
     expect(parseRange(new URLSearchParams('range=7d'))).toBe('7d');
+    expect(parseRange(new URLSearchParams('range=30d'))).toBe('30d');
     // A range this build does not draw falls back rather than asking for it.
     expect(parseRange(new URLSearchParams('range=90d'))).toBe('24h');
 
@@ -37,12 +39,17 @@ describe('histogramModel', () => {
     expect(applyRange(next, '24h').has('range')).toBe(false);
   });
 
+  it('asks for a month in hours, since the server names only 6h, 24h and 7d', () => {
+    expect(rangeQuery('7d')).toEqual({ range: '7d' });
+    expect(rangeQuery('30d')).toEqual({ hours: 720 });
+  });
+
   it('folds the wire buckets into counts, oldest first, ignoring unknown groups', () => {
     const buckets = histogramBuckets({
       buckets: [
-        { at: '2026-10-04T11:00:00Z', groups: { todos: 2, weather: 9 }, failures: 1, needs_human: 2 },
-        { at: '2026-10-04T10:00:00Z', groups: { gates: 3 } },
-        { at: 'not-a-time', groups: { gates: 1 } },
+        { start: '2026-10-04T11:00:00Z', by_group: { todos: 2, weather: 9 }, failures: 1, needs_human: 2 },
+        { start: '2026-10-04T10:00:00Z', by_group: { gates: 3 } },
+        { start: 'not-a-time', by_group: { gates: 1 } },
       ],
     });
     expect(buckets.map((bucket) => bucket.at)).toEqual([
@@ -79,6 +86,21 @@ describe('histogramModel', () => {
     const quiet = geometry.bars[0];
     expect(quiet.total).toBe(6);
     expect(quiet.segments.map((segment) => segment.groupId)).toEqual(['todos', 'gates']);
+  });
+
+  it('draws a picked group alone, scaled to its own busiest bucket', () => {
+    const buckets = histogramBuckets(HISTOGRAM);
+    const geometry = histogramGeometry(buckets, { width: 900, height: 100, spanHours: 24, only: 'gates' });
+    expect(geometry.max).toBe(6);
+    expect(geometry.events).toBe(9);
+    for (const bar of geometry.bars) {
+      expect(bar.segments.every((segment) => segment.groupId === 'gates')).toBe(true);
+      // Failures and needs-a-person are per bucket, never pinned on one group.
+      expect(bar.failures).toBeNull();
+      expect(bar.tickY).toBeNull();
+    }
+    expect(geometry.bars[1].segments[0].height).toBeCloseTo(100, 6);
+    expect(geometry.bars[1].title).toContain('gates 6');
   });
 
   it('says in words what the picture says', () => {
@@ -135,8 +157,13 @@ describe('ActivityHistogram', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Filter to gates' })).toHaveAttribute('aria-pressed', 'true')
     );
-    // Everything else fades back so the chosen group reads on its own.
-    expect(band.querySelectorAll('.activity-volume__seg.is-dimmed').length).toBeGreaterThan(0);
+    // The chosen group is drawn alone, and the heading says so.
+    await waitFor(() => {
+      const segs = [...band.querySelectorAll('.activity-volume__seg')];
+      expect(segs.length).toBeGreaterThan(0);
+      expect(segs.every((seg) => seg.classList.contains('is-gates'))).toBe(true);
+    });
+    expect(band.querySelector('.activity-volume__title')?.textContent).toContain('Gates only');
 
     // The same key again is the way back to every event.
     fireEvent.click(screen.getByRole('button', { name: 'Filter to gates' }));
@@ -171,6 +198,18 @@ describe('ActivityHistogram', () => {
     );
     const scoped = calls.filter((call) => call.pathname === '/api/v1/events/histogram');
     expect(scoped.every((call) => call.search.includes('family=jeryu'))).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: '30d' }));
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) =>
+            call.pathname === '/api/v1/events/histogram' &&
+            call.search.includes('hours=720') &&
+            !call.search.includes('range=')
+        )
+      ).toBe(true)
+    );
   });
 
   it('asks for the pinned repository, not the shell family, on a repository tab', async () => {
