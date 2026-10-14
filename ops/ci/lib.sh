@@ -34,7 +34,7 @@ require_jankurai() {
   # release bump renders no consumer change.
   # `v2` (a hermetic source build) is still accepted while hosts migrate, and
   # only until every governed host and the sandbox image carry a v3 receipt
-  # (docs/release.md, "Receipt transition"). The authority stamp binds only the
+  # (jeryu-tool docs/release.md, "Receipt transition"). The authority stamp binds only the
   # binary digest the host's own installer last confirmed; it records no
   # receipt schema or version, so it does not by itself retire v2.
   local pinned_release_repo="https://github.com/neverhuman/jankurai-audit"
@@ -168,7 +168,9 @@ require_jankurai() {
   # here: a missing or mistyped field rejects the receipt instead of erroring.
   receipt_defs='def text: type == "string" and length > 0;
     def hex($n): type == "string" and test("^[0-9a-f]{\($n)}$");
-    def toolchain($tool): text and test("^\($tool) [0-9]+\\.[0-9]+\\.[0-9]+ ");
+    def count: if type == "number" then . >= 0 and floor == .
+      else type == "string" and test("^[0-9]+$") end;
+    def toolchain($tool): text and test("^\($tool) [0-9]+\\.[0-9]+\\.[0-9]+( |$)");
     '
   for receipt in "${receipt_candidates[@]}"; do
     [[ -f "${receipt}" ]] || continue
@@ -211,9 +213,10 @@ require_jankurai() {
        (.build.rustc | toolchain("rustc")) and (.build.cargo | toolchain("cargo")) and
        (.build.target_triple | text) and (.build.mode | text) and
        ([.build.package_path, .build.builder_image_id, .build.linker, .build.glibc,
-         .build.vendor_files_sha256, .build.vendor_file_count,
+         .build.vendor_files_sha256,
          .build.cargo_config_sha256, .build.environment, .build.rustflags,
          .build.command] | all(text)) and
+       (.build.vendor_file_count | count) and
        (.build.context_sha256 | hex(64)) and
        (.build.builder_image | text and test("@sha256:[0-9a-f]{64}$")) and
        .build.cargo_net_offline == true and .build.closed_vendor == true and
@@ -276,8 +279,12 @@ require_jankurai() {
       def q($field):
         if type == "string" and length > 0 then @sh
         else error("receipt field \($field) is missing or not a non-empty string") end;
+      def q_count:
+        if type == "number" and . >= 0 and floor == . then tostring | @sh
+        elif type == "string" and test("^[0-9]+$") then @sh
+        else error("receipt field build.vendor_file_count is not a nonnegative integer") end;
       def toolchain_version:
-        (if type == "string" then capture("^rustc (?<v>[0-9]+\\.[0-9]+\\.[0-9]+) ")
+        (if type == "string" then capture("^rustc (?<v>[0-9]+\\.[0-9]+\\.[0-9]+)( |$)")
          else empty end //
           error("receipt field build.rustc is not a rustc version")).v;
       "export JERYU_JANKURAI_SOURCE_REPO=\(.source.remote|q("source.remote"))",
@@ -306,7 +313,7 @@ require_jankurai() {
         "export JERYU_JANKURAI_LINKER_VERSION=\(.build.linker|q("build.linker"))",
         "export JERYU_JANKURAI_GLIBC_VERSION=\(.build.glibc|q("build.glibc"))",
         "export JERYU_JANKURAI_VENDOR_FILES_SHA256=\(.build.vendor_files_sha256|q("build.vendor_files_sha256"))",
-        "export JERYU_JANKURAI_VENDOR_FILE_COUNT=\(.build.vendor_file_count|q("build.vendor_file_count"))",
+        "export JERYU_JANKURAI_VENDOR_FILE_COUNT=\(.build.vendor_file_count|q_count)",
         "export JERYU_JANKURAI_CARGO_CONFIG_SHA256=\(.build.cargo_config_sha256|q("build.cargo_config_sha256"))",
         "export JERYU_JANKURAI_BUILD_ENVIRONMENT=\(.build.environment|q("build.environment"))",
         "export JERYU_JANKURAI_RUSTFLAGS=\(.build.rustflags|q("build.rustflags"))",
