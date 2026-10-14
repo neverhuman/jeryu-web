@@ -62,7 +62,7 @@ describe('ScorecardPage', () => {
       'Not measured yet — needs incident ledger'
     );
     expect(screen.getByTestId('scorecard-station-breakdown')).toHaveTextContent('review');
-    expect(screen.getByTestId('scorecard-wip-strip')).toHaveAttribute('href', '/flow');
+    expect(screen.getByTestId('scorecard-wip-strip')).toHaveAttribute('href', '/work');
   });
 
   it('keeps window, family, repository and outcomes tab in the URL and request', async () => {
@@ -76,7 +76,10 @@ describe('ScorecardPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '90 d' }));
     await waitFor(() => expect(scorecardCalls(calls).at(-1)?.get('window')).toBe('90d'));
 
+    const beforeTyping = scorecardCalls(calls).length;
     fireEvent.change(screen.getByLabelText(/Repository/), { target: { value: 'globex/api' } });
+    expect(scorecardCalls(calls)).toHaveLength(beforeTyping);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
     await waitFor(() => expect(scorecardCalls(calls).at(-1)?.get('repo')).toBe('globex/api'));
 
     fireEvent.click(screen.getByRole('tab', { name: 'Outcomes' }));

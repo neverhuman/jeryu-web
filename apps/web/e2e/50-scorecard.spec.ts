@@ -43,7 +43,7 @@ test.describe('Scorecard', () => {
       'Not measured yet — needs incident ledger'
     );
     await expect(page.getByTestId('scorecard-station-breakdown')).toContainText('review');
-    await expect(page.getByTestId('scorecard-wip-strip')).toHaveAttribute('href', '/flow');
+    await expect(page.getByTestId('scorecard-wip-strip')).toHaveAttribute('href', '/work');
 
     const pairHeadings = await page
       .getByTestId('scorecard-volume-pairs')
@@ -84,6 +84,7 @@ test.describe('Scorecard', () => {
     await expect.poll(() => log.queries.at(-1)?.get('window')).toBe('90d');
 
     await page.getByLabel(/Repository/).fill('globex/api');
+    await page.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect.poll(() => log.queries.at(-1)?.get('repo')).toBe('globex/api');
 
     await page.getByRole('tab', { name: 'Outcomes' }).click();

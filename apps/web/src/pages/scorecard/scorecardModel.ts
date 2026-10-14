@@ -72,7 +72,7 @@ export function formatDuration(seconds: number): string {
   const sign = seconds < 0 ? '-' : '';
   if (abs < 60) return `${sign}${Math.round(abs)} s`;
   const minutes = abs / 60;
-  if (minutes < 90) return `${Math.round(minutes)} min`;
+  if (minutes < 90) return `${sign}${Math.round(minutes)} min`;
   const hours = minutes / 60;
   if (hours < 24) return `${sign}${Math.round(hours * 10) / 10} h`;
   return `${sign}${Math.round((hours / 24) * 10) / 10} d`;
@@ -129,26 +129,33 @@ export function drilldownHref(id: string, window: ScorecardWindow, family: strin
   const params = new URLSearchParams({ metric: id, window });
   if (family) params.set('family', family);
   if (repo) params.set('repo', repo);
-  if (id.includes('lead_time') || id.includes('wip') || id.includes('station') || id.includes('hold') || id.includes('gate')) {
-    return `/flow?${params.toString()}`;
-  }
-  if (id.includes('todo') || id.includes('false_done') || id.includes('work') || id.includes('mix')) {
-    return `/work?${params.toString()}`;
-  }
-  if (id.includes('pr') || id.includes('release') || id.includes('change') || id.includes('rework')) {
-    return `/in-flight?${params.toString()}`;
-  }
-  if (id.includes('incident') || id.includes('detect') || id.includes('restore')) {
-    return `/activity?${params.toString()}`;
-  }
-  return `/repos?${params.toString()}`;
+  // Use only registered surfaces and exact metric identities. Substring
+  // matches confused "prod" with PRs and sent flow metrics to a missing route.
+  const targets: Record<string, string> = {
+    lead_time_p50: '/work', lead_time_p85: '/work', lead_time_spread: '/work',
+    flow_efficiency: '/work', wip_by_station: '/work', station_breakdown: '/work',
+    holds_by_age_and_action: '/work', eta_error: '/work',
+    completed_work_items_per_day: '/work', false_done_rate: '/work',
+    cost_per_successful_change: '/work', human_minutes_per_successful_change: '/work',
+    rework_rate: '/work', arrival_vs_completion: '/work', completed_work_mix: '/work',
+    worker_slot_utilisation: '/work',
+    change_failure_rate: '/in-flight', review_catch_rate: '/in-flight',
+    surviving_net_lines_per_day: '/in-flight', raw_net_lines_per_day: '/in-flight',
+    prs_merged_per_day: '/in-flight', merged_but_unreleased: '/releases',
+    releases_per_day: '/releases', escaped_defects_to_main: '/in-flight',
+    main_red_time_per_repo: '/in-flight', review_cost: '/in-flight',
+    escaped_defects_to_prod: '/activity', time_to_detect: '/activity', time_to_restore: '/activity',
+    gate_queue_wait: '/quality-gate', gate_flake_rate: '/quality-gate',
+    runner_utilisation: '/runners', hypotheses_checked_and_met: '/yield',
+  };
+  return `${targets[id] ?? '/repos'}?${params.toString()}`;
 }
 
 export interface TileSpec {
   id: string;
   label: string;
   kind: MetricKind;
-  rowLink: 'Flow lots' | 'Todos' | 'Pull requests' | 'Incidents' | 'Rows';
+  rowLink: 'Todos' | 'Pull requests' | 'Incidents' | 'Rows';
 }
 
 export interface SectionSpec {
@@ -157,7 +164,7 @@ export interface SectionSpec {
 }
 
 export const HEADLINE_TILES: readonly TileSpec[] = [
-  { id: 'lead_time_p50', label: 'Lead time p50', kind: 'duration', rowLink: 'Flow lots' },
+  { id: 'lead_time_p50', label: 'Lead time p50', kind: 'duration', rowLink: 'Todos' },
   { id: 'change_failure_rate', label: 'Change failure rate', kind: 'percent', rowLink: 'Pull requests' },
   { id: 'time_to_restore', label: 'Time to restore', kind: 'duration', rowLink: 'Incidents' },
   { id: 'review_catch_rate', label: 'Review catch rate', kind: 'percent', rowLink: 'Pull requests' },
@@ -169,10 +176,10 @@ export const SECTIONS: readonly SectionSpec[] = [
   {
     title: 'Speed',
     tiles: [
-      { id: 'lead_time_p85', label: 'Lead time p85', kind: 'duration', rowLink: 'Flow lots' },
-      { id: 'flow_efficiency', label: 'Flow efficiency', kind: 'ratio', rowLink: 'Flow lots' },
-      { id: 'lead_time_spread', label: 'Lead-time spread', kind: 'duration', rowLink: 'Flow lots' },
-      { id: 'gate_queue_wait', label: 'Gate queue wait', kind: 'object', rowLink: 'Flow lots' },
+      { id: 'lead_time_p85', label: 'Lead time p85', kind: 'duration', rowLink: 'Todos' },
+      { id: 'flow_efficiency', label: 'Flow efficiency', kind: 'ratio', rowLink: 'Todos' },
+      { id: 'lead_time_spread', label: 'Lead-time spread', kind: 'duration', rowLink: 'Todos' },
+      { id: 'gate_queue_wait', label: 'Gate queue wait', kind: 'object', rowLink: 'Todos' },
     ],
   },
   {
@@ -189,9 +196,9 @@ export const SECTIONS: readonly SectionSpec[] = [
   {
     title: 'Inventory',
     tiles: [
-      { id: 'wip_by_station', label: 'WIP by station', kind: 'object', rowLink: 'Flow lots' },
+      { id: 'wip_by_station', label: 'WIP by station', kind: 'object', rowLink: 'Todos' },
       { id: 'merged_but_unreleased', label: 'Merged but unreleased', kind: 'count', rowLink: 'Pull requests' },
-      { id: 'holds_by_age_and_action', label: 'Holds by age and action', kind: 'count', rowLink: 'Flow lots' },
+      { id: 'holds_by_age_and_action', label: 'Holds by age and action', kind: 'count', rowLink: 'Todos' },
       { id: 'arrival_vs_completion', label: 'Arrival vs completion', kind: 'object', rowLink: 'Todos' },
     ],
   },
@@ -226,9 +233,9 @@ export const SECTIONS: readonly SectionSpec[] = [
   {
     title: 'Predictability & capacity',
     tiles: [
-      { id: 'eta_error', label: 'ETA error', kind: 'duration', rowLink: 'Flow lots' },
-      { id: 'lead_time_spread', label: 'Lead-time spread', kind: 'duration', rowLink: 'Flow lots' },
-      { id: 'gate_queue_wait', label: 'Gate queue wait', kind: 'object', rowLink: 'Flow lots' },
+      { id: 'eta_error', label: 'ETA error', kind: 'duration', rowLink: 'Todos' },
+      { id: 'lead_time_spread', label: 'Lead-time spread', kind: 'duration', rowLink: 'Todos' },
+      { id: 'gate_queue_wait', label: 'Gate queue wait', kind: 'object', rowLink: 'Todos' },
       { id: 'worker_slot_utilisation', label: 'Worker slot utilisation', kind: 'percent', rowLink: 'Rows' },
       { id: 'runner_utilisation', label: 'Runner utilisation', kind: 'percent', rowLink: 'Rows' },
     ],

@@ -1,7 +1,7 @@
 // ScorecardPage.tsx — outcome delivery scorecard at `/scorecard`.
 
 import { BarChart3, ServerOff } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type { ScorecardMetric, ScorecardWindow } from '../../api/types';
@@ -72,6 +72,7 @@ export function ScorecardPage(): JSX.Element {
       </PageHeader>
 
       <ScorecardControls
+        key={repo}
         window={window}
         tab={tab}
         repo={repo}
@@ -110,6 +111,7 @@ function ScorecardControls({
 }): JSX.Element {
   const scope = useFamilyScope();
   const families = useFamilyNames();
+  const [repoDraft, setRepoDraft] = useState(repo);
   return (
     <div className="scorecard__controls" data-testid="scorecard-controls">
       {families.names.length > 1 || scope.family ? (
@@ -132,15 +134,21 @@ function ScorecardControls({
           </button>
         ))}
       </div>
-      <label className="scorecard__repo-filter">
-        <span>Repository</span>
-        <input
-          className="form-input"
-          value={repo}
-          placeholder="owner/repo"
-          onChange={(event) => onRepo(event.target.value)}
-        />
-      </label>
+      <form className="scorecard__repo-filter" onSubmit={(event) => {
+        event.preventDefault();
+        onRepo(repoDraft.trim());
+      }}>
+        <label>
+          <span>Repository</span>
+          <input
+            className="form-input"
+            value={repoDraft}
+            placeholder="owner/repo"
+            onChange={(event) => setRepoDraft(event.target.value)}
+          />
+        </label>
+        <button type="submit" className="scorecard__segment">Apply</button>
+      </form>
       <div className="scorecard__tabs" role="tablist" aria-label="Scorecard view">
         <button
           type="button"
@@ -371,7 +379,7 @@ function WipStrip({ metric: m }: { metric: ScorecardMetric }): JSX.Element {
   }
   const entries = Object.entries(m.value as Record<string, { waiting?: number; active?: number; held?: number }>);
   return (
-    <Link className="scorecard-wip" to="/flow" data-testid="scorecard-wip-strip">
+    <Link className="scorecard-wip" to="/work" data-testid="scorecard-wip-strip">
       {entries.map(([name, counts]) => {
         const total = (counts.waiting ?? 0) + (counts.active ?? 0) + (counts.held ?? 0);
         return (

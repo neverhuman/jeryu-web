@@ -29,15 +29,24 @@ describe('scorecardModel', () => {
 
   it('formats known values, deltas and sparse sparklines', () => {
     expect(formatMetricValue(86_400, 'duration')).toBe('1 d');
+    expect(formatMetricValue(-120, 'duration')).toBe('-2 min');
+    expect(formatDelta(60, 180, 'duration')).toBe('-2 min vs previous');
     expect(formatMetricValue(42.25, 'money')).toBe('$42.25');
     expect(formatMetricValue(3.2, 'percent')).toBe('3.2%');
     expect(formatDelta(2.4, 2.1, 'count')).toBe('+0.3 vs previous');
     expect(sparklinePoints([1, null, 2])).toBe('0,28 100,4');
   });
 
+  it('routes exact identities to registered surfaces without substring collisions', () => {
+    expect(drilldownHref('escaped_defects_to_prod', '7d', '', '')).toMatch(/^\/activity\?/);
+    expect(drilldownHref('gate_flake_rate', '7d', '', '')).toMatch(/^\/quality-gate\?/);
+    expect(drilldownHref('runner_utilisation', '7d', '', '')).toMatch(/^\/runners\?/);
+    expect(drilldownHref('releases_per_day', '7d', '', '')).toMatch(/^\/releases\?/);
+  });
+
   it('routes row links to the backing surfaces', () => {
     expect(drilldownHref('wip_by_station', '7d', 'acme', 'acme/widgets')).toBe(
-      '/flow?metric=wip_by_station&window=7d&family=acme&repo=acme%2Fwidgets'
+      '/work?metric=wip_by_station&window=7d&family=acme&repo=acme%2Fwidgets'
     );
     expect(drilldownHref('false_done_rate', '7d', 'acme', '')).toBe(
       '/work?metric=false_done_rate&window=7d&family=acme'

@@ -40,6 +40,13 @@
   font-size: var(--font-size-sm);
 }
 
+.scorecard__repo-filter label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .scorecard__repo-filter input {
   width: min(220px, 48vw);
 }
@@ -254,6 +261,12 @@
   }
 
   .scorecard__repo-filter {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .scorecard__repo-filter label {
     width: 100%;
     align-items: flex-start;
     flex-direction: column;
