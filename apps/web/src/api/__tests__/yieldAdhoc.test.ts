@@ -60,6 +60,21 @@ describe('parseYieldAdhoc', () => {
     expect(parsed?.by_repo).toEqual([{ group: 'acme/widgets', family: null, usd: 3, sessions: 2 }]);
     expect(parsed?.weekly.map((row) => row.week)).toEqual(['2026-09-28', '2026-10-05']);
   });
+
+  it('keeps the server\'s "(unknown)" agent and model rows, and Monday week keys', () => {
+    const parsed = parseYieldAdhoc({
+      total_usd: 2,
+      sessions: 1,
+      by_agent: [{ group: '(unknown)', usd: 2, sessions: 1 }],
+      by_model: [{ group: '(unknown)', usd: 2, sessions: 1 }],
+      by_repo: [{ group: 'acme/widgets', family: null, usd: 2, sessions: 1 }],
+      weekly: [{ week: '2026-10-12', usd: 2 }],
+    });
+    expect(parsed?.by_agent[0].group).toBe('(unknown)');
+    expect(parsed?.by_model[0].group).toBe('(unknown)');
+    expect(parsed?.by_repo[0].family).toBeNull();
+    expect(parsed?.weekly).toEqual([{ week: '2026-10-12', usd: 2 }]);
+  });
 });
 
 describe('withCheckedAdhoc', () => {
