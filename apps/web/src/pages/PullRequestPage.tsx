@@ -162,6 +162,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const ownerPaths = useOwnerMergePaths(
     repoId,
     prNumber,
+    detail.data?.summary.head_sha ?? null,
     detail.data?.merge_passport.status === 'blocked'
   );
   const review = useSubmitReview(repoId, prNumber);

@@ -11,14 +11,15 @@ import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { OwnerMergePaths } from '../api/types';
 
-type OwnerPathsKey = readonly ['pull-owner-paths', string | null, string | null];
+type OwnerPathsKey = readonly ['pull-owner-paths', string | null, string | null, string | null];
 
 export function useOwnerMergePaths(
   repoId: string | null,
   prNumber: string | null,
+  headSha: string | null,
   enabled = true
 ): UseQueryResult<OwnerMergePaths, Error> {
-  const queryKey: OwnerPathsKey = ['pull-owner-paths', repoId, prNumber];
+  const queryKey: OwnerPathsKey = ['pull-owner-paths', repoId, prNumber, headSha];
   return useQuery({
     queryKey,
     queryFn: ({ signal }) =>
@@ -26,7 +27,8 @@ export function useOwnerMergePaths(
         endpoints.pullOwnerPaths(repoId as string, prNumber as string),
         { signal }
       ),
-    enabled: enabled && Boolean(repoId) && Boolean(prNumber),
+    enabled: enabled && Boolean(repoId) && Boolean(prNumber) && Boolean(headSha),
+    retry: false,
     staleTime: 15_000,
   });
 }

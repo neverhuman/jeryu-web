@@ -12,6 +12,7 @@ import { PIPELINE_KEY } from './usePipeline';
 export function invalidateAfterPrChange(queryClient: QueryClient, repoId: string | null): void {
   const keys: ReadonlyArray<readonly unknown[]> = [
     ['repo-pulls', repoId],
+    ['pull-owner-paths', repoId],
     CONTROL_PLANE_QUERY_KEY,
     ['releases'],
     ['deployments'],

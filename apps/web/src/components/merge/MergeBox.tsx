@@ -523,7 +523,11 @@ export function MergeBox({
         </ol>
       ) : null}
 
-      {!settled && showOwnerPaths(ownerPaths) ? (
+      {!settled &&
+      detail.merge_passport.status === 'blocked' &&
+      detail.merge_passport.head_sha === headSha &&
+      ownerPaths?.head_sha === headSha &&
+      showOwnerPaths(ownerPaths) ? (
         <section className="merge-box__owner" data-testid="pr-owner-paths">
           <h3 className="merge-box__owner-headline">
             {ownerPathHeadline(ownerPaths)}
@@ -537,8 +541,8 @@ export function MergeBox({
             </p>
           ) : null}
           <ul className="merge-box__owner-rows">
-            {ownerPathRows(ownerPaths).map((row) => (
-              <OwnerPathItem key={row.code} row={row} />
+            {ownerPathRows(ownerPaths).map((row, index) => (
+              <OwnerPathItem key={`${row.code}:${index}`} row={row} />
             ))}
           </ul>
         </section>

@@ -125,11 +125,12 @@ describe('ownerPathsModel', () => {
   });
 });
 
-function show(ownerPaths: OwnerMergePaths | null): void {
+function show(ownerPaths: OwnerMergePaths | null, passport: 'pass' | 'blocked' = 'blocked'): void {
   render(
     <MemoryRouter>
       <MergeBox
         detail={pullDetail({
+          passport,
           blockers: [
             {
               code: 'passport_blocked_checks',
@@ -153,6 +154,17 @@ function show(ownerPaths: OwnerMergePaths | null): void {
 }
 
 describe('MergeBox owner panel', () => {
+  it('hides a cached answer after the live passport passes', () => {
+    show(deployEight(), 'pass');
+    expect(screen.queryByTestId('pr-owner-paths')).toBeNull();
+  });
+
+  it('hides an answer for a different head while the current head is blocked', () => {
+    show(deployEight({ head_sha: 'f'.repeat(40) }));
+    expect(screen.queryByTestId('pr-owner-paths')).toBeNull();
+    expect(screen.getByTestId('pr-merge-gate')).toBeInTheDocument();
+  });
+
   it('lists each blocker with its step, marking the reader’s own', () => {
     show(deployEight());
     const panel = screen.getByTestId('pr-owner-paths');

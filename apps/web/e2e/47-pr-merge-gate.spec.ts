@@ -190,7 +190,18 @@ test('a running required gate keeps Merge on the page, disabled, and says how lo
   realtime,
 }) => {
   const finishTheGate = await seed(page);
+  await page.route(/\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+\/owner-paths$/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      head_sha: HEAD_SHA, base_ref: 'main', passport_hash: 'owner-fixture', blocked: true,
+      enforce_admins: true, viewer_is_admin: false, viewer_may_clear_as_owner: false,
+      headline: 'The required gate must finish.',
+      blockers: [{ code: 'passport_blocked_pending_checks', message: 'Required gate running',
+        how: 'Wait for the exact-head gate to finish.', owner_can_clear: false }],
+    }) })
+  );
   await page.goto(BASE);
+  await expect(page.getByTestId('pr-owner-paths')).toBeVisible();
+  await page.screenshot({ path: 'playwright-report/owner-paths-blocked.png', fullPage: true });
 
   const merge = page.getByRole('button', { name: 'Merge', exact: true });
   await expect(merge).toBeVisible({ timeout: 15_000 });
@@ -218,6 +229,7 @@ test('a running required gate keeps Merge on the page, disabled, and says how lo
   });
 
   await expect(merge).toBeEnabled({ timeout: 15_000 });
+  await expect(page.getByTestId('pr-owner-paths')).toHaveCount(0);
   await expect(page.getByTestId('pr-merge-gate')).toHaveCount(0);
   await expect(page.getByTestId('pr-merge-headline')).toHaveText('Ready to merge');
 });
