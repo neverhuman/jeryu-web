@@ -120,6 +120,8 @@ test.describe('Flow', () => {
 
     // The lot opens the work itself, which is where its trace is.
     await page.getByTestId('flow-card-gate').click();
+    await expect(lots).toContainText('At Gate, oldest first');
+    await expect(lots.locator('[data-list-row]').first()).toContainText('acme-0001');
     await page.keyboard.press('j');
     await expect(lots.locator('[data-list-row]').first()).toBeFocused();
     await page.keyboard.press('k');
