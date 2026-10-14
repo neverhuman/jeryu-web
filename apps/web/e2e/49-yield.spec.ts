@@ -1,7 +1,8 @@
 // 49-yield.spec.ts — the Yield page on `GET /api/v1/yield` mocked at the
 // browser boundary: the headline and its explanation, the controls in the
-// request, the todo links, a phone in the dark theme, the System nav entry,
-// and what an older server and a non-admin see.
+// request, the todo links, the ad-hoc agent sessions kept apart from the todo
+// numbers, a phone in the dark theme, the System nav entry, and what an older
+// server and a non-admin see.
 
 import { expect, test, type Page } from './fixtures/test';
 
@@ -105,6 +106,52 @@ test.describe('Yield', () => {
     await expect(page).toHaveURL(/\/work\/20261001-120000-aaaaaa$/);
   });
 
+  test('ad-hoc agent sessions sit after the breakdown, apart from cost per merged change @action:yield.adhoc', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockYieldApi(page);
+
+    await page.goto('/yield?adhoc=repo');
+    const section = page.getByTestId('yield-adhoc');
+    await expect(section).toBeVisible({ timeout: 15_000 });
+    await expect(section.getByRole('heading', { name: 'Ad-hoc agent sessions' })).toBeVisible();
+    await expect(page.getByTestId('yield-adhoc-note')).toContainText('not in cost per merged change');
+    await expect(page.getByTestId('yield-kpi-per-merged')).toContainText('$5.00');
+    await expect(page.getByTestId('yield-adhoc-tile-total')).toContainText('$12.34');
+    await expect(page.getByTestId('yield-adhoc-tile-unattributed')).toContainText('$1.20');
+    await expect(section.getByRole('img', { name: /^Ad-hoc spend by week, 2026-09-21 to 2026-10-05/ })).toBeVisible();
+
+    const cut = section.getByRole('group', { name: 'Break ad-hoc spend down by' });
+    await expect(cut.getByRole('button', { name: 'Repository' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('yield-adhoc-remainder')).toContainText('No repository');
+
+    await cut.getByRole('button', { name: 'Agent' }).click();
+    await expect(page).toHaveURL(/[?&]adhoc=agent\b/);
+    await expect(page.getByTestId('yield-adhoc-group-claude-code')).toContainText('$11.00');
+    // The breakdown's own cut is untouched.
+    await expect(page.getByTestId('yield-breakdown-table').getByRole('columnheader', { name: 'Model' })).toBeVisible();
+
+    await section.scrollIntoViewIfNeeded();
+    const result = await runAxe(page, { disableRules: ['color-contrast'] });
+    await persistAxeResult('yield-adhoc', result);
+    const rendered = await persistRenderedEvidence(page, 'yield-adhoc');
+    expect(rendered.geometry.width, 'the ad-hoc section rendered with width').toBeGreaterThan(0);
+    expect(blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`)).toEqual([]);
+
+    await cut.getByRole('button', { name: 'Repository' }).click();
+    await section.getByRole('link', { name: 'acme/widgets' }).click();
+    await expect(page).toHaveURL(/\/repos\/[^/]+\/acme\/widgets$/);
+  });
+
+  test('no ad-hoc section on a server that predates it @action:yield.adhoc', async ({ page }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockYieldApi(page, { withoutAdhoc: true });
+    await page.goto('/yield');
+    await expect(page.getByTestId('yield-breakdown-table')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('yield-adhoc')).toHaveCount(0);
+  });
+
   test('a filter updates the page in place: the reader stays where they scrolled @action:yield.in_place', async ({
     page,
   }) => {
@@ -165,6 +212,7 @@ test.describe('Yield', () => {
     await expect(page.getByTestId('yield-kpi-per-merged')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(page.getByTestId('yield-scrap')).toBeVisible();
+    await expect(page.getByTestId('yield-adhoc-table')).toBeVisible();
     expect(await sidewaysOverflow(page), 'no sideways scroll at 390px').toBeLessThanOrEqual(0);
     // The trend's axis text is HTML, so it keeps its size instead of shrinking
     // with the drawing on a narrow screen.

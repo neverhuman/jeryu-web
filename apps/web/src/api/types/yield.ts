@@ -117,4 +117,43 @@ export interface YieldReport {
   costliest: YieldTodoRef[];
   /** The ten scrapped todos that cost most in the window. */
   scrap: YieldTodoRef[];
+  /**
+   * Spend of agent sessions people ran by hand, outside the todo queue. It is
+   * never part of `totals`, `groups`, `weekly` or `experiments`. Absent on a
+   * server that predates it; `useYield` drops a malformed one the same way.
+   */
+  adhoc?: YieldAdhoc;
+}
+
+/** One row of an ad-hoc cut: a family, a repository, a harness or a model. */
+export interface YieldAdhocGroup {
+  group: string;
+  usd: number;
+  /** Distinct sessions that spent in this group. */
+  sessions: number;
+  /** The repository's family; only the repository cut sends it. */
+  family?: string | null;
+}
+
+/** One week of ad-hoc spend; `week` is keyed like the report's weekly rows. */
+export interface YieldAdhocWeek {
+  week: string;
+  usd: number;
+}
+
+/** The cuts of the ad-hoc spend, keyed like the wire fields (`by_<cut>`). */
+export type YieldAdhocBy = 'family' | 'repo' | 'agent' | 'model';
+
+/** Ad-hoc agent spend in the report window. Groups are sorted by spend, largest first. */
+export interface YieldAdhoc {
+  total_usd: number;
+  /** Distinct sessions in the window. */
+  sessions: number;
+  /** Spend that named neither a repository nor a family; it is in no group. */
+  unattributed_usd: number;
+  by_family: YieldAdhocGroup[];
+  by_repo: YieldAdhocGroup[];
+  by_agent: YieldAdhocGroup[];
+  by_model: YieldAdhocGroup[];
+  weekly: YieldAdhocWeek[];
 }

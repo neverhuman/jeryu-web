@@ -1,6 +1,7 @@
 // yieldMocks.ts — browser-boundary mock for `GET /api/v1/yield`, the spend
 // against what reached main. Invented data only: families acme and globex,
-// models model-a and model-b, harnesses claude and codex.
+// models model-a and model-b, harnesses claude and codex; ad-hoc sessions on
+// acme/widgets and globex/gears with claude-code and codex on model-x/model-y.
 //
 // Register AFTER `mockBootstrap` (Playwright matches the newest route first).
 // Without it the shared 404 fallback answers, which is what a server that
@@ -108,7 +109,40 @@ const TODO_B = {
   model: 'model-b',
 };
 
-export function yieldBody(params: URLSearchParams): Record<string, unknown> {
+/** Ad-hoc agent session spend: $1.20 named nothing, $0.80 named only a family. */
+const ADHOC = {
+  total_usd: 12.34,
+  sessions: 7,
+  unattributed_usd: 1.2,
+  by_family: [
+    { group: 'acme', usd: 9.14, sessions: 5 },
+    { group: 'globex', usd: 2, sessions: 2 },
+  ],
+  by_repo: [
+    { group: 'acme/widgets', family: 'acme', usd: 8.34, sessions: 4 },
+    { group: 'globex/gears', family: 'globex', usd: 2, sessions: 2 },
+  ],
+  by_agent: [
+    { group: 'claude-code', usd: 11, sessions: 6 },
+    { group: 'codex', usd: 1.34, sessions: 1 },
+  ],
+  by_model: [
+    { group: 'model-x', usd: 11, sessions: 6 },
+    { group: 'model-y', usd: 1.34, sessions: 1 },
+  ],
+  weekly: [
+    { week: '2026-09-21', usd: 3 },
+    { week: '2026-09-28', usd: 6.34 },
+    { week: '2026-10-05', usd: 3 },
+  ],
+};
+
+export interface YieldMockOptions {
+  /** Leave `adhoc` out, the way a server that predates it answers. */
+  withoutAdhoc?: boolean;
+}
+
+export function yieldBody(params: URLSearchParams, options: YieldMockOptions = {}): Record<string, unknown> {
   const by = params.get('by') ?? 'model';
   const groups = GROUPS[by] ?? GROUPS.model;
   const names = groups.map((group) => String(group.group));
@@ -160,6 +194,7 @@ export function yieldBody(params: URLSearchParams): Record<string, unknown> {
     ],
     costliest: [TODO_A, TODO_B],
     scrap: [TODO_B],
+    ...(options.withoutAdhoc ? {} : { adhoc: ADHOC }),
   };
 }
 
@@ -168,7 +203,7 @@ export interface YieldLog {
   queries: URLSearchParams[];
 }
 
-export async function mockYieldApi(page: Page): Promise<YieldLog> {
+export async function mockYieldApi(page: Page, options: YieldMockOptions = {}): Promise<YieldLog> {
   const log: YieldLog = { queries: [] };
   await page.route('**/api/v1/yield**', async (route: Route) => {
     const params = new URL(route.request().url()).searchParams;
@@ -176,7 +211,7 @@ export async function mockYieldApi(page: Page): Promise<YieldLog> {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(yieldBody(params)),
+      body: JSON.stringify(yieldBody(params, options)),
     });
   });
   return log;

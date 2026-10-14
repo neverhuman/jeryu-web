@@ -4,14 +4,17 @@
 // page turns that into one headline, what a merged change cost, and explains
 // it underneath: how much of the spend reached main, what review added, what
 // the routing experiment's arms do side by side, how the cost moves week by
-// week, and which todos cost the most. Family comes from the shell's scope;
-// the window and the breakdown's cut live in the address (`?days=`, `?by=`).
+// week, and which todos cost the most. Beside it, never inside it: what agent
+// sessions people ran by hand cost (`adhoc` in the report). Family comes from
+// the shell's scope; the window and the two tables' cuts live in the address
+// (`?days=`, `?by=`, `?adhoc=`).
 
 import { Coins, ServerOff } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type {
+  YieldAdhocBy,
   YieldBy,
   YieldExperiment,
   YieldReport,
@@ -39,6 +42,8 @@ import { useYield } from '../../hooks/useYield';
 import { UseThisWhen } from '../../layout/UseThisWhen';
 import { pillClass } from '../../components/tone/tone';
 import { todoHref } from '../shift/workPaths';
+import { ScrollTable } from './ScrollTable';
+import { YieldAdhocSection } from './YieldAdhoc';
 import { YieldFunnelBar } from './YieldFunnel';
 import { YieldTrendChart } from './YieldTrendChart';
 import {
@@ -65,6 +70,7 @@ import {
   windowDates,
   yieldKpis,
 } from './yieldModel';
+import { ADHOC_BY_PARAM, DEFAULT_ADHOC_BY, adhocState, parseAdhocBy } from './adhocModel';
 
 import '../page.css';
 import './Yield.css';
@@ -75,6 +81,7 @@ export function YieldPage(): JSX.Element {
   const scope = useFamilyScope();
   const days = parseWindow(params);
   const by = parseBy(params);
+  const adhocBy = parseAdhocBy(params);
   const dates = useMemo(() => windowDates(days, new Date()), [days]);
   const report = useYield({ ...(scope.family ? { family: scope.family } : {}), ...dates, by });
   const { data, isPending, isError, error, isPlaceholderData } = report;
@@ -93,6 +100,7 @@ export function YieldPage(): JSX.Element {
     // A filter is not a new page: keep the reader where they are on the page.
     setParams(next, { replace: true, preventScrollReset: true });
   };
+  const onAdhocBy = (value: YieldAdhocBy): void => setParam(ADHOC_BY_PARAM, value, DEFAULT_ADHOC_BY);
 
   return (
     <div className="page page--wide" data-testid="yield-page">
@@ -128,17 +136,30 @@ export function YieldPage(): JSX.Element {
             </p>
           ) : null}
           {data.totals.todos === 0 ? (
-            <ScopedEmptyState
-              icon={Coins}
-              title="No work in this window."
-              description={`No attempt started between ${data.window.since} and ${data.window.until}. Pick a longer window, or come back once agents have worked.`}
-            />
+            <>
+              <ScopedEmptyState
+                icon={Coins}
+                title="No work in this window."
+                description={`No attempt started between ${data.window.since} and ${data.window.until}. Pick a longer window, or come back once agents have worked.`}
+              />
+              {/* Sessions run by hand are not todo work: their spend still shows. */}
+              {data.adhoc && adhocState(data.adhoc) === 'spent' ? (
+                <YieldAdhocSection
+                  adhoc={data.adhoc}
+                  days={shownDays}
+                  by={adhocBy}
+                  onBy={onAdhocBy}
+                />
+              ) : null}
+            </>
           ) : (
             <YieldBody
               data={data}
               days={shownDays}
               by={by}
               onBy={(value) => setParam(BY_PARAM, value, DEFAULT_BY)}
+              adhocBy={adhocBy}
+              onAdhocBy={onAdhocBy}
             />
           )}
         </div>
@@ -218,11 +239,15 @@ function YieldBody({
   days,
   by,
   onBy,
+  adhocBy,
+  onAdhocBy,
 }: {
   data: YieldReport;
   days: number;
   by: YieldBy;
   onBy: (by: YieldBy) => void;
+  adhocBy: YieldAdhocBy;
+  onAdhocBy: (by: YieldAdhocBy) => void;
 }): JSX.Element {
   const kpis = yieldKpis(data.totals);
   return (
@@ -309,6 +334,10 @@ function YieldBody({
         <BreakdownTable data={data} />
       </section>
 
+      {data.adhoc ? (
+        <YieldAdhocSection adhoc={data.adhoc} days={days} by={adhocBy} onBy={onAdhocBy} />
+      ) : null}
+
       <div className="yield__lists">
         <TodoList
           id="yield-costliest"
@@ -360,18 +389,6 @@ function RateHeads(): JSX.Element {
         First pass
       </th>
     </>
-  );
-}
-
-/**
- * A table that scrolls sideways on a narrow screen. It is focusable, so the
- * columns past the edge can be reached and read without a mouse.
- */
-function ScrollTable({ label, children }: { label: string; children: ReactNode }): JSX.Element {
-  return (
-    <div className="table-scroll" role="region" aria-label={label} tabIndex={0}>
-      {children}
-    </div>
   );
 }
 

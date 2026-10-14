@@ -7,13 +7,16 @@
 // so an old window's numbers never pass for the new one's. A different family
 // never borrows another family's numbers: it loads afresh. A server that predates the route
 // answers 404 or the SPA shell; `isPipelineUnavailable` recognises both and the
-// page says "not available on this server version". Nothing retries.
+// page says "not available on this server version". Nothing retries. The
+// report's `adhoc` part is checked field by field on the way in (older servers
+// leave it out, and so does the result then).
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { apiGet } from '../api/client';
 import { endpoints } from '../api/endpoints';
 import type { YieldQuery, YieldReport } from '../api/types';
+import { parseYieldAdhoc } from '../api/yieldAdhoc';
 import { OPERATOR_REFRESH } from './refreshPolicy';
 
 export const YIELD_KEY = ['yield'];
@@ -22,11 +25,18 @@ export function useYield(query: YieldQuery): UseQueryResult<YieldReport, Error> 
   const family = query.family ?? '';
   return useQuery({
     queryKey: [...YIELD_KEY, family, query.since ?? '', query.until ?? '', query.by ?? ''],
-    queryFn: ({ signal }) => apiGet<YieldReport>(endpoints.yieldReport(query), { signal }),
+    queryFn: async ({ signal }) => withCheckedAdhoc(await apiGet<YieldReport>(endpoints.yieldReport(query), { signal })),
     placeholderData: (previous, previousQuery) =>
       previousQuery && previousQuery.queryKey[YIELD_KEY.length] === family ? previous : undefined,
     ...OPERATOR_REFRESH,
     staleTime: 60_000,
     retry: false,
   });
+}
+
+/** The report with its `adhoc` part checked; dropped when the server sent none. */
+export function withCheckedAdhoc(report: YieldReport): YieldReport {
+  const { adhoc: raw, ...rest } = report;
+  const adhoc = parseYieldAdhoc(raw);
+  return adhoc ? { ...rest, adhoc } : rest;
 }

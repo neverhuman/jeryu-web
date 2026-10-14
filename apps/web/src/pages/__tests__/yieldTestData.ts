@@ -1,7 +1,8 @@
 // yieldTestData.ts — one `GET /api/v1/yield` answer, invented: families acme
-// and globex, models model-a and model-b, harnesses claude and codex.
+// and globex, models model-a and model-b, harnesses claude and codex. REPORT
+// is what a server without ad-hoc spend sends; ADHOC is that part, on its own.
 
-import type { YieldReport, YieldRow } from '../../api/types';
+import type { YieldAdhoc, YieldReport, YieldRow } from '../../api/types';
 
 export function row(overrides: Partial<YieldRow> = {}): YieldRow {
   return {
@@ -186,3 +187,33 @@ export const REPORT: YieldReport = {
     },
   ],
 };
+
+/** Ad-hoc agent spend: $1.20 named no repository or family, $0.80 named only a family. */
+export const ADHOC: YieldAdhoc = {
+  total_usd: 12.34,
+  sessions: 7,
+  unattributed_usd: 1.2,
+  by_family: [
+    { group: 'acme', usd: 9.14, sessions: 5 },
+    { group: 'globex', usd: 2, sessions: 2 },
+  ],
+  by_repo: [
+    { group: 'acme/widgets', family: 'acme', usd: 8.34, sessions: 4 },
+    { group: 'globex/gears', family: 'globex', usd: 2, sessions: 2 },
+  ],
+  by_agent: [
+    { group: 'claude-code', usd: 11, sessions: 6 },
+    { group: 'codex', usd: 1.34, sessions: 1 },
+  ],
+  by_model: [
+    { group: 'model-x', usd: 11, sessions: 6 },
+    { group: 'model-y', usd: 1.34, sessions: 1 },
+  ],
+  weekly: [
+    { week: '2026-09-21', usd: 3 },
+    { week: '2026-09-28', usd: 6.34 },
+    { week: '2026-10-05', usd: 3 },
+  ],
+};
+
+export const REPORT_WITH_ADHOC: YieldReport = { ...REPORT, adhoc: ADHOC };

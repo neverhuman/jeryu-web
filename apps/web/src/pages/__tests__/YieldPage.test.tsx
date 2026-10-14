@@ -1,7 +1,8 @@
 // YieldPage.test.tsx — the Yield page on a mocked `GET /api/v1/yield`: the
 // headline and KPI row, the funnel, the arms table and its "not enough data
 // yet", the breakdown and its cut, the todo lists, the controls in the
-// request, and the states (loading, empty, older server, not an admin, error).
+// request, the ad-hoc agent sessions beside (never inside) those numbers, and
+// the states (loading, empty, older server, not an admin, error).
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -9,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { YieldPage } from '../yield/YieldPage';
 import { windowDates } from '../yield/yieldModel';
 import { errorResponse, json, recordHeaders, renderAt, type Override, type Recorded } from './shiftPageHelpers';
-import { REPORT, row } from './yieldTestData';
+import { ADHOC, REPORT, REPORT_WITH_ADHOC, row } from './yieldTestData';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -77,6 +78,74 @@ describe('YieldPage', () => {
     expect(screen.getByTestId('yield-price-sources')).toHaveTextContent(
       'Window 2026-09-11 to 2026-10-09 (UTC).'
     );
+  });
+
+  it('shows ad-hoc session spend after the breakdown, outside cost per merged change', async () => {
+    const calls = mockYieldApi((req) => (req.pathname === '/api/v1/yield' ? json(REPORT_WITH_ADHOC) : undefined));
+    renderAt('/yield', '/yield', <YieldPage />);
+    const section = await screen.findByTestId('yield-adhoc');
+    expect(within(section).getByRole('heading', { name: 'Ad-hoc agent sessions' })).toBeInTheDocument();
+    expect(screen.getByTestId('yield-adhoc-note')).toHaveTextContent('not in cost per merged change');
+    // The headline is todo work alone, whatever the sessions spent.
+    expect(screen.getByTestId('yield-kpi-per-merged')).toHaveTextContent('$5.00');
+    expect(screen.getByTestId('yield-adhoc-tile-total')).toHaveTextContent('$12.34');
+    expect(screen.getByTestId('yield-adhoc-tile-sessions')).toHaveTextContent('7');
+    expect(screen.getByTestId('yield-adhoc-tile-unattributed')).toHaveTextContent('$1.20');
+
+    // After the breakdown, before the todo lists.
+    const breakdown = screen.getByTestId('yield-breakdown-table');
+    expect(breakdown.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(section.compareDocumentPosition(screen.getByTestId('yield-costliest')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const table = within(section).getByTestId('yield-adhoc-table');
+    expect(within(table).getByRole('columnheader', { name: 'Family' })).toBeInTheDocument();
+    expect(screen.getByTestId('yield-adhoc-group-acme')).toHaveTextContent('acme574%$9.14');
+    expect(screen.getByTestId('yield-adhoc-remainder')).toHaveTextContent('No family—10%$1.20');
+    expect(within(table).getByTestId('yield-adhoc-total')).toHaveTextContent('All7100%$12.34');
+    expect(within(section).getByRole('img', { name: /^Ad-hoc spend by week, 2026-09-21 to 2026-10-05/ })).toBeInTheDocument();
+
+    const cut = within(section).getByRole('group', { name: 'Break ad-hoc spend down by' });
+    fireEvent.click(within(cut).getByRole('button', { name: 'Repository' }));
+    const repo = await screen.findByTestId('yield-adhoc-group-acme/widgets');
+    expect(within(repo).getByRole('link', { name: 'acme/widgets' })).toHaveAttribute('href', '/repos/jeryu/acme/widgets');
+    expect(repo).toHaveTextContent('acme');
+    expect(within(cut).getByRole('button', { name: 'Repository' })).toHaveAttribute('aria-pressed', 'true');
+    // The ad-hoc cut is the page's own choice: it never changes the request.
+    expect(yieldCalls(calls).every((query) => !query.has('adhoc'))).toBe(true);
+  });
+
+  it('hides the ad-hoc section on a server that does not send it', async () => {
+    mockYieldApi();
+    renderAt('/yield', '/yield', <YieldPage />);
+    await screen.findByTestId('yield-breakdown-table');
+    expect(screen.queryByTestId('yield-adhoc')).toBeNull();
+  });
+
+  it('says so in a line when no ad-hoc session spent in the window', async () => {
+    mockYieldApi((req) =>
+      req.pathname === '/api/v1/yield'
+        ? json({
+            ...REPORT,
+            adhoc: { ...ADHOC, total_usd: 0, sessions: 0, unattributed_usd: 0, by_family: [], by_repo: [], by_agent: [], by_model: [], weekly: [] },
+          })
+        : undefined
+    );
+    renderAt('/yield', '/yield', <YieldPage />);
+    expect(await screen.findByTestId('yield-adhoc-none')).toHaveTextContent(
+      'No ad-hoc agent session reported spend in this window.'
+    );
+    expect(screen.queryByTestId('yield-adhoc-table')).toBeNull();
+  });
+
+  it('still shows ad-hoc spend in a window with no todo work', async () => {
+    mockYieldApi((req) =>
+      req.pathname === '/api/v1/yield'
+        ? json({ ...REPORT_WITH_ADHOC, totals: row(), groups: [], weekly: [], experiments: [], costliest: [], scrap: [] })
+        : undefined
+    );
+    renderAt('/yield?adhoc=model', '/yield', <YieldPage />);
+    expect(await screen.findByText('No work in this window.')).toBeInTheDocument();
+    expect(screen.getByTestId('yield-adhoc-group-model-x')).toHaveTextContent('$11.00');
   });
 
   it('holds an arm back until it has enough data', async () => {
