@@ -22,6 +22,7 @@ import {
   Coins,
   Cog,
   FolderGit2,
+  Gauge,
   GitMerge,
   Layers,
   LifeBuoy,
@@ -42,6 +43,7 @@ import { SESSIONS_PATH } from '../pages/SessionsPage';
 import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { WORK_PATH } from '../pages/shift/workPaths';
 import { YIELD_PATH } from '../pages/yield/yieldModel';
+import { SCORECARD_PATH } from '../pages/scorecard';
 import type { AttentionArea } from '../pages/needsYou/needsYouModel';
 
 /**
@@ -245,6 +247,19 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     keywords: ['quality', 'gate', 'jankurai', 'proof', 'score', 'findings', 'dispute'],
     useWhen:
       'Use this when a score surprises you: it shows what the gate would have blocked, and who disagreed.',
+    group: 'system',
+  },
+  {
+    id: 'nav.scorecard',
+    label: 'Scorecard',
+    path: SCORECARD_PATH,
+    icon: Gauge,
+    paletteIcon: 'gauge',
+    shortcut: 'g c',
+    keywords: ['scorecard', 'outcomes', 'delivery', 'lead time', 'failure', 'recovery'],
+    useWhen:
+      'Use this when you want delivery outcomes: speed, quality, recovery, economics and unknown measurement sources.',
+    adminOnly: true,
     group: 'system',
   },
   {

@@ -34,6 +34,7 @@ import { RepositoriesPage } from '../pages/RepositoriesPage';
 import { SearchPage } from '../pages/search/SearchPage';
 import { SessionPage } from '../pages/SessionPage';
 import { SessionsPage } from '../pages/SessionsPage';
+import { ScorecardPage } from '../pages/scorecard';
 import { RepositoryAgentsPage } from '../pages/RepositoryAgentsPage';
 import { RepositoryFamilyPage } from '../pages/RepositoryFamilyPage';
 import { RepositoryPullRequestsPage } from '../pages/RepositoryPullRequestsPage';
@@ -99,6 +100,8 @@ export const router = createBrowserRouter([
       { path: 'intelligence', element: <IntelligencePage /> },
       // Spend against what reached main: cost per merged change.
       { path: 'yield', element: <YieldPage /> },
+      // Outcome delivery scorecard: speed, quality, recovery and economics.
+      { path: 'scorecard', element: <ScorecardPage /> },
       // The same graph, laid out by dependency depth and coloured by pin staleness.
       { path: DEPENDENCIES_PATH.slice(1), element: <DependenciesPage /> },
       // Quality gate: how the jankurai/proof score behaves, rule -> head -> findings.

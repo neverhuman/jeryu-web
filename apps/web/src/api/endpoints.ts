@@ -6,6 +6,7 @@
 import type { RepoGraphInclude } from './types/controlPlane';
 import type { PipelineEventsQuery, PipelineHistogramQuery } from './types/pipeline';
 import type { SearchQuery } from './types/search';
+import type { ScorecardQuery } from './types/scorecard';
 import type { UsageQuery } from './types/usage';
 import type { YieldQuery } from './types/yield';
 
@@ -381,6 +382,16 @@ export const endpoints = {
     if (query.by) qs.set('by', query.by);
     const suffix = qs.toString();
     return suffix ? `/api/v1/yield?${suffix}` : '/api/v1/yield';
+  },
+
+  /** Delivery outcome scorecard, unknown-aware and admin-only. */
+  scorecard: (query: ScorecardQuery): string => {
+    const qs = new URLSearchParams();
+    if (query.window) qs.set('window', query.window);
+    if (query.family) qs.set('family', query.family);
+    if (query.repo) qs.set('repo', query.repo);
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/scorecard?${suffix}` : '/api/v1/scorecard';
   },
 
   /** Account agent enrollments. */

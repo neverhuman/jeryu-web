@@ -53,6 +53,7 @@ const DESTINATIONS = [
     bare: '/intelligence/dependencies',
   },
   { label: 'Quality gate', scoped: '/quality-gate?family=acme', bare: '/quality-gate' },
+  { label: 'Scorecard', scoped: '/scorecard?family=acme', bare: '/scorecard' },
   // The section's own path is its first tab: the hop keeps the scope.
   { label: 'Shared tools', scoped: '/shared-tools/findings?family=acme', bare: '/shared-tools/findings' },
 ] as const;
@@ -67,6 +68,7 @@ const CHORDS = [
   { key: 'r', scoped: '/repos?family=acme' },
   { key: 'f', scoped: '/runners?family=acme' },
   { key: 'i', scoped: '/intelligence?family=acme' },
+  { key: 'c', scoped: '/scorecard?family=acme' },
   { key: 't', scoped: '/shared-tools/findings?family=acme' },
 ] as const;
 

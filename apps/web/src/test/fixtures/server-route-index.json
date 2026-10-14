@@ -63,6 +63,7 @@
     "/api/v1/release-board",
     "/api/v1/release-board/{family}",
     "/api/v1/release-pins",
+    "/api/v1/scorecard",
     "/api/v1/repos",
     "/api/v1/repos/{id}",
     "/api/v1/repos/{id}/agent-runs",
