@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import type { FlowReport } from '../../api/types';
 import { pillClass } from '../../components/tone/tone';
 import type { Tone } from '../../components/tone/tone';
+import { LIST_OPEN_PROP, listRowProps, useListKeys } from '../../hooks/useListKeys';
 import { etaWords, lotsAt, waitingWords } from './flowModel';
 
 const STATE_TONE: Record<string, Tone> = {
@@ -25,6 +26,7 @@ export interface FlowLotsProps {
 }
 
 export function FlowLots({ report, station, now }: FlowLotsProps): JSX.Element {
+  const listRef = useListKeys<HTMLOListElement>();
   const label = report.stations.find((candidate) => candidate.id === station)?.label ?? station;
   const lots = lotsAt(report, station);
   return (
@@ -37,10 +39,11 @@ export function FlowLots({ report, station, now }: FlowLotsProps): JSX.Element {
           Nothing is at {label} right now.
         </p>
       ) : (
-        <ol className="flow-lots">
+        <ol className="flow-lots" ref={listRef}>
           {lots.map((lot) => (
-            <li key={`${lot.station}-${lot.lot_id}`} className="flow-lots__row">
-              <Link className="flow-lots__link" to={lot.href} data-testid={`flow-lot-${lot.lot_id}`}>
+            <li key={`${lot.station}-${lot.lot_id}`} className="flow-lots__row"
+              {...listRowProps} data-list-key={`${lot.station}-${lot.lot_id}`}>
+              <Link {...LIST_OPEN_PROP} className="flow-lots__link" to={lot.href} data-testid={`flow-lot-${lot.lot_id}`}>
                 {lot.lot_id}
               </Link>
               <span className={pillClass(STATE_TONE[lot.state] ?? 'unknown')}>{lot.state}</span>

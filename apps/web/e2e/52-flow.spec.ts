@@ -120,7 +120,11 @@ test.describe('Flow', () => {
 
     // The lot opens the work itself, which is where its trace is.
     await page.getByTestId('flow-card-gate').click();
-    await page.getByTestId('flow-lot-acme-0001').click();
+    await page.keyboard.press('j');
+    await expect(lots.locator('[data-list-row]').first()).toBeFocused();
+    await page.keyboard.press('k');
+    await expect(lots.locator('[data-list-row]').first()).toBeFocused();
+    await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/work\/acme-0001$/);
   });
 
@@ -149,13 +153,16 @@ test.describe('Flow', () => {
     await expect(page).toHaveURL(/\/flow\?station=gate/);
     await expect(page.getByTestId('flow-lots')).toContainText('At Gate, oldest first');
 
+    await page.goto('/activity');
+    await expect(page.getByTestId('flow-line-strip')).toBeVisible();
+    const rendered = await persistRenderedEvidence(page, 'flow-activity-strip');
+    expect(rendered.geometry.width, 'Activity rendered with the strip above it').toBeGreaterThan(0);
+
     // The wall is the feed itself: no strip on it.
     await page.goto('/activity?wall=1');
     await expect(page.getByTestId('activity-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
 
-    const rendered = await persistRenderedEvidence(page, 'flow-activity-strip');
-    expect(rendered.geometry.width, 'Activity rendered with the strip above it').toBeGreaterThan(0);
   });
 
   test('phone dark mode stacks the line with no sideways scroll @action:flow.phone_dark', async ({

@@ -22,6 +22,8 @@ import { Link } from 'react-router-dom';
 import type { FlowReport } from '../../api/types';
 import { toneClass } from '../tone/tone';
 import { useFlow } from '../../hooks/useFlow';
+import { isPipelineForbidden, isPipelineUnavailable } from '../../hooks/usePipeline';
+import { ErrorState } from '../state';
 import {
   bottleneckNote,
   lineTotals,
@@ -217,7 +219,18 @@ export function FlowLineStrip({
   testId = 'flow-line-strip',
 }: FlowLineStripProps): JSX.Element | null {
   const report = useFlow(family ? { family } : {});
-  if (report.isError || !report.data) return null;
+  if (report.isPending) return null;
+  if (report.isError) {
+    if (isPipelineForbidden(report.error)) return null;
+    if (isPipelineUnavailable(report.error)) return null;
+    return (
+      <ErrorState
+        title="Could not load the delivery line."
+        error={report.error}
+        onRetry={() => void report.refetch()}
+      />
+    );
+  }
   return (
     <LineStrip
       report={report.data}

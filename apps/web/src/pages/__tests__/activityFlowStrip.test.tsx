@@ -6,7 +6,7 @@
 // station nothing has reached left blank. A reader the forge will not answer
 // `/api/v1/flow` for is shown no strip at all, and the wall has none.
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ActivityPage } from '../activity';
@@ -82,6 +82,20 @@ describe('Activity line strip', () => {
         'family=acme-split'
       )
     );
+    expect(calls.filter((call) => call.pathname === '/api/v1/flow').every(
+      (call) => new URLSearchParams(call.search).get('family') === 'acme-split'
+    )).toBe(true);
+  });
+
+  it('shows unexpected failures and lets the reader retry', async () => {
+    let unavailable = true;
+    mockWithFlow(() => unavailable ? errorResponse(500, 'temporary failure') : json(FLOW_REPORT));
+    renderAt('/activity', '/activity', <ActivityPage />);
+    expect(await screen.findByText('Could not load the delivery line.')).toBeInTheDocument();
+    unavailable = false;
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(await screen.findByTestId('flow-line-strip')).toBeInTheDocument();
+    expect(screen.queryByText('Could not load the delivery line.')).not.toBeInTheDocument();
   });
 
   it('leaves itself out for a reader who may not read the line', async () => {

@@ -165,8 +165,8 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   const feed = useActivityFeed(query);
   // The line strip above the band is scoped the way the feed is, except that a
   // repository moves on its family's line: `/api/v1/flow` scopes by family, so
-  // a pinned repository asks for the family it belongs to, and a repository
-  // whose family nothing names gets the whole line rather than an invented one.
+  // a pinned repository waits for its named family before showing a line.
+  // Missing repository metadata must never broaden this to every family.
   const stripRepos = useRepositories({}, { enabled: pinned });
   const stripFamily = pinned
     ? ((stripRepos.data?.repositories ?? []).find(
@@ -415,7 +415,7 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           (a repository's station counts are its family's line — the flow API
           scopes by family). A reader who may not read `/api/v1/flow` is shown
           no strip at all, and the wall has no room for one. */}
-      {wall ? null : <FlowLineStrip family={stripFamily} />}
+      {wall || (pinned && !stripFamily) ? null : <FlowLineStrip family={stripFamily} />}
 
       {/* The band is a filter on the feed, so it sits above the chips it sets.
           On the wall it has no chips to set and goes under the counters, at the
