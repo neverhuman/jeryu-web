@@ -17,6 +17,13 @@ export type { MergeBoxProps } from './MergeBox';
 export { gateExplanation } from './passportGates';
 export { mergeGateReasons, pendingGateRun } from './mergeGateModel';
 export type { MergeGateReason } from './mergeGateModel';
+export {
+  ownerPathHeadline,
+  ownerPathRows,
+  ownerStandingNote,
+  showOwnerPaths,
+} from './ownerPathsModel';
+export type { OwnerPathRow } from './ownerPathsModel';
 export { QueueToMerge } from './QueueToMerge';
 export type { QueueToMergeProps } from './QueueToMerge';
 export { ReviewList } from './ReviewList';

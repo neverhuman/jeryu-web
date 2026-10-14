@@ -1235,3 +1235,57 @@
 .merge-box__gate-words a {
   color: inherit;
 }
+
+/* What an owner can do about the blockers above: one row per blocker, the
+   clearable ones marked. The list is never shorter than the gate's. */
+.merge-box__owner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.merge-box__owner-headline {
+  margin: 0;
+  color: var(--color-fg-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.merge-box__owner-standing {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.merge-box__owner-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.merge-box__owner-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.merge-box__owner-row--owner {
+  color: var(--color-fg-primary);
+}
+
+.merge-box__owner-icon {
+  flex: none;
+  color: var(--color-fg-muted);
+}
+
+.merge-box__owner-row--owner .merge-box__owner-icon {
+  color: var(--color-accent-primary);
+}

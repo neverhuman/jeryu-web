@@ -172,6 +172,9 @@ export const endpoints = {
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge`,
   pullMergeAttempt: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/merge-attempt`,
+  /** Which of a blocked passport's blockers the viewer can clear, and how. */
+  pullOwnerPaths: (id: string, prNumber: string): string =>
+    `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/owner-paths`,
   /** POST joins the merge queue (idempotent); DELETE leaves it. */
   pullQueue: (id: string, prNumber: string): string =>
     `/api/v1/repos/${encodeURIComponent(id)}/pulls/${encodeURIComponent(prNumber)}/queue`,

@@ -47,6 +47,7 @@ import { useApprovePr } from '../hooks/useApprovePr';
 import { useAuth } from '../hooks/useAuth';
 import { useBootstrap } from '../hooks/useBootstrap';
 import { useMergeAttempt } from '../hooks/useMergeAttempt';
+import { useOwnerMergePaths } from '../hooks/useOwnerMergePaths';
 import { useMergePr } from '../hooks/useMergePr';
 import { useSetPullState } from '../hooks/useSetPullState';
 import { useSetPullDraft } from '../hooks/useSetPullDraft';
@@ -156,6 +157,13 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const approve = useApprovePr(repoId, prNumber);
   const mergeMutation = useMergePr(repoId, prNumber);
   const mergeAttempt = useMergeAttempt(repoId, prNumber);
+  // What the reader can do about each blocker. Only asked for on a head the
+  // passport has not cleared: a passing head has nothing to explain.
+  const ownerPaths = useOwnerMergePaths(
+    repoId,
+    prNumber,
+    detail.data?.merge_passport.status === 'blocked'
+  );
   const review = useSubmitReview(repoId, prNumber);
   // Close / reopen goes through the forge's GitHub-shaped edge, which keys on
   // `owner/name` rather than the opaque repository id.
@@ -597,6 +605,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
                 mergeMutation.error && !headDrift
                   ? mergeMutation.error.message
                   : null,
+              ownerPaths: ownerPaths.data ?? null,
               closeError: setState.error ? setState.error.message : null,
               queueOffer: repoArchived ? null : (
                 <QueueToMerge

@@ -148,3 +148,33 @@ export interface MergePullRequest {
   commit_title?: string | null;
   commit_message?: string | null;
 }
+
+/** One blocker of a blocked passport, as `GET /pulls/{number}/owner-paths`
+ *  describes it to the account asking. */
+export interface OwnerBlockerPath {
+  /** The passport blocker's canonical code, unchanged. */
+  code: string;
+  /** The passport's own message, unchanged. */
+  message: string;
+  /** Whether a repository admin can clear this one themselves. */
+  owner_can_clear: boolean;
+  /** The step that clears it, in one sentence. Never empty. */
+  how: string;
+}
+
+/** Wire shape of `GET /pulls/{number}/owner-paths`: which of the blockers the
+ *  viewer can clear and how. Every blocker of the passport appears, in the
+ *  passport's order, whether or not it is theirs. */
+export interface OwnerMergePaths {
+  head_sha: string;
+  base_ref: string;
+  passport_hash: string | null;
+  blocked: boolean;
+  /** `enforce_admins` on the protected base; null when it has no rule. */
+  enforce_admins: boolean | null;
+  viewer_is_admin: boolean;
+  /** Admin of this repository AND protection that leaves admins out. */
+  viewer_may_clear_as_owner: boolean;
+  blockers: OwnerBlockerPath[];
+  headline: string;
+}

@@ -28,6 +28,7 @@ import {
   GitMerge,
   RotateCcw,
   Send,
+  ShieldCheck,
   XCircle,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
@@ -36,7 +37,11 @@ import { Link } from 'react-router-dom';
 import { ActionButton } from '../action/ActionButton';
 import { CiProgress } from '../ciProgress/CiProgress';
 import { useServerNow } from '../../hooks/useServerNow';
-import type { PullRequestChecks, PullRequestDetail } from '../../api/types';
+import type {
+  OwnerMergePaths,
+  PullRequestChecks,
+  PullRequestDetail,
+} from '../../api/types';
 import { canChangeDraft } from '../../pages/pullDraftModel';
 import {
   mergeChecklist,
@@ -49,6 +54,13 @@ import {
   pendingGateRun,
   type MergeGateReason,
 } from './mergeGateModel';
+import {
+  ownerPathHeadline,
+  ownerPathRows,
+  ownerStandingNote,
+  showOwnerPaths,
+  type OwnerPathRow,
+} from './ownerPathsModel';
 import {
   pullStateAction,
   targetState,
@@ -107,6 +119,12 @@ export interface MergeBoxProps {
   reviewError?: string | null;
   /** The server's merge refusal, shown verbatim. */
   mergeError?: string | null;
+  /**
+   * Which of the blockers above the reader can clear and how
+   * (`GET /pulls/{number}/owner-paths`); null while reading, or on a head
+   * whose passport passes.
+   */
+  ownerPaths?: OwnerMergePaths | null;
   /** The server's refusal of a close / reopen, shown verbatim. */
   closeError?: string | null;
   /**
@@ -188,6 +206,25 @@ function GateReasonItem({
   );
 }
 
+function OwnerPathItem({ row }: { row: OwnerPathRow }): JSX.Element {
+  return (
+    <li
+      className={`merge-box__owner-row${row.owner ? ' merge-box__owner-row--owner' : ''}`}
+      data-owner={row.owner ? 'yes' : 'no'}
+      data-testid={`pr-owner-path-${row.code}`}
+    >
+      {row.owner ? (
+        <ShieldCheck aria-hidden="true" size={13} className="merge-box__owner-icon" />
+      ) : (
+        <Circle aria-hidden="true" size={13} className="merge-box__owner-icon" />
+      )}
+      <span>
+        <strong>{row.message}</strong> {row.how}
+      </span>
+    </li>
+  );
+}
+
 export function MergeBox({
   detail,
   checks = null,
@@ -206,6 +243,7 @@ export function MergeBox({
   draftRefusal = null,
   reviewError = null,
   mergeError = null,
+  ownerPaths = null,
   closeError = null,
   queueOffer = null,
   isBusy = false,
@@ -483,6 +521,27 @@ export function MergeBox({
             />
           ))}
         </ol>
+      ) : null}
+
+      {!settled && showOwnerPaths(ownerPaths) ? (
+        <section className="merge-box__owner" data-testid="pr-owner-paths">
+          <h3 className="merge-box__owner-headline">
+            {ownerPathHeadline(ownerPaths)}
+          </h3>
+          {ownerStandingNote(ownerPaths) ? (
+            <p
+              className="merge-box__owner-standing"
+              data-testid="pr-owner-standing"
+            >
+              {ownerStandingNote(ownerPaths)}
+            </p>
+          ) : null}
+          <ul className="merge-box__owner-rows">
+            {ownerPathRows(ownerPaths).map((row) => (
+              <OwnerPathItem key={row.code} row={row} />
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {mergeable ? (

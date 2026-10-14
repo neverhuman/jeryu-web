@@ -70,6 +70,7 @@ const endpointSamples = {
   pullDraft: ['repo-1', '7'],
   pullMerge: ['repo-1', '7'],
   pullMergeAttempt: ['repo-1', '7'],
+  pullOwnerPaths: ['repo-1', '7'],
   pullQueue: ['repo-1', '7'],
   repoMergeQueue: ['repo-1'],
   repoAutomation: ['repo-1'],
