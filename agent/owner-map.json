@@ -17,6 +17,7 @@
     "agent/": "agent",
     "apps/web/": "jeryu-web",
     "contracts/AGENTS.md": "jeryu-web",
+    "contracts/generated.lock": "jeryu-web",
     "contracts/generated/": "jeryu-web",
     "deny.toml": "workspace",
     "docs/": "docs",

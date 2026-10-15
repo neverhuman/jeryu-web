@@ -90,6 +90,11 @@
       "lane": "check",
       "purpose": "verify jeryu-web owned source remains build-addressable"
     },
+    "contracts/generated.lock": {
+      "command": "bash ops/ci/contract_compat.sh",
+      "lane": "check",
+      "purpose": "verify the generated contract mirror matches its lock"
+    },
     "contracts/generated/": {
       "command": "just check",
       "lane": "check",

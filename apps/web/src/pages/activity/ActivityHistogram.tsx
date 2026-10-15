@@ -61,7 +61,10 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   // A missing route leaves the band out. Other errors keep the range controls
   // available so a saved wide range can recover. Until the answer is in, it keeps its
   // height, so the list below it does not jump once the bars arrive.
-  if (histogram.isError && histogram.error instanceof ApiError && histogram.error.status === 404) return null;
+  // A forge without the histogram route answers 404: the band is absent, not broken.
+  const band: 'served' | 'absent' =
+    histogram.isError && histogram.error instanceof ApiError && histogram.error.status === 404 ? 'absent' : 'served';
+  if (band === 'absent') return null;
 
   const buckets = histogramBuckets(histogram.data);
   const readout = histogramReadout(histogram.data, rangeHours(range));
