@@ -31,7 +31,7 @@ export interface FlowLotsProps {
 export function FlowLots({ report, station, now, repo, onInspect }: FlowLotsProps): JSX.Element {
   const listRef = useListKeys<HTMLOListElement>();
   const label = report.stations.find((candidate) => candidate.id === station)?.label ?? station;
-  const lots = lotsAt(report, station).filter(lot => !repo || report.repo === repo || lot.lot_id.startsWith(`${repo}#`) || lot.href.includes(repo));
+  const lots = lotsAt(report, station).filter(lot => !repo || report.repo === repo || lot.lot_id.startsWith(`${repo}#`) || safeFlowHref(lot.href)?.startsWith(`/${repo}/`));
   return (
     <section className="page__section" aria-labelledby="flow-lots-title" data-testid="flow-lots">
       <h2 className="page__section-title" id="flow-lots-title">

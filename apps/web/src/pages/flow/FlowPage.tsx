@@ -28,7 +28,6 @@ import { UseThisWhen } from '../../layout/UseThisWhen';
 import {
   DEFAULT_WINDOW_DAYS,
   FLOW_WINDOWS,
-  STATION_PARAM,
   WINDOW_PARAM,
   parseMode,
   parseStation,
@@ -98,7 +97,7 @@ export function FlowPage(): JSX.Element {
         <EmptyState
           icon={RouteIcon}
           title="Layout is not on this page yet."
-          description="Live mode is here: the stations, their waits and the bottleneck. The tools serving each station are on Runners until Layout lands."
+          description="Live mode shows repository decisions and station history. Reporting services are linked from each station and on Runners."
           action={<Link to="/runners">Runners</Link>}
         />
       ) : isPending ? (

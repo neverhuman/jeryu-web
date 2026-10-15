@@ -63,7 +63,7 @@ export function FlowDetail({
   const tools =
     layout.data?.stations.find((s) => s.id === station)?.tools ?? [];
   const states = mode === 'arrivals' ? ['arrived', 'started'] : OUTCOMES;
-  const entries = Object.entries(history.data?.daily ?? {});
+  const entries = Object.entries(history.data?.daily ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const maximum = Math.max(
     1,
     ...entries.map(([, counts]) =>

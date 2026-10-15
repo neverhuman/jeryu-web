@@ -198,3 +198,33 @@ describe('Flow repository requirements', () => {
     expect(screen.queryByText(/No checks required by branch rule/)).toBeNull();
   });
 });
+
+
+describe('Flow review accuracy', () => {
+  it('selects the only deploy repository and preserves unspecified release stations', async () => {
+    mockFlowApi(req => req.pathname === '/api/v1/flow' ? json({ ...FLOW_REPORT, repository_wip: [{ repo: 'acme/other-deploy', station: 'gate', waiting: 1, active: 0, held: 0 }] }) : undefined);
+    renderAt('/flow', '/flow', <FlowPage />);
+    expect(await screen.findByRole('combobox', { name:'Change repository' })).toHaveValue('acme/other-deploy');
+    expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('1 waiting');
+    for (const id of ['pin','stage','deploy']) expect(screen.getByTestId(`flow-card-${id}`)).toHaveTextContent('No open visits recorded');
+    expect(screen.getByText('Route configuration unavailable')).toBeInTheDocument();
+  });
+  it('does not invent a consumer repository or discard required contexts on an unprotected branch', async () => {
+    mockFlowApi(req => {
+      if (req.pathname.endsWith('/automation')) return json({ repo:'acme/jeryu-web', defaultBranch:'main', requiredContexts:['widgets/required'], checks:[],actors:[],mirrors:[],grants:[],warnings:[] });
+      if (req.pathname.endsWith('/protection')) return errorResponse(404,'no rule');
+      if (req.pathname === '/api/v1/flow') return json({ ...FLOW_REPORT, repository_wip:[{repo:'acme/jeryu-web',station:'gate',waiting:1,active:0,held:0}] });
+      return undefined;
+    });
+    renderAt('/flow','/flow',<FlowPage />);
+    await waitFor(() => expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('1 required check'));
+    expect(screen.queryByTestId('flow-card-consumer-gate')).toBeNull();
+    expect(screen.getByTestId('flow-card-deploy')).toBeInTheDocument();
+  });
+  it('does not include a similarly named repository in a station list', async () => {
+    mockFlowApi(req => req.pathname === '/api/v1/flow' ? json(FLOW_REPORT) : undefined);
+    renderAt('/flow?repo=acme/widget&station=gate','/flow',<FlowPage />);
+    await screen.findByTestId('flow-detail');
+    expect(screen.queryByTestId('flow-lot-acme/widgets#42')).toBeNull();
+  });
+});

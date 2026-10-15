@@ -50,3 +50,9 @@ first-pass success, handoff delay, and regrouping with explicit denominators and
 coverage. Count mechanical work without treating its frequency as code quality.
 Expose effective repo-owned route configuration (pass-through, automatic,
 human-only, mixed) and its revision before claiming these modes from the map.
+
+Follow-up to the initial review: stations remain inspectable when release routing
+is unknown; no consumer repository is fabricated from a source name. Missing
+repository/station rows say no open visits are recorded, rather than displaying
+hard zeros. Gate requirements include both configuration responses, so a stale
+or missing branch-protection response cannot erase a reported required context.

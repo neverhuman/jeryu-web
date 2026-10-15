@@ -47,6 +47,8 @@ test.describe('Flow', () => {
     await expect(page.getByText('◇ Current revision satisfies configured merge requirements?')).toBeVisible();
     await expect(page.getByText('Yes → ⏸ awaiting activation authorization')).toHaveCount(0);
     await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
+    for (const id of ['pin', 'stage', 'deploy']) await expect(page.getByTestId(`flow-card-${id}`)).toBeVisible();
+    await expect(page.getByText('Route configuration unavailable')).toBeVisible();
 
     await page.getByTestId('flow-card-gate').click();
     await expect(page.getByTestId('flow-daily-chart')).toBeVisible();

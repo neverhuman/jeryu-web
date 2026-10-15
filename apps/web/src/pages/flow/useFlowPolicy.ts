@@ -21,6 +21,7 @@ export function useFlowPolicy(repo: string) {
   const checks = known
     ? [
         ...new Set([
+          ...(automation.data?.requiredContexts ?? []),
           ...(protection.data?.required_status_checks?.contexts ?? []),
           ...(protection.data?.required_jankurai_proof?.enabled
             ? [JANKURAI_PROOF_CHECK]

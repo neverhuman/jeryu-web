@@ -25,10 +25,10 @@ export function FlowMap({ report, active, repo, onStation, journey }: Props) {
       ? repo
       : (repos.find((r) => r.endsWith('/jeryu-web')) ??
         repos.find((r) => !r.endsWith('-deploy')) ??
+        repos[0] ??
         '');
-  const shipper = source.endsWith('/jeryu-web')
-    ? `${source.split('/')[0]}/jeryu-deploy`
-    : '';
+  const candidate = `${source.split('/')[0]}/jeryu-deploy`;
+  const shipper = source.endsWith('/jeryu-web') && repos.includes(candidate) ? candidate : '';
   const sourcePolicy = useFlowPolicy(source);
   const consumerPolicy = useFlowPolicy(shipper);
   const releaseRepo =
@@ -57,8 +57,7 @@ export function FlowMap({ report, active, repo, onStation, journey }: Props) {
             </small>
           )}
           <span>
-            {wip?.waiting ?? 0} waiting · {wip?.active ?? 0} running ·{' '}
-            {wip?.held ?? 0} held
+            {wip ? `${wip.waiting} waiting · ${wip.active} running · ${wip.held} held` : report.repository_wip ? 'No open visits recorded' : 'Station counts unavailable'}
           </span>
         </button>
         <Link
@@ -192,6 +191,11 @@ export function FlowMap({ report, active, repo, onStation, journey }: Props) {
           </div>
         </div>
       )}
+      {!releaseRepo && <div className="flow-map__lane">
+        <h3>Recorded release stations <small>Route configuration unavailable</small></h3>
+        <p>These stations remain inspectable. Their ordering and requirements depend on the repository’s release route.</p>
+        <div className="flow-map__parallel">{node('pin',source)}{node('stage',source)}{node('deploy',source)}</div>
+      </div>}
       <p className="flow__footnote">
         Requirements above describe current default-branch protection, not every
         repository-owned rule or historical policy. Unknown configuration is not
