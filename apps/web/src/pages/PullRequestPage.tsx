@@ -91,6 +91,7 @@ import {
   extractDrift,
   type HeadDriftInfo,
 } from './pullRequestDrift';
+import { replacementOf } from './pullRepoGroupsModel';
 import { repoFrontPath, repoShellCrumbs } from './repoBrowserModel';
 
 import './page.css';
@@ -479,6 +480,10 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
           <span className="pr-cockpit__meta">
             <code title={summary.head_sha}>{summary.head_sha.slice(0, 7)}</code>
           </span>
+          <ReplacementLine
+            replacement={replacementOf(data)}
+            pullPath={(number) => pullBasePath(provider, fullName, String(number))}
+          />
         </div>
       </PageHeader>
 
@@ -634,5 +639,47 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * What replaced this pull request, or what it replaced: the forge's own
+ * record, as links. A pull request closed because a later one carries its
+ * change is not abandoned work, and the replacement says where the work went.
+ */
+function ReplacementLine({
+  replacement,
+  pullPath,
+}: {
+  replacement: {
+    supersededBy: number | null;
+    supersededByState: string | null;
+    supersedes: number[];
+  };
+  pullPath: (number: number) => string;
+}): JSX.Element | null {
+  const { supersededBy, supersededByState, supersedes } = replacement;
+  if (supersededBy === null && supersedes.length === 0) return null;
+  return (
+    <span className="pr-cockpit__meta" data-testid="pr-replacement">
+      {supersededBy !== null ? (
+        <span>
+          Replaced by <Link to={pullPath(supersededBy)}>#{supersededBy}</Link>
+          {supersededByState ? <> ({supersededByState})</> : null}
+        </span>
+      ) : null}
+      {supersededBy !== null && supersedes.length > 0 ? <span aria-hidden="true">·</span> : null}
+      {supersedes.length > 0 ? (
+        <span>
+          Replaces{' '}
+          {supersedes.map((number, index) => (
+            <span key={number}>
+              {index > 0 ? ', ' : null}
+              <Link to={pullPath(number)}>#{number}</Link>
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </span>
   );
 }

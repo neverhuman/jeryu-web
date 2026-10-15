@@ -218,6 +218,7 @@ function row(
     state: 'mergeable',
     frontier: false,
     alsoWaiting: 0,
+    replaced: [],
   };
   return flow;
 }

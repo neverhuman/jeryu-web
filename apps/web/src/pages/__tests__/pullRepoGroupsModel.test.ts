@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { PullRequestSummary } from '../../api/types';
+import type { PullRequestSummary, PullSummaryRow } from '../../api/types';
 import {
   awaitingReleaseByRepo,
   awaitingReleaseCount,
@@ -56,7 +56,7 @@ const NO_RELEASES: ReleaseLadder = {
   uncertain: false,
 };
 
-const row = (pr: PullRequestSummary, l: ReleaseLadder = UNKNOWN_LADDER): TimelineRow => ({
+const row = (pr: PullSummaryRow, l: ReleaseLadder = UNKNOWN_LADDER): TimelineRow => ({
   pr,
   ladder: l,
   supersedes: [],
@@ -289,7 +289,7 @@ describe('buildRepoGroups', () => {
     ladders.set(91, ladder('dev', 'v9'));
     const { groups } = buildRepoGroups(
       [pull(90, 'closed', { title: 'first go — superseded by #91' }), pull(91, 'merged')],
-      { ladderFor }
+      { ladderFor: () => UNKNOWN_LADDER }
     );
     const rows = groups[0]?.rows ?? [];
     expect(numbers(rows)).toEqual([91]);
@@ -444,14 +444,76 @@ describe('shift work as branch rows', () => {
   });
 });
 
+describe('a pull request closed as replaced', () => {
+  it('is folded under its replacement rather than dropped', () => {
+    const { groups } = buildRepoGroups(
+      [
+        { ...pull(1, 'closed'), superseded_by: 2 },
+        { ...pull(2, 'open'), supersedes: [1] },
+      ],
+      { ladderFor: () => UNKNOWN_LADDER }
+    );
+    const rows = groups[0]?.rows ?? [];
+    const replacement = rows.find((r) => r.kind === 'pr' && r.row.pr.number === 2);
+    expect(replacement?.kind).toBe('pr');
+    expect(replacement?.kind === 'pr' ? replacement.replaced.map((r) => r.pr.number) : []).toEqual([
+      1,
+    ]);
+    // It is not a row of its own, and not in the History either: the
+    // replacement carries it.
+    expect(rows.some((r) => r.kind === 'pr' && r.row.pr.number === 1)).toBe(false);
+    expect(groups[0]?.older.some((r) => r.kind === 'pr' && r.row.pr.number === 1)).toBe(false);
+  });
+
+  it('folds each repository under its own replacement when the numbers repeat', () => {
+    const { groups } = buildRepoGroups(
+      [
+        { ...pull(1, 'closed', { repo: 'acme/widgets' }), superseded_by: 2 },
+        { ...pull(2, 'open', { repo: 'acme/widgets' }), supersedes: [1] },
+        { ...pull(1, 'closed', { repo: 'globex/parts' }), superseded_by: 2 },
+        { ...pull(2, 'open', { repo: 'globex/parts' }), supersedes: [1] },
+      ],
+      { ladderFor: () => UNKNOWN_LADDER }
+    );
+    for (const group of groups) {
+      const replacement = group.rows.find((r) => r.kind === 'pr' && r.row.pr.number === 2);
+      const replaced =
+        replacement?.kind === 'pr' ? replacement.replaced.map((r) => r.pr.repo.id) : [];
+      expect(replaced).toEqual([group.repo]);
+    }
+  });
+});
+
 describe('linkSupersessions', () => {
-  const rowsOf = (pulls: PullRequestSummary[]): TimelineRow[] => pulls.map((pr) => row(pr));
+  const rowsOf = (pulls: PullSummaryRow[]): TimelineRow[] => pulls.map((pr) => row(pr));
 
   it('reads a declaration from a label as well as the title', () => {
     const rows = rowsOf([pull(1, 'closed', { labels: ['superseded by #2'] }), pull(2, 'merged')]);
     linkSupersessions(rows);
     expect(rows[0]?.supersededBy).toBe(2);
     expect(rows[1]?.supersedes).toEqual([1]);
+  });
+
+  it('takes the link the forge recorded, even when the replacement is still open', () => {
+    const rows = rowsOf([
+      { ...pull(1, 'closed'), superseded_by: 2 },
+      { ...pull(2, 'open'), supersedes: [1] },
+    ]);
+    linkSupersessions(rows);
+    expect(rows[0]?.supersededBy).toBe(2);
+    expect(rows[1]?.supersedes).toEqual([1]);
+  });
+
+  it('prefers the recorded link over what the titles say', () => {
+    const rows = rowsOf([
+      { ...pull(1, 'closed', { title: 'superseded by #2' }), superseded_by: 3 },
+      pull(2, 'merged'),
+      pull(3, 'merged'),
+    ]);
+    linkSupersessions(rows);
+    expect(rows[0]?.supersededBy).toBe(3);
+    expect(rows[1]?.supersedes).toEqual([]);
+    expect(rows[2]?.supersedes).toEqual([1]);
   });
 
   it('spots a branch that landed under another number by its head sha', () => {

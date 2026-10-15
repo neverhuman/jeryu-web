@@ -674,6 +674,12 @@ export interface MockPullRequestDetail {
   description?: string | null;
   /** Reviewers whose approval the detail reports against this head. */
   reviews?: Array<Record<string, unknown>>;
+  /** The pull request that replaced this one, as the forge records it. */
+  superseded_by?: number | null;
+  /** Where that replacement stands (`open`, `merged`, ...). */
+  superseded_by_state?: string | null;
+  /** The pull requests this one replaced, ascending. */
+  supersedes?: number[];
 }
 
 /**
@@ -752,6 +758,9 @@ export async function mockPullRequestDetail(
       evaluated_at: '2026-05-26T00:00:00Z',
     },
     passport_hash: pr.passport_hash ?? 'passport-hash-0001',
+    superseded_by: pr.superseded_by ?? null,
+    superseded_by_state: pr.superseded_by_state ?? null,
+    supersedes: pr.supersedes ?? [],
   };
   await page.route(
     /\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+$/,

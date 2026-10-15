@@ -124,6 +124,42 @@ test.describe('PR cockpit (W-T-13)', () => {
     );
   });
 
+  test('a replaced pull request points at what carries its change @action:pr.replacement', async ({
+    page,
+  }) => {
+    await mockBootstrap(page);
+    await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
+    await mockPullRequestCommits(page, [
+      { sha: PR_SHA, message: 'Cherry-picked onto main', date: '2026-05-26T00:00:00Z' },
+    ]);
+    // #42 was closed when #45 landed its change; #42 had itself replaced #41.
+    await mockPullRequestDetail(page, {
+      repoId: `${REPO.host}:${REPO.owner}/${REPO.name}`,
+      number: PR_NUMBER,
+      title: 'Hold the frozen base',
+      state: 'closed',
+      head_sha: PR_SHA,
+      passport: 'blocked',
+      can_merge: false,
+      superseded_by: 45,
+      superseded_by_state: 'merged',
+      supersedes: [41],
+    });
+
+    await page.goto(`/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/${PR_NUMBER}`);
+    const replacement = page.getByTestId('pr-replacement');
+    await expect(replacement).toContainText('Replaced by #45 (merged)', { timeout: 15_000 });
+    await expect(replacement).toContainText('Replaces #41');
+    await expect(replacement.getByRole('link', { name: '#45' })).toHaveAttribute(
+      'href',
+      `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/45`
+    );
+    await expect(replacement.getByRole('link', { name: '#41' })).toHaveAttribute(
+      'href',
+      `/repos/${REPO.host}/${REPO.owner}/${REPO.name}/pulls/41`
+    );
+  });
+
   test('deep PR route returns 200 (SPA fallback) @bff', async ({ request }) => {
     const res = await request.get(
       `/repos/${REPO.host}/${REPO.owner}%2F${REPO.name}/pulls/${PR_NUMBER}`,

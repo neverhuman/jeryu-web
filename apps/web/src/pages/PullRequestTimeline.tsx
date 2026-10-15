@@ -2,7 +2,7 @@ import { Fragment, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAttentionAction } from '../hooks/useAttentionAction';
 
-import type { AttentionItem, PullRequestSummary } from '../api/types';
+import type { AttentionItem, PullRequestSummary, PullSummaryRow } from '../api/types';
 import { ActionPreviewDialog } from '../components/action/ActionPreviewDialog';
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { usePullBaseHistory, type BaseHistoryLookup } from '../hooks/usePullBaseHistory';
@@ -31,6 +31,7 @@ import {
   type FlowRow,
   type PullRow,
   type RepoGroup,
+  type TimelineRow,
 } from './pullRepoGroupsModel';
 import { draftBadgeLabel } from './pullDraftModel';
 import { pullRequestPath } from './pullRoomModel';
@@ -65,7 +66,7 @@ export function PullRequestTimeline({
   repoKeyFor,
   attention = NO_ATTENTION,
 }: {
-  pulls: PullRequestSummary[];
+  pulls: PullSummaryRow[];
   emptyMessage: string;
   /** Several repositories: each section is headed by `owner/name`. */
   showRepo?: boolean;
@@ -272,6 +273,24 @@ function BaseGraphView({
       attention={attention}
     />
   );
+  // A pull request that replaced another carries it: the replaced row is drawn
+  // under it, joined by a replacement edge, instead of being left out.
+  const withReplaced = (row: FlowRow) =>
+    row.kind === 'pr' && row.replaced.length > 0 ? (
+      <Fragment key={flowKey(row)}>
+        {flow(row)}
+        {row.replaced.map((replaced) => (
+          <ReplacedRow
+            key={`replaced-${replaced.pr.number}`}
+            replaced={replaced}
+            by={row.row.pr.number}
+            repo={group.repo}
+          />
+        ))}
+      </Fragment>
+    ) : (
+      flow(row)
+    );
   return (
     <div className="pull-graph" data-testid={`pull-graph-${group.repo}`}>
       {graph.lines.map((line) => (
@@ -290,7 +309,7 @@ function BaseGraphView({
               ) : (
                 <Fragment key={node.sha || `unknown-${index}`}>
                   <BaseCommitRow node={node} line={line} repo={group.repo} />
-                  {node.rows.map(flow)}
+                  {node.rows.map(withReplaced)}
                 </Fragment>
               )
             )}
@@ -310,6 +329,41 @@ function BaseGraphView({
         </section>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A pull request closed because a later one carries its change, drawn under
+ * that later one: the replacement edge of the graph. Closed work that was
+ * replaced is not abandoned work, so it is shown rather than hidden, and its
+ * row links to the pull request it was.
+ */
+function ReplacedRow({
+  replaced,
+  by,
+  repo,
+}: {
+  replaced: TimelineRow;
+  /** The pull request that replaced it. */
+  by: number;
+  repo: string;
+}): JSX.Element {
+  const { pr } = replaced;
+  return (
+    <li
+      className="pull-graph__replaced"
+      data-testid={`pull-replaced-${repo}-${pr.number}`}
+      data-replaced-by={by}
+    >
+      <span className="pull-graph__replaced-edge" aria-hidden="true">
+        &#8627;
+      </span>
+      <span className="pull-timeline__sr">Replaced by #{by}: </span>
+      <Link to={pullRequestPath(pr.repo.host, `${pr.repo.owner}/${pr.repo.name}`, pr.number)}>
+        <span className="pull-timeline__number">#{pr.number}</span> {pr.title}
+      </Link>
+      <span className="pull-graph__replaced-note"> · closed, replaced by #{by}</span>
+    </li>
   );
 }
 

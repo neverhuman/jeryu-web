@@ -1,3 +1,4 @@
+import type { PullRequestDetail } from '../../../../../contracts/generated/PullRequestDetail';
 import type { PullRequestSummary } from '../../../../../contracts/generated/PullRequestSummary';
 import type { ReviewThread } from '../../../../../contracts/generated/ReviewThread';
 
@@ -126,9 +127,34 @@ export interface PullRequestThreadList {
   threads: ReviewThread[];
 }
 
+/**
+ * What replaced a pull request, as the forge records it (replaced -> replacing,
+ * both in the same repository). Every pull request payload carries both fields:
+ * `superseded_by` is the pull request that replaced this one, `supersedes` the
+ * ones it replaced, ascending. Optional here, so a page talking to a forge from
+ * before the link existed reads them as absent rather than wrong.
+ */
+export interface PullReplacement {
+  superseded_by?: number | null;
+  /**
+   * Where the replacement itself stands (`open`, `merged`, `closed`, `draft`),
+   * so a row can say whether the work has landed. Absent on the GitHub edge's
+   * payload and on an older forge.
+   */
+  superseded_by_state?: string | null;
+  supersedes?: number[];
+}
+
+/** A pull request row or summary, with its replacement link. */
+export type PullSummaryRow = PullRequestSummary & PullReplacement;
+
+/** The pull request page's payload, with the replacement link on both levels. */
+export type PullDetailPayload = PullRequestDetail &
+  PullReplacement & { summary: PullSummaryRow };
+
 /** Wire shape of `GET /api/v1/repos/{id}/pulls`. */
 export interface PullRequestListResponse {
-  items: PullRequestSummary[];
+  items: PullSummaryRow[];
   total: number;
   /** What the server applied; `has_more` says another page follows. */
   page?: { limit: number; page: number; total: number; has_more: boolean };

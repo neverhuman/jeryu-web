@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { PullRequestSummary } from '../../api/types';
+import type { PullRequestSummary, PullSummaryRow } from '../../api/types';
 import { PullRequestTimeline } from '../PullRequestTimeline';
 import { renderAt } from './shiftPageHelpers';
 
@@ -59,6 +59,40 @@ describe('the timeline ordered by base', () => {
     expect(screen.queryByTestId('pull-graph-acme/widgets')).toBeNull();
   });
 
+  it('folds a pull request closed as replaced under its replacement, with the edge', async () => {
+    mockHistory('a');
+    const replaced: PullSummaryRow = {
+      ...pull(1, 'a'),
+      state: 'closed',
+      superseded_by: 2,
+      superseded_by_state: 'open',
+    };
+    const replacement: PullSummaryRow = { ...pull(2, 'a'), supersedes: [1] };
+    render('/pull-room?order=base', [replaced, replacement]);
+
+    const rail = await screen.findByTestId('pull-graph-acme/widgets-main');
+    // The replacement's row leads, the pull request it replaced hangs off it.
+    const order = [...rail.querySelectorAll(':scope > ol > li')].map(
+      (item) => item.getAttribute('data-testid') ?? item.className
+    );
+    expect(order).toEqual([
+      'pull-base-acme/widgets-main-aaaaaaa',
+      'pull-timeline-acme/widgets-2',
+      'pull-replaced-acme/widgets-1',
+    ]);
+    const edge = within(rail).getByTestId('pull-replaced-acme/widgets-1');
+    expect(edge).toHaveAttribute('data-replaced-by', '2');
+    expect(edge).toHaveTextContent('closed, replaced by #2');
+    expect(within(edge).getByRole('link')).toHaveAttribute(
+      'href',
+      '/repos/jeryu/acme/widgets/pulls/1'
+    );
+    // The replacement names what it carries, and the closed row is not
+    // listed again under Merged.
+    expect(screen.getByTestId('pull-timeline-acme/widgets-2')).toHaveTextContent('supersedes #1');
+    expect(screen.queryByTestId('pull-timeline-acme/widgets-1')).toBeNull();
+  });
+
   it('draws the bases unplaced when the history does not answer', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ error: { code: 'not_found', message: 'no' } }), {
@@ -73,7 +107,7 @@ describe('the timeline ordered by base', () => {
   });
 });
 
-function render(path: string, pulls: PullRequestSummary[]): void {
+function render(path: string, pulls: PullSummaryRow[]): void {
   renderAt(
     path,
     '/pull-room',

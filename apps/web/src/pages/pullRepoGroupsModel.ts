@@ -15,7 +15,7 @@
 
 import { DEFAULT_FORGE_HOST } from '../hooks/useForgeHost';
 import { compareInstants } from '../format/when';
-import type { PullRequestSummary } from '../api/types';
+import type { PullReplacement, PullRequestSummary, PullSummaryRow } from '../api/types';
 import type { GhostGroup, GhostRow } from './pullGhostsModel';
 import { queueHref } from './shift/workPaths';
 import { ladderCapped, ladderUndecided, type PipId, type ReleaseLadder } from './releaseChannelsModel';
@@ -88,7 +88,7 @@ export function pullRowHint(row: PullRow): string | undefined {
 }
 
 export interface TimelineRow {
-  pr: PullRequestSummary;
+  pr: PullSummaryRow;
   ladder: ReleaseLadder;
   /** Closed PRs whose change this one carries instead. */
   supersedes: number[];
@@ -127,6 +127,12 @@ export interface PullRow {
   frontier: boolean;
   /** On a not-yet-released frontier: how many more merged PRs wait with it. */
   alsoWaiting: number;
+  /**
+   * The closed pull requests this one replaced, newest first: they are folded
+   * under this row rather than hidden, so a reader of the graph can follow the
+   * work from the pull request that was closed to the one that carries it.
+   */
+  replaced: TimelineRow[];
 }
 
 /** A repository's rows in one list: branches, then pull requests from least far to shipped. */
@@ -182,7 +188,7 @@ export interface RepoTimeline {
 }
 
 export function buildRepoGroups(
-  pulls: readonly PullRequestSummary[],
+  pulls: readonly PullSummaryRow[],
   options: RepoGroupsOptions
 ): RepoTimeline {
   const rowLimit = options.rowLimit ?? ROW_LIMIT;
@@ -195,17 +201,41 @@ export function buildRepoGroups(
   linkSupersessions(rows);
 
   const pullsByRepo = new Map<string, PullRow[]>();
+  // Numbers repeat across repositories, so a row is keyed by both.
+  const byNumber = new Map<string, PullRow>();
+  const folded: TimelineRow[] = [];
   let awaitingRelease = 0;
   for (const row of rows) {
-    // A closed pull request another one carried is a line on its successor.
-    if (row.pr.state === 'closed' && row.supersededBy !== null) continue;
+    // A closed pull request another one carried is folded under its successor,
+    // not listed on its own and not dropped: the replacement row carries it.
+    if (row.pr.state === 'closed' && row.supersededBy !== null) {
+      folded.push(row);
+      continue;
+    }
     const state = pullStateOf(row);
     if (state === 'merged') awaitingRelease += 1;
     const repo = repoOf(row.pr);
     const list = pullsByRepo.get(repo) ?? [];
-    list.push({ kind: 'pr', row, state, frontier: false, alsoWaiting: 0 });
+    const pullRow: PullRow = {
+      kind: 'pr',
+      row,
+      state,
+      frontier: false,
+      alsoWaiting: 0,
+      replaced: [],
+    };
+    list.push(pullRow);
+    byNumber.set(`${repo}#${row.pr.number}`, pullRow);
     pullsByRepo.set(repo, list);
   }
+  for (const row of folded) {
+    const successor =
+      row.supersededBy === null
+        ? undefined
+        : byNumber.get(`${repoOf(row.pr)}#${row.supersededBy}`);
+    successor?.replaced.push(row);
+  }
+  for (const successor of byNumber.values()) successor.replaced.sort(newestFirst);
 
   const { branchesByRepo, unassigned, shift } = fileGhosts(options);
   const repos = new Set([...pullsByRepo.keys(), ...branchesByRepo.keys()]);
@@ -542,10 +572,17 @@ export function awaitingReleaseWarning(repos: readonly AwaitingRepo[], shown = 5
 }
 
 /**
- * A closed pull request whose change another one carries: either it says so
- * (`superseded by #12`, in a label or the title — what the shift driver and
- * pr-redteam can write mechanically), or a merged PR has the very same head
- * sha, which means the branch landed under a different number.
+ * A closed pull request whose change another one carries. The forge's own
+ * record answers it (`superseded_by`, written by a close-as-replaced), and a
+ * recorded link is taken whatever state the replacement is in: a replacement
+ * still open is exactly the case a reader needs to follow.
+ *
+ * Without a recorded link the pull requests' own words are read, as before:
+ * either the closed one says so (`superseded by #12`, in a label or the title —
+ * what the shift driver and pr-redteam write mechanically), or a merged PR has
+ * the very same head sha, which means the branch landed under a different
+ * number. A derived link only folds a row under a *merged* successor, because
+ * pointing at another closed PR on a guess would hide both.
  */
 export function linkSupersessions(rows: TimelineRow[]): void {
   const byNumber = new Map(rows.map((row) => [row.pr.number, row]));
@@ -554,14 +591,21 @@ export function linkSupersessions(rows: TimelineRow[]): void {
     if (row.pr.state === 'merged') mergedBySha.set(row.pr.head_sha, row);
   }
   for (const row of rows) {
+    const recorded = row.pr.superseded_by ?? null;
+    if (recorded !== null) {
+      const successor = byNumber.get(recorded);
+      if (successor && successor.pr.number !== row.pr.number) {
+        if (row.pr.state === 'closed') row.supersededBy = successor.pr.number;
+        successor.supersedes.push(row.pr.number);
+        continue;
+      }
+    }
     if (row.pr.state !== 'closed') continue;
     const declared = declaredSuccessor(row.pr);
     const successor =
       (declared !== null ? byNumber.get(declared) : undefined) ??
       mergedBySha.get(row.pr.head_sha) ??
       null;
-    // Only a merged successor folds a closed row away: pointing at another
-    // closed PR would hide both.
     if (!successor || successor.pr.state !== 'merged' || successor.pr.number === row.pr.number) {
       continue;
     }
@@ -569,6 +613,24 @@ export function linkSupersessions(rows: TimelineRow[]): void {
     successor.supersedes.push(row.pr.number);
   }
   for (const row of rows) row.supersedes.sort((a, b) => a - b);
+}
+
+/**
+ * What a pull request page says about its replacement: the pull request that
+ * replaced this one, and the ones it replaced. The forge's record is the
+ * source; `supersedes` keeps the order the forge gave (ascending).
+ */
+export function replacementOf(pr: PullReplacement): {
+  supersededBy: number | null;
+  /** Where the replacement stands, when the forge said. */
+  supersededByState: string | null;
+  supersedes: number[];
+} {
+  return {
+    supersededBy: pr.superseded_by ?? null,
+    supersededByState: pr.superseded_by_state ?? null,
+    supersedes: pr.supersedes ?? [],
+  };
 }
 
 const SUPERSEDED_BY = /supersed(?:ed|es)\s*(?:by)?\s*#(\d+)/i;
