@@ -338,3 +338,22 @@
 .flow-closures__explanation { white-space: pre-wrap; }
 .flow-closures select { max-width: 100%; }
 .flow-closures a { text-decoration: underline; text-underline-offset: .15em; }
+
+/* Family, product and repository: the aggregate journey above each lane. */
+.flow-map__family { display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:baseline; font-size:var(--font-size-sm); }
+.flow-map__family span { color:var(--color-fg-secondary); font-size:var(--font-size-xs); }
+.flow-map__product { display:flex; flex-direction:column; gap:var(--space-3); border:1px solid var(--color-border-subtle); border-radius:8px; padding:var(--space-4); }
+.flow-map__product > h3 { margin:0; font-size:var(--font-size-md); }
+.flow-map__product h4 { margin:0; font-size:var(--font-size-sm); }
+.flow-map__product h3 small,.flow-map__product h4 small { color:var(--color-fg-secondary); font-size:var(--font-size-xs); font-weight:400; }
+.flow-map__repos { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:var(--space-2); }
+.flow-map__repos > li { display:flex; flex-direction:column; gap:var(--space-1); border:1px solid var(--color-border-subtle); border-radius:6px; padding:var(--space-2); min-width:0; }
+.flow-map__repos > li.is-focus { border-color:var(--color-accent-primary); }
+.flow-map__repos > li > button { text-align:left; font:inherit; font-weight:600; color:var(--color-fg-primary); background:transparent; border:0; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; overflow-wrap:anywhere; }
+.flow-map__repos > li > small { color:var(--color-fg-secondary); font-size:var(--font-size-xs); }
+.flow-map__repo-badges { display:flex; flex-wrap:wrap; gap:var(--space-1); }
+.flow-map__repo-badges em { font-style:normal; font-size:var(--font-size-xs); color:var(--color-fg-secondary); border:1px solid var(--color-border-subtle); border-radius:999px; padding:0 var(--space-2); }
+.flow-map__coverage { border:1px dashed var(--color-accent-warning); border-radius:8px; padding:var(--space-3); font-size:var(--font-size-xs); }
+.flow-map__coverage ul { margin:var(--space-2) 0 0; padding-left:var(--space-4); display:flex; flex-direction:column; gap:var(--space-1); }
+.flow-map__edge button { font:inherit; color:var(--color-fg-primary); background:transparent; border:0; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+@media(max-width:600px) { .flow-map__repos { grid-template-columns:minmax(0,1fr); } }

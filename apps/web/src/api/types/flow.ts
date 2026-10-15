@@ -120,7 +120,64 @@ export interface FlowClosure {
   replacement: { href: string; label: string; state: string } | null;
   needs_attention: boolean;
 }
+/** A repository's configured review and check requirements. */
+export interface FlowRoute {
+  /** `automated`, `human_only`, `no_gate` or `unknown`. */
+  kind: string;
+  /** `branch_protection`, `no_protection_rule` or `unreadable`. */
+  source: string;
+  approvals: number | null;
+  required_checks: string[] | null;
+}
+
+/** One contributing repository of a product. */
+export interface FlowRepoNode {
+  repo: string;
+  /** `source` or `integration`. */
+  role: string;
+  /** True when more than one product of the family delivers it. */
+  shared: boolean;
+  pins_into: string[];
+  /** `pin_lock`, `declared`, `recorded_pin_events`, `none` or `unknown`. */
+  pin_source: string;
+  route: FlowRoute;
+  active_lots: number;
+  no_current_work: boolean;
+}
+
+/** Distinct work, one bucket per lot by its furthest recorded evidence. */
+export interface FlowWork {
+  active_lots: number;
+  changes: number;
+  pull_requests: number;
+  pin_pull_requests: number;
+  release_artifacts: number;
+}
+
+export interface FlowProduct {
+  id: string;
+  label: string;
+  family: string;
+  /** `declared` or `family_default`. */
+  source: string;
+  repos: FlowRepoNode[];
+  integration: string | null;
+  release: { repo: string; source: string; stations: string[] } | null;
+  work: FlowWork;
+}
+
+export interface FlowTopology {
+  families: { family: string; products: number; repos: number; work: FlowWork }[];
+  products: FlowProduct[];
+  unscoped_active_lots: number;
+  unknown: { scope: string; field: string; reason: string }[];
+  families_truncated: boolean;
+}
+
 export interface FlowReport {
+  /** The configured family/product/repository delivery topology. Absent on a
+   * server that predates it, which leaves the map on recorded visits only. */
+  topology?: FlowTopology;
   closures?: FlowClosure[];
   lifecycle_problems?: string[];
   repo?: string | null;

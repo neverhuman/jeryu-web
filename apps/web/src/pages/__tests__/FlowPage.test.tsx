@@ -188,24 +188,175 @@ describe('FlowPage', () => {
   });
 });
 
-describe('Flow repository handoff', () => {
-  it('shows a second independent PR cycle and scopes its station request', async () => {
-    const calls = mockFlowApi(req => req.pathname === '/api/v1/flow' ? json({ ...FLOW_REPORT, repository_wip: [
-      { repo: 'acme/jeryu-web', station: 'gate', waiting: 1, active: 0, held: 0 },
-      { repo: 'acme/jeryu-deploy', station: 'gate', waiting: 2, active: 0, held: 0 },
-    ] }) : undefined);
-    renderAt('/flow', '/flow', <FlowPage />);
-    await screen.findByTestId('flow-card-consumer-gate');
-    expect(screen.getAllByText(/Current revision satisfies configured/)).toHaveLength(2);
-    expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('1 waiting');
-    expect(screen.getByTestId('flow-card-consumer-gate')).toHaveTextContent('2 waiting');
-    fireEvent.click(screen.getByTestId('flow-card-consumer-gate'));
-    await waitFor(() => expect(calls.some(c => c.pathname === '/api/v1/flow' && new URLSearchParams(c.search).get('repo') === 'acme/jeryu-deploy')).toBe(true));
-    expect(await screen.findByTestId('flow-detail')).toHaveTextContent('Selected station · acme/jeryu-deploy');
-    expect(screen.getByText(/awaiting activation authorization/)).toBeInTheDocument();
-  });
+const ROUTE = (approvals: number | null, checks: string[] | null, kind: string) => ({
+  kind,
+  source: kind === 'unknown' ? 'unreadable' : 'branch_protection',
+  approvals,
+  required_checks: checks,
 });
 
+const repoNode = (repo: string, over: Record<string, unknown> = {}) => ({
+  repo,
+  role: 'source',
+  shared: false,
+  pins_into: [],
+  pin_source: 'none',
+  route: ROUTE(1, ['required'], 'automated'),
+  active_lots: 0,
+  no_current_work: true,
+  ...over,
+});
+
+const WORK = (over: Record<string, number> = {}) => ({
+  active_lots: 0,
+  changes: 0,
+  pull_requests: 0,
+  pin_pull_requests: 0,
+  release_artifacts: 0,
+  ...over,
+});
+
+/** One product, as a family that declares none gets by default. */
+const ONE_PRODUCT = {
+  families: [{ family: 'acme', products: 1, repos: 3, work: WORK({ active_lots: 2, pull_requests: 1, pin_pull_requests: 1 }) }],
+  products: [
+    {
+      id: 'acme',
+      label: 'acme',
+      family: 'acme',
+      source: 'family_default',
+      integration: 'acme/widgets-deploy',
+      release: { repo: 'acme/widgets-deploy', source: 'integration_repo', stations: ['stage', 'deploy'] },
+      work: WORK({ active_lots: 2, pull_requests: 1, pin_pull_requests: 1 }),
+      repos: [
+        repoNode('acme/widgets', { pins_into: ['acme/widgets-deploy'], pin_source: 'pin_lock', active_lots: 1, no_current_work: false }),
+        repoNode('acme/widgets-deploy', { role: 'integration', route: ROUTE(0, [], 'no_gate'), active_lots: 1, no_current_work: false }),
+        repoNode('acme/widgets-core', { pins_into: ['acme/widgets-deploy'], pin_source: 'pin_lock', route: ROUTE(2, [], 'human_only') }),
+      ],
+    },
+  ],
+  unscoped_active_lots: 0,
+  unknown: [],
+  families_truncated: false,
+};
+
+/** Two product groups sharing one dependency, as veox-ai is configured. */
+const TWO_PRODUCTS = {
+  families: [{ family: 'veox-ai', products: 2, repos: 5, work: WORK({ active_lots: 2, changes: 1, pull_requests: 1 }) }],
+  products: [
+    {
+      id: 'portal', label: 'Veox portal', family: 'veox-ai', source: 'declared',
+      integration: 'veox-ai/veox-portal-deploy',
+      release: { repo: 'veox-ai/veox-portal-deploy', source: 'declared', stations: ['stage', 'deploy'] },
+      work: WORK({ active_lots: 2, changes: 1, pull_requests: 1 }),
+      repos: [
+        repoNode('veox-ai/veox-portal', { active_lots: 1, no_current_work: false, pins_into: ['veox-ai/veox-portal-deploy'], pin_source: 'pin_lock' }),
+        repoNode('veox-ai/veox-shared', { shared: true, active_lots: 1, no_current_work: false, pins_into: ['veox-ai/veox-portal-deploy'], pin_source: 'pin_lock' }),
+        repoNode('veox-ai/veox-portal-deploy', { role: 'integration' }),
+      ],
+    },
+    {
+      id: 'studio', label: 'Veox studio', family: 'veox-ai', source: 'declared',
+      integration: null, release: null,
+      work: WORK({ active_lots: 1, pull_requests: 1 }),
+      repos: [
+        repoNode('veox-ai/veox-studio'),
+        repoNode('veox-ai/veox-shared', { shared: true, active_lots: 1, no_current_work: false }),
+      ],
+    },
+  ],
+  unscoped_active_lots: 1,
+  unknown: [
+    { scope: 'studio', field: 'integration_repo', reason: 'no_pin_lock_or_declaration' },
+    { scope: 'family', field: 'lot_repository', reason: 'visits_name_no_repository' },
+  ],
+  families_truncated: false,
+};
+
+describe('Flow family and product topology', () => {
+  it('shows every configured repository converging on the shared chain, and scopes a click', async () => {
+    const calls = mockFlowApi((req) =>
+      req.pathname === '/api/v1/flow'
+        ? json({
+            ...FLOW_REPORT,
+            topology: ONE_PRODUCT,
+            repository_wip: [
+              { repo: 'acme/widgets', station: 'gate', waiting: 1, active: 0, held: 0 },
+              { repo: 'acme/widgets-deploy', station: 'gate', waiting: 2, active: 0, held: 0 },
+            ],
+          })
+        : undefined
+    );
+    renderAt('/flow', '/flow', <FlowPage />);
+    await screen.findByTestId('flow-product-acme');
+    // The family headline counts one work item once, however many stations it is at.
+    expect(screen.getByTestId('flow-family-acme')).toHaveTextContent(
+      '3 configured repositories · 2 in flight · 1 pull request · 1 pin pull request'
+    );
+    // A configured repository with no work in flight is still on the map.
+    expect(screen.getByTestId('flow-repo-acme/widgets-core')).toHaveTextContent('configured · no current work');
+    expect(screen.getByTestId('flow-repo-acme/widgets-core')).toHaveTextContent(
+      'No checks required by configuration · human decision only'
+    );
+    expect(screen.getByTestId('flow-repo-acme/widgets')).toHaveTextContent('Pins into acme/widgets-deploy (pin lock)');
+    expect(screen.getByTestId('flow-converge-acme')).toHaveTextContent('converge in acme/widgets-deploy');
+    // The source lane and the integration repository's own cycle are separate.
+    expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('1 waiting');
+    expect(screen.getByTestId('flow-card-consumer-gate')).toHaveTextContent('2 waiting');
+    expect(screen.getByTestId('flow-card-consumer-review')).toHaveTextContent(
+      'No approval required by configuration · pass-through'
+    );
+    expect(screen.getByText(/awaiting activation authorization/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('flow-card-consumer-gate'));
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) => c.pathname === '/api/v1/flow' && new URLSearchParams(c.search).get('repo') === 'acme/widgets-deploy'
+        )
+      ).toBe(true)
+    );
+    expect(await screen.findByTestId('flow-detail')).toHaveTextContent('Selected station · acme/widgets-deploy');
+    // The drilldown keeps the product visible and offers the way back.
+    expect(screen.getByTestId('flow-drilldown')).toHaveTextContent('acme/widgets-deploy');
+    expect(screen.getByTestId('flow-product-acme')).toBeInTheDocument();
+  });
+
+  it('groups several products, marks a shared dependency and discloses what is unknown', async () => {
+    mockFlowApi((req) =>
+      req.pathname === '/api/v1/flow' ? json({ ...FLOW_REPORT, topology: TWO_PRODUCTS }) : undefined
+    );
+    renderAt('/flow', '/flow', <FlowPage />);
+    await screen.findByTestId('flow-product-portal');
+    expect(screen.getByTestId('flow-product-studio')).toBeInTheDocument();
+    // The shared repository is in both products and marked in both.
+    expect(screen.getAllByTestId('flow-shared-veox-ai/veox-shared')).toHaveLength(2);
+    // The family total counts the shared work once; the products keep their own.
+    expect(screen.getByTestId('flow-family-veox-ai')).toHaveTextContent(
+      '5 configured repositories · 2 in flight'
+    );
+    expect(screen.getByTestId('flow-product-portal')).toHaveTextContent('2 in flight');
+    expect(screen.getByTestId('flow-product-studio')).toHaveTextContent('1 in flight');
+    // A product with no configured convergence point says so instead of guessing.
+    expect(screen.getByTestId('flow-converge-studio')).toHaveTextContent('No configured convergence point');
+    const coverage = screen.getByTestId('flow-topology-coverage');
+    expect(coverage).toHaveTextContent('studio: convergence point — no declaration and no readable pin lock');
+    expect(coverage).toHaveTextContent('1 recorded work item name no repository');
+    // Each product keeps its own addressable stations.
+    expect(screen.getByTestId('flow-card-portal-gate')).toBeInTheDocument();
+    expect(screen.getByTestId('flow-card-studio-gate')).toBeInTheDocument();
+  });
+
+  it('narrows to one product when a repository of it is picked', async () => {
+    mockFlowApi((req) =>
+      req.pathname === '/api/v1/flow' ? json({ ...FLOW_REPORT, topology: TWO_PRODUCTS }) : undefined
+    );
+    renderAt('/flow?repo=veox-ai/veox-studio', '/flow', <FlowPage />);
+    await screen.findByTestId('flow-product-studio');
+    expect(screen.queryByTestId('flow-product-portal')).toBeNull();
+    expect(screen.getByTestId('flow-card-gate')).toBeInTheDocument();
+  });
+});
 
 describe('Flow repository requirements', () => {
   it.each([0, 2])('reads required approvals (%s) and check pass-through from the branch rule', async (approvals) => {

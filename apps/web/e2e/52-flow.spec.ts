@@ -44,11 +44,20 @@ test.describe('Flow', () => {
     await page.goto('/flow');
     await expect(page.getByTestId('flow-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('flow-card-gate')).toContainText('3 waiting');
-    await expect(page.getByText('◇ Current revision satisfies configured merge requirements?')).toBeVisible();
-    await expect(page.getByText('Yes → ⏸ awaiting activation authorization')).toHaveCount(0);
+    // The contributing repository and the integration repository each have
+    // their own decision: the pin opens a second pull request.
+    await expect(page.getByText('◇ Current revision satisfies configured merge requirements?')).toHaveCount(2);
+    await expect(page.getByText('Yes → ⏸ awaiting activation authorization')).toBeVisible();
     await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
     for (const id of ['pin', 'stage', 'deploy']) await expect(page.getByTestId(`flow-card-${id}`)).toBeVisible();
-    await expect(page.getByText('Route configuration unavailable')).toBeVisible();
+    // The default view is the family's product journey: every configured
+    // repository, including one with no current work, converging on the chain
+    // the configuration records.
+    await expect(page.getByTestId('flow-family-acme')).toContainText('3 configured repositories');
+    await expect(page.getByTestId('flow-repo-acme/widgets-core')).toContainText('configured · no current work');
+    await expect(page.getByTestId('flow-converge-acme')).toContainText('converge in acme/widgets-deploy');
+    await expect(page.getByTestId('flow-card-consumer-gate')).toContainText('1 waiting');
+    await expect(page.getByText('Route configuration unavailable')).toHaveCount(0);
 
     await page.getByTestId('flow-card-gate').click();
     await expect(page.getByTestId('flow-daily-chart')).toBeVisible();

@@ -46,8 +46,60 @@ function lot(lotId: string, at: string, state: string, over: Over = {}): Over {
   };
 }
 
+/** The configured topology of the invented family: one product (the default a
+ *  family that declares none gets), three configured repositories, the pin
+ *  chain the integration repository's lock records, and a repository with no
+ *  current work. */
+function topology(): Over {
+  const work = (over: Over = {}) => ({
+    active_lots: 0, changes: 0, pull_requests: 0, pin_pull_requests: 0, release_artifacts: 0, ...over,
+  });
+  const route = (approvals: number | null, checks: string[] | null, kind: string) => ({
+    kind, source: kind === 'unknown' ? 'unreadable' : 'branch_protection', approvals, required_checks: checks,
+  });
+  const node = (repo: string, over: Over = {}) => ({
+    repo, role: 'source', shared: false, pins_into: [], pin_source: 'none',
+    route: route(1, ['widgets/required'], 'automated'), active_lots: 0, no_current_work: true, ...over,
+  });
+  return {
+    families: [{ family: 'acme', products: 1, repos: 3, work: work({ active_lots: 5, changes: 2, pull_requests: 2, pin_pull_requests: 1 }) }],
+    products: [
+      {
+        id: 'acme', label: 'acme', family: 'acme', source: 'family_default',
+        integration: 'acme/widgets-deploy',
+        release: { repo: 'acme/widgets-deploy', source: 'integration_repo', stations: ['stage', 'deploy'] },
+        work: work({ active_lots: 5, changes: 2, pull_requests: 2, pin_pull_requests: 1 }),
+        repos: [
+          node('acme/widgets', { pins_into: ['acme/widgets-deploy'], pin_source: 'pin_lock', active_lots: 4, no_current_work: false }),
+          node('acme/widgets-deploy', { role: 'integration', route: route(0, [], 'no_gate'), active_lots: 1, no_current_work: false }),
+          node('acme/widgets-core', { pins_into: ['acme/widgets-deploy'], pin_source: 'pin_lock', route: route(2, [], 'human_only') }),
+        ],
+      },
+    ],
+    unscoped_active_lots: 0,
+    unknown: [],
+    families_truncated: false,
+  };
+}
+
+/** Open visits per repository and station, so each lane counts its own work. */
+function repositoryWip(): Over[] {
+  const at = (repo: string, station: string, waiting: number, active: number, held = 0) => ({ repo, station, waiting, active, held });
+  return [
+    at('acme/widgets', 'queue', 2, 0),
+    at('acme/widgets', 'work', 0, 3),
+    at('acme/widgets', 'review', 1, 0, 1),
+    at('acme/widgets', 'gate', 3, 2),
+    at('acme/widgets', 'merge', 0, 1),
+    at('acme/widgets-deploy', 'gate', 1, 0),
+    at('acme/widgets-deploy', 'pin', 1, 0),
+  ];
+}
+
 function flowBody(params: URLSearchParams): Over {
   return {
+    topology: topology(),
+    repository_wip: repositoryWip(),
     closures: [
       { lot_id: 'acme/widgets#41', repo: 'acme/widgets', station: 'gate', href: '/acme/widgets/pull/41', title: 'Unexplained closure', kind: 'pull_request', disposition: 'needs_disposition', explanation: 'Original attempt closed.', replacement: null, needs_attention: true },
       { lot_id: 'acme/widgets#40', repo: 'acme/widgets', station: 'review', href: '/acme/widgets/pull/40', title: 'Replaced attempt', kind: 'pull_request', disposition: 'replacement_recorded', explanation: 'Superseded-by: #42', replacement: { href: '/acme/widgets/pull/42', label: 'acme/widgets#42', state: 'open' }, needs_attention: false },
@@ -56,6 +108,8 @@ function flowBody(params: URLSearchParams): Over {
     schema_version: 'jeryu.flow/v1',
     generated_at: '2026-10-14T12:00:00.000Z',
     family: params.get('family'),
+    // The server echoes the repository filter it answered for.
+    repo: params.get('repo'),
     days: Number(params.get('days') ?? 28),
     window: { since: '2026-09-16T12:00:00.000Z', until: '2026-10-14T12:00:00.000Z' },
     stations: [
