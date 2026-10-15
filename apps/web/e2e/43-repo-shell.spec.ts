@@ -63,7 +63,7 @@ async function seed(page: Page, viewer: Parameters<typeof mockBootstrap>[1] = {}
       id: REPO,
       default_branch: 'main',
       visibility: 'private',
-      description: 'The widget API',
+      description: 'The widget API (GitHub mirror: acme-oss/widget-api)',
       family: 'acme',
       open_pull_requests: 4,
       active_agents: 1,
@@ -129,6 +129,13 @@ test('every repository page carries the same header and tab bar @action:repo.she
 
     // The same header, on all six: the repository, its visibility, its family.
     await expect(page.getByTestId('repo-shell-title')).toHaveText('widget-api');
+    const mirror = page.getByTestId('repo-shell-header').getByRole('link', {
+      name: '(GitHub mirror: acme-oss/widget-api) (opens in a new window)', exact: true,
+    });
+    await expect(mirror).toHaveAttribute('href', 'https://github.com/acme-oss/widget-api');
+    await expect(mirror).toHaveAttribute('target', '_blank');
+    await expect(mirror).toHaveAttribute('rel', 'noopener noreferrer');
+    await expect(mirror.locator('svg')).toBeVisible();
     await expect(page.getByTestId('repo-header-family')).toHaveAttribute(
       'href',
       '/repos/family/acme'
@@ -155,6 +162,8 @@ test('every repository page carries the same header and tab bar @action:repo.she
     // Automation is marked because its merge identity cannot merge.
     await expect(page.getByTestId('repo-tab-automation-warning')).toBeVisible();
   }
+
+  await page.screenshot({ path: 'test-results/repo-shell-mirror.png' });
 
   // The Activity tab is the event log pinned to this repository.
   await shell.goto(`${BASE}/activity`);

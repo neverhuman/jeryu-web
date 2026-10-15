@@ -25,6 +25,7 @@ import {
   RepoFamilyRail,
   useFamilyRail,
 } from './RepoFamilyRail';
+import { RepoDescription } from './RepoDescription';
 import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoHealthPill } from './RepoHealthPill';
 import { RepoRoleBadge } from './RepoRoleBadge';
@@ -116,7 +117,7 @@ export function RepoLayout({
         parent="nav.repos"
         crumbs={repoShellCrumbs(provider, fullName, summary)}
         freshness={queryFreshness(resolved)}
-        subtitle={summary?.description || undefined}
+        subtitle={summary?.description ? <RepoDescription text={summary.description} /> : undefined}
         actions={
           summary ? (
             <>
