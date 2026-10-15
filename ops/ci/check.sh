@@ -2,6 +2,10 @@
 set -euo pipefail
 
 source ops/ci/lib.sh
+
+# Interface contracts: the generated mirror must match its reviewed lock (ADR 0015).
+sh ops/ci/contract_compat.sh
+
 if [[ -f Cargo.toml ]]; then
   cargo metadata --format-version 1 --no-deps >/dev/null
   if [[ "${JERYU_SPLIT_FULL_CHECK:-0}" == "1" ]]; then

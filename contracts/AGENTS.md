@@ -17,3 +17,9 @@ Forbidden edits:
 Proof lane:
 - `cargo test -p jeryu-readmodel --jobs 40 && cd apps/web && npm run typecheck`
 
+
+Compatibility lock (ADR 0015, jeryu-deploy `docs/adr`):
+- `contracts/generated.lock` pins the sha256 of every generated file;
+  `ops/ci/contract_compat.sh` fails the gate when they differ and names the
+  consumer. After a reviewed regeneration run it with `--write` and commit the
+  lock together with the generated files.
