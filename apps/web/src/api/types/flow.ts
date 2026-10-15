@@ -76,6 +76,21 @@ export interface FlowLine {
   finished: number;
 }
 
+/** Why a lot is held where it stopped. Absent on a server that predates holds. */
+export interface FlowHold {
+  /** `review_hold`, `gate_red`, `queue_conflict`, `queue_failed` or `superseded`. */
+  reason: string;
+  /** The reviewer's login, the check's name, `merge-queue`, or the replacing pull request. */
+  by: string;
+  /** The oldest event on the current head that caused the hold. */
+  since: string;
+  age_s: number;
+  /** The head is unchanged since the hold and no fix has been claimed. */
+  nobody_acting: boolean;
+  /** The pull request's review, for a review hold. */
+  review_href: string | null;
+}
+
 export interface FlowLot {
   lot_id: string;
   station: string;
@@ -89,6 +104,9 @@ export interface FlowLot {
   eta_unknown_stations: string[];
   slowest_ahead: string | null;
   href: string;
+  /** The pull request page, when the lot is bound to a pull request. */
+  pr_href?: string | null;
+  hold?: FlowHold | null;
 }
 
 export interface FlowWindow {

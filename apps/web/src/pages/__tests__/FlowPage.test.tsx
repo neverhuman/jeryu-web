@@ -121,7 +121,7 @@ describe('FlowPage', () => {
     expect(screen.getByTestId('flow-lot-acme-0001')).toHaveAttribute('href', '/work/acme-0001');
     expect(screen.getByTestId('flow-lot-acme/widgets#42')).toHaveAttribute(
       'href',
-      '/acme/widgets/pull/42'
+      '/repos/jeryu/acme/widgets/pulls/42'
     );
 
 
@@ -129,6 +129,20 @@ describe('FlowPage', () => {
     fireEvent.click(screen.getByTestId('flow-card-review'));
     await waitFor(() =>
       expect(screen.getByTestId('flow-lots')).toHaveTextContent('held — awaiting an explicit release decision')
+    );
+    // A lot held for a named reason says why, by whom, for how long, and
+    // links to its pull request and review; nobody acting is its own badge.
+    const hold = screen.getByTestId('flow-hold-acme/widgets#43');
+    expect(hold).toHaveTextContent('review held it');
+    expect(hold).toHaveTextContent('held by acme-reviewer, 5h 30m');
+    expect(within(hold).getByTestId('flow-nobody-acting-acme/widgets#43')).toHaveTextContent('nobody acting');
+    expect(within(hold).getByRole('link', { name: 'Pull request' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/acme/widgets/pulls/43'
+    );
+    expect(within(hold).getByRole('link', { name: 'Review' })).toHaveAttribute(
+      'href',
+      '/repos/jeryu/acme/widgets/pulls/43#changes-requested'
     );
   });
 

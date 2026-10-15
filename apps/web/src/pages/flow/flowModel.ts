@@ -208,6 +208,19 @@ export function lotsAt(report: FlowReport, station: string): FlowLot[] {
     .sort((a, b) => a.since.localeCompare(b.since));
 }
 
+const HOLD_REASONS: Record<string, string> = {
+  review_hold: 'review held it',
+  gate_red: 'required check is red',
+  queue_conflict: 'merge queue refused it (conflict)',
+  queue_failed: 'merge queue gave up on it',
+  superseded: 'a later pull request replaced it',
+};
+
+/** What stopped a held lot, in words; an unknown reason is shown as sent. */
+export function holdReasonWords(reason: string): string {
+  return HOLD_REASONS[reason] ?? reason;
+}
+
 /** A lot's estimate in words: what is left, and what it does not cover. */
 export function etaWords(lot: FlowLot): string {
   if (lot.state === 'held') return 'held — a person is the next step';
