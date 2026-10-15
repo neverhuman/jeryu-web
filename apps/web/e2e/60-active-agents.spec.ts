@@ -66,6 +66,48 @@ test('global inventory wraps native paths on a phone @a11y @action:agents.global
 });
 
 
+test('agents show robot avatars and a timeline, as a list or as cards @a11y @action:agents.global_views', async ({ page }) => {
+  await seed(page);
+  await page.goto('/agents');
+  const list = page.getByTestId('agents-presence-list');
+  await expect(list.getByRole('listitem')).toHaveCount(5);
+  // List is the default view: a badge avatar on every row and a timeline strip in a 24 hour window.
+  await expect(page.getByTestId('agents-view-list')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-testid^="presence-avatar-"] svg.agent-avatar--badge')).toHaveCount(5);
+  await expect(page.locator('[data-testid^="presence-timeline-bar-"]')).toHaveCount(5);
+  await expect(page.getByTestId('presence-timeline-axis')).toBeVisible();
+  await expect(page.getByTestId('agents-timeline-span')).toHaveValue('24h');
+  await expect(page.getByTestId('presence-timeline-external:codex')).toHaveAttribute('aria-label', /idle since/);
+
+  await page.getByTestId('agents-view-cards').click();
+  await expect(page).toHaveURL(/view=cards/);
+  const cards = page.getByTestId('agent-cards');
+  await expect(cards.getByRole('listitem')).toHaveCount(5);
+  await expect(cards.locator('svg.agent-avatar:not(.agent-avatar--badge)')).toHaveCount(5);
+  await expect(page.getByTestId('agents-presence-list')).toHaveCount(0);
+  const result = await runAxe(page, { include: '[data-testid="active-agents-page"]' });
+  await persistAxeResult('active-agents-cards', result);
+  await persistRenderedEvidence(page, 'active-agents-cards');
+  expect(blockingViolations(result).map((v) => v.id)).toEqual([]);
+
+  // A filter choice applies at once, and the view and timeline span survive it and a reload.
+  await page.getByTestId('agents-timeline-span').selectOption('7d');
+  await expect(page).toHaveURL(/span=7d/);
+  await page.getByRole('combobox', { name: 'Harness', exact: true }).selectOption('agy');
+  await expect(page).toHaveURL(/agent=agy/);
+  await expect(cards.getByRole('listitem')).toHaveCount(1);
+  await page.getByRole('combobox', { name: 'Source', exact: true }).selectOption('external');
+  await expect(page).toHaveURL(/source=external/);
+  await expect(page).toHaveURL(/agent=agy/);
+  await expect(page).toHaveURL(/view=cards/);
+  await expect(page).toHaveURL(/span=7d/);
+  await page.reload();
+  await expect(cards.getByRole('listitem')).toHaveCount(1);
+  await page.getByTestId('agents-view-list').click();
+  await expect(page).not.toHaveURL(/view=/);
+  await expect(page.getByTestId('agents-presence-list').getByRole('listitem')).toHaveCount(1);
+});
+
 test('global private metadata is visible only to reporter or admin @action:agents.global_privacy', async ({ page }) => {
   // Deliberately over-return private fields: the browser also hides them for
   // another viewer. Server authorization remains the actual access boundary.

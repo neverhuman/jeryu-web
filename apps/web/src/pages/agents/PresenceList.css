@@ -252,3 +252,28 @@ a.presence-compact__row:hover {
 .presence__location dt { font-weight: var(--font-weight-semibold); }
 .presence__location dd { margin: 0; overflow-wrap: anywhere; }
 .presence__location code { font-family: var(--font-mono); }
+
+/* Active agents page: the robot avatar on the left, the row's facts beside it. */
+.presence__with-avatar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.presence__avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-top: 0.1rem;
+}
+
+.presence__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}

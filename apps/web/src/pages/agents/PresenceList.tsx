@@ -7,6 +7,9 @@
 // that reaches the repository through its family says so, and two live agents
 // on one branch each carry a collision warning.
 //
+// The Active agents page can add each agent's robot avatar on the left and a
+// timeline strip along the top of each row (PresenceTimeline).
+//
 // The family rail draws the compact list: live rows only, one line each.
 
 import { AlertTriangle, Bot, GitBranch, ListChecks, GitPullRequest, Radio, Server, Users } from 'lucide-react';
@@ -14,6 +17,8 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 import { isLivePresence, presenceRunId, type AgentPresenceItem, type PresenceRow } from '../../api/agentPresence';
+import { AgentBot } from '../../components/agentBot/AgentBot';
+import { botOfPresence } from '../../components/agentBot/agentBotModel';
 import { toneClass } from '../../components/tone/tone';
 import { useListKeys, listRowProps, LIST_OPEN_PROP } from '../../hooks/useListKeys';
 import { useAuth } from '../../hooks/useAuth';
@@ -32,6 +37,8 @@ import {
   stateTone,
   todoLabel,
 } from './presenceModel';
+import { TimelineStrip } from './PresenceTimeline';
+import type { TimelineWindow } from './presenceTimelineModel';
 
 import './PresenceList.css';
 
@@ -46,9 +53,13 @@ export interface PresenceListProps {
   /** Run ids open in the terminal. */
   openRuns: ReadonlySet<string>;
   onOpenRun: (row: PresenceRow) => void;
+  /** Draw each agent's robot avatar on the left of its row. */
+  avatars?: boolean;
+  /** Draw a timeline strip along the top of each row, in this window. */
+  timeline?: TimelineWindow;
 }
 
-export function PresenceList({ rows, host, repo, hostForRepo, now, openRuns, onOpenRun }: PresenceListProps): JSX.Element {
+export function PresenceList({ rows, host, repo, hostForRepo, now, openRuns, onOpenRun, avatars = false, timeline }: PresenceListProps): JSX.Element {
   const listRef = useListKeys<HTMLUListElement>();
   const { user } = useAuth();
   const byId = useMemo(() => new Map(rows.map((row) => [row.item.id, row.item])), [rows]);
@@ -66,6 +77,8 @@ export function PresenceList({ rows, host, repo, hostForRepo, now, openRuns, onO
           byId={byId}
           open={openRuns.has(presenceRunId(row.item) ?? '')}
           onOpenRun={onOpenRun}
+          avatar={avatars}
+          timeline={timeline}
         />
       ))}
     </ul>
@@ -82,6 +95,8 @@ function PresenceRowView({
   byId,
   open,
   onOpenRun,
+  avatar,
+  timeline,
 }: {
   row: PresenceRow;
   privateDetails: boolean;
@@ -92,6 +107,8 @@ function PresenceRowView({
   byId: ReadonlyMap<string, AgentPresenceItem>;
   open: boolean;
   onOpenRun: (row: PresenceRow) => void;
+  avatar: boolean;
+  timeline?: TimelineWindow;
 }): JSX.Element {
   const { item, run } = row;
   const runId = presenceRunId(item);
@@ -109,14 +126,8 @@ function PresenceRowView({
     </>
   );
 
-  return (
-    <li
-      {...listRowProps}
-      data-list-key={item.id}
-      className={`presence__row presence__row--${item.state}${collision ? ' presence__row--collides' : ''}`}
-      data-testid={`presence-row-${item.id}`}
-      data-state={item.state}
-    >
+  const content = (
+    <>
       <div className="presence__head">
         <span
           className={toneClass('presence__state', stateTone(item.state))}
@@ -242,6 +253,26 @@ function PresenceRowView({
           ) : null}
         </p>
       ) : null}
+    </>
+  );
+
+  return (
+    <li
+      {...listRowProps}
+      data-list-key={item.id}
+      className={`presence__row presence__row--${item.state}${collision ? ' presence__row--collides' : ''}`}
+      data-testid={`presence-row-${item.id}`}
+      data-state={item.state}
+    >
+      {timeline ? <TimelineStrip item={item} window={timeline} now={now} /> : null}
+      {avatar ? (
+        <div className="presence__with-avatar">
+          <span className="presence__avatar" data-testid={`presence-avatar-${item.id}`}>
+            <AgentBot agent={botOfPresence(item)} mode="badge" size={40} />
+          </span>
+          <div className="presence__content">{content}</div>
+        </div>
+      ) : content}
     </li>
   );
 }

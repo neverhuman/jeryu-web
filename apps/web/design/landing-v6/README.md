@@ -11,7 +11,8 @@ Regenerate the declared v6 zone from the repository root with
 preserves alpha and records dimensions, byte counts and hashes without
 upscaling. Earlier revisions remain on the preview branch; this branch carries the approved graphic.
 
-Five short SVG light trails stream right to left behind the right-facing dragon. Their
+Seven short currents of light stream right to left behind the right-facing dragon,
+each on a row of the 80px background grid and each at its own speed. Their
 opacity falls to zero before each reset. The stationary grid stays legible;
 a soft atmospheric wash also streams left, fading before its reset. The
 dragon is one complete graphic with no independently moving anatomy. There

@@ -1,0 +1,41 @@
+/* Agent bot motion. The whole bot moves as one piece, scaling from its feet;
+   limbs never animate. Working bobs and leans in, thinking bobs, leans back and
+   orbits, idle turns gray and still, error and done hold still with a badge.
+   Each bot's --agent-avatar-delay offsets its rhythm so a fleet never moves in step. */
+.agent-avatar { display: block; flex: none; overflow: visible; transition: filter .5s; }
+.agent-avatar__rig { transform-origin: 60px 134px; }
+.agent-avatar--badge .agent-avatar__rig { transform-origin: 60px 80px; }
+.agent-avatar__eyes { animation: agent-avatar-blink 6s infinite; animation-delay: var(--agent-avatar-delay); }
+.agent-avatar__head { transition: transform .5s ease; transform-origin: 60px 74px; }
+.agent-avatar__eyes, .agent-avatar__tip, .agent-avatar__mark { transition: opacity .4s; }
+.agent-avatar__thrust { opacity: .35; }
+@keyframes agent-avatar-blink { 0%, 45%, 49%, 100% { transform: scaleY(1); } 47% { transform: scaleY(.12); } }
+
+.agent-avatar--working .agent-avatar__rig { animation: agent-avatar-work 2.4s ease-in-out infinite; animation-delay: var(--agent-avatar-delay); }
+@keyframes agent-avatar-work { 50% { transform: translateY(-3px) scale(1.035); } }
+
+.agent-avatar--thinking .agent-avatar__rig { animation: agent-avatar-think 3.6s ease-in-out infinite; animation-delay: var(--agent-avatar-delay); }
+@keyframes agent-avatar-think { 50% { transform: translateY(-2px) scale(.975); } }
+.agent-avatar--working .agent-avatar__thrust, .agent-avatar--thinking .agent-avatar__thrust { animation: agent-avatar-flick .5s ease-in-out infinite alternate; }
+@keyframes agent-avatar-flick { from { opacity: .6; } to { opacity: .2; } }
+.agent-avatar--thinking .agent-avatar__orbit { display: inline; transform-origin: 60px 44px; animation: agent-avatar-spin 2.6s linear infinite; }
+@keyframes agent-avatar-spin { to { transform: rotate(360deg); } }
+.agent-avatar--thinking .agent-avatar__tip { transform-box: fill-box; transform-origin: center; animation: agent-avatar-pulse .9s ease-in-out infinite alternate; }
+@keyframes agent-avatar-pulse { to { transform: scale(1.5); opacity: .55; } }
+.agent-avatar--thinking .agent-avatar__head { transform: rotate(4deg); }
+
+.agent-avatar--idle { filter: grayscale(1) brightness(.82); }
+.agent-avatar--idle * { animation: none !important; }
+.agent-avatar--idle .agent-avatar__eyes { opacity: .35; }
+
+.agent-avatar--error .agent-avatar__eyes, .agent-avatar--error .agent-avatar__mouth { color: #ff5a6a !important; }
+.agent-avatar--error .agent-avatar__visor { stroke: #ff4d5e; }
+.agent-avatar--error .agent-avatar__tip, .agent-avatar--error .agent-avatar__mark { fill: #ff5a6a; }
+.agent-avatar--error .agent-avatar__bubble--error, .agent-avatar--done .agent-avatar__bubble--done { display: inline; }
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-avatar, .agent-avatar * { animation: none !important; transition: none !important; }
+}
+@media (forced-colors: active) {
+  .agent-avatar { forced-color-adjust: none; }
+}

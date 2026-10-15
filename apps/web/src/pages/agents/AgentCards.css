@@ -1,0 +1,62 @@
+/* AgentCards.css — the Active agents card view. */
+
+.agent-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* Two columns on a phone, as many as fit on a desktop. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+  gap: 0.75rem;
+}
+
+.agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem 0.75rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-2);
+  font-size: var(--font-size-xs);
+}
+
+.agent-card--stale,
+.agent-card--ended { opacity: 0.75; }
+
+.agent-card__bot {
+  display: flex;
+  justify-content: center;
+  padding-block: 0.5rem 0.25rem;
+}
+
+.agent-card__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.agent-card__name {
+  min-width: 0;
+  color: var(--color-fg-primary);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.agent-card__headline {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  overflow-wrap: anywhere;
+}
+
+.agent-card__meta {
+  margin: 0;
+  color: var(--color-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+/* The repository link sits inside a sentence, so it is underlined, not only colored. */
+.agent-card__meta a { text-decoration: underline; text-underline-offset: 2px; }
