@@ -25,6 +25,14 @@ is why every describe in the a11y spec carries `@a11y`
 (`apps/web/scripts/e2e-suite-selection.test.mjs` holds that). Either suite still
 runs on its own: `test:e2e:actions` and `test:e2e:a11y`.
 
+The gate builds the SPA once. `ops/ci/pr-ci.sh` exports
+`JERYU_WEB_DIST_FRESH=1` after its build, and the browser lanes
+(`apps/web/scripts/ensure-dist.mjs`) then serve that dist instead of building
+again; run on their own, they build first. Straight after that build,
+`ops/ci/dist-reproducible.sh` builds once more and requires identical files,
+because jeryu-deploy pins the dist by content hash. For a release candidate,
+`just reproducible-build` is the stronger check (two clones, fresh installs).
+
 The lane's worker count comes from `apps/web/scripts/e2e-workers.mjs`: the
 governed `JERYU_CI_JOBS` scaled down, since a Chromium worker costs more than
 one CPU, and capped. `JERYU_PLAYWRIGHT_WORKERS=<n>` overrides it for one run.

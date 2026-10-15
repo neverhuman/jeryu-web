@@ -14,6 +14,7 @@ npm --workspace @jeryu/web run lint
 npm --workspace @jeryu/web run test:coverage
 npm --workspace @jeryu/web run test:contracts
 npm --workspace @jeryu/web run build
+export JERYU_WEB_DIST_FRESH=1
 npm --workspace @jeryu/web run test:e2e:ci
 npm --workspace @jeryu/web run build-storybook
 npm --workspace @jeryu/web run ux-qa

@@ -127,7 +127,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/web-flows/cargo
-            target/web-flows/browser
+            ~/.cache/jeryu-web-flows
           key: web-flows-${{ runner.os }}-1.95.0-${{ hashFiles('apps/web/tests/web-flows/Cargo.lock', 'ops/ci/web-flows.sh') }}
       - name: Production build and Rust browser journey
         run: |

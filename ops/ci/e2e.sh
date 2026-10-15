@@ -12,6 +12,7 @@ ensure_web_deps
 ensure_playwright_browsers
 
 npm --workspace @jeryu/web run build
+export JERYU_WEB_DIST_FRESH=1
 npm --workspace @jeryu/web run test:e2e:actions
 npm --workspace @jeryu/web run test:e2e:matrix
 

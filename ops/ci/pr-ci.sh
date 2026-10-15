@@ -67,10 +67,13 @@ bash ops/ci/security.sh
 bash ops/ci/artifact_support.sh
 
 echo "[pr-ci] web required checks" >&2
-npm --workspace @jeryu/web run typecheck
+# check.sh (JERYU_SPLIT_FULL_CHECK=1) has already typechecked the workspace.
 npm --workspace @jeryu/web run test:coverage
 npm --workspace @jeryu/web run test:contracts
 npm --workspace @jeryu/web run build
+# Every later lane serves or inspects this one build; none rebuilds it.
+export JERYU_WEB_DIST_FRESH=1
+bash ops/ci/dist-reproducible.sh
 bash ops/ci/web-flows.sh
 npm --workspace @jeryu/web run test:e2e:ci
 npm --workspace @jeryu/web run build-storybook
