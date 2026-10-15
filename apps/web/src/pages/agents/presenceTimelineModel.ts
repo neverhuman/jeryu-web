@@ -1,6 +1,6 @@
-// presenceTimelineModel.ts — where an agent's working time falls in a time window.
+// presenceTimelineModel.ts — where an agent's working time falls in a time range.
 //
-// Pure. Each presence row becomes one bar in a shared window (24 hours by
+// Pure. Each presence row becomes one bar in a shared range (24 hours by
 // default): it starts when the agent was first seen and its solid part runs to
 // its last activity. A live, active agent runs on to now; an idle one trails a
 // faint tail to now; an ended one stops with a cap. The Active agents page
@@ -21,6 +21,8 @@ const SPAN_HOURS: Record<TimelineSpan, number> = { '6h': 6, '24h': 24, '7d': 168
 const TICK_HOURS: Record<TimelineSpan, number> = { '6h': 1, '24h': 3, '7d': 24 };
 
 export const SPAN_LABEL: Record<TimelineSpan, string> = { '6h': 'Last 6 hours', '24h': 'Last 24 hours', '7d': 'Last 7 days' };
+/** Where a strip's left edge sits, for a strip drawn without the shared axis. */
+export const SPAN_AGO: Record<TimelineSpan, string> = { '6h': '6 h ago', '24h': '24 h ago', '7d': '7 days ago' };
 
 export function spanOf(value: string | null | undefined): TimelineSpan {
   return TIMELINE_SPANS.find((span) => span === value) ?? DEFAULT_SPAN;
@@ -38,19 +40,19 @@ export function timelineWindow(span: TimelineSpan, now: number): TimelineWindow 
 
 export interface TimelineTick {
   at: number;
-  /** 0–1 across the window. */
+  /** 0–1 across the range. */
   offset: number;
   label: string;
 }
 
 /** Ticks on whole local hours (whole local days for a week), oldest first. */
-export function timelineTicks(window: TimelineWindow): TimelineTick[] {
-  const step = TICK_HOURS[window.span] * HOUR;
-  const zoneShift = new Date(window.start).getTimezoneOffset() * 60_000;
-  const first = Math.ceil((window.start - zoneShift) / step) * step + zoneShift;
+export function timelineTicks(range: TimelineWindow): TimelineTick[] {
+  const step = TICK_HOURS[range.span] * HOUR;
+  const zoneShift = new Date(range.start).getTimezoneOffset() * 60_000;
+  const first = Math.ceil((range.start - zoneShift) / step) * step + zoneShift;
   const ticks: TimelineTick[] = [];
-  for (let at = first; at < window.end; at += step) {
-    ticks.push({ at, offset: (at - window.start) / (window.end - window.start), label: tickText(at, SPAN_HOURS[window.span]) });
+  for (let at = first; at < range.end; at += step) {
+    ticks.push({ at, offset: (at - range.start) / (range.end - range.start), label: tickText(at, SPAN_HOURS[range.span]) });
   }
   return ticks;
 }
@@ -58,14 +60,14 @@ export function timelineTicks(window: TimelineWindow): TimelineTick[] {
 export type TimelineTail = 'running' | 'idle' | 'none';
 
 export interface TimelineBar {
-  /** 0–1 across the window: where the bar starts. */
+  /** 0–1 across the range: where the bar starts. */
   left: number;
   /** 0–1: the solid, working part. */
   width: number;
   /** 0–1: the faint idle part after the last activity, up to now. */
   tailWidth: number;
   tail: TimelineTail;
-  /** The agent was first seen before the window opened. */
+  /** The agent was first seen before the range opened. */
   clippedStart: boolean;
   ended: boolean;
   /** One sentence for hover and screen readers. */
@@ -74,24 +76,24 @@ export interface TimelineBar {
 
 /**
  * The bar for one presence row, or null when the row has no times or all of
- * its time lies before the window.
+ * its time lies before the range.
  */
 export function timelineBar(
   item: Pick<AgentPresenceItem, 'state' | 'started_at' | 'last_active_at'>,
-  window: TimelineWindow,
+  range: TimelineWindow,
   now: number,
 ): TimelineBar | null {
   const first = item.started_at ?? item.last_active_at;
   if (first === null) return null;
   const last = Math.max(first, item.last_active_at ?? first);
-  const end = Math.max(last, Math.min(now, window.end));
+  const end = Math.max(last, Math.min(now, range.end));
   const live = item.state === 'active' || item.state === 'idle';
   const workEnd = item.state === 'active' ? end : last;
   const tailEnd = item.state === 'idle' ? end : workEnd;
-  if (tailEnd < window.start || first > window.end) return null;
+  if (tailEnd < range.start || first > range.end) return null;
 
-  const span = window.end - window.start;
-  const at = (ms: number): number => Math.min(1, Math.max(0, (ms - window.start) / span));
+  const span = range.end - range.start;
+  const at = (ms: number): number => Math.min(1, Math.max(0, (ms - range.start) / span));
   const left = at(first);
   const width = Math.max(0, at(workEnd) - left);
   const tailWidth = Math.max(0, at(tailEnd) - at(workEnd));
@@ -100,7 +102,7 @@ export function timelineBar(
     width,
     tailWidth,
     tail: item.state === 'active' ? 'running' : item.state === 'idle' ? 'idle' : 'none',
-    clippedStart: first < window.start,
+    clippedStart: first < range.start,
     ended: item.state === 'ended',
     summary: barSummary(item.state, first, last, now, live),
   };

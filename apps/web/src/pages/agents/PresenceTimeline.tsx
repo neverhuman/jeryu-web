@@ -13,13 +13,13 @@ const percent = (fraction: number): string => `${(fraction * 100).toFixed(3)}%`;
 /** A start position that keeps a bar's minimum width on the strip, even at now. */
 const onStrip = (fraction: number): string => `min(${percent(fraction)}, calc(100% - 2px))`;
 
-export function TimelineStrip({ item, window, now }: {
+export function TimelineStrip({ item, range, now }: {
   item: Pick<AgentPresenceItem, 'id' | 'state' | 'started_at' | 'last_active_at'>;
-  window: TimelineWindow;
+  range: TimelineWindow;
   now: number;
 }): JSX.Element {
-  const bar = timelineBar(item, window, now);
-  const label = bar ? bar.summary : `Not seen in the ${SPAN_LABEL[window.span].toLowerCase()}.`;
+  const bar = timelineBar(item, range, now);
+  const label = bar ? bar.summary : `Not seen in the ${SPAN_LABEL[range.span].toLowerCase()}.`;
   return (
     <div className="presence-timeline" role="img" aria-label={label} title={label} data-testid={`presence-timeline-${item.id}`}>
       {bar ? (
@@ -39,9 +39,9 @@ export function TimelineStrip({ item, window, now }: {
   );
 }
 
-/** Hour ticks for the window, aligned with every TimelineStrip below it. */
-export function TimelineAxis({ window }: { window: TimelineWindow }): JSX.Element {
-  const ticks = timelineTicks(window);
+/** Hour ticks for the range, aligned with every TimelineStrip below it. */
+export function TimelineAxis({ range }: { range: TimelineWindow }): JSX.Element {
+  const ticks = timelineTicks(range);
   return (
     <div className="presence-axis" aria-hidden="true" data-testid="presence-timeline-axis">
       {ticks.map((tick) => (

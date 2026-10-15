@@ -60,3 +60,12 @@
 
 /* The repository link sits inside a sentence, so it is underlined, not only colored. */
 .agent-card__meta a { text-decoration: underline; text-underline-offset: 2px; }
+
+.agent-card__scale {
+  display: flex;
+  justify-content: space-between;
+  margin: -0.15rem 0 0;
+  color: var(--color-fg-muted);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+}

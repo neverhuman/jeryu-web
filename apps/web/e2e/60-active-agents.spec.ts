@@ -104,9 +104,16 @@ test('agents show robot avatars and a timeline, as a list or as cards @a11y @act
   // A filter choice applies at once, and the view and timeline span survive it and a reload.
   await page.getByTestId('agents-timeline-span').selectOption('7d');
   await expect(page).toHaveURL(/span=7d/);
-  await page.getByRole('combobox', { name: 'Harness', exact: true }).selectOption('agy');
+  // Choosing applies at once and keeps keyboard focus on the list that was used.
+  const harness = page.getByRole('combobox', { name: 'Harness', exact: true });
+  await harness.focus();
+  // A mark on the DOM node survives only if applying the choice does not remount the list.
+  await harness.evaluate((node) => node.setAttribute('data-probe', 'kept'));
+  await harness.selectOption('agy');
   await expect(page).toHaveURL(/agent=agy/);
   await expect(cards.getByRole('listitem')).toHaveCount(1);
+  await expect(harness).toHaveAttribute('data-probe', 'kept');
+  await expect(harness).toBeFocused();
   await page.getByRole('combobox', { name: 'Source', exact: true }).selectOption('external');
   await expect(page).toHaveURL(/source=external/);
   await expect(page).toHaveURL(/agent=agy/);
@@ -114,9 +121,20 @@ test('agents show robot avatars and a timeline, as a list or as cards @a11y @act
   await expect(page).toHaveURL(/span=7d/);
   await page.reload();
   await expect(cards.getByRole('listitem')).toHaveCount(1);
+  // Each card says where its strip starts, since a grid has no shared axis.
+  await expect(cards.getByRole('listitem').first()).toContainText('7 days ago');
   await page.getByTestId('agents-view-list').click();
   await expect(page).not.toHaveURL(/view=/);
   await expect(page.getByTestId('agents-presence-list').getByRole('listitem')).toHaveCount(1);
+
+  // Cards are keyboard rows like the list: j moves, Enter opens the repository.
+  await page.goto('/agents?view=cards');
+  await expect(cards.getByRole('listitem')).toHaveCount(5);
+  await cards.getByRole('listitem').first().focus();
+  await page.keyboard.press('j');
+  await expect(cards.getByRole('listitem').nth(1)).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/repos\/forge\/acme\/widgets\/agents$/);
 });
 
 test('global private metadata is visible only to reporter or admin @action:agents.global_privacy', async ({ page }) => {

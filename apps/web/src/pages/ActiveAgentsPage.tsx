@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { ChangeEvent, FormEvent } from 'react';
+import { Fragment, type ChangeEvent, type FormEvent } from 'react';
 
 import { fetchAllAgentPresence, type PresenceRow } from '../api/agentPresence';
 import { PageHeader, queryFreshness } from '../components/pageHeader';
@@ -84,9 +84,10 @@ export function ActiveAgentsPage(): JSX.Element {
     event.preventDefault();
     applyForm(event.currentTarget);
   }
-  // The form remounts only when the filters change, so switching the view or
-  // the timeline span keeps anything typed but not yet applied.
-  const filterKey = FILTERS.map((key) => `${key}=${params.get(key) ?? ''}`).join('&');
+  // The typed fields remount only when their own filters change, so switching
+  // the view or the timeline span keeps anything typed but not yet applied. The
+  // lists are controlled and never remount, so choosing one keeps focus on it.
+  const textKey = FIELDS.map(([key]) => `${key}=${params.get(key) ?? ''}`).join('&');
   function move(next: number): void {
     const updated = new URLSearchParams(params);
     updated.set('page', String(next));
@@ -100,19 +101,21 @@ export function ActiveAgentsPage(): JSX.Element {
     <div className="page active-agents" data-testid="active-agents-page">
       <PageHeader title="Active agents" freshness={queryFreshness(query)}
         subtitle="Agents running across repositories and servers. Live includes active and idle sessions." />
-      <form key={filterKey} className="active-agents__filters" onSubmit={filter} aria-label="Filter active agents">
-        {FIELDS.map(([key, label]) => <label key={key}>{label}<input name={key} defaultValue={params.get(key) ?? ''} /></label>)}
-        <label>Harness<select name="agent" defaultValue={params.get('agent') ?? ''} onChange={applyChoice}>
+      <form className="active-agents__filters" onSubmit={filter} aria-label="Filter active agents">
+        <Fragment key={textKey}>
+          {FIELDS.map(([key, label]) => <label key={key}>{label}<input name={key} defaultValue={params.get(key) ?? ''} /></label>)}
+        </Fragment>
+        <label>Harness<select name="agent" value={params.get('agent') ?? ''} onChange={applyChoice}>
           <option value="">All harnesses</option>
           <option value="claude-code">Claude</option><option value="codex">Codex</option>
           <option value="cursor">Cursor</option><option value="grok">Grok</option><option value="agy">AGY</option>
         </select></label>
-        <label>Source<select name="source" defaultValue={params.get('source') ?? ''} onChange={applyChoice}>
+        <label>Source<select name="source" value={params.get('source') ?? ''} onChange={applyChoice}>
           <option value="">All sources</option><option value="external">CLI sessions</option>
           <option value="agent_run">Jeryu runs</option><option value="queue_worker">Queue workers</option>
           <option value="reviewer">Reviewers</option><option value="gate">Gates</option>
         </select></label>
-        <label>State<select name="state" defaultValue={params.get('state') ?? 'live'} onChange={applyChoice}>
+        <label>State<select name="state" value={params.get('state') ?? 'live'} onChange={applyChoice}>
           <option value="live">Live</option><option value="active">Active</option><option value="idle">Idle</option>
           <option value="stale">Stale</option><option value="ended">Ended</option><option value="all">All states</option>
         </select></label>
@@ -141,7 +144,7 @@ export function ActiveAgentsPage(): JSX.Element {
         {!rows.length ? <EmptyState title="No agents match these filters." description="Try another server, repository, or state." />
           : view === 'cards' ? <AgentCards items={rows.map((row) => row.item)} hostForRepo={forgeHost} now={now} timeline={timeline} />
           : <>
-            <TimelineAxis window={timeline} />
+            <TimelineAxis range={timeline} />
             <PresenceList rows={rows} host={forgeHost()} hostForRepo={forgeHost} repo="" now={now}
               openRuns={OPEN_RUNS} onOpenRun={openRun} avatars timeline={timeline} />
           </>}

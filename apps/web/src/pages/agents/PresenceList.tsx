@@ -264,7 +264,7 @@ function PresenceRowView({
       data-testid={`presence-row-${item.id}`}
       data-state={item.state}
     >
-      {timeline ? <TimelineStrip item={item} window={timeline} now={now} /> : null}
+      {timeline ? <TimelineStrip item={item} range={timeline} now={now} /> : null}
       {avatar ? (
         <div className="presence__with-avatar">
           <span className="presence__avatar" data-testid={`presence-avatar-${item.id}`}>
