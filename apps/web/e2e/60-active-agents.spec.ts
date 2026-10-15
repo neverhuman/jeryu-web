@@ -14,7 +14,7 @@ async function seed(page: Page, login = 'ada', role: 'admin' | 'user' = 'user'):
     const items = agents.map((agent, index) => ({
       id: `external:${agent}`, session_id: agent, source: 'external', agent,
       state: 'idle', reporter: 'ada', operator: 'ada', host: 'xbabe2',
-      branch: 'ada/agents', last_active_at: Date.now(), links: {}, collides_with: [],
+      branch: 'ada/agents', started_at: Date.now() - (index + 2) * 3_600_000, last_active_at: Date.now(), links: {}, collides_with: [],
       repos: index === 4 ? [] : ['acme/widgets'], families: index === 4 ? [] : ['acme'],
       location: { session_path: `/home/ada/.${agent}/sessions/${'long-native-session-'.repeat(5)}data.jsonl`, checkout_path: '/src/widgets/.agent/worktrees/agents', checkout_kind: 'worktree', cwd: '/src/widgets/.agent/worktrees/agents/src', screen: '123.agents' },
     }));
@@ -75,12 +75,23 @@ test('agents show robot avatars and a timeline, as a list or as cards @a11y @act
   await expect(page.getByTestId('agents-view-list')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-testid^="presence-avatar-"] svg.agent-avatar--badge')).toHaveCount(5);
   await expect(page.locator('[data-testid^="presence-timeline-bar-"]')).toHaveCount(5);
+  // Each bar is drawn on its strip with real width: first seen hours ago, active until now.
+  for (const bar of await page.locator('[data-testid^="presence-timeline-bar-"]').all()) {
+    const box = await bar.boundingBox();
+    const strip = await bar.locator('..').boundingBox();
+    expect(box!.width).toBeGreaterThan(4);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(strip!.x + strip!.width + 1);
+  }
   await expect(page.getByTestId('presence-timeline-axis')).toBeVisible();
   await expect(page.getByTestId('agents-timeline-span')).toHaveValue('24h');
   await expect(page.getByTestId('presence-timeline-external:codex')).toHaveAttribute('aria-label', /idle since/);
 
+  // Switching the view keeps a filter typed but not yet applied.
+  await page.getByRole('textbox', { name: 'Search', exact: true }).fill('widgets');
   await page.getByTestId('agents-view-cards').click();
   await expect(page).toHaveURL(/view=cards/);
+  await expect(page.getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('widgets');
+  await page.getByRole('textbox', { name: 'Search', exact: true }).fill('');
   const cards = page.getByTestId('agent-cards');
   await expect(cards.getByRole('listitem')).toHaveCount(5);
   await expect(cards.locator('svg.agent-avatar:not(.agent-avatar--badge)')).toHaveCount(5);

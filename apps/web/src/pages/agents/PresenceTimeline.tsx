@@ -10,6 +10,8 @@ import { SPAN_LABEL, timelineBar, timelineTicks, type TimelineWindow } from './p
 import './PresenceTimeline.css';
 
 const percent = (fraction: number): string => `${(fraction * 100).toFixed(3)}%`;
+/** A start position that keeps a bar's minimum width on the strip, even at now. */
+const onStrip = (fraction: number): string => `min(${percent(fraction)}, calc(100% - 2px))`;
 
 export function TimelineStrip({ item, window, now }: {
   item: Pick<AgentPresenceItem, 'id' | 'state' | 'started_at' | 'last_active_at'>;
@@ -24,13 +26,13 @@ export function TimelineStrip({ item, window, now }: {
         <>
           <span
             className={`presence-timeline__bar presence-timeline__bar--${item.state}${bar.clippedStart ? ' is-clipped' : ''}${bar.ended ? ' is-ended' : ''}`}
-            style={{ left: percent(bar.left), width: percent(bar.width) }}
+            style={{ left: onStrip(bar.left), width: percent(bar.width) }}
             data-testid={`presence-timeline-bar-${item.id}`}
           />
           {bar.tailWidth > 0 ? (
-            <span className="presence-timeline__tail" style={{ left: percent(bar.left + bar.width), width: percent(bar.tailWidth) }} />
+            <span className="presence-timeline__tail" style={{ left: onStrip(bar.left + bar.width), width: percent(bar.tailWidth) }} />
           ) : null}
-          {bar.tail === 'running' ? <span className="presence-timeline__now" style={{ left: percent(bar.left + bar.width) }} /> : null}
+          {bar.tail === 'running' ? <span className="presence-timeline__now" style={{ left: onStrip(bar.left + bar.width) }} /> : null}
         </>
       ) : null}
     </div>

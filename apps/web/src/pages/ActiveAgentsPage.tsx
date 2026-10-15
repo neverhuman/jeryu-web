@@ -66,13 +66,9 @@ export function ActiveAgentsPage(): JSX.Element {
     else updated.set(key, value);
     setParams(updated, { replace: true });
   }
-  /** A choice from a list applies at once; typed filters apply on Enter or the button. */
-  function applyChoice(event: ChangeEvent<HTMLSelectElement>): void {
-    event.currentTarget.form?.requestSubmit();
-  }
-  function filter(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
+  /** Every filter in the form, plus the reader's view and span, becomes the address. */
+  function applyForm(form: HTMLFormElement): void {
+    const data = new FormData(form);
     const next = keepView();
     for (const key of FILTERS) {
       const value = String(data.get(key) ?? '').trim();
@@ -80,6 +76,17 @@ export function ActiveAgentsPage(): JSX.Element {
     }
     setParams(next);
   }
+  /** A choice from a list applies at once; typed filters apply on Enter or the button. */
+  function applyChoice(event: ChangeEvent<HTMLSelectElement>): void {
+    if (event.currentTarget.form) applyForm(event.currentTarget.form);
+  }
+  function filter(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    applyForm(event.currentTarget);
+  }
+  // The form remounts only when the filters change, so switching the view or
+  // the timeline span keeps anything typed but not yet applied.
+  const filterKey = FILTERS.map((key) => `${key}=${params.get(key) ?? ''}`).join('&');
   function move(next: number): void {
     const updated = new URLSearchParams(params);
     updated.set('page', String(next));
@@ -93,7 +100,7 @@ export function ActiveAgentsPage(): JSX.Element {
     <div className="page active-agents" data-testid="active-agents-page">
       <PageHeader title="Active agents" freshness={queryFreshness(query)}
         subtitle="Agents running across repositories and servers. Live includes active and idle sessions." />
-      <form key={params.toString()} className="active-agents__filters" onSubmit={filter} aria-label="Filter active agents">
+      <form key={filterKey} className="active-agents__filters" onSubmit={filter} aria-label="Filter active agents">
         {FIELDS.map(([key, label]) => <label key={key}>{label}<input name={key} defaultValue={params.get(key) ?? ''} /></label>)}
         <label>Harness<select name="agent" defaultValue={params.get('agent') ?? ''} onChange={applyChoice}>
           <option value="">All harnesses</option>

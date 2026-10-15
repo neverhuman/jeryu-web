@@ -36,6 +36,14 @@ describe('AgentBot', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('draws a bot for a hostile harness name instead of throwing', () => {
+    for (const harness of ['__proto__', 'constructor']) {
+      const { container, unmount } = render(<AgentBot agent={{ ...agent, harness }} />);
+      expect(container.querySelector('svg.agent-avatar')).not.toBeNull();
+      unmount();
+    }
+  });
+
   it('carries the status as a class so motion is pure CSS', () => {
     const { container, rerender } = render(<AgentBot agent={agent} />);
     rerender(<AgentBot agent={{ ...agent, status: 'done' }} />);

@@ -89,16 +89,22 @@ export function rng(seed: string): () => number {
   };
 }
 
-/** The known harness a reported name belongs to, or null. */
+/**
+ * The known harness a reported name belongs to, or null. The name is remote
+ * data, so only the alias table's own keys count: `__proto__` or
+ * `constructor` must not resolve through the prototype chain.
+ */
 export function knownHarness(harness: string): BotHarness | null {
   const key = harness.trim().toLowerCase();
-  return HARNESS_ALIASES[key] ?? HARNESSES.find((name) => name.toLowerCase() === key) ?? null;
+  if (Object.hasOwn(HARNESS_ALIASES, key)) return HARNESS_ALIASES[key];
+  return HARNESSES.find((name) => name.toLowerCase() === key) ?? null;
 }
 
 /** Known harnesses keep their silhouette; others get a stable hashed one. */
 export function archetypeOf(harness: string): Archetype {
   const known = knownHarness(harness);
-  return ARCHETYPES[known ?? HARNESSES[hash(`harness:${harness}`) % HARNESSES.length]];
+  const hashed = ARCHETYPES[HARNESSES[hash(`harness:${harness}`) % HARNESSES.length]];
+  return (known && ARCHETYPES[known]) || hashed;
 }
 
 export interface Palette {

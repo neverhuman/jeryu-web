@@ -53,6 +53,15 @@ describe('agent bot model', () => {
     expect(archetypeOf('codex').loco).toBe('treads');
   });
 
+  it('never resolves a harness name through the prototype chain', () => {
+    // The harness is free-form remote data; these must hash like any other name.
+    for (const name of ['__proto__', 'constructor', 'toString', 'hasOwnProperty', 'valueOf']) {
+      expect(knownHarness(name)).toBeNull();
+      expect(Object.values(ARCHETYPES)).toContain(archetypeOf(name));
+      expect(paletteOf(name).known).toBe(false);
+    }
+  });
+
   it('gives an unknown harness a stable look of its own', () => {
     expect(archetypeOf('cursor')).toBe(archetypeOf('cursor'));
     expect(paletteOf('cursor')).toEqual(paletteOf('cursor'));

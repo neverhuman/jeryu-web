@@ -25,9 +25,8 @@ export function AgentCards({ items, hostForRepo, now, timeline }: {
   return (
     <ul className="agent-cards" data-testid="agent-cards">
       {items.map((item) => {
-        const href = presenceRepoHref(hostForRepo(item.repos[0]), item);
         const headline = presenceHeadline(item);
-        const where = item.repos.length ? item.repos.join(', ') : item.families.map((family) => `family ${family}`).join(', ');
+        const families = item.families.map((family) => `family ${family}`).join(', ');
         return (
           <li key={item.id} className={`agent-card agent-card--${item.state}`} data-testid={`agent-card-${item.id}`} data-state={item.state}>
             <TimelineStrip item={item} window={timeline} now={now} />
@@ -44,7 +43,11 @@ export function AgentCards({ items, hostForRepo, now, timeline }: {
               {item.operator ? <> · {item.operator}</> : null}
             </p>
             <p className="agent-card__meta">
-              {href ? <Link to={href}>{where}</Link> : <span>{where || 'No repository assigned'}</span>}
+              {item.repos.length ? item.repos.map((name, index) => {
+                // One link per repository, each opening the repository it names.
+                const href = presenceRepoHref(hostForRepo(name), { ...item, repos: [name] });
+                return <span key={name}>{index ? ', ' : null}{href ? <Link to={href}>{name}</Link> : name}</span>;
+              }) : <span>{families || 'No repository assigned'}</span>}
               {item.last_active_at !== null ? <> · seen {relativeText(item.last_active_at, now)}</> : null}
             </p>
           </li>
