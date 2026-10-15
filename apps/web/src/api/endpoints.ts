@@ -398,6 +398,7 @@ export const endpoints = {
   /** Where work sits on the delivery line, over a window (admin-only). */
   flow: (query: FlowQuery): string => {
     const qs = new URLSearchParams();
+    if (query.repo) qs.set('repo', query.repo);
     if (query.family) qs.set('family', query.family);
     if (query.days) qs.set('days', String(query.days));
     const suffix = qs.toString();

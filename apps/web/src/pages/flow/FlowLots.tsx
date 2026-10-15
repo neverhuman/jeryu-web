@@ -4,13 +4,14 @@
 // has been there, what state it is in and when it is expected to be done. The
 // row opens the work's own page, which is where its trace is.
 
+import { safeFlowHref } from './flowModel';
 import { Link } from 'react-router-dom';
 
 import type { FlowReport } from '../../api/types';
 import { pillClass } from '../../components/tone/tone';
 import type { Tone } from '../../components/tone/tone';
 import { LIST_OPEN_PROP, listRowProps, useListKeys } from '../../hooks/useListKeys';
-import { etaWords, lotsAt, waitingWords } from './flowModel';
+import { lotsAt, waitingWords } from './flowModel';
 
 const STATE_TONE: Record<string, Tone> = {
   held: 'human',
@@ -23,12 +24,14 @@ export interface FlowLotsProps {
   /** The station id, as the address holds it. */
   station: string;
   now: Date;
+  repo?: string;
+  onInspect?: (id: string) => void;
 }
 
-export function FlowLots({ report, station, now }: FlowLotsProps): JSX.Element {
+export function FlowLots({ report, station, now, repo, onInspect }: FlowLotsProps): JSX.Element {
   const listRef = useListKeys<HTMLOListElement>();
   const label = report.stations.find((candidate) => candidate.id === station)?.label ?? station;
-  const lots = lotsAt(report, station);
+  const lots = lotsAt(report, station).filter(lot => !repo || report.repo === repo || lot.lot_id.startsWith(`${repo}#`) || lot.href.includes(repo));
   return (
     <section className="page__section" aria-labelledby="flow-lots-title" data-testid="flow-lots">
       <h2 className="page__section-title" id="flow-lots-title">
@@ -43,15 +46,13 @@ export function FlowLots({ report, station, now }: FlowLotsProps): JSX.Element {
           {lots.map((lot) => (
             <li key={`${lot.station}-${lot.lot_id}`} className="flow-lots__row"
               {...listRowProps} data-list-key={`${lot.station}-${lot.lot_id}`}>
-              <Link {...LIST_OPEN_PROP} className="flow-lots__link" to={lot.href} data-testid={`flow-lot-${lot.lot_id}`}>
+              <Link {...LIST_OPEN_PROP} className="flow-lots__link" to={safeFlowHref(lot.href) ?? '/flow'} data-testid={`flow-lot-${lot.lot_id}`}>
                 {lot.lot_id}
               </Link>
+              {onInspect && <button onClick={() => onInspect(lot.lot_id)}>Inspect journey</button>}
               <span className={pillClass(STATE_TONE[lot.state] ?? 'unknown')}>{lot.state}</span>
               <span className="flow-lots__waited">here {waitingWords(lot, now)}</span>
-              <span className="flow-lots__eta">{etaWords(lot)}</span>
-              {lot.slowest_ahead ? (
-                <span className="flow-lots__slowest">slowest ahead: {lot.slowest_ahead}</span>
-              ) : null}
+              {lot.state === 'held' && <span>held — awaiting an explicit release decision</span>}
             </li>
           ))}
         </ol>

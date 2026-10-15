@@ -6,6 +6,7 @@
 // Gate and Review, a hold at Review, a station nothing has reached (Pin) whose
 // numbers are absent rather than zero, and the oldest lots per station.
 
+import { flowHistory, FLOW_LAYOUT } from './flowHistory';
 import type { Page, Route } from '@playwright/test';
 
 type Over = Record<string, unknown>;
@@ -124,6 +125,11 @@ export async function mockFlowApi(page: Page): Promise<FlowLog> {
   const log: FlowLog = { queries: [] };
   await page.route('**/api/v1/flow**', async (route: Route) => {
     const params = new URL(route.request().url()).searchParams;
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/history') || path.endsWith('/layout')) {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/history') ? flowHistory(params) : FLOW_LAYOUT) });
+      return;
+    }
     log.queries.push(params);
     await route.fulfill({
       status: 200,

@@ -5,6 +5,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { flowHistory, FLOW_LAYOUT } from '../../../e2e/fixtures/flowHistory';
 import { FlowPage } from '../flow';
 import { FLOW_REPORT } from './flowTestData';
 import {
@@ -33,6 +34,8 @@ function mockFlowApi(override?: Override): Recorded[] {
     calls.push(req);
     const custom = override?.(req);
     if (custom) return custom;
+    if (url.pathname === '/api/v1/flow/history') return json(flowHistory(url.searchParams));
+    if (url.pathname === '/api/v1/flow/layout') return json(FLOW_LAYOUT);
     if (url.pathname === '/api/v1/flow') {
       return json({
         ...FLOW_REPORT,
@@ -57,38 +60,30 @@ const flowCalls = (calls: Recorded[]): URLSearchParams[] =>
   calls.filter((call) => call.pathname === '/api/v1/flow').map((call) => new URLSearchParams(call.search));
 
 describe('FlowPage', () => {
-  it('lays the line out as stations and names the bottleneck in the header', async () => {
+  it('shows configured parallel decisions without inventing an unknown release route', async () => {
     mockFlowApi();
     renderAt('/flow', '/flow', <FlowPage />);
+    await screen.findByTestId('flow-body');
+    expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('3 waiting');
+    expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('2 running');
+    expect(screen.getByText(/Current revision satisfies configured/)).toBeInTheDocument();
+    expect(screen.queryByText(/awaiting activation authorization/)).toBeNull();
+    expect(screen.queryByTestId('flow-bottleneck-badge')).toBeNull();
+    expect(screen.queryByTestId('flow-line-strip')).toBeNull();
+  });
 
-    expect(await screen.findByTestId('flow-body')).toBeInTheDocument();
-    expect(screen.getByTestId('flow-bottleneck-badge')).toHaveTextContent(
-      'Gate holds the most waiting'
-    );
-    // The strip above the cards is the one Activity carries, with the totals.
-    expect(screen.getByTestId('flow-line-strip-cycle')).toHaveTextContent('1.0 d');
-    expect(screen.getByTestId('flow-line-strip-x-factor')).toHaveTextContent('4.2×');
-
-    const gate = screen.getByTestId('flow-card-gate');
-    expect(gate).toHaveTextContent('3 waiting');
-    expect(gate).toHaveTextContent('2 active');
-    expect(gate).toHaveTextContent('Oldest wait 1h 10m');
-    expect(gate).toHaveTextContent('Queue 15m · work 6m 40s');
-    expect(gate).toHaveTextContent('4.2/h');
-    expect(gate.className).toContain('flow-card--bottleneck');
-    // Red is a hold: Review has one.
-    expect(screen.getByTestId('flow-card-review').className).toContain('flow-card--human');
-    // A station nothing has reached says so rather than showing zeros.
-    expect(screen.getByTestId('flow-card-pin')).toHaveTextContent(
-      'nothing has reached this station yet'
-    );
-    expect(screen.getByTestId('flow-card-stage')).toHaveTextContent('queue time: not enough data');
-
-    // The rework loops, as arcs and as the same sentences in words.
-    expect(screen.getByTestId('flow-rework-gate-work')).toHaveTextContent('9');
-    expect(screen.getByTestId('flow-rework-list')).toHaveTextContent(
-      '9 lots sent back from Gate to Work (19% of what left)'
-    );
+  it('filters daily transitions and opens the named runner and item journey', async () => {
+    const calls = mockFlowApi();
+    renderAt('/flow?station=gate', '/flow', <FlowPage />);
+    await screen.findByTestId('flow-daily-chart');
+    fireEvent.click(screen.getByRole('button', { name: '2026-10-13: Returned for fixes 1' }));
+    await waitFor(() => expect(calls.some(c => c.pathname.endsWith('/history') && c.search.includes('state=rework') && c.search.includes('day=2026-10-13'))).toBe(true));
+    await screen.findByText('Repair the queue');
+    expect(screen.getByRole('link', { name: 'Runner gate-b' })).toHaveAttribute('href', '/runners?runners=gate-b');
+    const history = screen.getByText('Repair the queue').closest('li')!;
+    fireEvent.click(within(history).getByRole('button', { name: 'Inspect journey' }));
+    await screen.findByTestId('flow-item-journey');
+    expect(screen.getByTestId('flow-item-journey')).toHaveTextContent('acme/widgets#41');
   });
 
   it('lists a station lots oldest first, and each lot opens its own page', async () => {
@@ -111,12 +106,12 @@ describe('FlowPage', () => {
       'href',
       '/acme/widgets/pull/42'
     );
-    expect(rows[1]).toHaveTextContent('not counting pin');
+
 
     // A held lot has no estimate: its next step is a person.
     fireEvent.click(screen.getByTestId('flow-card-review'));
     await waitFor(() =>
-      expect(screen.getByTestId('flow-lots')).toHaveTextContent('held — a person is the next step')
+      expect(screen.getByTestId('flow-lots')).toHaveTextContent('held — awaiting an explicit release decision')
     );
   });
 
@@ -127,7 +122,7 @@ describe('FlowPage', () => {
     expect(flowCalls(calls)[0].get('days')).toBe('7');
     // A deep link lists that station's lots without a click.
     expect(screen.getByTestId('flow-lots')).toHaveTextContent('At Gate, oldest first');
-    expect(screen.getByTestId('flow-line-strip-station-gate')).toHaveAttribute(
+    expect(screen.getByTestId('flow-card-gate')).toHaveAttribute(
       'aria-pressed',
       'true'
     );
@@ -135,9 +130,8 @@ describe('FlowPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '90 d' }));
     await waitFor(() => expect(flowCalls(calls).at(-1)?.get('days')).toBe('90'));
 
-    // Clicking the open station again puts the list away.
-    fireEvent.click(screen.getByTestId('flow-card-gate'));
-    await waitFor(() => expect(screen.queryByTestId('flow-lots')).toBeNull());
+    fireEvent.click(screen.getByTestId('flow-card-review'));
+    expect(screen.getByTestId('flow-detail')).toHaveTextContent('Assess the current pull request revision independently.');
   });
 
   it('says so on a server without the route, and to a reader who may not read it', async () => {
@@ -160,5 +154,47 @@ describe('FlowPage', () => {
     renderAt('/flow?mode=layout', '/flow', <FlowPage />);
     expect(await screen.findByText('Layout is not on this page yet.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Runners' })).toHaveAttribute('href', '/runners');
+  });
+});
+
+describe('Flow repository handoff', () => {
+  it('shows a second independent PR cycle and scopes its station request', async () => {
+    const calls = mockFlowApi(req => req.pathname === '/api/v1/flow' ? json({ ...FLOW_REPORT, repository_wip: [
+      { repo: 'acme/jeryu-web', station: 'gate', waiting: 1, active: 0, held: 0 },
+      { repo: 'acme/jeryu-deploy', station: 'gate', waiting: 2, active: 0, held: 0 },
+    ] }) : undefined);
+    renderAt('/flow', '/flow', <FlowPage />);
+    await screen.findByTestId('flow-card-consumer-gate');
+    expect(screen.getAllByText(/Current revision satisfies configured/)).toHaveLength(2);
+    expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('1 waiting');
+    expect(screen.getByTestId('flow-card-consumer-gate')).toHaveTextContent('2 waiting');
+    fireEvent.click(screen.getByTestId('flow-card-consumer-gate'));
+    await waitFor(() => expect(calls.some(c => c.pathname === '/api/v1/flow' && new URLSearchParams(c.search).get('repo') === 'acme/jeryu-deploy')).toBe(true));
+    expect(await screen.findByTestId('flow-detail')).toHaveTextContent('Selected station · acme/jeryu-deploy');
+    expect(screen.getByText(/awaiting activation authorization/)).toBeInTheDocument();
+  });
+});
+
+
+describe('Flow repository requirements', () => {
+  it.each([0, 2])('reads required approvals (%s) and check pass-through from the branch rule', async (approvals) => {
+    mockFlowApi(req => {
+      if (req.pathname.endsWith('/automation')) return json({ repo: 'acme/widgets', defaultBranch: 'main', requiredContexts: [], checks: [], actors: [], mirrors: [], grants: [], grantsVisible: false, warnings: [] });
+      if (req.pathname.endsWith('/protection')) return json({ required_status_checks: { contexts: [] }, required_pull_request_reviews: { required_approving_review_count: approvals } });
+      if (req.pathname === '/api/v1/flow') return json({ ...FLOW_REPORT, repo: 'acme/widgets', repository_wip: [{ repo: 'acme/widgets', station: 'gate', waiting: 1, active: 0, held: 0 }] });
+      return undefined;
+    });
+    renderAt('/flow?repo=acme/widgets&station=gate', '/flow', <FlowPage />);
+    await waitFor(() => expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('No checks required by branch rule · pass-through'));
+    expect(screen.getByTestId('flow-card-review')).toHaveTextContent(approvals ? '2 approving reviews required' : 'No approval required by branch rule · pass-through');
+    expect(screen.getByTestId('flow-detail')).toHaveTextContent('current default-branch rules');
+    expect(screen.getByRole('link', { name: 'Inspect repository configuration' })).toHaveAttribute('href', '/acme/widgets/settings/branch-protection');
+  });
+  it('does not infer pass-through or human-only policy from missing configuration', async () => {
+    mockFlowApi(req => req.pathname === '/api/v1/flow' ? json({ ...FLOW_REPORT, repository_wip: [{ repo: 'acme/widgets', station: 'gate', waiting: 1, active: 0, held: 0 }] }) : undefined);
+    renderAt('/flow', '/flow', <FlowPage />);
+    await screen.findByTestId('flow-card-gate');
+    expect(screen.getByTestId('flow-card-gate')).toHaveTextContent('Check requirement unknown');
+    expect(screen.queryByText(/No checks required by branch rule/)).toBeNull();
   });
 });

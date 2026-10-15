@@ -133,3 +133,14 @@ describe('flowModel', () => {
     ).toBeNull();
   });
 });
+
+describe('Flow evidence links', () => {
+  it('refuses executable and authority-changing navigation', async () => {
+    const { safeFlowHref, safeFlowLogHref } = await import('../flow/flowModel');
+    expect(safeFlowHref('/work/item')).toBe('/work/item');
+    for (const href of ['//evil.example', '/\\evil.example', 'javascript:alert(1)', '/work/\nitem']) expect(safeFlowHref(href)).toBeNull();
+    expect(safeFlowLogHref('https://forge.example/log/1')).toBe('https://forge.example/log/1');
+    expect(safeFlowLogHref('javascript:alert(1)')).toBeNull();
+    expect(safeFlowLogHref('https://secret@forge.example/log')).toBeNull();
+  });
+});

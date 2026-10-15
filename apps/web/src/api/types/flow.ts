@@ -10,6 +10,7 @@
 // Contract: jeryu-deploy `docs/flow.md`, ADR 0004.
 
 export interface FlowQuery {
+  repo?: string;
   family?: string;
   /** The window in days: 7, 28 or 90. */
   days?: number;
@@ -96,6 +97,8 @@ export interface FlowWindow {
 }
 
 export interface FlowReport {
+  repo?: string | null;
+  repository_wip?: FlowRepositoryWip[];
   schema_version: string;
   generated_at: string;
   family: string | null;
@@ -105,4 +108,25 @@ export interface FlowReport {
   line: FlowLine;
   /** The oldest lots at each station, 20 per station at most. */
   lots: FlowLot[];
+}
+
+export interface FlowRepositoryWip extends FlowWip { repo: string; station: string }
+export interface FlowHistoryItem {
+  event_seq: number; lot_id: string; station: string; state: string; ts: string;
+  repo: string | null; pr: number | null; sha: string | null; title?: string | null; summary: string | null;
+  runner: string | null; log_url: string | null; href: string;
+}
+export interface FlowHistory {
+  daily: Record<string, Record<string, number>>;
+  items: FlowHistoryItem[]; total: number; offset: number; detailed_since: string; timezone: string;
+  related_items?: { lot_id: string; href: string }[];
+  deliveries: { repo: string; revision: string; release: string | null; kind: string; ts: string }[];
+}
+export interface FlowHistoryQuery {
+  family?: string; repo?: string; station?: string; days: number; day?: string;
+  state?: string; lot?: string; offset?: number;
+}
+export interface FlowLayout {
+  stations: { id: string; tools: { runnerId: string; host: string; online: string; load: string;
+    lastSeen: string; code: { version?: string; commit?: string } | null }[] }[];
 }

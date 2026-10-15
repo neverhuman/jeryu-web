@@ -11,6 +11,9 @@ import type { RepositoryMirrorStatus } from '../api/types';
 /** The check that records merge-to-GitHub mirror pushes. */
 export const MIRROR_CHECK = 'jeryu/github-mirror';
 
+/** The forge's required audit proof context. */
+export const JANKURAI_PROOF_CHECK = 'jankurai/proof';
+
 /** Said wherever a failing mirror is explained: the table, and repo Settings. */
 export const MIRROR_OPERATOR_SENTENCE =
   'The forge host cannot push to GitHub (missing SSH rewrite or deploy key on the server). An operator fixes it on the host; merges are not affected.';
@@ -44,7 +47,7 @@ export interface FailingCheck {
 
 /** One plain sentence: the next step for a failing check, by its name. */
 export function whatToDo(checkName: string): string {
-  if (checkName === 'jankurai/proof') {
+  if (checkName === JANKURAI_PROOF_CHECK) {
     return 'Raise the audit score to the floor: fix the listed caps or findings on the default branch, then push; the proof re-runs on the next push.';
   }
   if (checkName === MIRROR_CHECK) return MIRROR_OPERATOR_SENTENCE;

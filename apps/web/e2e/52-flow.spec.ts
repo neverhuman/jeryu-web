@@ -43,42 +43,19 @@ test.describe('Flow', () => {
 
     await page.goto('/flow');
     await expect(page.getByTestId('flow-page')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('flow-bottleneck-badge')).toContainText(
-      'Gate holds the most waiting'
-    );
-    // The strip is the whole line in one row, with the line's own numbers.
-    await expect(page.getByTestId('flow-line-strip-cycle')).toContainText('1.0 d');
-    await expect(page.getByTestId('flow-line-strip-x-factor')).toContainText('4.2×');
-    await expect(page.getByTestId('flow-line-strip-wip')).toContainText('13');
+    await expect(page.getByTestId('flow-card-gate')).toContainText('3 waiting');
+    await expect(page.getByText('◇ Current revision satisfies configured merge requirements?')).toBeVisible();
+    await expect(page.getByText('Yes → ⏸ awaiting activation authorization')).toHaveCount(0);
+    await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
 
-    const stations = await page
-      .getByTestId('flow-stations')
-      .locator('.flow-card__label')
-      .evaluateAll((nodes) => nodes.map((node) => node.textContent));
-    expect(stations).toEqual([
-      'Queue',
-      'Work',
-      'Shift',
-      'Review',
-      'Gate',
-      'Merge',
-      'Pin',
-      'Stage',
-      'Deploy',
-    ]);
-    const gate = page.getByTestId('flow-card-gate');
-    await expect(gate).toContainText('3 waiting');
-    await expect(gate).toContainText('Queue 15m · work 6m 40s');
-    await expect(gate).toHaveClass(/flow-card--bottleneck/);
-    // Unknown stays unknown: nothing has been pinned, so Pin has no numbers.
-    await expect(page.getByTestId('flow-card-pin')).toContainText(
-      'nothing has reached this station yet'
-    );
-    // The loops back along the line, as arcs and in the same words.
-    await expect(page.getByTestId('flow-rework-gate-work')).toContainText('9');
-    await expect(page.getByTestId('flow-rework-list')).toContainText(
-      '9 lots sent back from Gate to Work (19% of what left)'
-    );
+    await page.getByTestId('flow-card-gate').click();
+    await expect(page.getByTestId('flow-daily-chart')).toBeVisible();
+    await page.getByRole('button', { name: '2026-10-13: Returned for fixes 1' }).click();
+    await expect(page.getByText('Repair the queue')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Runner gate-b' })).toHaveAttribute('href', '/runners?runners=gate-b');
+    const evidence = page.getByText('Repair the queue').locator('..');
+    await evidence.getByRole('button', { name: 'Inspect journey' }).click();
+    await expect(page.getByTestId('flow-item-journey')).toContainText('acme/widgets#41');
 
     const result = await runAxe(page, { disableRules: ['color-contrast'] });
     await persistAxeResult('flow-live', result);
@@ -105,12 +82,11 @@ test.describe('Flow', () => {
       nodes.map((node) => node.textContent)
     );
     expect(ids).toEqual(['acme-0001', 'acme/widgets#42', 'acme-0002']);
-    // A partial estimate says which station it does not cover.
-    await expect(lots).toContainText('not counting pin');
+
 
     // A held lot has no estimate: its next step is a person.
     await page.getByTestId('flow-card-review').click();
-    await expect(page.getByTestId('flow-lots')).toContainText('held — a person is the next step');
+    await expect(page.getByTestId('flow-lots')).toContainText('held — awaiting an explicit release decision');
 
     // The window stays a filter: the station picked stays picked.
     await page.getByRole('group', { name: 'Window' }).getByRole('button', { name: '90 d' }).click();
@@ -184,11 +160,8 @@ test.describe('Flow', () => {
     await expect(labels.first()).toBeVisible();
     const labelPx = await labels.first().evaluate((el) => el.getBoundingClientRect().height);
     expect(labelPx, 'station labels stay legible at 390px').toBeGreaterThanOrEqual(12);
-    const columns = await page
-      .getByTestId('flow-stations')
-      .locator('.flow-line__cards')
-      .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
-    expect(columns, 'one station per row on a phone').toBe(1);
+    const columns = await page.locator('.flow-map__intake').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+    expect(columns, 'one intake station per row on a phone').toBe(1);
     await expect(page.getByTestId('flow-lots')).toContainText('At Gate, oldest first');
 
     const result = await runAxe(page, { disableRules: ['color-contrast'] });

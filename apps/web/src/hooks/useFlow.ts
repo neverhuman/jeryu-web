@@ -20,10 +20,10 @@ export const FLOW_KEY = ['flow'] as const;
 export function useFlow(query: FlowQuery): UseQueryResult<FlowReport, Error> {
   const family = query.family ?? '';
   return useQuery({
-    queryKey: [...FLOW_KEY, family, query.days ?? ''],
+    queryKey: [...FLOW_KEY, family, query.repo ?? '', query.days ?? ''],
     queryFn: ({ signal }) => apiGet<FlowReport>(endpoints.flow(query), { signal }),
     placeholderData: (previous, previousQuery) =>
-      previousQuery && previousQuery.queryKey[FLOW_KEY.length] === family ? previous : undefined,
+      previousQuery && previousQuery.queryKey[FLOW_KEY.length] === family && previousQuery.queryKey[FLOW_KEY.length + 1] === (query.repo ?? '') ? previous : undefined,
     ...OPERATOR_REFRESH,
     staleTime: 30_000,
     retry: false,

@@ -229,3 +229,13 @@ export function waitingWords(lot: FlowLot, now: Date): string {
 export function bottleneck(report: FlowReport): FlowStation | null {
   return report.stations.find((station) => station.bottleneck) ?? null;
 }
+
+export function safeFlowHref(value: string | null): string | null {
+  return value?.startsWith('/') && !value.startsWith('//') && !/[\\\u0000-\u0020]/.test(value) ? value : null;
+}
+
+export function safeFlowLogHref(value: string | null): string | null {
+  if (safeFlowHref(value)) return value;
+  if (!value || /[\\\u0000-\u0020]/.test(value)) return null;
+  try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? value : null; } catch { return null; }
+}

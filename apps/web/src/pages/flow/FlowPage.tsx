@@ -1,20 +1,4 @@
-// FlowPage.tsx — `/flow`: where work sits on the delivery line.
-//
-// Live mode lays the line out as stations, left to right: what is at each one
-// now, how long it waits there against how long the step itself takes, where
-// work loops back, and which station holds the most waiting. The strip at the
-// top is the whole line in one row — the same component Activity carries — and
-// says the cycle time, the X-factor (how many times longer the work took than
-// the work itself) and the WIP. Clicking a station lists its lots, oldest
-// first, with an estimate; a lot opens its own page, where its trace is.
-//
-// Family comes from the shell's scope; the window and the picked station live
-// in the address (`?days=`, `?station=`, `?mode=`), so a screen can be sent to
-// somebody else as a link. Changing a filter is not a new page: the previous
-// answer stays up, dimmed, until the next one lands.
-//
-// Contract: jeryu-deploy `docs/flow.md`, ADR 0004. Nothing here is a fixture:
-// a number the flow ledger cannot support says so.
+// Flow maps repository decisions and immutable item evidence (Deploy ADR 0013).
 
 import { Route as RouteIcon, ServerOff } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -23,7 +7,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { useFamilyNames } from '../../components/family/useFamilyNames';
-import { LineStrip } from '../../components/flow/LineStrip';
+import { FlowMap } from './FlowMap';
+import { FlowDetail } from './FlowDetail';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import {
@@ -32,7 +17,6 @@ import {
   LoadingState,
   PermissionDeniedState,
 } from '../../components/state';
-import { pillClass } from '../../components/tone/tone';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import {
   isPipelineForbidden,
@@ -41,14 +25,11 @@ import {
 } from '../../hooks/usePipeline';
 import { useFlow } from '../../hooks/useFlow';
 import { UseThisWhen } from '../../layout/UseThisWhen';
-import { FlowLots } from './FlowLots';
-import { FlowStations } from './FlowStations';
 import {
   DEFAULT_WINDOW_DAYS,
   FLOW_WINDOWS,
   STATION_PARAM,
   WINDOW_PARAM,
-  bottleneck,
   parseMode,
   parseStation,
   parseWindow,
@@ -63,7 +44,9 @@ export function FlowPage(): JSX.Element {
   const scope = useFamilyScope();
   const days = parseWindow(params);
   const mode = parseMode(params);
-  const report = useFlow({ ...(scope.family ? { family: scope.family } : {}), days });
+  const selectedRepo = params.get("repo") ?? "";
+  const [journey, setJourney] = useState<string[]>([]);
+  const report = useFlow({ ...(scope.family ? { family: scope.family } : {}), ...(selectedRepo ? { repo: selectedRepo } : {}), days });
   const { data, isPending, isError, error, isPlaceholderData } = report;
   // While a new window loads, the old answer stays up: label it with the
   // window it was read for, not the one just picked.
@@ -85,7 +68,14 @@ export function FlowPage(): JSX.Element {
     setParams(next, { replace: true, preventScrollReset: true });
   };
 
-  const held = data ? bottleneck(data) : null;
+  const pickStation = (id: string, repo = '') => {
+    const next = new URLSearchParams(params);
+    next.set('station', id);
+    if (repo) next.set('repo', repo); else next.delete('repo');
+    for (const key of ['day', 'state', 'offset', 'lot']) next.delete(key);
+    setJourney([]);
+    setParams(next, { replace: true, preventScrollReset: true });
+  };
 
   return (
     <div className="page page--wide" data-testid="flow-page">
@@ -93,14 +83,8 @@ export function FlowPage(): JSX.Element {
         title="Flow"
         testId="flow-header"
         freshness={queryFreshness(report)}
-        subtitle="Where work sits on the delivery line, how long it waits at each step, where it loops back, and which step is the bottleneck."
-        badges={
-          held ? (
-            <span className={pillClass('warn')} data-testid="flow-bottleneck-badge">
-              {held.label} holds the most waiting
-            </span>
-          ) : null
-        }
+        subtitle="Follow changes across repositories, decisions, review, checks, and release. Pick a station to inspect its work and daily history."
+
       >
         <UseThisWhen id="nav.flow" />
       </PageHeader>
@@ -135,13 +119,7 @@ export function FlowPage(): JSX.Element {
             </p>
           ) : null}
 
-          <LineStrip
-            report={data}
-            totals
-            {...(scope.family ? { family: scope.family } : {})}
-            activeStation={station}
-            onStation={(id) => setParam(STATION_PARAM, id === station ? '' : id, '')}
-          />
+          <div className="flow-summary"><strong>{data.line.wip} recorded work in progress</strong><span>{data.line.finished} verified completions in {shownDays} days</span><span>Parallel visits overlap. Uncorrelated work remains unresolved.</span></div>
 
           {data.line.wip === 0 && data.line.finished === 0 ? (
             <ScopedEmptyState
@@ -155,20 +133,9 @@ export function FlowPage(): JSX.Element {
             <h2 className="page__section-title" id="flow-stations-title">
               Stations · last {shownDays} days
             </h2>
-            <FlowStations
-              report={data}
-              active={station}
-              onStation={(id) => setParam(STATION_PARAM, id === station ? '' : id, '')}
-            />
+            <FlowMap report={data} active={station} repo={selectedRepo} onStation={pickStation} journey={journey} />
           </section>
-
-          {station ? (
-            <FlowLots report={data} station={station} now={now} />
-          ) : (
-            <p className="flow__hint" data-testid="flow-lots-hint">
-              Pick a station to list the work waiting at it, oldest first.
-            </p>
-          )}
+          {station ? <FlowDetail key={`${scope.family ?? ''}-${selectedRepo}-${station}`} report={data} station={station} repo={selectedRepo} days={shownDays} now={now} {...(scope.family ? { family: scope.family } : {})} onJourney={setJourney} /> : <p className="flow__hint" data-testid="flow-lots-hint">Pick a station for its purpose, services, current work, and daily activity.</p>}
 
           <p className="flow__footnote" data-testid="flow-footnote">
             Read from the flow ledger, projected from the pipeline event log. Window{' '}

@@ -140,7 +140,7 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
       'x-factor',
     ],
     useWhen:
-      'Use this when work is slow and nobody knows where it sits: it names the station holding the most waiting.',
+      'Use this when work is slow and nobody knows where it sits: inspect the next decision, responsible service, and recorded history.',
     // `/api/v1/flow` is admin-only, like the event log it is projected from.
     adminOnly: true,
     group: 'primary',
