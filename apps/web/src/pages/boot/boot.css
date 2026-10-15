@@ -10,9 +10,11 @@
 
    Hero stacking order, back to front (every layer is inside .marketing-scene):
      0  .marketing-scene::after   drifting atmosphere wash
-     1  .dragon-landing           the alpha dragon and its slipstream
-     2  .marketing-scene::before  the technical grid (fades 55%→75% down the story)
-     3  .boot__hero, .landing-sections, .marketing-footer   content
+     1  .marketing-scene__currents  light running along grid rows, behind the dragon
+     1  .dragon-landing           the alpha dragon
+     2  .marketing-scene::before  the technical grid (80px minor, 320px major)
+     3  .boot__hero, .landing-sections, .marketing-footer   content; the story
+        sections paint solid navy over the grid before their first heading
      4  .dragon-landing--unavailable                        the retry notice
      5  .marketing-header                                   navigation
    The hero copy has its own isolated halo (.marketing-scene__copy::before)
@@ -128,6 +130,8 @@
   isolation: isolate;
   overflow: clip;
   background: radial-gradient(ellipse 75% 700px at 18% 360px, var(--marketing-atmosphere), transparent 80%);
+  /* The hero column gap; DragonLanding.css derives the dragon's place from it. */
+  --hero-gap: clamp(24px, 4vw, 64px);
 }
 .marketing-scene::before {
   content: '';
@@ -143,12 +147,66 @@
   background-size: 320px 320px, 320px 320px, 80px 80px, 80px 80px;
   background-position: center top;
 }
-/* On the story the grid belongs to the hero: it thins from 55% down the page
-   and is gone by 75%, so the workflow and the closing section sit on plain navy. */
+/* On the story the grid belongs to the hero. The story sections paint the
+   page navy over it (full bleed), fading in over their top padding so the grid,
+   the currents and the dragon's tail are gone before "From intent to evidence."
+   The mask keeps the footer plain as well. */
 .boot:not(.boot--auth-open) .marketing-scene::before {
   -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 75%);
   mask-image: linear-gradient(to bottom, #000 55%, transparent 75%);
 }
+.landing-sections::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(50% - 50vw);
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--color-bg-0) clamp(40px, 4.5vw, 72px));
+}
+
+/* Currents: short streaks of light that run right to left (behind the
+   right-facing dragon) exactly on rows of the 80px background grid. Each row
+   has its own length and speed; some race, some drift. Hidden when still. */
+.marketing-scene__currents {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: 1120px;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--marketing-grid-energy);
+}
+.marketing-scene__current {
+  position: absolute;
+  left: 0;
+  width: var(--current-length);
+  height: 1px;
+  background: linear-gradient(90deg, currentColor, transparent);
+  filter: drop-shadow(0 0 3px currentColor);
+  opacity: 0;
+  animation: marketing-current var(--current-speed) linear var(--current-delay) infinite;
+  animation-play-state: paused;
+}
+.marketing-scene__current:nth-child(1) { top: 160px; --current-length: 180px; --current-speed: 3.4s; --current-delay: -1.2s; }
+.marketing-scene__current:nth-child(2) { top: 320px; --current-length: 120px; --current-speed: 7.5s; --current-delay: -4s; }
+.marketing-scene__current:nth-child(3) { top: 400px; --current-length: 260px; --current-speed: 2.4s; --current-delay: -.4s; }
+.marketing-scene__current:nth-child(4) { top: 560px; --current-length: 140px; --current-speed: 9s; --current-delay: -6s; }
+.marketing-scene__current:nth-child(5) { top: 720px; --current-length: 220px; --current-speed: 4.2s; --current-delay: -2.6s; }
+.marketing-scene__current:nth-child(6) { top: 800px; --current-length: 100px; --current-speed: 12s; --current-delay: -3s; }
+.marketing-scene__current:nth-child(7) { top: 960px; --current-length: 300px; --current-speed: 2.9s; --current-delay: -1.9s; }
+[data-background-motion='running'] .marketing-scene__current { animation-play-state: running; }
+@keyframes marketing-current {
+  0% { transform: translate3d(100vw, 0, 0); opacity: 0; }
+  8%, 86% { opacity: .85; }
+  100% { transform: translate3d(-100%, 0, 0); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marketing-scene__current { animation: none; }
+}
+@media (forced-colors: active) {
+  .marketing-scene__currents { display: none; }
+}
+[data-theme='high-contrast'] .marketing-scene__currents { display: none; }
 .boot__hero, .landing-sections, .marketing-footer { position: relative; z-index: 3; }
 .marketing-scene__copy { position: relative; isolation: isolate; }
 .marketing-scene__copy::before {
@@ -175,7 +233,7 @@
   min-height: clamp(720px, calc(100svh - 88px), 900px);
   margin-inline: auto;
   padding: 16px clamp(24px, 5vw, 80px) 56px;
-  gap: 0 clamp(24px, 4vw, 64px);
+  gap: 0 var(--hero-gap);
 }
 .boot:not(.boot--auth-open) .boot__hero-copy { grid-column: 2; }
 .boot__hero-copy { position: relative; z-index: 1; isolation: isolate; min-width: 0; padding-block: 48px; }

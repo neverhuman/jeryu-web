@@ -126,9 +126,9 @@ async fn exercise(driver: &WebDriver, fixture: &Fixture, artifacts: &Path) -> Re
     // Observe actual frame movement, allowing the cycle to wrap between samples.
     let mut moved_left = false;
     for _ in 0..10 {
-        let x = rendered(driver, "new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.dragon-landing__flow')).transform).m41").await?.as_f64().unwrap();
+        let x = rendered(driver, "new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.marketing-scene__current')).transform).m41").await?.as_f64().unwrap();
         sleep(Duration::from_millis(80)).await;
-        let next = rendered(driver, "new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.dragon-landing__flow')).transform).m41").await?.as_f64().unwrap();
+        let next = rendered(driver, "new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.marketing-scene__current')).transform).m41").await?.as_f64().unwrap();
         if next < x - 1.0 {
             moved_left = true;
             break;
@@ -136,7 +136,7 @@ async fn exercise(driver: &WebDriver, fixture: &Fixture, artifacts: &Path) -> Re
     }
     assert!(
         moved_left,
-        "wakes must travel left behind the right-facing dragon"
+        "grid currents must travel left behind the right-facing dragon"
     );
     click(driver, ".marketing-header__login").await?;
     assert_eq!(scene(driver, "0.1").await?, grid);

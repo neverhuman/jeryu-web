@@ -165,9 +165,11 @@ test.describe('Signed-out landing', () => {
     const dragon = await page.getByTestId('dragon-landing').boundingBox();
     expect(heading).not.toBeNull();
     expect(dragon).not.toBeNull();
-    // Desktop composition: the dragon owns the left half and faces the headline on the right.
-    expect(dragon!.x + dragon!.width / 2).toBeLessThan(heading!.x);
-    expect(dragon!.x).toBeGreaterThanOrEqual(0);
+    // Desktop composition: the dragon faces the headline and its artwork (97.3%
+    // of the poster width, the foreclaws) ends before the copy. Its back may run
+    // a little off the left edge; its head never runs under the headline.
+    expect(dragon!.x + dragon!.width * 0.973).toBeLessThan(heading!.x);
+    expect(dragon!.x).toBeGreaterThan(-dragon!.width * 0.12);
 
     await page.getByRole('button', { name: 'Log in' }).click();
     await expect(page.getByRole('tab', { name: 'Login' })).toHaveAttribute('aria-selected', 'true');
@@ -212,7 +214,7 @@ test.describe('Signed-out landing', () => {
     await expect(page.getByTestId('dragon-layers')).toHaveCount(0);
     await expect(page.locator('.marketing-scene')).toHaveAttribute('data-background-motion', 'paused');
     await expect(page.getByRole('button', { name: 'Pause background motion' })).toHaveCount(0);
-    expect(await page.locator('.dragon-landing__flow').first().evaluate((node) => getComputedStyle(node).animationName)).toBe('none');
+    expect(await page.locator('.marketing-scene__current').first().evaluate((node) => getComputedStyle(node).animationName)).toBe('none');
     const login = page.getByRole('button', { name: 'Log in' });
     await expect(login).toBeVisible();
     const box = await login.boundingBox();
@@ -226,9 +228,17 @@ test.describe('Signed-out landing', () => {
     await mockSession(page, { current: null });
     await openStory(page);
     const story = page.locator('.marketing-scene');
-    const flow = page.locator('.dragon-landing__flow').first();
+    const flow = page.locator('.marketing-scene__current').first();
     await expect(story).toHaveAttribute('data-background-motion', 'running');
-    // SVG wakes must stream left behind the right-facing dragon in rendered frames, not merely have a keyframe name.
+    // Currents ride rows of the 80px background grid at different speeds.
+    const currents = await page.locator('.marketing-scene__current').evaluateAll((nodes) => nodes.map((node) => ({
+      top: (node as HTMLElement).offsetTop,
+      duration: getComputedStyle(node).animationDuration,
+    })));
+    expect(currents.length).toBeGreaterThan(3);
+    for (const current of currents) expect(current.top % 80).toBe(0);
+    expect(new Set(currents.map((current) => current.duration)).size).toBe(currents.length);
+    // Currents must stream left behind the right-facing dragon in rendered frames, not merely have a keyframe name.
     const first = await flow.evaluate((node) => new DOMMatrixReadOnly(getComputedStyle(node).transform).m41);
     await expect.poll(() => flow.evaluate((node) => new DOMMatrixReadOnly(getComputedStyle(node).transform).m41)).toBeLessThan(first - 2);
     await expect(page.getByRole('button', { name: /(?:Pause|Play) background motion/ })).toHaveCount(0);
@@ -364,8 +374,11 @@ test.describe('Signed-out landing', () => {
       expect(frame).not.toBeNull();
       expect(poster).not.toBeNull();
       expect(workflow).not.toBeNull();
-      // Keep the complete graphic and its free tips inside the viewport.
-      expect(frame!.x).toBeGreaterThanOrEqual(0);
+      // The head stays clear of the headline; only the back may leave the viewport.
+      const headline = await page.getByRole('heading', { name: 'Git for agents.' }).boundingBox();
+      expect(headline).not.toBeNull();
+      expect(frame!.x + frame!.width * 0.973).toBeLessThan(headline!.x);
+      expect(frame!.x).toBeGreaterThan(-frame!.width * 0.12);
       expect(frame!.x + frame!.width).toBeLessThanOrEqual(1440);
       expect(poster!.y + poster!.height).toBeLessThanOrEqual(frame!.y + frame!.height + 1);
       // The alpha dragon crosses the hero boundary into the product story.

@@ -1,12 +1,19 @@
-/* Desktop (>= 1024px): the dragon is absolute inside .marketing-scene, anchored
-   to the left edge of the 1600px frame, and tall enough that its tail recedes
-   under the first story section. The head faces the headline on the right. */
+/* Desktop (>= 1024px): the dragon is absolute inside .marketing-scene and is
+   placed by its head, not its back. The copy column always starts at
+   50% + --hero-gap / 2 (boot.css), and the opaque artwork ends at 97.3% of the
+   image width (the foreclaws; the snout reaches 93%). So the art stops a
+   clearance short of the copy at every width, and on narrower desktops its back
+   mane runs off the left edge instead of the head running under the headline.
+   The tail recedes under the first story section. */
 .dragon-landing {
+  --dragon-width: clamp(560px, 56vw, 1086px);
+  --dragon-reach: .973;
+  --dragon-clearance: clamp(16px, 2vw, 40px);
   position: absolute;
   z-index: 1;
   top: 24px;
-  left: max(0px, calc((100% - 1600px) / 2 - 24px));
-  width: clamp(540px, 52vw, 1086px);
+  left: calc(50% + var(--hero-gap) / 2 - var(--dragon-clearance) - var(--dragon-width) * var(--dragon-reach));
+  width: var(--dragon-width);
   aspect-ratio: 3 / 4;
   margin: 0;
   pointer-events: none;
@@ -25,20 +32,6 @@
 }
 /* Public forms use a faint signature; returning to the story restores it. */
 .marketing-scene[data-dragon-subdued='true'] .dragon-landing__poster { opacity: .1; }
-.dragon-landing__traces {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  color: var(--marketing-grid-energy);
-  stroke: currentColor;
-  stroke-width: 1;
-  opacity: .55;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 96%);
-  mask-image: linear-gradient(to bottom, #000 55%, transparent 96%);
-}
-.dragon-landing__rails { opacity: .16; }
 .dragon-landing--unavailable { z-index: 4; }
 .dragon-landing__unavailable {
   position: absolute;
@@ -74,25 +67,34 @@
 }
 
 /* Tablet and phone: the story's dragon leaves the absolute layer and follows
-   the hero copy in flow, cropped to a landscape band that keeps the head and
-   mane. The subdued dragon behind a form stays a faint absolute backdrop. */
+   the hero copy in flow as a full-bleed band. --dragon-band is the poster
+   width; the band shows the top of the artwork (horns, head, mane), puts the
+   snout and claws near the right edge, lets the back run off the left edge and
+   fades out at the bottom instead of ending in a box. The subdued dragon behind
+   a form stays a faint absolute backdrop. */
 @media (max-width: 1023px) {
   .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing {
+    --dragon-band: min(100vw, 860px);
+    --dragon-head-x: 95%;
     position: relative;
     order: 1;
     top: auto;
     left: auto;
     width: 100%;
-    aspect-ratio: 2 / 1;
+    height: calc(var(--dragon-band) * .75);
+    aspect-ratio: auto;
     overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
   }
   .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing__poster {
     position: absolute;
     top: 0;
-    right: -6%;
-    width: 70%;
-    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%);
-    mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%);
+    left: calc(var(--dragon-head-x) - var(--dragon-band) * var(--dragon-reach));
+    width: var(--dragon-band);
+    max-width: none;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
   .marketing-scene[data-dragon-subdued='true'] .dragon-landing {
     top: 40px;
@@ -102,46 +104,20 @@
   }
   .dragon-landing__unavailable { top: 24px; left: 50%; transform: translateX(-50%); width: min(300px, calc(100% - 40px)); }
 }
+/* Phones: a larger poster so the head reads at arm's length; more of the back
+   is off the left edge. The band stays wider than it is tall. */
 @media (max-width: 767px) {
   .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing {
-    width: calc(100% - 32px);
-    margin: 4px auto 0;
-    aspect-ratio: 4 / 3;
-  }
-  /* 136% wide and shifted left shows the head, horns and mane at phone size. */
-  .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing__poster {
-    right: auto;
-    left: -30%;
-    width: 136%;
+    --dragon-band: 128vw;
+    --dragon-head-x: 96%;
+    height: 82vw;
   }
   .marketing-scene[data-dragon-subdued='true'] .dragon-landing { top: 56px; right: -24%; width: 92vw; }
 }
 @media (forced-colors: active) {
-  .dragon-landing__traces { display: none; }
   .dragon-landing__unavailable { color: CanvasText; background: Canvas; border-color: CanvasText; }
 }
 
-/* Short wakes stream behind the right-facing dragon and fade before resetting outside the scene. */
-.dragon-landing__flow {
-  stroke-width: 2;
-  stroke-linecap: round;
-  opacity: 0;
-  animation: landing-slipstream 6s linear infinite;
-  animation-play-state: paused;
-}
-.dragon-landing__flow:nth-child(2) { animation-delay: -2.8s; animation-duration: 7.2s; }
-.dragon-landing__flow:nth-child(3) { animation-delay: -1.6s; animation-duration: 5.4s; }
-.dragon-landing__flow:nth-child(4) { animation-delay: -4.1s; animation-duration: 6.8s; }
-.dragon-landing__flow:nth-child(5) { animation-delay: -3.2s; animation-duration: 8s; }
-[data-background-motion='running'] .dragon-landing__flow { animation-play-state: running; }
-@keyframes landing-slipstream {
-  0% { transform: translate3d(1246px, 0, 0); opacity: 0; }
-  12% { opacity: .9; }
-  80% { opacity: .9; }
-  100% { transform: translate3d(-160px, 0, 0); opacity: 0; }
-}
 @media (prefers-reduced-motion: reduce), (forced-colors: active) {
-  .dragon-landing__flow { animation: none; }
   .dragon-landing__poster { transition: none; }
 }
-[data-theme='high-contrast'] .dragon-landing__flow { animation: none; }
