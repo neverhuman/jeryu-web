@@ -1,3 +1,4 @@
+import { HypothesisOutcomes } from './HypothesisOutcomes';
 // ScorecardPage.tsx — outcome delivery scorecard at `/scorecard`.
 
 import { BarChart3, ServerOff } from 'lucide-react';
@@ -404,19 +405,22 @@ function OutcomesTab({
   family: string;
   repo: string;
 }): JSX.Element {
+  const hypotheses = metric(metrics, 'hypotheses_checked_and_met');
+  const monthly = !!hypotheses.value && typeof hypotheses.value === 'object' && 'month' in hypotheses.value;
   return (
     <section className="page__section" aria-labelledby="scorecard-outcomes" data-testid="scorecard-outcomes">
       <h2 className="page__section-title" id="scorecard-outcomes">
         Outcomes
       </h2>
+      <HypothesisOutcomes metric={metric(metrics, 'hypotheses_checked_and_met')} />
       <div className="scorecard__tiles">
-        <MetricTile
+        {monthly ? null : <MetricTile
           spec={{ id: 'hypotheses_checked_and_met', label: 'Hypotheses checked and met', kind: 'object', rowLink: 'Rows' }}
-          metric={metric(metrics, 'hypotheses_checked_and_met')}
+          metric={hypotheses}
           window={window}
           family={family}
           repo={repo}
-        />
+        />}
         <MetricTile
           spec={{ id: 'successful_changes', label: 'Successful changes', kind: 'count', rowLink: 'Todos' }}
           metric={metric(metrics, 'successful_changes')}

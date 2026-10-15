@@ -1,3 +1,4 @@
+import { TodoOutcome } from './TodoOutcome';
 // TodoPage.tsx — one todo's own page (`/work/<id>`).
 //
 // Needs you, Activity, the workers line and a queue row's id all land here, so a
@@ -211,6 +212,15 @@ function TodoView({
         hrefs={prHref ? { pr: prHref } : {}}
       />
       <NeedsYouAbout subject={{ todoId: todo.id }} />
+      {'hypothesis' in todo ? (
+        <TodoOutcome
+          key={`${todo.family}:${todo.id}`}
+          todo={todo}
+          canEdit={isAdmin || !!viewer && (todo.assignee
+            ? todo.assignee === viewer.login
+            : todo.requested_by === viewer.login)}
+        />
+      ) : null}
       {/* Anyone signed in who can work on it may take a todo on or hand it to
           another person. A server that predates assignees sends no `assignee`
           key at all (a newer one sends null), so offer nothing it would refuse. */}

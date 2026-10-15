@@ -93,6 +93,7 @@ export const KIND_PRECEDENCE: readonly string[] = [
   'pr_awaiting_approval',
   'pr_ready_to_merge',
   'todo_blocked',
+  'todo_check_outcome',
   'todo_handoff',
   'todo_stuck_claim',
   'todo_waiting_on_blocker',
@@ -226,6 +227,7 @@ export function attentionBadgeCount(data: AttentionResponse | undefined): number
 
 const KIND_LABEL: Record<string, string> = {
   todo_blocked: 'Blocked todo',
+  todo_check_outcome: 'Check outcome',
   todo_handoff: 'Todo handed to you',
   todo_stuck_claim: 'Stuck claim',
   todo_untriaged: 'Todo to triage',

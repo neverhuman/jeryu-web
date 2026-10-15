@@ -69,6 +69,10 @@ export interface ShiftAttempt {
 }
 
 export interface ShiftTodo {
+  hypothesis?: string;
+  check_after?: string | number | null;
+  outcome?: 'met' | 'not_met' | 'unclear' | 'not_checked';
+  outcome_note?: string;
   id: string;
   family: string;
   title: string;
@@ -174,12 +178,18 @@ export type ShiftTodoActionKind =
   | 'edit'
   | 'claim'
   | 'assign'
-  | 'unassign';
+  | 'unassign'
+  | 'outcome_check';
 
 export interface ShiftTodoActionRequest {
   action: ShiftTodoActionKind;
-  /** `assign`: the login of the person to hand the todo to. */
-  value?: string | number;
+  /** `assign`: a login; `outcome_check`: the fields to change. */
+  value?: string | number | {
+    hypothesis?: string;
+    check_after?: string | number | null;
+    outcome?: ShiftTodo['outcome'];
+    outcome_note?: string;
+  };
   note?: string;
   /**
    * `release` only: take the todo back from a worker whose claim lease is

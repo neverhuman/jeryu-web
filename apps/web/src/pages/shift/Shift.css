@@ -636,3 +636,26 @@
 .shift__assignee-line {
   font-weight: 600;
 }
+.todo-outcome__form {
+  align-items: stretch;
+  flex-direction: column;
+  max-width: 44rem;
+}
+
+.todo-outcome__form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.todo-outcome__form select {
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-fg-primary);
+  background: var(--color-bg-1);
+  border: 1px solid var(--color-border-strong);
+  font: inherit;
+}
+
+.todo-outcome p {
+  overflow-wrap: anywhere;
+}

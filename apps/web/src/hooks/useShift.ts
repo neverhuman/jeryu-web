@@ -26,6 +26,7 @@ import { apiGet, apiSend } from '../api/client';
 import { fetchShiftTodos } from '../api/shiftTodoLists';
 import { newIdempotencyKey } from './idempotency';
 import { PIPELINE_KEY } from './usePipeline';
+import { SCORECARD_KEY } from './useScorecard';
 import { endpoints } from '../api/endpoints';
 import type {
   CreateShiftTodoRequest,
@@ -198,6 +199,7 @@ export function useShiftTodoAction(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [...SHIFT_KEY, 'todos'] });
       void queryClient.invalidateQueries({ queryKey: PIPELINE_KEY });
+      void queryClient.invalidateQueries({ queryKey: SCORECARD_KEY });
     },
   });
 }

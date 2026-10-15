@@ -280,3 +280,21 @@
     grid-template-columns: 64px minmax(0, 1fr) 58px;
   }
 }
+
+.scorecard__hypotheses {
+  overflow-x: auto;
+}
+
+.scorecard__hypotheses table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.scorecard__hypotheses th,
+.scorecard__hypotheses td {
+  padding: var(--space-2);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border-strong);
+  overflow-wrap: anywhere;
+}
