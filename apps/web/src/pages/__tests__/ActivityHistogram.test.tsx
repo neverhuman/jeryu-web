@@ -17,6 +17,8 @@ import {
   chipCounts,
   histogramGeometry,
   histogramQuery,
+  histogramReadout,
+  histogramRefetchMs,
   histogramSummary,
   parseRange,
   rangeQuery,
@@ -24,12 +26,12 @@ import {
 import type { PipelineHistogramResponse } from '../../api/types';
 import { mockPipelineApi } from './pipelinePageHelpers';
 import { HISTOGRAM } from './pipelineTestData';
-import { errorResponse, renderAt } from './shiftPageHelpers';
+import { errorResponse, json, renderAt } from './shiftPageHelpers';
 
-// Three buckets exactly as jeryu-deploy's histogram route answered
-// `?range=6h` on 2026-10-15, not written from this build's own type: the
-// band once drew nothing in production because every fixture here used a
-// shape the server never sent.
+// The whole answer jeryu-deploy's histogram route gave to `?range=6h` at
+// 2026-10-15T02:15Z, saved byte for byte and never edited: not written from
+// this build's own type. The band once drew nothing in production because
+// every fixture here used a shape the server never sent.
 const SERVER_ANSWER = JSON.parse(
   readFileSync(join(process.cwd(), 'src/test/fixtures/events-histogram.server.json'), 'utf8')
 ) as PipelineHistogramResponse;
@@ -67,23 +69,43 @@ describe('histogramModel', () => {
     expect(histogramQuery('24h', { family: '' })).toEqual({ range: '24h' });
   });
 
-  it('reads an answer the server actually sent', () => {
+  it('reads an answer the server actually sent, and adds up to its total', () => {
     const buckets = histogramBuckets(SERVER_ANSWER);
-    expect(buckets).toHaveLength(3);
-    expect(buckets.map((bucket) => bucket.at)).toEqual([
-      '2026-10-14T19:55:00Z',
-      '2026-10-14T20:00:00Z',
-      '2026-10-14T20:05:00Z',
-    ]);
-    // `other` is not one of the stacked groups, so the drawn total is the
-    // stack's: 36 of the server's 40 in the first bucket.
-    expect(buckets[0].counts.gates).toBe(16);
-    expect(buckets[0].total).toBe(36);
-    expect(buckets[0].failures).toBe(5);
+    expect(buckets).toHaveLength(73);
+    expect(buckets[0].at).toBe('2026-10-14T20:10:00Z');
+    // Events in no stacked group are Other, so each bar is the server's total.
+    expect(buckets[6].counts.other).toBe(10);
+    expect(buckets[6].total).toBe(16);
+    const serverTotal = SERVER_ANSWER.buckets.reduce((sum, bucket) => sum + (bucket.total ?? 0), 0);
+    expect(serverTotal).toBe(872);
     const counts = chipCounts(buckets);
-    expect(counts.gates).toBe(35);
-    expect(counts.all).toBe(69);
-    expect(counts.human).toBe(6);
+    expect(counts.all).toBe(serverTotal);
+    expect(counts.gates).toBe(254);
+    expect(counts.human).toBe(25);
+    const geometry = histogramGeometry(buckets, { width: 900, height: 100, spanHours: 6 });
+    expect(geometry.events).toBe(serverTotal);
+    // The server answered the window asked for, in a shape this build reads.
+    expect(histogramReadout(SERVER_ANSWER, 6)).toEqual({ unreadable: false, answeredHours: null });
+  });
+
+  it('says so when an answer cannot be read or is shorter than asked', () => {
+    const oldShape = {
+      from: '2026-10-14T00:00:00Z',
+      to: '2026-10-15T00:00:00Z',
+      buckets: [{ at: '2026-10-14T00:00:00Z', groups: { gates: 3 } }],
+    } as unknown as PipelineHistogramResponse;
+    expect(histogramReadout(oldShape, 24)).toEqual({ unreadable: true, answeredHours: null });
+    // A server that ignored `hours=720` and answered its 24 h default.
+    const ignored = { ...SERVER_ANSWER, from: '2026-10-14T02:00:00Z', to: '2026-10-15T02:00:00Z' };
+    expect(histogramReadout(ignored, 720)).toEqual({ unreadable: false, answeredHours: 24 });
+    expect(histogramReadout(undefined, 24)).toEqual({ unreadable: false, answeredHours: null });
+  });
+
+  it('asks a wide window less often', () => {
+    expect(histogramRefetchMs('6h')).toBe(15_000);
+    expect(histogramRefetchMs('24h')).toBe(15_000);
+    expect(histogramRefetchMs('7d')).toBe(60_000);
+    expect(histogramRefetchMs('30d')).toBe(300_000);
   });
 
   it('folds the wire buckets into counts, oldest first, ignoring unknown groups', () => {
@@ -170,6 +192,18 @@ describe('histogramModel', () => {
     expect(histogramSummary(gatesOnly, '24h', 'Gates')).toBe(
       'Gates volume over 24h: 9 events in 3 buckets, busiest 6.'
     );
+    const mergesOnly = histogramGeometry(histogramBuckets(HISTOGRAM), {
+      width: 900,
+      height: 100,
+      spanHours: 24,
+      only: 'merges',
+    });
+    expect(histogramSummary(mergesOnly, '24h', 'Merges')).toBe('Merges volume over 24h: 1 event in 3 buckets, busiest 1.');
+    const deploysNone = histogramGeometry(
+      histogramBuckets({ buckets: [{ start: '2026-10-04T10:00:00Z', by_group: { gates: 2 } }] }),
+      { width: 900, height: 100, spanHours: 24, only: 'deploys' }
+    );
+    expect(histogramSummary(deploysNone, '24h', 'Deploys')).toBe('Deploys volume over 24h: no events.');
 
     const title = bucketTitle(histogramBuckets(HISTOGRAM)[1], 24);
     expect(title).toContain('13 events');
@@ -301,6 +335,17 @@ describe('ActivityHistogram', () => {
     } finally {
       window.matchMedia = original;
     }
+  });
+
+  it('says on the band when the answer is in a shape it cannot read', async () => {
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events/histogram'
+        ? json({ from: HISTOGRAM.from, to: HISTOGRAM.to, buckets: [{ at: '2026-10-04T10:00:00Z', groups: { gates: 3 } }] })
+        : undefined
+    );
+    renderPage();
+    const note = await screen.findByTestId('activity-volume-note');
+    expect(note.textContent).toContain('cannot read');
   });
 
   it('leaves the band out on a server without the route, keeping the feed', async () => {

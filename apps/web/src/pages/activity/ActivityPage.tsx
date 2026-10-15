@@ -90,6 +90,7 @@ import {
   chipCounts,
   histogramBuckets,
   histogramQuery,
+  histogramRefetchMs,
   parseRange,
   type HistogramRangeId,
 } from './histogramModel';
@@ -806,7 +807,9 @@ function Filters({
   // The same query the band above asks, so the counts are one request shared
   // with it and say the same thing the bars do. A server without the route
   // leaves the badges out rather than showing a chip row of zeros.
-  const histogram = useEventsHistogram(histogramQuery(range, { family: filters.family, repo }));
+  const histogram = useEventsHistogram(histogramQuery(range, { family: filters.family, repo }), {
+    refetchInterval: histogramRefetchMs(range),
+  });
   const counts =
     histogram.isError || histogram.data === undefined
       ? null

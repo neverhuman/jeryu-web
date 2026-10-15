@@ -988,6 +988,7 @@
 .activity-volume__seg.is-deploys {
   fill: color-mix(in srgb, var(--color-accent-secondary) 45%, var(--color-accent-primary));
 }
+.activity-volume__seg.is-other { fill: var(--color-fg-muted); cursor: default; }
 
 /* A failure the pipeline owns is the failed tone (amber, outlined), not red:
    red on this site is kept for what waits on a person — the tick above. */
@@ -1056,6 +1057,16 @@
   color: var(--color-fg-primary);
 }
 
+.activity-volume__key--plain {
+  cursor: default;
+}
+
+.activity-volume__note {
+  margin: 0 0 var(--space-1);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
 .activity-volume__swatch {
   display: inline-block;
   width: 10px;
@@ -1071,6 +1082,7 @@
   background: color-mix(in srgb, var(--color-accent-success) 50%, var(--color-accent-info));
 }
 .activity-volume__swatch.is-releases { background: var(--color-accent-warning); }
+.activity-volume__swatch.is-other { background: var(--color-fg-muted); }
 .activity-volume__swatch.is-deploys {
   background: color-mix(in srgb, var(--color-accent-secondary) 45%, var(--color-accent-primary));
 }

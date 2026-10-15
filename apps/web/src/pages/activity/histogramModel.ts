@@ -59,6 +59,14 @@ export function histogramQuery(
   return { ...rangeQuery(id), ...where };
 }
 
+/**
+ * How often the band and the chip counts ask again. A wide window barely
+ * moves between asks, so it is asked for less often than a narrow one.
+ */
+export function histogramRefetchMs(id: HistogramRangeId): number {
+  return id === '30d' ? 300_000 : id === '7d' ? 60_000 : 15_000;
+}
+
 /** The URL params a range button sets, keeping every other filter. */
 export function applyRange(params: URLSearchParams, id: HistogramRangeId): URLSearchParams {
   const next = new URLSearchParams(params);
@@ -84,6 +92,15 @@ export const HISTOGRAM_GROUPS: readonly HistogramGroup[] = [
   { id: 'releases', label: 'Releases', chipId: 'releases' },
   { id: 'deploys', label: 'Deploys', chipId: 'deploys' },
 ];
+
+/**
+ * Events the server counts in a group this build does not stack. They are
+ * drawn on top of each bar so the bars, the heading and the All chip add up
+ * to the server's own total; there is no chip for them, so they filter nothing.
+ */
+export const OTHER_GROUP: HistogramGroup = { id: 'other', label: 'Other', chipId: 'all' };
+
+const DRAWN_GROUPS: readonly HistogramGroup[] = [...HISTOGRAM_GROUPS, OTHER_GROUP];
 
 export function chipOfGroup(groupId: string): ActivityChip | undefined {
   const group = HISTOGRAM_GROUPS.find((candidate) => candidate.id === groupId);
@@ -119,18 +136,22 @@ export function histogramBuckets(response: PipelineHistogramResponse | undefined
     .filter((bucket) => typeof bucket?.start === 'string' && !Number.isNaN(Date.parse(bucket.start)))
     .map((bucket) => {
       const counts: Record<string, number> = {};
-      let total = 0;
+      let stacked = 0;
       for (const group of HISTOGRAM_GROUPS) {
         const n = count(bucket.by_group?.[group.id]);
         counts[group.id] = n;
-        total += n;
+        stacked += n;
       }
+      // The server's total counts every event, the stacked groups only some:
+      // the rest is Other. A server without a total names its own `other`.
+      const total = count(bucket.total);
+      counts[OTHER_GROUP.id] = total > stacked ? total - stacked : count(bucket.by_group?.[OTHER_GROUP.id]);
       return {
         at: bucket.start,
         counts,
         failures: count(bucket.failures),
         needsHuman: count(bucket.needs_human),
-        total,
+        total: stacked + counts[OTHER_GROUP.id],
       };
     });
   return buckets.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
@@ -145,6 +166,32 @@ export function histogramBuckets(response: PipelineHistogramResponse | undefined
  * what the chip shows, when all it means is that the server does not count
  * that group yet.
  */
+/**
+ * What the server's answer says about itself, so a mismatch is said on the
+ * band rather than drawn as an empty or mislabelled plot. `unreadable`: it
+ * sent buckets and none of them is one this build reads. `answeredHours`: the
+ * window it answered, when that is shorter than the one asked for.
+ */
+export interface HistogramReadout {
+  unreadable: boolean;
+  answeredHours: number | null;
+}
+
+export function histogramReadout(
+  response: PipelineHistogramResponse | undefined,
+  askedHours: number
+): HistogramReadout {
+  const sent = response?.buckets?.length ?? 0;
+  const unreadable = sent > 0 && histogramBuckets(response).length === 0;
+  const from = Date.parse(response?.from ?? '');
+  const to = Date.parse(response?.to ?? '');
+  const span = Number.isNaN(from) || Number.isNaN(to) ? null : (to - from) / 3_600_000;
+  // Bucket edges round the window out, never in, so only a clearly shorter
+  // answer is one the server chose: a server that ignored the asked window.
+  const answeredHours = span !== null && span > 0 && span < askedHours * 0.9 ? Math.round(span) : null;
+  return { unreadable, answeredHours };
+}
+
 export function chipCounts(buckets: readonly HistogramBucket[]): Record<string, number> {
   const counts: Record<string, number> = { all: 0, human: 0 };
   for (const chip of ACTIVITY_CHIPS) {
@@ -225,7 +272,7 @@ export function histogramGeometry(
     const barTop = height - barHeight;
     let top = height;
     const segments: HistogramSegment[] = [];
-    for (const group of HISTOGRAM_GROUPS) {
+    for (const group of DRAWN_GROUPS) {
       const value = bucket.counts[group.id] ?? 0;
       if (value <= 0) continue;
       const segHeight = (value / bucket.total) * barHeight;
@@ -267,7 +314,7 @@ export function histogramGeometry(
 /** The `<title>` of one bar: the time, the stack, and what went wrong. */
 export function bucketTitle(bucket: HistogramBucket, spanHours: number): string {
   const when = tickText(Date.parse(bucket.at), spanHours);
-  const parts = HISTOGRAM_GROUPS.filter((group) => (bucket.counts[group.id] ?? 0) > 0).map(
+  const parts = DRAWN_GROUPS.filter((group) => (bucket.counts[group.id] ?? 0) > 0).map(
     (group) => `${group.label.toLowerCase()} ${bucket.counts[group.id]}`
   );
   const tail: string[] = [];
@@ -282,7 +329,7 @@ export function histogramSummary(geometry: HistogramGeometry, rangeLabel: string
   // One group drawn alone says so, as the heading does: its bars are that
   // group on its own scale, with no failures or needs-a-person drawn.
   const what = onlyLabel ? `${onlyLabel} volume` : 'Pipeline volume';
-  if (geometry.bars.length === 0) return `${what} over ${rangeLabel}: no events.`;
+  if (geometry.events === 0) return `${what} over ${rangeLabel}: no events.`;
   const peak = geometry.bars.reduce((best, bar) => (bar.total > best.total ? bar : best), geometry.bars[0]);
   const failed = geometry.bars.reduce((sum, bar) => sum + bar.failed, 0);
   const human = geometry.bars.reduce((sum, bar) => sum + bar.needsHuman, 0);

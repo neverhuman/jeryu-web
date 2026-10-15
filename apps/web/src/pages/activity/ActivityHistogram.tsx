@@ -28,6 +28,9 @@ import {
   parseRange,
   rangeHours,
   histogramQuery,
+  histogramReadout,
+  histogramRefetchMs,
+  OTHER_GROUP,
   type HistogramRangeId,
 } from './histogramModel';
 
@@ -48,7 +51,9 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   const [params, setParams] = useSearchParams();
   const reduced = usePrefersReducedMotion();
   const range = parseRange(params);
-  const histogram = useEventsHistogram(histogramQuery(range, { family, repo }));
+  const histogram = useEventsHistogram(histogramQuery(range, { family, repo }), {
+    refetchInterval: histogramRefetchMs(range),
+  });
   const current = activeChip(parseActivityFilters(params));
   const activeGroup = activeGroupId(current);
 
@@ -59,6 +64,7 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   if (unanswered) return null;
 
   const buckets = histogramBuckets(histogram.data);
+  const readout = histogramReadout(histogram.data, rangeHours(range));
   const geometry = histogramGeometry(buckets, {
     width: WIDTH,
     height: PLOT,
@@ -67,6 +73,15 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   });
   const rangeLabel = HISTOGRAM_RANGES.find((candidate) => candidate.id === range)?.label ?? range;
   const onlyLabel = HISTOGRAM_GROUPS.find((group) => group.id === activeGroup)?.label;
+  const hasOther = buckets.some((bucket) => (bucket.counts[OTHER_GROUP.id] ?? 0) > 0);
+  // Said in words on the band, never drawn as an empty or mislabelled plot.
+  const note = readout.unreadable
+    ? 'The server answered in a shape this page cannot read, so there is nothing to draw.'
+    : readout.answeredHours !== null
+      ? `The server answered ${readout.answeredHours}h, not the ${rangeLabel} asked for.`
+      : histogram.data !== undefined && buckets.length > 0 && geometry.events === 0
+        ? `No ${onlyLabel ? onlyLabel.toLowerCase() : 'events'} in the last ${rangeLabel}.`
+        : null;
 
   const setChip = (chipId: string): void => {
     const chip = ACTIVITY_CHIPS.find((candidate) => candidate.id === chipId);
@@ -105,6 +120,11 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
           ))}
         </div>
       </div>
+      {note ? (
+        <p className="activity-volume__note" data-testid="activity-volume-note">
+          {note}
+        </p>
+      ) : null}
       <div className="activity-volume__plot">
         <svg
           viewBox={`0 0 ${WIDTH} ${PLOT + AXIS}`}
@@ -131,7 +151,11 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
                   y={segment.y}
                   width={bar.width}
                   height={segment.height}
-                  onClick={() => setChip(HISTOGRAM_GROUPS.find((g) => g.id === segment.groupId)?.chipId ?? 'all')}
+                  onClick={
+                    segment.groupId === OTHER_GROUP.id
+                      ? undefined
+                      : () => setChip(HISTOGRAM_GROUPS.find((g) => g.id === segment.groupId)?.chipId ?? 'all')
+                  }
                 />
               ))}
               {bar.failures ? (
@@ -180,6 +204,14 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
             {group.label}
           </button>
         ))}
+        {hasOther ? (
+          // Counted by the server in no group this page stacks: drawn so the
+          // bars add up, but there is nothing here to filter to.
+          <span className="activity-volume__key activity-volume__key--plain">
+            <span className={`activity-volume__swatch is-${OTHER_GROUP.id}`} aria-hidden="true" />
+            {OTHER_GROUP.label}
+          </span>
+        ) : null}
       </div>
     </section>
   );
