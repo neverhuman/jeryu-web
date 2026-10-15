@@ -47,9 +47,15 @@ export function BootScreen({
               keep your code, context, and evidence together.
             </p>
             {!authOpen ? (
-              <a className="boot__explore" href="#how-it-works">
-                Explore the forge <span aria-hidden="true">↓</span>
-              </a>
+              <div className="boot__cta">
+                <Link className="marketing-pill boot__cta-primary" to="/waitlist">
+                  Join waitlist
+                  <span aria-hidden="true">→</span>
+                </Link>
+                <a className="boot__cta-secondary" href="#how-it-works">
+                  See how it works <span aria-hidden="true">↓</span>
+                </a>
+              </div>
             ) : null}
             <p className="boot__signature">Built for code. Designed for autonomy.</p>
           </div>

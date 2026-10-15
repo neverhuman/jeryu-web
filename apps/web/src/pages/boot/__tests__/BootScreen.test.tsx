@@ -16,7 +16,11 @@ describe('BootScreen public story', () => {
     expect(screen.getByRole('heading', { name: 'Git for agents.' })).toBeVisible();
     const nav = screen.getByRole('navigation', { name: 'Account access' });
     expect(nav.textContent).toContain('Log in');
-    expect(screen.getAllByRole('link', { name: /Join waitlist/ })[0]).toHaveAttribute('href', '/waitlist');
+    const joins = screen.getAllByRole('link', { name: /Join waitlist/ });
+    // The navigation pill, the hero pill and the footer link all open the public waitlist.
+    expect(joins).toHaveLength(3);
+    joins.forEach((join) => expect(join).toHaveAttribute('href', '/waitlist'));
+    expect(screen.getByRole('link', { name: /See how it works/ })).toHaveAttribute('href', '#how-it-works');
     expect(screen.queryByLabelText('Email')).toBeNull();
     expect(document.querySelector('form')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Sign up' })).toBeNull();
@@ -28,6 +32,8 @@ describe('BootScreen public story', () => {
     const source = screen.getByTestId('dragon-poster').getAttribute('src');
     await user.click(screen.getByRole('button', { name: 'Log in' }));
     expect(screen.getByLabelText('Username')).toHaveFocus();
+    // The hero call to action yields to the form; the navigation pill and footer link stay.
+    expect(screen.getAllByRole('link', { name: /Join waitlist/ })).toHaveLength(2);
     expect(screen.getByTestId('dragon-landing')).toBeVisible();
     expect(screen.getByTestId('dragon-poster')).toHaveAttribute('src', source);
     await user.click(screen.getByRole('button', { name: /Back to the story/ }));

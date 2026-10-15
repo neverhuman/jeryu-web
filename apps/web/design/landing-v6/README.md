@@ -22,11 +22,39 @@ the existing visibility/intersection lifecycle still suspend it.
 The header is the sole wordmark, the top waitlist link opens its public page,
 and native login and the existing logout repair retain their behavior.
 
-The desktop story is lifted 50px: the scene top moves from 52px to 2px,
-the centered hero is 50px shorter, and its copy has a further 25px offset.
-The header and native auth keep their position. Phones retain their clear
-header/content spacing. Rendered desktop geometry records the before/after
-positions and checks the exact 50px lift.
+## Composition and breakpoints
+
+The hero is a two-part composition: the dragon on the left, the copy on the
+right. The dragon is absolute inside the scene, anchored to the left edge of
+the 1600px content frame, and its tail recedes under the first story section.
+The headline leads at display scale (up to 96px); the lede, the waitlist pill
+and the secondary "See how it works" link follow. Every waitlist call to
+action (navigation, hero, form submit) is the same `.marketing-pill`: a
+rounded pill on a cyan-to-blue gradient with a short lift on hover.
+
+| Range | Hero | Dragon | Workflow steps |
+|---|---|---|---|
+| phone, under 768px | one column: eyebrow, headline, lede, pill, then the dragon | in flow after the copy, cropped to a 4:3 band showing the head and mane | one vertical timeline on a left rail |
+| tablet, 768–1023px | one column, copy capped at 640px | in flow, a 2:1 band anchored right with a slight bleed | two across; the gated merge spans the row |
+| desktop, 1024px and up | dragon left, copy in the right column | absolute, 52vw wide (540px to 1086px) from the frame's left edge | five across |
+| wide, 1280px and up | same, full display scale | same | same |
+
+Below 1024px the navigation is sticky and compact, so the waitlist pill is
+one tap away from anywhere in the story. The forms (waitlist, login, signup)
+keep the dragon as a faint absolute backdrop at every width.
+
+Stacking order inside the scene, back to front: atmosphere wash (0), dragon
+and slipstream (1), technical grid (2), content (3), the dragon's retry
+notice (4), navigation (5). The hero copy keeps its own halo behind the text.
+The grid belongs to the hero: it fades from 55% down the story and is gone
+by 75%, so the workflow and the closing section sit on plain navy.
+
+Motion stays subtle: the dragon follows the first 900px of scroll at a tenth
+of the speed, and the story sections rise the last 20px into place as they
+enter the viewport. The reveal moves but never hides, so full-page evidence
+captures always show the whole story. Both are CSS scroll-driven animations;
+browsers without them, and readers who prefer reduced motion, see everything
+in its final place.
 
 
 The shared `MarketingScene` owns the alpha dragon, grid and motion lifecycle

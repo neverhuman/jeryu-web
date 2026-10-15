@@ -165,7 +165,9 @@ test.describe('Signed-out landing', () => {
     const dragon = await page.getByTestId('dragon-landing').boundingBox();
     expect(heading).not.toBeNull();
     expect(dragon).not.toBeNull();
-    expect(dragon!.x).toBeGreaterThan(heading!.x);
+    // Desktop composition: the dragon owns the left half and faces the headline on the right.
+    expect(dragon!.x + dragon!.width / 2).toBeLessThan(heading!.x);
+    expect(dragon!.x).toBeGreaterThanOrEqual(0);
 
     await page.getByRole('button', { name: 'Log in' }).click();
     await expect(page.getByRole('tab', { name: 'Login' })).toHaveAttribute('aria-selected', 'true');
@@ -257,24 +259,36 @@ test.describe('Signed-out landing', () => {
     }
   });
 
-  for (const width of [390, 320]) {
-    test(`a ${width}px phone offers waitlist drill-down without sideways scroll @action:landing.phone`, async ({ page }) => {
+  // Phones and a portrait tablet: one column, copy and its call to action
+  // before the dragon, the navigation pill a tap away, no sideways scroll.
+  for (const [width, height] of [[390, 844], [320, 844], [820, 1180]] as const) {
+    test(`a ${width}px screen offers waitlist drill-down without sideways scroll @action:landing.phone`, async ({ page }) => {
       await mockBootstrap(page, { login: 'jordanh', auth: null });
       await mockSession(page, { current: null });
-      await page.setViewportSize({ width, height: 844 });
+      await page.setViewportSize({ width, height });
       await openStory(page);
       await expect(page.getByLabel('Email')).toHaveCount(0);
       const join = page.getByRole('navigation', { name: 'Account access' }).getByRole('link', { name: /Join waitlist/ });
       const box = await join.boundingBox();
       expect(box).not.toBeNull();
       expect(box!.height).toBeGreaterThanOrEqual(44);
-      expect(box!.y + box!.height).toBeLessThan(844);
+      expect(box!.y + box!.height).toBeLessThan(height);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
       await expect(page.getByTestId('dragon-poster')).toBeVisible();
       const frame = await page.getByTestId('dragon-landing').boundingBox();
       expect(frame).not.toBeNull();
       expect(frame!.x).toBeGreaterThanOrEqual(0);
       expect(frame!.x + frame!.width).toBeLessThanOrEqual(width);
+      // Headline, lede and the hero pill come first; the dragon follows them in flow.
+      const heroJoin = page.locator('.boot__hero').getByRole('link', { name: /Join waitlist/ });
+      const heroJoinBox = await heroJoin.boundingBox();
+      const heading = await page.getByRole('heading', { name: 'Git for agents.' }).boundingBox();
+      expect(heroJoinBox).not.toBeNull();
+      expect(heading).not.toBeNull();
+      expect(heroJoinBox!.height).toBeGreaterThanOrEqual(44);
+      expect(heading!.y).toBeLessThan(heroJoinBox!.y);
+      expect(heroJoinBox!.y + heroJoinBox!.height).toBeLessThanOrEqual(frame!.y + 1);
+      expect(frame!.height).toBeLessThan(frame!.width);
       await expect(page.getByTestId('dragon-layers')).toHaveCount(0);
       await persistSceneEvidence(page, `landing-phone-${width}`);
       await join.click();

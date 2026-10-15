@@ -1,4 +1,22 @@
-/* Public-site tokens stay inside .marketing; the operator UI retains its theme. */
+/* Public-site tokens stay inside .marketing; the operator UI retains its theme.
+
+   Breakpoints shared by every public-page stylesheet (boot, DragonLanding,
+   MarketingHeader, LandingSections):
+     phone    <  768px   one column; the dragon follows the copy in flow
+     tablet   768–1023px one column; the dragon is a wide, cropped band
+     desktop  >= 1024px  dragon left, copy right; the dragon is absolute
+     wide     >= 1280px  desktop with the full display scale
+   Content is capped at 1600px and centered beyond that.
+
+   Hero stacking order, back to front (every layer is inside .marketing-scene):
+     0  .marketing-scene::after   drifting atmosphere wash
+     1  .dragon-landing           the alpha dragon and its slipstream
+     2  .marketing-scene::before  the technical grid (fades 55%→75% down the story)
+     3  .boot__hero, .landing-sections, .marketing-footer   content
+     4  .dragon-landing--unavailable                        the retry notice
+     5  .marketing-header                                   navigation
+   The hero copy has its own isolated halo (.marketing-scene__copy::before)
+   that sits behind its text only. */
 .marketing {
   --color-bg-0: #07111f;
   --color-bg-1: #0e1b2c;
@@ -14,6 +32,9 @@
   --marketing-button: #7de3f5;
   --marketing-button-hover: #a9eef9;
   --marketing-button-text: #061522;
+  --marketing-button-gradient: linear-gradient(135deg, #8eeaf8 0%, #4cc3ef 100%);
+  --marketing-button-gradient-hover: linear-gradient(135deg, #a9eef9 0%, #62d0f5 100%);
+  --marketing-button-shadow: 0 12px 32px -14px rgb(77 195 239 / .6);
   --marketing-display: var(--font-sans);
   --marketing-grid-minor: rgb(105 183 232 / .10);
   --marketing-grid-major: rgb(105 183 232 / .13);
@@ -48,6 +69,9 @@
   --marketing-button: #176078;
   --marketing-button-hover: #104c61;
   --marketing-button-text: #f4fbff;
+  --marketing-button-gradient: linear-gradient(135deg, #1b6f8e 0%, #176078 100%);
+  --marketing-button-gradient-hover: linear-gradient(135deg, #1f7d9f 0%, #1a6b86 100%);
+  --marketing-button-shadow: 0 12px 28px -14px rgb(23 96 120 / .5);
   color-scheme: light;
 }
 
@@ -71,6 +95,9 @@
     --marketing-button: #176078;
     --marketing-button-hover: #104c61;
     --marketing-button-text: #f4fbff;
+    --marketing-button-gradient: linear-gradient(135deg, #1b6f8e 0%, #176078 100%);
+    --marketing-button-gradient-hover: linear-gradient(135deg, #1f7d9f 0%, #1a6b86 100%);
+    --marketing-button-shadow: 0 12px 28px -14px rgb(23 96 120 / .5);
     color-scheme: light;
   }
 }
@@ -85,10 +112,50 @@
   --color-accent-primary: #a6efff;
   --color-border-subtle: #fff;
   --color-border-strong: #fff;
+  --marketing-button-gradient: none;
+  --marketing-button-gradient-hover: none;
+  --marketing-button-shadow: none;
 }
 
 .marketing *, .marketing *::before, .marketing *::after { box-sizing: border-box; }
 .marketing a:focus-visible, .marketing button:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 5px; }
+
+/* One pill for every waitlist call to action: header, hero and the form. */
+.marketing-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-color: var(--marketing-button);
+  background-image: var(--marketing-button-gradient);
+  color: var(--marketing-button-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--marketing-button-shadow);
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out, background-color 160ms ease-out;
+}
+.marketing-pill > span { transition: transform 160ms ease-out; }
+.marketing-pill:hover { background-color: var(--marketing-button-hover); background-image: var(--marketing-button-gradient-hover); transform: translateY(-1px); }
+.marketing-pill:hover > span { transform: translateX(3px); }
+.marketing-pill:active { transform: translateY(0); }
+.marketing-pill:disabled { opacity: .65; cursor: wait; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .marketing-pill, .marketing-pill > span { transition: none; }
+  .marketing-pill:hover, .marketing-pill:hover > span { transform: none; }
+}
+@media (forced-colors: active) {
+  .marketing-pill { background-image: none; background-color: ButtonFace; color: ButtonText; border-color: ButtonText; box-shadow: none; }
+}
+
 .marketing-scene {
   min-height: 100svh;
   width: 100%;
@@ -96,7 +163,7 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-  background: radial-gradient(ellipse 75% 700px at 82% 360px, var(--marketing-atmosphere), transparent 80%);
+  background: radial-gradient(ellipse 75% 700px at 18% 360px, var(--marketing-atmosphere), transparent 80%);
 }
 .marketing-scene::before {
   content: '';
@@ -112,34 +179,47 @@
   background-size: 320px 320px, 320px 320px, 80px 80px, 80px 80px;
   background-position: center top;
 }
+/* On the story the grid belongs to the hero: it thins from 55% down the page
+   and is gone by 75%, so the workflow and the closing section sit on plain navy. */
+.boot:not(.boot--auth-open) .marketing-scene::before {
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 75%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 75%);
+}
 .boot__hero, .landing-sections, .marketing-footer { position: relative; z-index: 3; }
 .marketing-scene__copy { position: relative; isolation: isolate; }
 .marketing-scene__copy::before {
   content: '';
   position: absolute;
   z-index: -1;
-  inset: -60px -60px -60px -100px;
+  inset: -60px -60px -60px -80px;
   pointer-events: none;
-  background: radial-gradient(ellipse at 25% 45%, var(--color-bg-0) 24%, transparent 76%);
+  background: radial-gradient(ellipse at 45% 50%, var(--color-bg-0) 18%, transparent 72%);
 }
 
+/* Desktop hero: the dragon (absolute, see DragonLanding.css) owns the left
+   half and the copy takes the right column. The header rule would cut through
+   the dragon's mane there, so the story's desktop header has none. */
+@media (min-width: 1024px) {
+  .boot:not(.boot--auth-open) .marketing-header { border-bottom-color: transparent; }
+}
 .boot__hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, .88fr) minmax(0, 1.12fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
   width: min(100%, 1600px);
-  min-height: clamp(760px, calc(100svh - 102px), 900px);
+  min-height: clamp(720px, calc(100svh - 88px), 900px);
   margin-inline: auto;
-  padding: 18px clamp(24px, 5vw, 80px) 32px;
-  gap: 0;
+  padding: 16px clamp(24px, 5vw, 80px) 56px;
+  gap: 0 clamp(24px, 4vw, 64px);
 }
-.boot__hero-copy { position: relative; z-index: 1; isolation: isolate; min-width: 0; padding-block: 56px; }
+.boot:not(.boot--auth-open) .boot__hero-copy { grid-column: 2; }
+.boot__hero-copy { position: relative; z-index: 1; isolation: isolate; min-width: 0; padding-block: 48px; }
 .boot__eyebrow {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 26px;
+  margin: 0 0 28px;
   color: var(--color-accent-primary);
   font-size: 11px;
   font-weight: 600;
@@ -147,16 +227,27 @@
   text-transform: uppercase;
 }
 .boot__eyebrow > span { width: 6px; height: 6px; background: currentColor; transform: rotate(45deg); }
-.boot__hero h1 { margin: 22px 0 20px; font-family: var(--marketing-display); font-size: clamp(40px, 4.1vw, 65px); line-height: 1.08; font-weight: 600; letter-spacing: -.04em; }
-.boot__lede { max-width: 37ch; margin: 0; color: var(--color-fg-secondary); font-size: clamp(16px, 1.25vw, 18px); line-height: 1.8; }
-.boot__explore { display: inline-flex; align-items: center; gap: 24px; min-height: 50px; margin-top: 30px; color: var(--color-fg-primary); font-size: 14px; font-weight: 500; text-decoration: none; }
-.boot__explore > span { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--color-border-strong); border-radius: 50%; }
-.boot__explore:hover > span { background: var(--color-accent-primary-bg); border-color: var(--color-accent-primary); }
-.boot__signature { margin: 40px 0 0; color: var(--color-fg-muted); font-size: 11px; letter-spacing: .045em; }
+.boot__hero h1 {
+  margin: 0 0 24px;
+  font-family: var(--marketing-display);
+  font-size: clamp(48px, 6.4vw, 96px);
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.boot--auth-open .boot__hero h1 { font-size: clamp(40px, 4.1vw, 64px); }
+.boot__lede { max-width: 38ch; margin: 0; color: var(--color-fg-secondary); font-size: clamp(16px, 1.3vw, 19px); line-height: 1.75; }
+.boot__cta { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; margin-top: 36px; }
+.boot__cta-primary { min-height: 52px; padding-inline: 30px; font-size: 15px; }
+.boot__cta-secondary { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--color-fg-primary); font-size: 14px; font-weight: 500; text-decoration: none; }
+.boot__cta-secondary > span { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--color-border-strong); border-radius: 50%; transition: background-color 160ms ease-out, border-color 160ms ease-out; }
+.boot__cta-secondary:hover > span { background: var(--color-accent-primary-bg); border-color: var(--color-accent-primary); }
+.boot__signature { margin: 44px 0 0; color: var(--color-fg-muted); font-size: 11px; letter-spacing: .045em; }
 .boot__auth-panel { width: min(100%, 440px); justify-self: center; min-width: 0; margin: 32px 0; }
 .boot__back-button { display: inline-flex; align-items: center; min-height: 44px; padding: 0; margin-bottom: 14px; color: var(--color-fg-secondary); background: transparent; border: 0; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
 .boot__return-to { margin: 0 0 18px; color: var(--color-fg-secondary); font-size: 13px; overflow-wrap: anywhere; }
-.login-panel { display: flex; flex-direction: column; gap: 22px; padding: 28px; border: 1px solid var(--color-border-subtle); background: var(--color-bg-1); }
+.login-panel { display: flex; flex-direction: column; gap: 22px; padding: 28px; border: 1px solid var(--color-border-subtle); border-radius: 16px; background: var(--color-bg-1); }
 .login-panel__brand { display: flex; align-items: center; gap: 16px; }
 .login-panel__mark { font-size: 28px; }
 .login-panel__brand-text { display: flex; flex-direction: column; gap: 6px; }
@@ -167,34 +258,53 @@
 .marketing-footer p > span { margin-inline: 10px; }
 .marketing-footer a { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; color: var(--color-fg-primary); text-decoration: none; white-space: nowrap; }
 
-@media (max-width: 900px) {
-  .boot__hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 620px; }
-  .boot__hero h1 { font-size: 40px; }
-  .boot__lede { font-size: 15px; }
-  .boot__hero-copy { padding-block: 32px; }
-  .boot--auth-open .boot__hero { grid-template-columns: 1fr; }
-  .boot--auth-open .boot__hero-copy { max-width: 540px; }
-  .boot__auth-panel { width: min(100%, 540px); margin: 0 0 40px; justify-self: start; }
+/* Scroll reveals: content below the fold rises the last 20px into place as it
+   enters. It moves but never hides (no opacity), so a full-page capture, print
+   or find-in-page always has the whole story. Browsers without scroll-driven
+   animations, and readers who prefer reduced motion, see everything in place. */
+@keyframes landing-reveal {
+  from { transform: translate3d(0, 20px, 0); }
+  to { transform: none; }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .landing-reveal { animation: landing-reveal ease-out both; animation-timeline: view(block); animation-range: entry 0% entry 40%; }
+  }
 }
 
-@media (max-width: 600px) {
-  .boot__hero { grid-template-columns: minmax(0, 1fr); align-items: start; padding: 34px 24px 0; min-height: 840px; }
-  .boot--auth-open .boot__hero { min-height: auto; }
-  .boot__hero-copy { padding: 0; }
-  .boot__eyebrow { margin-bottom: 20px; font-size: 9px; letter-spacing: .13em; }
-  .boot__hero h1 { margin: 14px 0 16px; font-size: 40px; }
-  .boot__lede { max-width: 38ch; font-size: 15px; line-height: 1.75; }
-  .boot__explore { margin-top: 20px; gap: 18px; }
-  .boot__signature { margin-top: 18px; font-size: 10px; }
-  .boot__auth-panel { margin-top: 24px; }
-  .marketing-footer { align-items: flex-start; flex-direction: column; gap: 4px; padding: 24px; }
+/* Tablet and phone: one column. The copy and its call to action come first,
+   then the dragon (in flow, cropped: see DragonLanding.css), then the story. */
+@media (max-width: 1023px) {
+  .marketing-scene { display: flex; flex-direction: column; }
+  .marketing-scene > .landing-sections { order: 2; }
+  .marketing-scene > .marketing-footer { order: 3; }
+  .boot__hero { grid-template-columns: minmax(0, 1fr); align-items: start; min-height: 0; padding: 40px clamp(24px, 5vw, 56px) 8px; }
+  .boot:not(.boot--auth-open) .boot__hero-copy { grid-column: 1; max-width: 640px; }
+  .boot__hero-copy { padding-block: 0; }
+  .boot__hero h1 { font-size: clamp(44px, 7.2vw, 72px); }
+  .boot--auth-open .boot__hero h1 { font-size: clamp(36px, 5.5vw, 48px); }
+  .boot--auth-open .boot__hero-copy { max-width: 560px; }
+  .boot__auth-panel { width: min(100%, 540px); margin: 24px 0 40px; justify-self: start; }
+  .boot--auth-open .boot__hero { padding-bottom: 24px; }
+}
+@media (max-width: 767px) {
+  .boot__hero { padding: 32px 20px 0; }
+  .boot__eyebrow { margin-bottom: 22px; font-size: 10px; letter-spacing: .14em; }
+  .boot__hero h1 { margin-bottom: 18px; font-size: clamp(40px, 11.5vw, 56px); }
+  .boot__lede { max-width: 40ch; font-size: 16px; line-height: 1.7; }
+  .boot__cta { margin-top: 28px; gap: 14px 24px; }
+  .boot__cta-primary { width: min(100%, 360px); min-height: 52px; }
+  .boot__signature { margin-top: 24px; font-size: 10px; }
+  .boot__auth-panel { margin-top: 20px; }
+  .login-panel { padding: 22px; }
+  .marketing-footer { align-items: flex-start; flex-direction: column; gap: 4px; padding: 24px 20px; }
 }
 
 @media (forced-colors: active) {
   .marketing { background: Canvas; color: CanvasText; }
   .marketing-scene { background: Canvas; }
   .marketing-scene::before, .marketing-scene__copy::before { display: none; }
-  .boot__explore, .boot__back-button { color: LinkText; }
+  .boot__cta-secondary, .boot__back-button { color: LinkText; }
   .boot__eyebrow { color: CanvasText; }
 }
 
@@ -211,7 +321,7 @@
   width: 100%;
   height: 1500px;
   pointer-events: none;
-  background: radial-gradient(ellipse 38% 400px at 65% 420px, var(--marketing-atmosphere), transparent 80%);
+  background: radial-gradient(ellipse 38% 400px at 35% 420px, var(--marketing-atmosphere), transparent 80%);
   opacity: .45;
   animation: landing-atmosphere 20s linear infinite;
   animation-play-state: paused;
@@ -229,13 +339,3 @@
   .marketing-scene::after { display: none; }
 }
 [data-theme='high-contrast'] .marketing-scene::after { display: none; }
-
-/* Lift the desktop story exactly 50px while the header keeps its position.
-   A 50px shorter centered hero lifts copy 25px; its offset supplies the rest. */
-@media (min-width: 601px) {
-  .boot:not(.boot--auth-open) .boot__hero { min-height: clamp(710px, calc(100svh - 152px), 850px); }
-  .boot:not(.boot--auth-open) .boot__hero-copy { top: -25px; }
-}
-@media (min-width: 601px) and (max-width: 900px) {
-  .boot:not(.boot--auth-open) .boot__hero { min-height: 570px; }
-}

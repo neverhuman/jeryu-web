@@ -26,9 +26,9 @@ export function MarketingHeader({
         ) : (
           <Link className="marketing-header__login" to="/login">Log in</Link>
         )}
-        <Link className="marketing-header__waitlist" to="/waitlist">
+        <Link className="marketing-pill marketing-header__waitlist" to="/waitlist">
           Join waitlist
-          <span aria-hidden="true">↗</span>
+          <span aria-hidden="true">→</span>
         </Link>
       </nav>
     </header>

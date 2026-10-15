@@ -1,9 +1,12 @@
+/* Desktop (>= 1024px): the dragon is absolute inside .marketing-scene, anchored
+   to the left edge of the 1600px frame, and tall enough that its tail recedes
+   under the first story section. The head faces the headline on the right. */
 .dragon-landing {
   position: absolute;
   z-index: 1;
-  top: 2px;
-  right: max(12px, calc((100% - 1600px) / 2 + 12px));
-  width: min(74vw, 1086px);
+  top: 24px;
+  left: max(0px, calc((100% - 1600px) / 2 - 24px));
+  width: clamp(540px, 52vw, 1086px);
   aspect-ratio: 3 / 4;
   margin: 0;
   pointer-events: none;
@@ -17,6 +20,7 @@
   transition: opacity 180ms ease-out;
   /* Alpha reveals the same grid behind horns and coils in every theme.
      The tail recedes beneath the product story instead of ending in a box. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgb(0 0 0 / .3) 70%, transparent 98%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 46%, rgb(0 0 0 / .3) 70%, transparent 98%);
 }
 /* Public forms use a faint signature; returning to the story restores it. */
@@ -31,6 +35,7 @@
   stroke-width: 1;
   opacity: .55;
   overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 96%);
   mask-image: linear-gradient(to bottom, #000 55%, transparent 96%);
 }
 .dragon-landing__rails { opacity: .16; }
@@ -38,24 +43,78 @@
 .dragon-landing__unavailable {
   position: absolute;
   top: 260px;
-  right: 20%;
+  left: 20%;
   width: min(280px, 80%);
   padding: 24px;
   color: var(--color-fg-secondary);
   background: var(--color-bg-1);
   border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
   text-align: center;
   pointer-events: auto;
 }
 .dragon-landing__unavailable p { font-size: 14px; }
-.dragon-landing__unavailable button { min-height: 44px; padding: 0 18px; border: 1px solid var(--color-border-strong); background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 13px; cursor: pointer; }
-@media (max-width: 900px) {
-  .dragon-landing { width: 76vw; right: 12px; top: 30px; }
+.dragon-landing__unavailable button { min-height: 44px; padding: 0 18px; border: 1px solid var(--color-border-strong); border-radius: 999px; background: transparent; color: var(--color-fg-primary); font: inherit; font-size: 13px; cursor: pointer; }
+
+/* Subtle parallax: while the first screen scrolls away the dragon follows at a
+   tenth of the speed, so it seems to sit behind the page. CSS scroll timelines
+   only; browsers without them keep the dragon still. */
+@keyframes dragon-parallax {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 90px, 0); }
 }
-@media (max-width: 600px) {
-  .dragon-landing { top: 390px; right: 12px; width: calc(100% - 24px); }
-  .dragon-landing__poster { mask-image: linear-gradient(to bottom, transparent, #000 7%, #000 58%, rgb(0 0 0 / .3) 80%, transparent); }
-  .dragon-landing__unavailable { top: 100px; right: 18%; }
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) and (min-width: 1024px) {
+    .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing {
+      animation: dragon-parallax linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 900px;
+    }
+  }
+}
+
+/* Tablet and phone: the story's dragon leaves the absolute layer and follows
+   the hero copy in flow, cropped to a landscape band that keeps the head and
+   mane. The subdued dragon behind a form stays a faint absolute backdrop. */
+@media (max-width: 1023px) {
+  .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing {
+    position: relative;
+    order: 1;
+    top: auto;
+    left: auto;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+    overflow: hidden;
+  }
+  .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing__poster {
+    position: absolute;
+    top: 0;
+    right: -6%;
+    width: 70%;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%);
+  }
+  .marketing-scene[data-dragon-subdued='true'] .dragon-landing {
+    top: 40px;
+    left: auto;
+    right: -12%;
+    width: min(80vw, 560px);
+  }
+  .dragon-landing__unavailable { top: 24px; left: 50%; transform: translateX(-50%); width: min(300px, calc(100% - 40px)); }
+}
+@media (max-width: 767px) {
+  .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing {
+    width: calc(100% - 32px);
+    margin: 4px auto 0;
+    aspect-ratio: 4 / 3;
+  }
+  /* 136% wide and shifted left shows the head, horns and mane at phone size. */
+  .marketing-scene:not([data-dragon-subdued='true']) .dragon-landing__poster {
+    right: auto;
+    left: -30%;
+    width: 136%;
+  }
+  .marketing-scene[data-dragon-subdued='true'] .dragon-landing { top: 56px; right: -24%; width: 92vw; }
 }
 @media (forced-colors: active) {
   .dragon-landing__traces { display: none; }

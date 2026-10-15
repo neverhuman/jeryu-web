@@ -12,7 +12,7 @@ export function LandingSections(): JSX.Element {
   return (
     <div className="landing-sections">
       <section id="how-it-works" className="landing-workflow" aria-labelledby="workflow-title">
-        <div className="landing-workflow__intro">
+        <div className="landing-workflow__intro landing-reveal">
           <div>
             <p className="landing-section-label">The way forward</p>
             <h2 id="workflow-title">From intent<br />to evidence.</h2>
@@ -22,7 +22,7 @@ export function LandingSections(): JSX.Element {
         </div>
         <ol className="landing-workflow__stages">
           {stages.map(([number, title, description]) => (
-            <li key={number}>
+            <li key={number} className="landing-reveal">
               <span className="landing-workflow__number" aria-hidden="true">{number}</span>
               <h3>{title}</h3>
               <p>{description}</p>
@@ -31,7 +31,7 @@ export function LandingSections(): JSX.Element {
         </ol>
       </section>
       <section className="landing-detail" aria-labelledby="detail-title">
-        <div className="landing-detail__drawing" aria-hidden="true">
+        <div className="landing-detail__drawing landing-reveal" aria-hidden="true">
           <svg viewBox="0 0 540 280" fill="none" focusable="false">
             <path d="M50 140H480M140 140C175 140 175 62 210 62H330C365 62 365 140 400 140M140 140C175 140 175 218 210 218H330C365 218 365 140 400 140" stroke="currentColor" strokeWidth="1.5" />
             <path d="M200 140H355M242 62H300M242 218H300" stroke="currentColor" strokeWidth="5" opacity=".15" />
@@ -42,7 +42,7 @@ export function LandingSections(): JSX.Element {
           </svg>
           <span>Independent work. Shared history.</span>
         </div>
-        <div className="landing-detail__copy">
+        <div className="landing-detail__copy landing-reveal">
           <p className="landing-section-label">Built around the work</p>
           <h2 id="detail-title">Many agents.<br />One clear picture.</h2>
           <p>Keep repository families, agent sessions, and pull requests within reach.
