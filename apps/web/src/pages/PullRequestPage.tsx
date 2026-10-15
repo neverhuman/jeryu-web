@@ -49,6 +49,8 @@ import { useBootstrap } from '../hooks/useBootstrap';
 import { useMergeAttempt } from '../hooks/useMergeAttempt';
 import { useOwnerMergePaths } from '../hooks/useOwnerMergePaths';
 import { useMergePr } from '../hooks/useMergePr';
+import { useRepoMergeQueue } from '../hooks/useMergeQueue';
+import { queueEntryFor } from '../components/merge/mergeQueueModel';
 import { useSetPullState } from '../hooks/useSetPullState';
 import { useSetPullDraft } from '../hooks/useSetPullDraft';
 import { useSubmitReview } from '../hooks/useSubmitReview';
@@ -157,6 +159,11 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const approve = useApprovePr(repoId, prNumber);
   const mergeMutation = useMergePr(repoId, prNumber);
   const mergeAttempt = useMergeAttempt(repoId, prNumber);
+  // The same query the queue strip reads (one request between them): while the
+  // queue is building this pull request's replay, a direct Merge can only be
+  // refused, so the merge box says it is queued instead of offering it.
+  const mergeQueue = useRepoMergeQueue(repoId);
+  const queued = queueEntryFor(mergeQueue.data, prNumber)?.state === 'building';
   // What the reader can do about each blocker. Only asked for on a head the
   // passport has not cleared: a passing head has nothing to explain.
   const ownerPaths = useOwnerMergePaths(
@@ -608,6 +615,7 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
                   : null,
               ownerPaths: ownerPaths.data ?? null,
               closeError: setState.error ? setState.error.message : null,
+              queued,
               queueOffer: repoArchived ? null : (
                 <QueueToMerge
                   repoId={repoId}

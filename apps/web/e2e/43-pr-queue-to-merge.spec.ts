@@ -187,5 +187,8 @@ test.describe('Queue a pull request to merge it', () => {
       'the gate is running on it'
     );
     await expect(page.getByTestId('pr-queue-gate-progress')).toBeVisible();
+    // A direct merge of a queued pull request can only be refused: Merge reads Queued.
+    await expect(page.getByRole('button', { name: 'Queued', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Merge', exact: true })).toHaveCount(0);
   });
 });

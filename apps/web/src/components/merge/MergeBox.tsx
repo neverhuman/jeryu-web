@@ -132,6 +132,11 @@ export interface MergeBoxProps {
    * moved under a green head, Queue again when the entry failed.
    */
   queueOffer?: ReactNode;
+  /**
+   * The merge queue is building this pull request's replay. It lands when that
+   * gate passes; a direct merge meanwhile is refused, so Merge is not offered.
+   */
+  queued?: boolean;
   /** When true, mutations are disabled (in-flight). */
   isBusy?: boolean;
   /** Repository is read-only, so PR-changing actions stay visible but disabled. */
@@ -246,6 +251,7 @@ export function MergeBox({
   ownerPaths = null,
   closeError = null,
   queueOffer = null,
+  queued = false,
   isBusy = false,
   readOnly = false,
   className,
@@ -460,11 +466,12 @@ export function MergeBox({
           variant={primary === 'merge' ? 'primary' : 'default'}
           icon={<GitMerge aria-hidden="true" size={12} />}
           onClick={() => handleMerge('merge')}
-          disabled={busyOrReadOnly || !mergeable}
-          aria-disabled={busyOrReadOnly || !mergeable ? true : undefined}
+          disabled={busyOrReadOnly || !mergeable || queued}
+          aria-disabled={busyOrReadOnly || !mergeable || queued ? true : undefined}
+          title={queued ? 'In the merge queue: it lands when the queue\'s gate passes' : undefined}
           actionId="pull.merge"
         >
-          Merge
+          {queued ? 'Queued' : 'Merge'}
         </ActionButton>
         {cta.show ? (
           <ActionButton

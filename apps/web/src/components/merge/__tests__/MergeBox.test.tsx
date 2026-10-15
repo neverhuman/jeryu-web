@@ -131,6 +131,22 @@ describe('MergeBox', () => {
     expect(screen.queryByRole('button', { name: 'Squash' })).toBeNull();
   });
 
+  it('says Queued instead of offering Merge while the queue builds the replay', () => {
+    // jeryu-deploy#386: queued, then Merge clicked while the queue's gate ran;
+    // the direct merge could only be refused, with a message to queue it.
+    const detail = pullDetail({
+      passport: 'pass',
+      approvals: 1,
+      required_approvals: 1,
+      reviews: [approvalRow()],
+    });
+    show({ detail, checks: pullChecks(), queued: true });
+    const button = screen.getByRole('button', { name: 'Queued' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('title', expect.stringContaining('merge queue'));
+    expect(screen.queryByRole('button', { name: 'Merge' })).toBeNull();
+  });
+
   it('disables every action while a mutation is in flight', () => {
     show({ isBusy: true, onRequestChanges: vi.fn() });
     for (const name of [/Approve exact SHA/, /Request changes/]) {
