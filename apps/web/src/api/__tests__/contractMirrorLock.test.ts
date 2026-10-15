@@ -47,4 +47,19 @@ describe('contract mirror lock', () => {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
+
+  it('names the repository that holds the lock when there is none', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'contract-lock-'));
+    try {
+      mkdirSync(join(tmp, 'contracts'));
+      cpSync(join(repoRoot, 'contracts/generated'), join(tmp, 'contracts/generated'), {
+        recursive: true,
+      });
+      const r = run(tmp);
+      expect(r.status).toBe(1);
+      expect(r.stderr).toContain('jeryu-web has no contracts/generated.lock');
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 });
