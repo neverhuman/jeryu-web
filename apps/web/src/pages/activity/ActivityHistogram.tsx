@@ -27,7 +27,7 @@ import {
   histogramSummary,
   parseRange,
   rangeHours,
-  rangeQuery,
+  histogramQuery,
   type HistogramRangeId,
 } from './histogramModel';
 
@@ -48,8 +48,7 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   const [params, setParams] = useSearchParams();
   const reduced = usePrefersReducedMotion();
   const range = parseRange(params);
-  const query = { ...rangeQuery(range), ...(repo ? { repo } : family ? { family } : {}) };
-  const histogram = useEventsHistogram(query);
+  const histogram = useEventsHistogram(histogramQuery(range, { family, repo }));
   const current = activeChip(parseActivityFilters(params));
   const activeGroup = activeGroupId(current);
 
@@ -111,7 +110,7 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
           viewBox={`0 0 ${WIDTH} ${PLOT + AXIS}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label={histogramSummary(geometry, rangeLabel)}
+          aria-label={histogramSummary(geometry, rangeLabel, onlyLabel)}
           data-testid="activity-volume-svg"
         >
           {geometry.bars.map((bar, index) => (

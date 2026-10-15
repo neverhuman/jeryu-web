@@ -1,0 +1,62 @@
+{
+  "schema_version": "jeryu.pipeline_events/v1",
+  "from": "2026-10-14T19:55:00Z",
+  "to": "2026-10-14T20:10:00Z",
+  "bucket_seconds": 300,
+  "buckets": [
+    {
+      "start": "2026-10-14T19:55:00Z",
+      "total": 40,
+      "by_group": {
+        "todos": 0,
+        "gates": 16,
+        "reviews": 9,
+        "pulls": 11,
+        "merges": 0,
+        "releases": 0,
+        "deploys": 0,
+        "other": 4
+      },
+      "failures": 5,
+      "needs_human": 2,
+      "cost_usd": 8.03,
+      "seconds_p50": 54
+    },
+    {
+      "start": "2026-10-14T20:00:00Z",
+      "total": 17,
+      "by_group": {
+        "todos": 0,
+        "gates": 11,
+        "reviews": 2,
+        "pulls": 4,
+        "merges": 0,
+        "releases": 0,
+        "deploys": 0,
+        "other": 0
+      },
+      "failures": 4,
+      "needs_human": 2,
+      "cost_usd": 5.4,
+      "seconds_p50": 333
+    },
+    {
+      "start": "2026-10-14T20:05:00Z",
+      "total": 16,
+      "by_group": {
+        "todos": 0,
+        "gates": 8,
+        "reviews": 6,
+        "pulls": 2,
+        "merges": 0,
+        "releases": 0,
+        "deploys": 0,
+        "other": 0
+      },
+      "failures": 2,
+      "needs_human": 2,
+      "cost_usd": 4.19,
+      "seconds_p50": 172
+    }
+  ]
+}

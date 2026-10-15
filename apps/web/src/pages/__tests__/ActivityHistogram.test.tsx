@@ -2,6 +2,9 @@
 // geometry it draws, the filter it sets, the range it holds in the URL, and
 // what it does on a server that has no histogram route.
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,14 +14,25 @@ import {
   applyRange,
   bucketTitle,
   histogramBuckets,
+  chipCounts,
   histogramGeometry,
+  histogramQuery,
   histogramSummary,
   parseRange,
   rangeQuery,
 } from '../activity/histogramModel';
+import type { PipelineHistogramResponse } from '../../api/types';
 import { mockPipelineApi } from './pipelinePageHelpers';
 import { HISTOGRAM } from './pipelineTestData';
 import { errorResponse, renderAt } from './shiftPageHelpers';
+
+// Three buckets exactly as jeryu-deploy's histogram route answered
+// `?range=6h` on 2026-10-15, not written from this build's own type: the
+// band once drew nothing in production because every fixture here used a
+// shape the server never sent.
+const SERVER_ANSWER = JSON.parse(
+  readFileSync(join(process.cwd(), 'src/test/fixtures/events-histogram.server.json'), 'utf8')
+) as PipelineHistogramResponse;
 
 function renderPage(path = '/activity'): void {
   renderAt(path, '/activity', <ActivityPage />);
@@ -42,6 +56,34 @@ describe('histogramModel', () => {
   it('asks for a month in hours, since the server names only 6h, 24h and 7d', () => {
     expect(rangeQuery('7d')).toEqual({ range: '7d' });
     expect(rangeQuery('30d')).toEqual({ hours: 720 });
+  });
+
+  it('asks the band and the chip counts the same query, scope included', () => {
+    expect(histogramQuery('30d', { family: 'jeryu' })).toEqual({ hours: 720, family: 'jeryu' });
+    expect(histogramQuery('6h', { family: 'jeryu', repo: 'jeryu/jeryu-web' })).toEqual({
+      range: '6h',
+      repo: 'jeryu/jeryu-web',
+    });
+    expect(histogramQuery('24h', { family: '' })).toEqual({ range: '24h' });
+  });
+
+  it('reads an answer the server actually sent', () => {
+    const buckets = histogramBuckets(SERVER_ANSWER);
+    expect(buckets).toHaveLength(3);
+    expect(buckets.map((bucket) => bucket.at)).toEqual([
+      '2026-10-14T19:55:00Z',
+      '2026-10-14T20:00:00Z',
+      '2026-10-14T20:05:00Z',
+    ]);
+    // `other` is not one of the stacked groups, so the drawn total is the
+    // stack's: 36 of the server's 40 in the first bucket.
+    expect(buckets[0].counts.gates).toBe(16);
+    expect(buckets[0].total).toBe(36);
+    expect(buckets[0].failures).toBe(5);
+    const counts = chipCounts(buckets);
+    expect(counts.gates).toBe(35);
+    expect(counts.all).toBe(69);
+    expect(counts.human).toBe(6);
   });
 
   it('folds the wire buckets into counts, oldest first, ignoring unknown groups', () => {
@@ -117,6 +159,16 @@ describe('histogramModel', () => {
     expect(summary).toContain('1 needed a person');
     expect(histogramSummary(histogramGeometry([], { width: 900, height: 100, spanHours: 24 }), '6h')).toBe(
       'Pipeline volume over 6h: no events.'
+    );
+
+    const gatesOnly = histogramGeometry(histogramBuckets(HISTOGRAM), {
+      width: 900,
+      height: 100,
+      spanHours: 24,
+      only: 'gates',
+    });
+    expect(histogramSummary(gatesOnly, '24h', 'Gates')).toBe(
+      'Gates volume over 24h: 9 events in 3 buckets, busiest 6.'
     );
 
     const title = bucketTitle(histogramBuckets(HISTOGRAM)[1], 24);

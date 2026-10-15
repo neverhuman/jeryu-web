@@ -47,6 +47,18 @@ export function rangeQuery(id: HistogramRangeId): Pick<PipelineHistogramQuery, '
   return id === '30d' ? { hours: rangeHours(id) } : { range: id };
 }
 
+/**
+ * The whole histogram query for a range and a scope. The band and the chip
+ * counts both ask through this, so they share one request and one answer.
+ */
+export function histogramQuery(
+  id: HistogramRangeId,
+  scope: { family?: string; repo?: string }
+): PipelineHistogramQuery {
+  const where = scope.repo ? { repo: scope.repo } : scope.family ? { family: scope.family } : {};
+  return { ...rangeQuery(id), ...where };
+}
+
 /** The URL params a range button sets, keeping every other filter. */
 export function applyRange(params: URLSearchParams, id: HistogramRangeId): URLSearchParams {
   const next = new URLSearchParams(params);
@@ -266,13 +278,16 @@ export function bucketTitle(bucket: HistogramBucket, spanHours: number): string 
 }
 
 /** The band's one-sentence summary, read instead of the picture. */
-export function histogramSummary(geometry: HistogramGeometry, rangeLabel: string): string {
-  if (geometry.bars.length === 0) return `Pipeline volume over ${rangeLabel}: no events.`;
+export function histogramSummary(geometry: HistogramGeometry, rangeLabel: string, onlyLabel?: string): string {
+  // One group drawn alone says so, as the heading does: its bars are that
+  // group on its own scale, with no failures or needs-a-person drawn.
+  const what = onlyLabel ? `${onlyLabel} volume` : 'Pipeline volume';
+  if (geometry.bars.length === 0) return `${what} over ${rangeLabel}: no events.`;
   const peak = geometry.bars.reduce((best, bar) => (bar.total > best.total ? bar : best), geometry.bars[0]);
   const failed = geometry.bars.reduce((sum, bar) => sum + bar.failed, 0);
   const human = geometry.bars.reduce((sum, bar) => sum + bar.needsHuman, 0);
   return (
-    `Pipeline volume over ${rangeLabel}: ${geometry.events} event${geometry.events === 1 ? '' : 's'} ` +
+    `${what} over ${rangeLabel}: ${geometry.events} event${geometry.events === 1 ? '' : 's'} ` +
     `in ${geometry.bars.length} bucket${geometry.bars.length === 1 ? '' : 's'}, busiest ${peak.total}` +
     `${failed > 0 ? `, ${failed} failed` : ''}${human > 0 ? `, ${human} needed a person` : ''}.`
   );

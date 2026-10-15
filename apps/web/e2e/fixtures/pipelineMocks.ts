@@ -374,24 +374,28 @@ export function pinsBody(
 /**
  * `GET /api/v1/events/histogram`: hourly volume for the band above the feed,
  * oldest bucket first. The counts are shaped so every group is in the stack.
+ * The server names 6h, 24h and 7d as `range`; 30 days arrive as `hours=720`,
+ * which it buckets by day, so that is what the mock answers then.
  */
-export function histogramBody(range = '24h'): Record<string, unknown> {
-  const hours = range === '6h' ? 6 : range === '7d' ? 24 : 12;
+export function histogramBody(range = '24h', hours: number | null = null): Record<string, unknown> {
+  const daily = hours !== null && hours > 24 * 7;
+  const step = daily ? 86_400_000 : 3_600_000;
+  const count = daily ? Math.round(hours / 24) : range === '6h' ? 6 : range === '7d' ? 24 : 12;
   const shape = [
     { todos: 3, gates: 5 },
     { todos: 6, gates: 9, reviews: 2, pulls: 2, merges: 1 },
     { gates: 4, pulls: 1, releases: 1, deploys: 1 },
     { todos: 2, gates: 2, reviews: 1 },
   ];
-  const buckets = Array.from({ length: hours }, (_, i) => ({
-    start: new Date(Date.now() - (hours - 1 - i) * 3_600_000).toISOString(),
+  const buckets = Array.from({ length: count }, (_, i) => ({
+    start: new Date(Date.now() - (count - 1 - i) * step).toISOString(),
     by_group: shape[i % shape.length],
     failures: i % 3 === 1 ? 2 : 0,
     needs_human: i % 4 === 2 ? 1 : 0,
   }));
   return {
     schema_version: 1,
-    bucket_seconds: 3600,
+    bucket_seconds: step / 1000,
     buckets,
     // Window totals: what the 24-hour strip reads, counted over the whole
     // range rather than over the page of events the browser holds.
@@ -401,6 +405,8 @@ export function histogramBody(range = '24h'): Record<string, unknown> {
 
 export interface PipelineMockLog {
   eventQueries: string[];
+  /** Each `/events/histogram` query string, in the order asked. */
+  histogramQueries: string[];
 }
 
 export async function mockPipelineApi(
@@ -412,7 +418,7 @@ export async function mockPipelineApi(
     usage?: Record<string, unknown>;
   } = {}
 ): Promise<PipelineMockLog> {
-  const log: PipelineMockLog = { eventQueries: [] };
+  const log: PipelineMockLog = { eventQueries: [], histogramQueries: [] };
   const events = options.events ?? pipelineEvents();
   const json = (route: Route, body: unknown): Promise<void> =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -421,7 +427,12 @@ export async function mockPipelineApi(
   await page.route(/\/api\/v1\/pins(\?.*)?$/, (route) => json(route, options.pins ?? pinsBody()));
   await page.route(/\/api\/v1\/usage(\?.*)?$/, (route) => json(route, options.usage ?? usageBody()));
   await page.route(/\/api\/v1\/events\/histogram(\?.*)?$/, (route, request) =>
-    json(route, histogramBody(new URL(request.url()).searchParams.get('range') ?? '24h'))
+    {
+      const qs = new URL(request.url()).searchParams;
+      log.histogramQueries.push(qs.toString());
+      const hours = qs.get('hours');
+      return json(route, histogramBody(qs.get('range') ?? '24h', hours === null ? null : Number(hours)));
+    }
   );
   await page.route(/\/api\/v1\/events(\?.*)?$/, (route, request) => {
     const qs = new URL(request.url()).searchParams;

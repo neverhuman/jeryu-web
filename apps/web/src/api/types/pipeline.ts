@@ -143,7 +143,6 @@ export interface PipelineEventsResponse {
 export interface PipelineHistogramBucket {
   /** Start of the bucket, RFC 3339; the next bucket's start is its end. */
   start: string;
-  total?: number | null;
   by_group?: Record<string, number> | null;
   failures?: number | null;
   needs_human?: number | null;
