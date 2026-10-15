@@ -98,3 +98,10 @@ merge, or release authority. A hosted runner without that installation fails
 before the canonical gate; do not bypass the verifier to make it green. Runner
 provisioning is tracked in https://github.com/neverhuman/jeryu-web/issues/2.
 All checks, including that existing job, must pass before this PR is ready.
+
+The owner-path endpoint is exercised through the authenticated Axum router in
+jeryu-deploy's `web::tests::browser_link_tests::owner_paths_are_served_to_readers_without_private_repository_disclosure`.
+Its handler tests also check administrator protection settings and their masking
+for other readers. The web route-index fixture checks client spelling only; it
+is not evidence that a running server provides the route. Older servers may
+answer 404, in which case the optional panel remains hidden without retries.

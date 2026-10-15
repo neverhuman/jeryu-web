@@ -128,15 +128,18 @@ describe('AdminSettingsPage user list', () => {
       }
       return (fallback as (...args: unknown[]) => unknown)(url, ...rest);
     }) as typeof apiGet);
-    renderSettings();
-    const table = await screen.findByTestId('admin-users-table');
-    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
-      'User',
-      'Role',
-      'Kind',
-      'Actions',
-    ]);
-    vi.mocked(apiGet).mockImplementation(fallback as typeof apiGet);
+    try {
+      renderSettings();
+      const table = await screen.findByTestId('admin-users-table');
+      expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+        'User',
+        'Role',
+        'Kind',
+        'Actions',
+      ]);
+    } finally {
+      vi.mocked(apiGet).mockImplementation(fallback as typeof apiGet);
+    }
   });
 
   it('asks where the temporary password goes when the account has no address, then says it was sent', async () => {

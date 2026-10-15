@@ -80,6 +80,6 @@ export function ownerStandingNote(
   paths: OwnerMergePaths | null | undefined
 ): string | null {
   if (!paths?.blocked) return null;
-  if (!paths.viewer_may_clear_as_owner) return null;
+  if (!paths.viewer_may_clear_as_owner || !paths.viewer_is_admin || paths.enforce_admins !== false) return null;
   return `Branch protection on ${paths.base_ref} leaves administrators out (enforce_admins is off), and you administer this repository: the steps marked below are yours to take on head ${paths.head_sha.slice(0, 12)}.`;
 }

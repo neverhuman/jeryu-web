@@ -201,7 +201,6 @@ test('a running required gate keeps Merge on the page, disabled, and says how lo
   );
   await page.goto(BASE);
   await expect(page.getByTestId('pr-owner-paths')).toBeVisible();
-  await page.screenshot({ path: 'playwright-report/owner-paths-blocked.png', fullPage: true });
 
   const merge = page.getByRole('button', { name: 'Merge', exact: true });
   await expect(merge).toBeVisible({ timeout: 15_000 });

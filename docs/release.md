@@ -44,3 +44,14 @@ exact protected `jeryu-tool` source/tag/binary receipt, clean exact-head CI,
 and independent approval before protected merge. The backup, monitoring,
 rate-limit or abuse, checksum, SBOM, provenance, and rollback controls above
 remain mandatory for any later product promotion.
+
+## Owner-guidance series provenance correction
+
+The author-preservation claim for PR #189 has an exception: merged commit
+`5bea7556ccdd5f3826bb5581a7e8944b69881077` records
+`Your Name <you@example.com>` as author. Its cherry-pick source,
+`759973aa2aa427fa7bac0c6dfd19e4e2d3214c2b`, is named in the commit message
+but is unavailable in this clone. Neither establishes a verified person behind
+that identity. Treat that commit's human attribution as unknown;
+the series must not be described as preserving verified authors throughout.
+The merged history is retained rather than assigning an unverified author.

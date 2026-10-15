@@ -119,6 +119,14 @@ describe('ownerPathsModel', () => {
     ).toBeNull();
   });
 
+  it.each([true, null])('claims no exemption when enforce_admins is %s despite the owner flag', (enforce_admins) => {
+    expect(ownerStandingNote(deployEight({ enforce_admins }))).toBeNull();
+  });
+
+  it('claims no standing for inconsistent viewer flags', () => {
+    expect(ownerStandingNote(deployEight({ viewer_is_admin: false }))).toBeNull();
+  });
+
   it('has nothing to say before the answer arrives', () => {
     expect(showOwnerPaths(null)).toBe(false);
     expect(ownerPathRows(undefined)).toEqual([]);
