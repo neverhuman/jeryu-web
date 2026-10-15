@@ -186,8 +186,8 @@ export function histogramReadout(
   const from = Date.parse(response?.from ?? '');
   const to = Date.parse(response?.to ?? '');
   const span = Number.isNaN(from) || Number.isNaN(to) ? null : (to - from) / 3_600_000;
-  // Bucket edges round the window out, never in, so only a clearly shorter
-  // answer is one the server chose: a server that ignored the asked window.
+  // A short span may reflect retention, a young instance, or a server using
+  // a narrower window. Report the available span without assuming the cause.
   const answeredHours = span !== null && span > 0 && span < askedHours * 0.9 ? Math.round(span) : null;
   return { unreadable, answeredHours };
 }

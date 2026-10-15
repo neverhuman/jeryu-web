@@ -13,6 +13,7 @@
 
 import { useSearchParams } from 'react-router-dom';
 
+import { ApiError } from '../../api/client';
 import { useEventsHistogram } from '../../hooks/usePipeline';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { ACTIVITY_CHIPS, activeChip, applyChip, parseActivityFilters } from './activityModel';
@@ -57,11 +58,10 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   const current = activeChip(parseActivityFilters(params));
   const activeGroup = activeGroupId(current);
 
-  // An older forge answers this path with a 404: leave the band out rather
-  // than explain it above the feed. Until the answer is in, the band keeps its
+  // A missing route leaves the band out. Other errors keep the range controls
+  // available so a saved wide range can recover. Until the answer is in, it keeps its
   // height, so the list below it does not jump once the bars arrive.
-  const unanswered = histogram.isError;
-  if (unanswered) return null;
+  if (histogram.isError && histogram.error instanceof ApiError && histogram.error.status === 404) return null;
 
   const buckets = histogramBuckets(histogram.data);
   const readout = histogramReadout(histogram.data, rangeHours(range));
@@ -73,15 +73,23 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
   });
   const rangeLabel = HISTOGRAM_RANGES.find((candidate) => candidate.id === range)?.label ?? range;
   const onlyLabel = HISTOGRAM_GROUPS.find((group) => group.id === activeGroup)?.label;
-  const hasOther = buckets.some((bucket) => (bucket.counts[OTHER_GROUP.id] ?? 0) > 0);
+  const hasOther = activeGroup === null && buckets.some((bucket) => (bucket.counts[OTHER_GROUP.id] ?? 0) > 0);
   // Said in words on the band, never drawn as an empty or mislabelled plot.
-  const note = readout.unreadable
-    ? 'The server answered in a shape this page cannot read, so there is nothing to draw.'
+  const note = histogram.isError
+    ? `Volume for ${rangeLabel} could not be loaded. Try another range.`
+    : readout.unreadable
+      ? 'The server answered in a shape this page cannot read, so there is nothing to draw.'
+      : readout.answeredHours !== null
+        ? `Only ${readout.answeredHours}h of history available for the ${rangeLabel} range.`
+        : histogram.data !== undefined && buckets.length > 0 && geometry.events === 0
+          ? `No ${onlyLabel ? onlyLabel.toLowerCase() : 'events'} in the last ${rangeLabel}.`
+          : null;
+
+  const summary = histogram.isError || readout.unreadable
+    ? note ?? ''
     : readout.answeredHours !== null
-      ? `The server answered ${readout.answeredHours}h, not the ${rangeLabel} asked for.`
-      : histogram.data !== undefined && buckets.length > 0 && geometry.events === 0
-        ? `No ${onlyLabel ? onlyLabel.toLowerCase() : 'events'} in the last ${rangeLabel}.`
-        : null;
+      ? `${note} ${histogramSummary(geometry, `${readout.answeredHours}h available`, onlyLabel)}`
+      : histogramSummary(geometry, rangeLabel, onlyLabel);
 
   const setChip = (chipId: string): void => {
     const chip = ACTIVITY_CHIPS.find((candidate) => candidate.id === chipId);
@@ -120,17 +128,19 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
           ))}
         </div>
       </div>
-      {note ? (
-        <p className="activity-volume__note" data-testid="activity-volume-note">
-          {note}
-        </p>
-      ) : null}
+      <div aria-live="polite" aria-atomic="true">
+        {note ? (
+          <p className="activity-volume__note" data-testid="activity-volume-note">
+            {note}
+          </p>
+        ) : null}
+      </div>
       <div className="activity-volume__plot">
         <svg
           viewBox={`0 0 ${WIDTH} ${PLOT + AXIS}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label={histogramSummary(geometry, rangeLabel, onlyLabel)}
+          aria-label={summary}
           data-testid="activity-volume-svg"
         >
           {geometry.bars.map((bar, index) => (

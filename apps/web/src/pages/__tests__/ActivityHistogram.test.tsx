@@ -346,6 +346,53 @@ describe('ActivityHistogram', () => {
     renderPage();
     const note = await screen.findByTestId('activity-volume-note');
     expect(note.textContent).toContain('cannot read');
+    expect(note.parentElement).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByTestId('activity-volume-svg')).toHaveAttribute('aria-label', note.textContent);
+  });
+
+
+  it('shows Other only while its segments are drawn', async () => {
+    mockPipelineApi((req) => req.pathname === '/api/v1/events/histogram' ? json(SERVER_ANSWER) : undefined);
+    renderPage();
+    const band = await screen.findByTestId('activity-volume');
+    await waitFor(() => expect(band.querySelector('.activity-volume__key--plain')).toHaveTextContent('Other'));
+    fireEvent.click(screen.getByRole('button', { name: 'Filter to gates' }));
+    expect(band.querySelector('.activity-volume__seg.is-other')).toBeNull();
+    expect(band.querySelector('.activity-volume__key--plain')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Filter to gates' }));
+    expect(band.querySelector('.activity-volume__seg.is-other')).not.toBeNull();
+    expect(band.querySelector('.activity-volume__key--plain')).toHaveTextContent('Other');
+  });
+
+  it.each([400, 422])('keeps range recovery available after a %s response to a bookmarked month', async (status) => {
+    const calls = mockPipelineApi((req) =>
+      req.pathname === '/api/v1/events/histogram' && new URLSearchParams(req.search).has('hours')
+        ? errorResponse(status, 'unsupported hours')
+        : req.pathname === '/api/v1/events/histogram'
+          ? json({ ...HISTOGRAM, from: '2026-10-08T00:00:00Z', to: '2026-10-15T00:00:00Z' })
+          : undefined
+    );
+    renderPage('/activity?range=30d&family=jeryu');
+    const note = await screen.findByTestId('activity-volume-note');
+    expect(note).toHaveTextContent('Volume for 30d could not be loaded. Try another range.');
+    expect(note.parentElement).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByTestId('activity-volume-svg')).toHaveAttribute('aria-label', note.textContent);
+    fireEvent.click(screen.getByRole('button', { name: '7d' }));
+    await waitFor(() => expect(screen.getByTestId('activity-volume-svg').getAttribute('aria-label')).toContain('21 events'));
+    expect(screen.queryByTestId('activity-volume-note')).toBeNull();
+    expect(calls.some((call) => call.search.includes('range=7d') && call.search.includes('family=jeryu'))).toBe(true);
+  });
+
+  it.each([24, 168, 12])('describes %sh of available history without assigning a cause', async (hours) => {
+    const to = '2026-10-15T02:00:00Z';
+    mockPipelineApi((req) => req.pathname === '/api/v1/events/histogram'
+      ? json({ ...SERVER_ANSWER, from: new Date(Date.parse(to) - hours * 3_600_000).toISOString(), to }) : undefined);
+    renderPage('/activity?range=30d');
+    const note = await screen.findByTestId('activity-volume-note');
+    expect(note).toHaveTextContent(`Only ${hours}h of history available for the 30d range.`);
+    expect(note.parentElement).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByTestId('activity-volume-svg').getAttribute('aria-label')).toContain(note.textContent);
+    expect(screen.getByTestId('activity-volume-svg').getAttribute('aria-label')).toContain(`${hours}h available`);
   });
 
   it('leaves the band out on a server without the route, keeping the feed', async () => {
