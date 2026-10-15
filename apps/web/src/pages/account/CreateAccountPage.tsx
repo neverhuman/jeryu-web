@@ -18,6 +18,8 @@ import { AccountFrame, PASSWORD_MIN_LENGTH, Status } from './AccountRecoveryPage
 import { JoinWaitlistLink, SignupPolicyUnreadable } from './JoinWaitlistLink';
 import { INVITE_ONLY, RATE_LIMITED, UNREACHABLE } from './accountCopy';
 
+import '../boot/MarketingPill.css';
+
 type Phase = 'idle' | 'saving' | 'invalid' | 'closed';
 type Problem = { field: 'login' | 'password' | 'form'; text: string };
 

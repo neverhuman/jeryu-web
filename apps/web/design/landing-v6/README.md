@@ -28,9 +28,11 @@ The hero is a two-part composition: the dragon on the left, the copy on the
 right. The dragon is absolute inside the scene, anchored to the left edge of
 the 1600px content frame, and its tail recedes under the first story section.
 The headline leads at display scale (up to 96px); the lede, the waitlist pill
-and the secondary "See how it works" link follow. Every waitlist call to
-action (navigation, hero, form submit) is the same `.marketing-pill`: a
-rounded pill on a cyan-to-blue gradient with a short lift on hover.
+and the secondary "See how it works" link follow. Every primary call to
+action on the public pages (the navigation and hero `.marketing-pill`, and
+every `.waitlist__submit` on the waitlist, login/signup, create-account and
+account-recovery forms) is the same pill from `MarketingPill.css`: rounded, on
+a cyan-to-blue gradient, with a short lift on hover.
 
 | Range | Hero | Dragon | Workflow steps |
 |---|---|---|---|

@@ -8,6 +8,7 @@ import { MarketingHeader } from './MarketingHeader';
 import { MarketingScene } from './MarketingScene';
 
 import './boot.css';
+import './MarketingPill.css';
 
 type Mode = 'login' | 'signup';
 

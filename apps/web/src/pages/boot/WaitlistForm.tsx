@@ -11,6 +11,7 @@ import { endpoints } from '../../api/endpoints';
 import { useSignupPolicy } from '../../hooks/useSignupPolicy';
 import { JoinWaitlistLink, SignupPolicyUnreadable } from '../account/JoinWaitlistLink';
 
+import './MarketingPill.css';
 import './WaitlistForm.css';
 
 type Phase = 'idle' | 'submitting' | 'received' | 'invalid' | 'limited' | 'failed';
@@ -116,7 +117,7 @@ export function WaitlistForm(): JSX.Element {
           onChange={(event) => setNote(event.target.value)}
         />
       </label>
-      <button type="submit" className="marketing-pill waitlist__submit" disabled={phase === 'submitting'}>
+      <button type="submit" className="waitlist__submit" disabled={phase === 'submitting'}>
         {phase === 'submitting' ? 'Joining…' : 'Join the waitlist'}
       </button>
       {message ? (
@@ -152,7 +153,7 @@ export function WaitlistEntry(): JSX.Element {
         <SignupPolicyUnreadable
           retrying={view.retrying}
           retry={view.retry}
-          className="marketing-pill waitlist__submit"
+          className="waitlist__submit"
         />
       </div>
     );
@@ -164,7 +165,7 @@ export function WaitlistEntry(): JSX.Element {
       <p className="waitlist__privacy">
         The waitlist is kept on its own site: leave your email there for an invitation.
       </p>
-      <JoinWaitlistLink waitlist={view.waitlist} className="marketing-pill waitlist__submit" />
+      <JoinWaitlistLink waitlist={view.waitlist} className="waitlist__submit" />
     </div>
   );
 }

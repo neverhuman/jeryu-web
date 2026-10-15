@@ -5,7 +5,6 @@
 .waitlist__field input { min-height: 46px; padding: 0 14px; }
 .waitlist__field textarea { min-height: 110px; padding: 12px 14px; resize: vertical; }
 .waitlist__field input:focus-visible, .waitlist__field textarea:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 3px; }
-/* The submit shares the pill with the header and hero (boot.css); here it fills the form. */
-.waitlist__submit { width: 100%; min-height: 50px; padding: 12px 20px; font-size: 15px; }
+/* .waitlist__submit is the shared pill: MarketingPill.css. */
 .waitlist__status { margin: 0; color: var(--color-fg-primary); font-size: 14px; line-height: 1.6; }
 .waitlist__privacy { margin: 0; color: var(--color-fg-muted); font-size: 12px; line-height: 1.7; }

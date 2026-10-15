@@ -21,6 +21,7 @@ import { RATE_LIMITED, UNREACHABLE } from './accountCopy';
 
 import '../boot/boot.css';
 import '../WaitlistPage.css';
+import '../boot/MarketingPill.css';
 import '../boot/WaitlistForm.css';
 
 /** The forge refuses a shorter password; the form says so before it asks. */

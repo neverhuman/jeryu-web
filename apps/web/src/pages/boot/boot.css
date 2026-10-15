@@ -16,7 +16,7 @@
      4  .dragon-landing--unavailable                        the retry notice
      5  .marketing-header                                   navigation
    The hero copy has its own isolated halo (.marketing-scene__copy::before)
-   that sits behind its text only. */
+   that sits behind its text only. The waitlist pill lives in MarketingPill.css. */
 .marketing {
   --color-bg-0: #07111f;
   --color-bg-1: #0e1b2c;
@@ -120,42 +120,6 @@
 .marketing *, .marketing *::before, .marketing *::after { box-sizing: border-box; }
 .marketing a:focus-visible, .marketing button:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 5px; }
 
-/* One pill for every waitlist call to action: header, hero and the form. */
-.marketing-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 46px;
-  padding: 0 24px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background-color: var(--marketing-button);
-  background-image: var(--marketing-button-gradient);
-  color: var(--marketing-button-text);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  box-shadow: var(--marketing-button-shadow);
-  transition: transform 160ms ease-out, box-shadow 160ms ease-out, background-color 160ms ease-out;
-}
-.marketing-pill > span { transition: transform 160ms ease-out; }
-.marketing-pill:hover { background-color: var(--marketing-button-hover); background-image: var(--marketing-button-gradient-hover); transform: translateY(-1px); }
-.marketing-pill:hover > span { transform: translateX(3px); }
-.marketing-pill:active { transform: translateY(0); }
-.marketing-pill:disabled { opacity: .65; cursor: wait; transform: none; }
-@media (prefers-reduced-motion: reduce) {
-  .marketing-pill, .marketing-pill > span { transition: none; }
-  .marketing-pill:hover, .marketing-pill:hover > span { transform: none; }
-}
-@media (forced-colors: active) {
-  .marketing-pill { background-image: none; background-color: ButtonFace; color: ButtonText; border-color: ButtonText; box-shadow: none; }
-}
-
 .marketing-scene {
   min-height: 100svh;
   width: 100%;
@@ -239,7 +203,7 @@
 .boot--auth-open .boot__hero h1 { font-size: clamp(40px, 4.1vw, 64px); }
 .boot__lede { max-width: 38ch; margin: 0; color: var(--color-fg-secondary); font-size: clamp(16px, 1.3vw, 19px); line-height: 1.75; }
 .boot__cta { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; margin-top: 36px; }
-.boot__cta-primary { min-height: 52px; padding-inline: 30px; font-size: 15px; }
+.boot__cta .boot__cta-primary { min-height: 52px; padding-inline: 30px; font-size: 15px; }
 .boot__cta-secondary { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--color-fg-primary); font-size: 14px; font-weight: 500; text-decoration: none; }
 .boot__cta-secondary > span { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--color-border-strong); border-radius: 50%; transition: background-color 160ms ease-out, border-color 160ms ease-out; }
 .boot__cta-secondary:hover > span { background: var(--color-accent-primary-bg); border-color: var(--color-accent-primary); }
@@ -293,7 +257,7 @@
   .boot__hero h1 { margin-bottom: 18px; font-size: clamp(40px, 11.5vw, 56px); }
   .boot__lede { max-width: 40ch; font-size: 16px; line-height: 1.7; }
   .boot__cta { margin-top: 28px; gap: 14px 24px; }
-  .boot__cta-primary { width: min(100%, 360px); min-height: 52px; }
+  .boot__cta .boot__cta-primary { width: min(100%, 360px); min-height: 52px; }
   .boot__signature { margin-top: 24px; font-size: 10px; }
   .boot__auth-panel { margin-top: 20px; }
   .login-panel { padding: 22px; }

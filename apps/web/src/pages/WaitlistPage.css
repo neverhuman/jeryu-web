@@ -5,8 +5,12 @@
 .waitlist-page .landing-section-label { margin: 0 0 24px; color: var(--color-accent-primary); font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
 .waitlist-page__back { display: inline-flex; align-items: center; min-height: 44px; margin-top: 26px; color: var(--color-fg-primary); font-size: 13px; text-decoration: none; }
 .waitlist-page__form { width: 100%; min-width: 0; max-width: 500px; padding: 30px; border: 1px solid var(--color-border-subtle); border-radius: 16px; background: var(--color-bg-1); }
-@media (max-width: 740px) {
+/* One column below the desktop breakpoint shared with boot.css (1024px). */
+@media (max-width: 1023px) {
   .waitlist-page__content { grid-template-columns: 1fr; padding-top: 42px; gap: 30px; }
-  .waitlist-page__form { padding: 24px; max-width: none; }
+  .waitlist-page__form { padding: 24px; max-width: 560px; }
   .waitlist-page__intro > p:not(.landing-section-label) { font-size: 15px; max-width: 44ch; }
+}
+@media (max-width: 767px) {
+  .waitlist-page__form { max-width: none; }
 }

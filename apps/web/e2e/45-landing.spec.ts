@@ -274,6 +274,14 @@ test.describe('Signed-out landing', () => {
       expect(box!.height).toBeGreaterThanOrEqual(44);
       expect(box!.y + box!.height).toBeLessThan(height);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+      // The compact navigation is sticky: scrolled into the story, the pill is still on screen.
+      await page.locator('#how-it-works').scrollIntoViewIfNeeded();
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      const stuck = await join.boundingBox();
+      expect(stuck).not.toBeNull();
+      expect(stuck!.y).toBeGreaterThanOrEqual(0);
+      expect(stuck!.y + stuck!.height).toBeLessThan(height);
+      await page.evaluate(() => window.scrollTo(0, 0));
       await expect(page.getByTestId('dragon-poster')).toBeVisible();
       const frame = await page.getByTestId('dragon-landing').boundingBox();
       expect(frame).not.toBeNull();

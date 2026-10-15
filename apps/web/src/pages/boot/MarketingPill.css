@@ -1,0 +1,48 @@
+/* One pill for every primary call to action on the public pages: the
+   navigation and hero "Join waitlist" links (.marketing-pill) and every form
+   submit or link that carries .waitlist__submit (the waitlist, login/signup,
+   create-account and account-recovery pages). Both selectors are styled here
+   so a call site needs only one class. Tokens come from .marketing (boot.css);
+   the fallbacks keep the pill usable outside it. */
+.marketing-pill,
+.waitlist__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-color: var(--marketing-button, var(--color-accent-primary));
+  background-image: var(--marketing-button-gradient, none);
+  color: var(--marketing-button-text, var(--color-bg-0));
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--marketing-button-shadow, none);
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out, background-color 160ms ease-out;
+}
+.marketing-pill > span,
+.waitlist__submit > span { transition: transform 160ms ease-out; }
+.marketing-pill:hover,
+.waitlist__submit:hover { background-color: var(--marketing-button-hover, var(--color-accent-primary)); background-image: var(--marketing-button-gradient-hover, none); transform: translateY(-1px); }
+.marketing-pill:hover > span,
+.waitlist__submit:hover > span { transform: translateX(3px); }
+.marketing-pill:active,
+.waitlist__submit:active { transform: translateY(0); }
+.marketing-pill:disabled,
+.waitlist__submit:disabled { opacity: .65; cursor: wait; transform: none; }
+/* Form submits fill their form; later in this file, so the order is fixed. */
+.waitlist__submit { width: 100%; min-height: 50px; padding: 12px 20px; font-size: 15px; white-space: normal; }
+@media (prefers-reduced-motion: reduce) {
+  .marketing-pill, .marketing-pill > span, .waitlist__submit, .waitlist__submit > span { transition: none; }
+  .marketing-pill:hover, .marketing-pill:hover > span, .waitlist__submit:hover, .waitlist__submit:hover > span { transform: none; }
+}
+@media (forced-colors: active) {
+  .marketing-pill, .waitlist__submit { background-image: none; background-color: ButtonFace; color: ButtonText; border-color: ButtonText; box-shadow: none; }
+}

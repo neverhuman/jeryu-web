@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { JeryuWordmark } from '../../components/brand/JeryuWordmark';
 
 import './MarketingHeader.css';
+import './MarketingPill.css';
 
 export function MarketingHeader({
   onLogin,
