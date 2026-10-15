@@ -38,6 +38,14 @@ export interface QueueEntry {
   /** Why it failed or left the queue; null while it is building. */
   reason?: string | null;
   landed_sha?: string | null;
+  /**
+   * The queued pull request whose queue commit this one is built on: entries
+   * on one base form a stack, and a green gate lands its entry with every
+   * entry below it. Absent when built on the base tip, or from an older forge.
+   */
+  after?: number | null;
+  /** The entry above whose green gate landed this one, when not its own. */
+  landed_with?: number | null;
 }
 
 /** `GET /api/v1/repos/{id}/merge-queue`. */

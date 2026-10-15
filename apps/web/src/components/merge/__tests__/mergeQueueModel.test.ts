@@ -127,6 +127,10 @@ describe('mergeQueueModel', () => {
       line: 'In the merge queue: 3333333 is this head replayed onto main, and the gate is running on it.',
       cta: null,
     });
+    // Stacked behind another queued pull request: its gate also covers #41.
+    expect(mergeQueueOffer({ detail, entry: entry({ state: 'building', after: 41 }) })?.line).toBe(
+      "In the merge queue: 3333333 is this head replayed onto #41's queue commit on main (it lands with or after #41), and the gate is running on it."
+    );
     expect(
       mergeQueueOffer({ detail, entry: entry({ state: 'failed', reason: 'The gate failed twice.' }) })
     ).toEqual({

@@ -140,7 +140,9 @@ export function mergeQueueOffer(input: {
     return {
       kind: 'building',
       state: 'building',
-      line: `In the merge queue: ${entry.queue_sha.slice(0, 7)} is this head replayed onto ${entry.base}, ${
+      line: `In the merge queue: ${entry.queue_sha.slice(0, 7)} is this head replayed onto ${
+        entry.after ? `#${entry.after}'s queue commit on ${entry.base} (it lands with or after #${entry.after})` : entry.base
+      }, ${
         queueGateWaiting(entry)
           ? 'waiting for a gate runner to pick it up'
           : 'and the gate is running on it'
