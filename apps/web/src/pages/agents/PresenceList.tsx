@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 
 import { isLivePresence, presenceRunId, type AgentPresenceItem, type PresenceRow } from '../../api/agentPresence';
 import { toneClass } from '../../components/tone/tone';
+import { useListKeys, listRowProps, LIST_OPEN_PROP } from '../../hooks/useListKeys';
 import { relativeText } from '../../format/when';
 
 import {
@@ -39,22 +40,25 @@ export interface PresenceListProps {
   host: string;
   /** `owner/name` of the repository the list is for. */
   repo: string;
+  hostForRepo?: (repo?: string) => string;
   now: number;
   /** Run ids open in the terminal. */
   openRuns: ReadonlySet<string>;
   onOpenRun: (row: PresenceRow) => void;
 }
 
-export function PresenceList({ rows, host, repo, now, openRuns, onOpenRun }: PresenceListProps): JSX.Element {
+export function PresenceList({ rows, host, repo, hostForRepo, now, openRuns, onOpenRun }: PresenceListProps): JSX.Element {
+  const listRef = useListKeys<HTMLUListElement>();
   const byId = useMemo(() => new Map(rows.map((row) => [row.item.id, row.item])), [rows]);
   return (
-    <ul className="presence" data-testid="agents-presence-list">
+    <ul ref={listRef} className="presence" data-testid="agents-presence-list">
       {rows.map((row) => (
         <PresenceRowView
           key={row.item.id}
           row={row}
-          host={host}
+          host={hostForRepo?.(row.item.repos[0]) ?? host}
           repo={repo}
+          hostForRepo={hostForRepo}
           now={now}
           byId={byId}
           open={openRuns.has(presenceRunId(row.item) ?? '')}
@@ -69,6 +73,7 @@ function PresenceRowView({
   row,
   host,
   repo,
+  hostForRepo,
   now,
   byId,
   open,
@@ -77,6 +82,7 @@ function PresenceRowView({
   row: PresenceRow;
   host: string;
   repo: string;
+  hostForRepo?: (repo?: string) => string;
   now: number;
   byId: ReadonlyMap<string, AgentPresenceItem>;
   open: boolean;
@@ -99,6 +105,8 @@ function PresenceRowView({
 
   return (
     <li
+      {...listRowProps}
+      data-list-key={item.id}
       className={`presence__row presence__row--${item.state}${collision ? ' presence__row--collides' : ''}`}
       data-testid={`presence-row-${item.id}`}
       data-state={item.state}
@@ -113,6 +121,7 @@ function PresenceRowView({
         {runId ? (
           <button
             type="button"
+            {...LIST_OPEN_PROP}
             className={`presence__name presence__open${open ? ' is-active' : ''}`}
             onClick={() => onOpenRun(row)}
             aria-pressed={open}
@@ -183,6 +192,27 @@ function PresenceRowView({
           </span>
         ) : null}
       </p>
+
+      {!repo ? (
+        <p className="presence__links">
+          {item.repos.map((name, index) => (
+            <Link key={name} to={presenceRepoHref(hostForRepo?.(name) ?? host, { ...item, repos: [name] })!}
+              {...(index === 0 && !runId ? LIST_OPEN_PROP : {})}>{name}</Link>
+          ))}
+          {item.repos.length === 0 ? <span>{item.families.length ? `Family ${item.families.join(', ')}` : 'No repository assigned'}</span> : null}
+        </p>
+      ) : null}
+      {item.location ? (
+        <dl className="presence__location" data-testid={`presence-location-${item.id}`}>
+          <dt>Session data</dt><dd><code>{item.location.session_path ?? 'Not reported'}</code></dd>
+          <dt>{item.location.checkout_kind === 'worktree' ? 'Worktree' : 'Checkout'}</dt>
+          <dd><code>{item.location.checkout_path ?? 'Not reported'}</code></dd>
+          {item.location.cwd && item.location.cwd !== item.location.checkout_path ? <><dt>Working directory</dt><dd><code>{item.location.cwd}</code></dd></> : null}
+          {!item.branch && item.location.head ? <><dt>Detached commit</dt><dd><code>{item.location.head}</code></dd></> : null}
+          {item.location.screen ? <><dt>Screen</dt><dd><code>{item.location.screen}</code></dd></> : null}
+          {item.worker ? <><dt>Worker</dt><dd>{item.worker.family} / {item.worker.slot}</dd></> : null}
+        </dl>
+      ) : null}
 
       {collision ? (
         <p className="presence__collision" role="note" data-testid={`presence-collision-${item.id}`}>

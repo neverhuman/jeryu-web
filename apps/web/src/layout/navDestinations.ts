@@ -226,6 +226,17 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     group: 'wiki',
   },
   {
+    id: 'nav.active-agents',
+    shortcut: 'g v',
+    label: 'Active agents',
+    path: '/agents',
+    icon: Bot,
+    paletteIcon: 'bot',
+    keywords: ['active agents', 'sessions', 'claude', 'codex', 'cursor', 'grok', 'agy', 'host', 'worktree'],
+    useWhen: 'Use this when you need to find running agents and locate their sessions and checkouts.',
+    group: 'system',
+  },
+  {
     id: 'nav.runners',
     label: 'Runners',
     path: '/runners',

@@ -1,0 +1,31 @@
+.active-agents__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3, 0.75rem);
+  margin-bottom: var(--space-4, 1rem);
+}
+.active-agents__filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1 1 10rem;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-xs);
+}
+.active-agents__filters input,
+.active-agents__filters select,
+.active-agents button {
+  min-height: 2.25rem;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  color: var(--color-fg-primary);
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+.active-agents button { cursor: pointer; }
+.active-agents button:disabled { opacity: 0.5; cursor: default; }
+.active-agents__paging { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }

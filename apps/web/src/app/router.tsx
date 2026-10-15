@@ -36,6 +36,7 @@ import { SessionPage } from '../pages/SessionPage';
 import { SessionsPage } from '../pages/SessionsPage';
 import { FlowPage } from '../pages/flow';
 import { ScorecardPage } from '../pages/scorecard';
+import { ActiveAgentsPage } from '../pages/ActiveAgentsPage';
 import { RepositoryAgentsPage } from '../pages/RepositoryAgentsPage';
 import { RepositoryFamilyPage } from '../pages/RepositoryFamilyPage';
 import { RepositoryPullRequestsPage } from '../pages/RepositoryPullRequestsPage';
@@ -114,6 +115,7 @@ export const router = createBrowserRouter([
       { path: 'quality-gate/heads/:owner/:name', element: <QualityGateLatestHeadPage /> },
       { path: 'quality-gate/heads/:owner/:name/:sha', element: <QualityGateHeadPage /> },
       { path: 'runners', element: <FleetPage /> },
+      { path: 'agents', element: <ActiveAgentsPage /> },
       { path: 'shared-tools/findings', element: <ToolsPage /> },
       { path: 'shared-tools/proposals', element: <ProposalsPage /> },
       { path: 'shared-tools/adoption', element: <ToolFleetPage /> },

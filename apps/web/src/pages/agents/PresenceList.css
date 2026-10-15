@@ -241,3 +241,14 @@ a.presence-compact__row:hover {
 .presence__dot--warn {
   background: var(--color-accent-warning);
 }
+
+.presence__location {
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) minmax(0, 1fr);
+  gap: 0.2rem 0.75rem;
+  margin: 0.25rem 0 0;
+  color: var(--color-fg-secondary);
+}
+.presence__location dt { font-weight: var(--font-weight-semibold); }
+.presence__location dd { margin: 0; overflow-wrap: anywhere; }
+.presence__location code { font-family: var(--font-mono); }

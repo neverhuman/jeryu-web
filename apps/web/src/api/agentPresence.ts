@@ -29,6 +29,16 @@ export interface PresenceLinks {
   agent_run?: string;
 }
 
+export interface PresenceLocation {
+  session_path?: string;
+  cwd?: string;
+  checkout_path?: string;
+  checkout_kind?: string;
+  head?: string;
+  screen?: string;
+  pid?: number;
+}
+
 /** One agent at work, one row of the Agents list. */
 export interface AgentPresenceItem {
   /** Source-prefixed id, unique in the list. */
@@ -51,7 +61,10 @@ export interface AgentPresenceItem {
   expires_at: number | null;
   cost_usd: number | null;
   links: PresenceLinks;
-  /** Only administrators are sent this. */
+  reporter?: string;
+  location?: PresenceLocation;
+  worker?: { family: string; slot: string };
+  /** External hosts are visible to the reporter and administrators. */
   host: string | null;
   /** Ids of other live items on the same repository and branch. */
   collides_with: string[];
@@ -118,6 +131,17 @@ function linksOf(value: unknown): PresenceLinks {
   return links;
 }
 
+function locationOf(value: Record<string, unknown>): PresenceLocation {
+  const location: PresenceLocation = {};
+  for (const key of ['session_path', 'cwd', 'checkout_path', 'checkout_kind', 'head', 'screen'] as const) {
+    const field = text(value[key]);
+    if (field) location[key] = field;
+  }
+  const pid = finite(value.pid);
+  if (pid !== null && Number.isSafeInteger(pid) && pid > 0) location.pid = pid;
+  return location;
+}
+
 /** One wire item, or null when it lacks the id or the agent a row needs. */
 export function parsePresenceItem(value: unknown): AgentPresenceItem | null {
   if (!isRecord(value)) return null;
@@ -147,6 +171,10 @@ export function parsePresenceItem(value: unknown): AgentPresenceItem | null {
     cost_usd: cost !== null && cost >= 0 ? cost : null,
     links,
     host: text(value.host),
+    ...(text(value.reporter) ? { reporter: text(value.reporter)! } : {}),
+    ...(isRecord(value.location) ? { location: locationOf(value.location) } : {}),
+    ...(isRecord(value.worker) && text(value.worker.family) && text(value.worker.slot)
+      ? { worker: { family: text(value.worker.family)!, slot: text(value.worker.slot)! } } : {}),
     collides_with: texts(value.collides_with).filter((other) => other !== id),
     repos: texts(value.repos),
     families: texts(value.families),
@@ -309,4 +337,8 @@ export async function fetchRepoAgentPresence(repoId: string, signal?: AbortSigna
 export async function fetchFamilyAgentPresence(family: string, signal?: AbortSignal): Promise<AgentPresenceList> {
   const body = await apiGet<unknown>(familyAgentPresencePath(family), { signal });
   return parsePresenceList(body);
+}
+
+export async function fetchAllAgentPresence(params: URLSearchParams, signal?: AbortSignal): Promise<AgentPresenceList> {
+  return parsePresenceList(await apiGet<unknown>(`/api/v1/agent-presence?${params.toString()}`, { signal }));
 }
