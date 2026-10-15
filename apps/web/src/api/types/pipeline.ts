@@ -49,6 +49,17 @@ export interface AttentionBudget {
   waiting?: number | null;
 }
 
+/**
+ * The one question a `pr_needs_owner_decision` row asks and the two calls that
+ * answer it (`jeryu.attention/v1.5`). The row carries no `action.api`: the step
+ * is the owner's Yes or No, so nothing replays it for them.
+ */
+export interface AttentionDecision {
+  question: string;
+  yes: AttentionApiAction;
+  no: AttentionApiAction;
+}
+
 export interface AttentionItem {
   id: string;
   kind: string;
@@ -66,6 +77,8 @@ export interface AttentionItem {
   budget?: AttentionBudget | null;
   /** Set on a todo item when a person has taken the todo on (attention v1.4). */
   assignee?: string | null;
+  /** Set on `pr_needs_owner_decision` only (attention v1.5). */
+  decision?: AttentionDecision | null;
   /** In-app path to the place to act. */
   href: string | null;
   action: AttentionAction | null;

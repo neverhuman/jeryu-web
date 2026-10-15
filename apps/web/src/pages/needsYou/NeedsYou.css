@@ -91,6 +91,20 @@
   gap: var(--space-1);
 }
 
+/* The two answers to an owner's question sit side by side: one decision, two
+   ways to take it, not a stack of unrelated acts. */
+.needs-you__decide {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.needs-you__decide-note {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .needs-you__title-line {
   margin: 0;
   display: flex;

@@ -33,11 +33,14 @@ import {
   acknowledgeTarget,
   alsoLine,
   attentionContext,
+  ownerDecision,
   primaryAction,
   repoFamilyMap,
   rowDetail,
   attentionHref,
   type AttentionSubject,
+  type DecisionAnswer,
+  type OwnerDecision,
   type PrimaryAction,
 } from './needsYouModel';
 
@@ -66,7 +69,10 @@ export function AttentionRow({
   now: Date;
 } & FamilyProps): JSX.Element {
   const item = subject.primary;
-  const action = primaryAction(item);
+  // A row that asks the owner a question offers that question's Yes and No,
+  // and nothing else: its one step is theirs to take.
+  const decision = ownerDecision(item);
+  const action = decision ? null : primaryAction(item);
   const family = familyFor(item);
   const detail = rowDetail(item);
   const to = attentionHref(item);
@@ -128,7 +134,9 @@ export function AttentionRow({
           </ul>
         ) : null}
       </div>
-      {action?.type === 'api' ? (
+      {decision ? (
+        <Decide item={item} decision={decision} />
+      ) : action?.type === 'api' ? (
         <RunAction item={item} action={action} />
       ) : action?.type === 'command' ? (
         <CopyCommand
@@ -165,6 +173,66 @@ function Also({ item }: { item: AttentionItem }): JSX.Element {
       </span>{' '}
       {line.detail}
     </li>
+  );
+}
+
+/**
+ * The one question only the owner can answer, as the two buttons that answer
+ * it. Each is confirmed first, in the forge's own words, and a refusal is
+ * worded on the row rather than thrown away. Nothing here answers for them:
+ * both calls are the owner's, and the forge refuses either from anybody else.
+ */
+function Decide({
+  item,
+  decision,
+}: {
+  item: AttentionItem;
+  decision: OwnerDecision;
+}): JSX.Element {
+  const run = useAttentionAction();
+  const [confirming, setConfirming] = useState<DecisionAnswer | null>(null);
+  const button = (answer: DecisionAnswer, first: boolean): JSX.Element => (
+    <ActionButton
+      variant={first ? 'primary' : 'default'}
+      {...(first ? LIST_ACTION_PROP : {})}
+      disabled={run.isPending}
+      aria-label={`${answer.label}: ${decision.question}`}
+      onClick={() => {
+        run.reset();
+        setConfirming(answer);
+      }}
+    >
+      {answer.label}
+    </ActionButton>
+  );
+  return (
+    <div className="needs-you__act needs-you__decide">
+      {button(decision.yes, true)}
+      {button(decision.no, false)}
+      {run.error ? (
+        <span className="needs-you__error" role="alert">
+          {run.error.message}
+        </span>
+      ) : null}
+      <ActionPreviewDialog
+        open={confirming !== null}
+        title={`${confirming?.label ?? ''}: ${decision.question}`}
+        description={confirming?.confirm}
+        confirmLabel={confirming?.label ?? ''}
+        confirmDisabled={run.isPending}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => {
+          const answer = confirming;
+          setConfirming(null);
+          if (!answer) return;
+          // A refusal lands in `run.error`, which the row words above.
+          run.mutate({ method: answer.method, path: answer.path, body: answer.body });
+        }}
+      />
+      <span className="needs-you__decide-note" aria-hidden="true">
+        {item.sha ? `on ${item.sha.slice(0, 12)}` : null}
+      </span>
+    </div>
   );
 }
 

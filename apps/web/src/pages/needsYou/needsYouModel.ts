@@ -1,7 +1,12 @@
 // needsYouModel.ts — pure helpers for the "Needs you" page and its nav badge.
 
 import type { Tone } from '../../components/tone/tone';
-import type { AttentionItem, AttentionResponse, AttentionSeverity } from '../../api/types';
+import type {
+  AttentionApiAction,
+  AttentionItem,
+  AttentionResponse,
+  AttentionSeverity,
+} from '../../api/types';
 import { CHANGES_REQUESTED_ANCHOR } from '../../components/merge/reviewListModel';
 import { compareInstants } from '../../format/when';
 
@@ -84,6 +89,9 @@ export const KIND_PRECEDENCE: readonly string[] = [
   // Already on its base: closing it is the only act left, whatever else it raised.
   'pr_already_landed',
   'reviewer_stuck',
+  // One answer from the owner unblocks everything else this pull request
+  // raised, so it is the act on the row whatever else it says.
+  'pr_needs_owner_decision',
   'pr_changes_requested',
   'queue_refused',
   'queue_failed',
@@ -235,6 +243,7 @@ const KIND_LABEL: Record<string, string> = {
   shift_without_pr: 'Shift has no review pull request',
   shift_budget_spent: 'Shift budget spent',
   pr_changes_requested: 'Changes requested',
+  pr_needs_owner_decision: 'Needs your decision',
   pr_checks_failing: 'Checks failing',
   pr_awaiting_approval: 'Awaiting approval',
   pr_ready_to_merge: 'Ready to merge',
@@ -305,6 +314,54 @@ export function primaryAction(item: AttentionItem): PrimaryAction {
   }
   const to = attentionHref(item);
   return to ? { type: 'link', label, to } : null;
+}
+
+/** One answer to an owner decision: the call and what the confirm step says. */
+export interface DecisionAnswer {
+  label: string;
+  method: ApiMethod;
+  path: string;
+  body?: unknown;
+  confirm: string;
+}
+
+export interface OwnerDecision {
+  question: string;
+  yes: DecisionAnswer;
+  no: DecisionAnswer;
+}
+
+function answer(
+  call: AttentionApiAction | undefined,
+  label: string,
+  fallback: string
+): DecisionAnswer | null {
+  const path = safeApiPath(call?.path);
+  const method = call ? apiMethod(call.method) : null;
+  if (!call || !path || !method) return null;
+  return {
+    label,
+    method,
+    path,
+    body: call.body,
+    confirm: call.confirm?.trim() || fallback,
+  };
+}
+
+/**
+ * The question a row asks the owner, when it asks one and both answers are
+ * calls this page can make. A server that predates `decision`, or a payload
+ * whose calls are not same-origin `/api/` writes, reads as no question at all:
+ * the row then falls back to its link, and nobody is offered a button that
+ * does not answer anything.
+ */
+export function ownerDecision(item: AttentionItem): OwnerDecision | null {
+  const decision = item.decision;
+  const question = decision?.question?.trim();
+  if (!decision || !question) return null;
+  const yes = answer(decision.yes, 'Yes', 'Record your Yes on this exact head?');
+  const no = answer(decision.no, 'No', 'Record your No on this exact head?');
+  return yes && no ? { question, yes, no } : null;
 }
 
 /**
