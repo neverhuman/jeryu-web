@@ -82,7 +82,7 @@ const PRESENCE: MockPresenceItem[] = [
 ];
 
 async function seed(page: Page, presence: MockPresenceItem[] | null): Promise<void> {
-  await mockBootstrap(page);
+  await mockBootstrap(page, { login: 'ada', auth: { role: 'admin' } });
   await mockRepoList(page, [
     { id: WIDGETS, default_branch: 'main', visibility: 'private', family: 'acme' },
     { id: GEARS, default_branch: 'main', visibility: 'private', family: 'acme' },
@@ -262,4 +262,14 @@ test('the presence list reads at phone width @action:agents.presence_phone', asy
     blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`),
     'blocking axe violations on the presence list'
   ).toEqual([]);
+});
+
+
+test('repository presence opens a terminal by keyboard @action:agents.presence_keyboard', async ({ page }) => {
+  await seed(page, PRESENCE);
+  await page.goto(`${REPO_PATH}/agents`);
+  const row = page.getByTestId('presence-row-agent_run:run-2');
+  await row.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('agent-terminal').first()).toHaveAttribute('data-run-id', 'run-2');
 });

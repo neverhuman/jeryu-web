@@ -226,6 +226,8 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     group: 'wiki',
   },
   {
+    // The presence API is authenticated and filters scopes per reader; private
+    // metadata is reporter/admin-only, so the inventory itself is not admin-only.
     id: 'nav.active-agents',
     shortcut: 'g v',
     label: 'Active agents',

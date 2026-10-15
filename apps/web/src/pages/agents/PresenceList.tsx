@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { isLivePresence, presenceRunId, type AgentPresenceItem, type PresenceRow } from '../../api/agentPresence';
 import { toneClass } from '../../components/tone/tone';
 import { useListKeys, listRowProps, LIST_OPEN_PROP } from '../../hooks/useListKeys';
+import { useAuth } from '../../hooks/useAuth';
 import { relativeText } from '../../format/when';
 
 import {
@@ -49,6 +50,7 @@ export interface PresenceListProps {
 
 export function PresenceList({ rows, host, repo, hostForRepo, now, openRuns, onOpenRun }: PresenceListProps): JSX.Element {
   const listRef = useListKeys<HTMLUListElement>();
+  const { user } = useAuth();
   const byId = useMemo(() => new Map(rows.map((row) => [row.item.id, row.item])), [rows]);
   return (
     <ul ref={listRef} className="presence" data-testid="agents-presence-list">
@@ -56,6 +58,7 @@ export function PresenceList({ rows, host, repo, hostForRepo, now, openRuns, onO
         <PresenceRowView
           key={row.item.id}
           row={row}
+          privateDetails={user?.role === 'admin' || Boolean(user?.login && row.item.source === 'external' && row.item.reporter === user.login)}
           host={hostForRepo?.(row.item.repos[0]) ?? host}
           repo={repo}
           hostForRepo={hostForRepo}
@@ -71,6 +74,7 @@ export function PresenceList({ rows, host, repo, hostForRepo, now, openRuns, onO
 
 function PresenceRowView({
   row,
+  privateDetails,
   host,
   repo,
   hostForRepo,
@@ -80,6 +84,7 @@ function PresenceRowView({
   onOpenRun,
 }: {
   row: PresenceRow;
+  privateDetails: boolean;
   host: string;
   repo: string;
   hostForRepo?: (repo?: string) => string;
@@ -90,6 +95,7 @@ function PresenceRowView({
 }): JSX.Element {
   const { item, run } = row;
   const runId = presenceRunId(item);
+  const canOpenRun = Boolean(runId && (repo || presenceRepoHref(host, item)));
   const headline = presenceHeadline(item);
   const collision = isLivePresence(item) ? collisionText(item, byId) : null;
   const pullHref = presencePullHref(host, item.links.pr);
@@ -118,7 +124,7 @@ function PresenceRowView({
         >
           {item.state}
         </span>
-        {runId ? (
+        {canOpenRun ? (
           <button
             type="button"
             {...LIST_OPEN_PROP}
@@ -175,7 +181,7 @@ function PresenceRowView({
           </span>
         ) : null}
         {item.lane ? <span className="presence__fact">checkout {item.lane}</span> : null}
-        {item.host ? (
+        {privateDetails && item.host ? (
           <span className="presence__fact" data-testid={`presence-host-${item.id}`}>
             <Server size={12} aria-hidden="true" /> {item.host}
           </span>
@@ -195,20 +201,22 @@ function PresenceRowView({
 
       {!repo ? (
         <p className="presence__links">
-          {item.repos.map((name, index) => (
-            <Link key={name} to={presenceRepoHref(hostForRepo?.(name) ?? host, { ...item, repos: [name] })!}
-              {...(index === 0 && !runId ? LIST_OPEN_PROP : {})}>{name}</Link>
-          ))}
+          {item.repos.map((name, index) => {
+            const href = presenceRepoHref(hostForRepo?.(name) ?? host, { ...item, repos: [name] });
+            return href ? <Link key={name} to={href}
+              {...(index === 0 && !runId ? LIST_OPEN_PROP : {})}>{name}</Link> : <span key={name}>{name}</span>;
+          })}
           {item.repos.length === 0 ? <span>{item.families.length ? `Family ${item.families.join(', ')}` : 'No repository assigned'}</span> : null}
         </p>
       ) : null}
-      {item.location ? (
+      {privateDetails && item.location ? (
         <dl className="presence__location" data-testid={`presence-location-${item.id}`}>
           <dt>Session data</dt><dd><code>{item.location.session_path ?? 'Not reported'}</code></dd>
           <dt>{item.location.checkout_kind === 'worktree' ? 'Worktree' : 'Checkout'}</dt>
           <dd><code>{item.location.checkout_path ?? 'Not reported'}</code></dd>
           {item.location.cwd && item.location.cwd !== item.location.checkout_path ? <><dt>Working directory</dt><dd><code>{item.location.cwd}</code></dd></> : null}
           {!item.branch && item.location.head ? <><dt>Detached commit</dt><dd><code>{item.location.head}</code></dd></> : null}
+          {item.location.pid ? <><dt>Process</dt><dd>{item.location.pid}</dd></> : null}
           {item.location.screen ? <><dt>Screen</dt><dd><code>{item.location.screen}</code></dd></> : null}
           {item.worker ? <><dt>Worker</dt><dd>{item.worker.family} / {item.worker.slot}</dd></> : null}
         </dl>

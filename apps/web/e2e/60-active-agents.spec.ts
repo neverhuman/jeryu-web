@@ -2,8 +2,8 @@ import { expect, test, type Page } from './fixtures/test';
 import { blockingViolations, persistAxeResult, persistRenderedEvidence, runAxe } from './fixtures/accessibility';
 import { mockBootstrap, mockCompanionShell, mockRepoList } from './fixtures/mocks';
 
-async function seed(page: Page): Promise<void> {
-  await mockBootstrap(page);
+async function seed(page: Page, login = 'ada', role: 'admin' | 'user' = 'user'): Promise<void> {
+  await mockBootstrap(page, { login, auth: { role } });
   await mockRepoList(page, [{ id: { host: 'forge', owner: 'acme', name: 'widgets' }, default_branch: 'main', visibility: 'public', family: 'acme' }]);
   await mockCompanionShell(page);
   await page.route('**/api/v1/agent-presence?*', async (route) => {
@@ -63,4 +63,20 @@ test('global inventory wraps native paths on a phone @a11y @action:agents.global
   await persistAxeResult('active-agents-phone', result);
   await persistRenderedEvidence(page, 'active-agents-phone');
   expect(blockingViolations(result).map((v) => v.id)).toEqual([]);
+});
+
+
+test('global private metadata is visible only to reporter or admin @action:agents.global_privacy', async ({ page }) => {
+  // Deliberately over-return private fields: the browser also hides them for
+  // another viewer. Server authorization remains the actual access boundary.
+  await seed(page, 'grace');
+  await page.goto('/agents');
+  await expect(page.getByTestId('agents-presence-list').getByRole('listitem')).toHaveCount(5);
+  await expect(page.locator('[data-testid^="presence-location-"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="presence-host-"]')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Active agents', exact: true }).first()).toBeVisible();
+  await seed(page, 'root', 'admin');
+  await page.reload();
+  await expect(page.locator('[data-testid^="presence-location-"]')).toHaveCount(5);
+  await expect(page.locator('[data-testid^="presence-host-"]')).toHaveCount(5);
 });

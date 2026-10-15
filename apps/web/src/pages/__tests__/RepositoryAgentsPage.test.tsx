@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SHIFT_TODO_PAGE_LIMIT } from '../../api/shiftTodoLists';
 import { RepositoryAgentsPage } from '../RepositoryAgentsPage';
 
+vi.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { login: 'ada', role: 'admin' } }) }));
+
 const REPO_ID = 'repo-1';
 const AGENTS_ROUTE = '/repos/jeryu/alice%2Fjeryu/agents';
 const NOW = '2026-09-21T00:21:16Z';
