@@ -101,7 +101,15 @@ All checks, including that existing job, must pass before this PR is ready.
 
 The owner-path endpoint is exercised through the authenticated Axum router in
 jeryu-deploy's `web::tests::browser_link_tests::owner_paths_are_served_to_readers_without_private_repository_disclosure`.
-Its handler tests also check administrator protection settings and their masking
-for other readers. The web route-index fixture checks client spelling only; it
-is not evidence that a running server provides the route. Older servers may
-answer 404, in which case the optional panel remains hidden without retries.
+That test is the non-owner case too: a reader of a public repository receives
+the blockers with `enforce_admins` null, a reader without access to a private
+one receives 403, and an unauthenticated caller 401. Its handler tests
+(`web::tests::owner_paths_tests`) cover administrator protection settings and
+their masking for other readers. The web client therefore asks for the route
+for any viewer of a blocked pull request and renders whatever comes back: the
+standing note needs `viewer_may_clear_as_owner`, `viewer_is_admin` and
+`enforce_admins: false` together, so a masked answer claims nothing.
+
+The web route-index fixture checks client spelling only; it is not evidence
+that a running server provides the route. Older servers may answer 404, in
+which case the optional panel remains hidden without retries.

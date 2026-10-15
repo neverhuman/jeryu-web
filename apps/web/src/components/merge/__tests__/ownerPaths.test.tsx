@@ -195,6 +195,33 @@ describe('MergeBox owner panel', () => {
     expect(screen.getByRole('button', { name: 'Merge' })).toBeDisabled();
   });
 
+  it('gives a reader who is not an admin the rows and no owner standing', () => {
+    // What the server actually sends such a reader: the blockers, whose they
+    // are, and no branch-protection state at all.
+    show(
+      deployEight({
+        enforce_admins: null,
+        viewer_is_admin: false,
+        viewer_may_clear_as_owner: false,
+        headline: '2 of 3 blockers a repository admin can clear, each with its step below.',
+      })
+    );
+    const panel = screen.getByTestId('pr-owner-paths');
+    expect(panel).toHaveTextContent('a repository admin can clear');
+    expect(screen.queryByTestId('pr-owner-standing')).toBeNull();
+    expect(
+      screen.getByTestId('pr-owner-path-passport_blocked_checks')
+    ).toHaveAttribute('data-owner', 'yes');
+  });
+
+  it('claims no standing when the answer withholds the protection state', () => {
+    // An answer that asserts the exemption without the field behind it — a
+    // masked reader, or a server that predates the field — renders no note.
+    show(deployEight({ enforce_admins: null }));
+    expect(screen.getByTestId('pr-owner-paths')).toBeInTheDocument();
+    expect(screen.queryByTestId('pr-owner-standing')).toBeNull();
+  });
+
   it('shows no panel while the answer has not arrived', () => {
     show(null);
     expect(screen.queryByTestId('pr-owner-paths')).toBeNull();

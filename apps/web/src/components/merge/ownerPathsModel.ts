@@ -80,6 +80,16 @@ export function ownerStandingNote(
   paths: OwnerMergePaths | null | undefined
 ): string | null {
   if (!paths?.blocked) return null;
-  if (!paths.viewer_may_clear_as_owner || !paths.viewer_is_admin || paths.enforce_admins !== false) return null;
+  // All three fields have to agree before the sentence below is a fact. The
+  // server masks `enforce_admins` for a reader who does not administer the
+  // repository, so a null there means "not told", never "off": an answer that
+  // claims the standing without the protection state behind it gets no note.
+  if (
+    !paths.viewer_may_clear_as_owner ||
+    !paths.viewer_is_admin ||
+    paths.enforce_admins !== false
+  ) {
+    return null;
+  }
   return `Branch protection on ${paths.base_ref} leaves administrators out (enforce_admins is off), and you administer this repository: the steps marked below are yours to take on head ${paths.head_sha.slice(0, 12)}.`;
 }
