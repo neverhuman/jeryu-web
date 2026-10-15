@@ -42,6 +42,10 @@ export function rangeHours(id: HistogramRangeId): number {
 /**
  * The window part of the histogram query. The server names 6h, 24h and 7d as
  * a `range`; anything longer is asked for in `hours`, which it buckets by day.
+ * `hours` is bounded on the server (1 to 720) and refused, not clamped, when
+ * it is over that: the bounds are pinned in
+ * `src/test/fixtures/server-histogram-window.json` so a wider range cannot be
+ * added here without a copy of the server's own limit saying it is accepted.
  */
 export function rangeQuery(id: HistogramRangeId): Pick<PipelineHistogramQuery, 'range' | 'hours'> {
   return id === '30d' ? { hours: rangeHours(id) } : { range: id };

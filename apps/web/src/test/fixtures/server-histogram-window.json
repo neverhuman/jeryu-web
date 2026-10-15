@@ -1,0 +1,13 @@
+{
+  "source": "jeryu-deploy crates/jeryu-api/src/web/pipeline/histogram.rs on origin/main: MAX_HOURS, MAX_BUCKETS, the strict_query filter_one_of list for `range`, and default_bucket_seconds for a window asked for in `hours`. Hand-maintained, like server-route-index.json: a change on the server stays invisible here until this copy is updated.",
+  "range_values": ["6h", "24h", "7d"],
+  "hours_min": 1,
+  "hours_max": 720,
+  "max_buckets": 1500,
+  "default_bucket_seconds_for_hours": [
+    { "up_to_hours": 2, "seconds": 300 },
+    { "up_to_hours": 12, "seconds": 900 },
+    { "up_to_hours": 168, "seconds": 3600 },
+    { "up_to_hours": 720, "seconds": 86400 }
+  ]
+}
