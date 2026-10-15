@@ -227,3 +227,19 @@ describe('mergePresenceWithRuns', () => {
     expect(mergePresenceWithRuns([], [])).toEqual([]);
   });
 });
+
+
+describe('private location metadata', () => {
+  it('preserves supplied observations without inventing hidden fields', () => {
+    const parsed = parsePresenceItem(wire({
+      reporter: 'ada',
+      location: { session_path: '/home/ada/.codex/session.jsonl', checkout_path: '/src/lane', checkout_kind: 'worktree', cwd: '/src/lane/src', screen: '123.work', pid: 123 },
+      worker: { family: 'acme', slot: 'w1' },
+    }));
+    expect(parsed?.location).toEqual({ session_path: '/home/ada/.codex/session.jsonl', checkout_path: '/src/lane', checkout_kind: 'worktree', cwd: '/src/lane/src', screen: '123.work', pid: 123 });
+    expect(parsed?.worker).toEqual({ family: 'acme', slot: 'w1' });
+    expect(parsePresenceItem(wire())).not.toHaveProperty('location');
+    expect(parsePresenceItem(wire({ location: null }))).not.toHaveProperty('location');
+    expect(parsePresenceItem(wire({ location: { cwd: 123, pid: -1 } }))?.location).toEqual({});
+  });
+});

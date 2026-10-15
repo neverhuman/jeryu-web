@@ -74,6 +74,7 @@ describe('LeftNav', () => {
       'Repositories',
     ]);
     expect(SYSTEM_NAV.map((item) => item.label)).toEqual([
+      'Active agents',
       'Runners',
       'Intelligence',
       'Dependencies',
