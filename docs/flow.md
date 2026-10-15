@@ -56,3 +56,18 @@ is unknown; no consumer repository is fabricated from a source name. Missing
 repository/station rows say no open visits are recorded, rather than displaying
 hard zeros. Gate requirements include both configuration responses, so a stale
 or missing branch-protection response cannot erase a reported required context.
+
+### Closed work
+
+Flow keeps closed, unmerged PRs and closed todos with no PR binding in a separate
+closure list, outside active station counts. Merged work keeps its release steps.
+The list exposes current descriptions, explicit replacement links and their
+status, unknown dispositions, and recorded abandonment reasons. Filter it by
+disposition or selected station; Inspect history opens the original event trail.
+Older servers report lifecycle reconciliation unavailable. Existing history and
+Scorecard metrics are not rewritten by the current lifecycle overlay.
+
+Record `Superseded-by: owner/repo#123` on its own line in a PR description or todo
+note, or both `Flow-disposition: abandoned` and `Flow-reason: ...` for a deliberate
+cancellation. These are reported decisions, not proof of shipped commits. Without
+those fields the explanation remains visible and the item needs disposition.

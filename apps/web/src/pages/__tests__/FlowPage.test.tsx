@@ -60,6 +60,23 @@ const flowCalls = (calls: Recorded[]): URLSearchParams[] =>
   calls.filter((call) => call.pathname === '/api/v1/flow').map((call) => new URLSearchParams(call.search));
 
 describe('FlowPage', () => {
+  it('keeps closed work discoverable, segments dispositions, and opens its history', async () => {
+    mockFlowApi(req => req.pathname === '/api/v1/flow' ? json({ ...FLOW_REPORT, closures: [
+      { lot_id: 'acme/widgets#90', station: 'gate', kind: 'pull_request', href: '/acme/widgets/pull/90', title: 'Unexplained closure', disposition: 'needs_disposition', explanation: '', replacement: null, needs_attention: true },
+      { lot_id: 'acme/widgets#91', station: 'review', kind: 'pull_request', href: '/acme/widgets/pull/91', title: 'Replaced work', disposition: 'replacement_recorded', explanation: 'Superseded-by: #92', replacement: { href: '/acme/widgets/pull/92', label: 'acme/widgets#92', state: 'open' }, needs_attention: false },
+    ] }) : undefined);
+    renderAt('/flow', '/flow', <FlowPage />);
+    const panel = await screen.findByTestId('flow-closures');
+    fireEvent.click(within(panel).getByText('Inspect closed work'));
+    expect(panel).toHaveTextContent('2 items · 1 need attention');
+    expect(within(panel).getByRole('link', { name: 'acme/widgets#90' })).toHaveAttribute('href', '/acme/widgets/pull/90');
+    expect(within(panel).queryByText('Replaced work')).toBeNull();
+    fireEvent.change(within(panel).getByLabelText('Disposition'), { target: { value: 'replacement_recorded' } });
+    expect(within(panel).getByRole('link', { name: 'acme/widgets#92' })).toHaveAttribute('href', '/acme/widgets/pull/92');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Inspect history' }));
+    expect(await screen.findByTestId('flow-item-journey')).toHaveTextContent('acme/widgets#91');
+  });
+
   it('shows configured parallel decisions without inventing an unknown release route', async () => {
     mockFlowApi();
     renderAt('/flow', '/flow', <FlowPage />);

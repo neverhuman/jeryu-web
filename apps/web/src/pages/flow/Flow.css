@@ -321,3 +321,8 @@
 .flow-map__decision button { text-align:left; font:inherit; color:var(--color-fg-primary); border:0; background:transparent; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
 .flow-map__handoff > .flow-map__node-wrap { flex:0 0 240px; }
 @media(max-width:600px) { .flow-map__handoff > .flow-map__node-wrap { flex:auto; } }
+
+.flow-closures { margin-block: 1.5rem; padding: 1rem; border: 1px solid var(--border); border-radius: .5rem; overflow-wrap: anywhere; }
+.flow-closures__explanation { white-space: pre-wrap; }
+.flow-closures select { max-width: 100%; }
+.flow-closures a { text-decoration: underline; text-underline-offset: .15em; }

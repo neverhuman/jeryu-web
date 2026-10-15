@@ -96,7 +96,15 @@ export interface FlowWindow {
   until: string;
 }
 
+export interface FlowClosure {
+  lot_id: string; repo: string | null; station: string; href: string; title: string;
+  kind: 'pull_request' | 'todo'; disposition: string; explanation: string;
+  replacement: { href: string; label: string; state: string } | null;
+  needs_attention: boolean;
+}
 export interface FlowReport {
+  closures?: FlowClosure[];
+  lifecycle_problems?: string[];
   repo?: string | null;
   repository_wip?: FlowRepositoryWip[];
   schema_version: string;

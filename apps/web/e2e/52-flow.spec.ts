@@ -202,3 +202,25 @@ test.describe('Flow', () => {
     await expect(userNav.getByRole('link', { name: 'Flow', exact: true })).toHaveCount(0);
   });
 });
+
+
+test('closed work stays discoverable with replacement status and history @action:flow.closures', async ({ page }) => {
+  await mockBootstrap(page, { auth: { role: 'admin' } });
+  await mockFlowApi(page);
+  await page.goto('/flow');
+  const panel = page.getByTestId('flow-closures');
+  await expect(panel).toContainText('2 items · 1 need attention');
+  await panel.getByText('Inspect closed work', { exact: true }).click();
+  await expect(panel.getByText('Original attempt closed.')).toBeHidden();
+  await panel.getByText('Recorded explanation', { exact: true }).click();
+  await expect(panel.getByText('Original attempt closed.')).toBeVisible();
+  await panel.getByLabel('Disposition').selectOption('replacement_recorded');
+  await expect(panel.getByRole('link', { name: 'acme/widgets#42', exact: true })).toHaveAttribute('href', '/acme/widgets/pull/42');
+  expect(blockingViolations(await runAxe(page)).map(v => v.id)).toEqual([]);
+  await panel.getByRole('button', { name: 'Inspect history' }).click();
+  await expect(page).toHaveURL(/lot=acme%2Fwidgets%2340/);
+  await expect(page.getByTestId('flow-item-journey')).toContainText('acme/widgets#40');
+  await panel.getByLabel('Disposition').selectOption('attention');
+  await panel.getByLabel('Only review').check();
+  await expect(panel).toContainText('No closed work matches these filters.');
+});

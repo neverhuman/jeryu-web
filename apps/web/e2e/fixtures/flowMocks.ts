@@ -48,6 +48,11 @@ function lot(lotId: string, at: string, state: string, over: Over = {}): Over {
 
 function flowBody(params: URLSearchParams): Over {
   return {
+    closures: [
+      { lot_id: 'acme/widgets#41', repo: 'acme/widgets', station: 'gate', href: '/acme/widgets/pull/41', title: 'Unexplained closure', kind: 'pull_request', disposition: 'needs_disposition', explanation: 'Original attempt closed.', replacement: null, needs_attention: true },
+      { lot_id: 'acme/widgets#40', repo: 'acme/widgets', station: 'review', href: '/acme/widgets/pull/40', title: 'Replaced attempt', kind: 'pull_request', disposition: 'replacement_recorded', explanation: 'Superseded-by: #42', replacement: { href: '/acme/widgets/pull/42', label: 'acme/widgets#42', state: 'open' }, needs_attention: false },
+    ],
+    lifecycle_problems: [],
     schema_version: 'jeryu.flow/v1',
     generated_at: '2026-10-14T12:00:00.000Z',
     family: params.get('family'),

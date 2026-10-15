@@ -9,6 +9,7 @@ import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { FlowMap } from './FlowMap';
 import { FlowDetail } from './FlowDetail';
+import { FlowClosures } from './FlowClosures';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import {
@@ -134,6 +135,12 @@ export function FlowPage(): JSX.Element {
             </h2>
             <FlowMap report={data} active={station} repo={selectedRepo} onStation={pickStation} journey={journey} />
           </section>
+          <FlowClosures report={data} station={station} onInspect={(lot, at) => {
+            const next = new URLSearchParams(params);
+            next.set('station', at); next.set('lot', lot);
+            for (const key of ['day', 'state', 'offset']) next.delete(key);
+            setParams(next, { replace: true, preventScrollReset: true });
+          }} />
           {station ? <FlowDetail key={`${scope.family ?? ''}-${selectedRepo}-${station}`} report={data} station={station} repo={selectedRepo} days={shownDays} now={now} {...(scope.family ? { family: scope.family } : {})} onJourney={setJourney} /> : <p className="flow__hint" data-testid="flow-lots-hint">Pick a station for its purpose, services, current work, and daily activity.</p>}
 
           <p className="flow__footnote" data-testid="flow-footnote">
