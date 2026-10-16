@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -39,6 +39,14 @@ describe('BootScreen public story', () => {
     await user.click(screen.getByRole('button', { name: /Back to the story/ }));
     expect(screen.getByTestId('dragon-landing')).toBeVisible();
     expect(screen.queryByLabelText('Username')).toBeNull();
+  });
+
+  it.each([false, true])('shows company details in the footer with auth open: %s', (initialAuthOpen) => {
+    render(<MemoryRouter><BootScreen initialAuthOpen={initialAuthOpen} /></MemoryRouter>);
+    const footer = within(document.querySelector('footer')!);
+    expect(footer.getByText(/A product of/)).toBeVisible();
+    expect(footer.getByRole('link', { name: 'VEOX AI' })).toHaveAttribute('href', 'https://veox.ai/');
+    expect(footer.getByRole('link', { name: 'Contact VEOX' })).toHaveAttribute('href', 'https://veox.ai/contact');
   });
 
   it('retains the destination when opened for a protected deep link', () => {

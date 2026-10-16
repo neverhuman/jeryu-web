@@ -277,6 +277,7 @@
 .login-panel__sub { color: var(--color-fg-muted); font-size: 11px; letter-spacing: .06em; }
 .marketing-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: min(100%, 1600px); margin-inline: auto; padding: 28px clamp(24px, 5vw, 80px); border-top: 1px solid var(--color-border-subtle); font-size: 12px; color: var(--color-fg-muted); }
 .marketing-footer p { margin: 0; }
+.marketing-footer__company { display: flex; flex-wrap: wrap; align-items: center; column-gap: 24px; }
 .marketing-footer p > span { margin-inline: 10px; }
 .marketing-footer a { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; color: var(--color-fg-primary); text-decoration: none; white-space: nowrap; }
 

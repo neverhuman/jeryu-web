@@ -80,7 +80,11 @@ export function BootScreen({
         </section>
         {!authOpen ? <LandingSections /> : null}
         <footer className="marketing-footer">
-          <p>JeRyū <span>·</span> The forge for agent work.</p>
+          <div className="marketing-footer__company">
+            <p>JeRyū <span>·</span> The forge for agent work.</p>
+            <p>A product of <a href="https://veox.ai/">VEOX AI</a></p>
+            <a href="https://veox.ai/contact">Contact VEOX</a>
+          </div>
           <Link to="/waitlist">Join waitlist <span aria-hidden="true">↗</span></Link>
         </footer>
       </MarketingScene>

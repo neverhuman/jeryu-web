@@ -249,6 +249,11 @@ test.describe('Signed-out landing', () => {
     await page.getByRole('button', { name: /Back to the story/ }).click();
     await expect(poster).toHaveCSS('opacity', '1');
     await page.locator('.marketing-footer').scrollIntoViewIfNeeded();
+    const footer = page.locator('.marketing-footer');
+    await expect(footer.getByRole('link', { name: 'VEOX AI' })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'VEOX AI' })).toHaveAttribute('href', 'https://veox.ai/');
+    await expect(footer.getByRole('link', { name: 'Contact VEOX' })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'Contact VEOX' })).toHaveAttribute('href', 'https://veox.ai/contact');
     await expect(story).toHaveAttribute('data-background-motion', 'paused');
     await page.getByRole('heading', { name: 'Git for agents.' }).scrollIntoViewIfNeeded();
     await expect(story).toHaveAttribute('data-background-motion', 'running');
