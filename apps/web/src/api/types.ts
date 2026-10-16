@@ -11,6 +11,7 @@
 
 export type * from './types/generated';
 export type * from './types/pullRequests';
+export type * from './types/repositories';
 export type * from './types/controlPlane';
 export type * from './types/toolBuild';
 export type * from './types/shift';

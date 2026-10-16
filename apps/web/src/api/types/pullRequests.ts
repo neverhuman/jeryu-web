@@ -145,12 +145,25 @@ export interface PullReplacement {
   supersedes?: number[];
 }
 
-/** A pull request row or summary, with its replacement link. */
-export type PullSummaryRow = PullRequestSummary & PullReplacement;
+/**
+ * The two links the forge returns beside an object: `html_url`, the canonical
+ * browser URL to open or share, and `api_url`, where the same object is
+ * fetched as JSON. Never interchangeable — opening `api_url` gives JSON, and
+ * fetching `html_url` gives this app's shell. Optional, so a page talking to a
+ * forge from before the fields existed falls back to a link it builds itself.
+ */
+export interface CanonicalLinks {
+  html_url?: string | null;
+  api_url?: string | null;
+}
 
-/** The pull request page's payload, with the replacement link on both levels. */
+/** A pull request row or summary, with its replacement and canonical links. */
+export type PullSummaryRow = PullRequestSummary & PullReplacement & CanonicalLinks;
+
+/** The pull request page's payload, with both link sets on both levels. */
 export type PullDetailPayload = PullRequestDetail &
-  PullReplacement & { summary: PullSummaryRow };
+  PullReplacement &
+  CanonicalLinks & { summary: PullSummaryRow };
 
 /** Wire shape of `GET /api/v1/repos/{id}/pulls`. */
 export interface PullRequestListResponse {

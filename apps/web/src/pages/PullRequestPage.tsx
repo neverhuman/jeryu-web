@@ -37,6 +37,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { ActionButton } from '../components/action/ActionButton';
+import { CopyButton } from '../components/clipboard/CopyButton';
 import { QueueToMerge, type DiffViewerMode } from '../components/merge';
 import {
   ErrorState,
@@ -72,6 +73,7 @@ import {
   isSettled,
   pullStateBadge,
 } from '../components/merge/pullReviewModel';
+import { canonicalPullPath, sharedLink } from './canonicalLinks';
 import { When } from '../format/When';
 import { PageHeader, queryFreshness } from '../components/pageHeader';
 import { ChecksPanel } from '../components/merge';
@@ -424,6 +426,12 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
   const badge = pullStateBadge(summary);
   const settled = isSettled(data);
   const base = pullBasePath(provider, fullName, prNumber ?? '');
+  // What a reader copies is what the forge publishes: the `html_url` the API
+  // returned, and only otherwise the canonical path built from the data here.
+  const shareLink = sharedLink(
+    data.html_url ?? summary.html_url,
+    canonicalPullPath(resolved.data.summary.id, summary.number, tab)
+  );
   const isBusy =
     approve.isPending ||
     mergeMutation.isPending ||
@@ -484,6 +492,14 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
             replacement={replacementOf(data)}
             pullPath={(number) => pullBasePath(provider, fullName, String(number))}
           />
+          <CopyButton
+            className="pr-cockpit__meta"
+            text={shareLink}
+            label={`the link to pull request #${summary.number}`}
+            testId="pr-copy-link"
+          >
+            Copy link
+          </CopyButton>
         </div>
       </PageHeader>
 

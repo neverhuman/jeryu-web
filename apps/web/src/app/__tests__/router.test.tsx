@@ -68,6 +68,30 @@ describe('router route table', () => {
     expect(idx).toBeGreaterThan(-1);
     expect(idx).toBeLessThan(notFoundIdx);
   });
+
+  // `/<owner>/<repo>` is the canonical public URL of a repository this forge
+  // hosts, so an owner name shares the top-level namespace with every page of
+  // the app. Each of the app's own names has to be registered before the
+  // pattern, or an owner called `work` would take the Work page.
+  it('registers every reserved top-level name above the :owner/:repo pattern', () => {
+    const paths = topLevelRoutes().map((r) => r.path ?? '(index)');
+    const forgeIdx = paths.findIndex((path) => path.startsWith(':owner/:repo'));
+    expect(forgeIdx).toBeGreaterThan(-1);
+    const reserved = paths
+      .slice(0, forgeIdx)
+      .filter((path) => path !== '(index)' && !path.startsWith(':'))
+      .map((path) => path.split('/')[0]);
+    // The names the app answers for itself, each ahead of the pattern.
+    for (const name of ['repos', 'work', 'flow', 'search', 'settings', 'needs-you', 'sessions']) {
+      expect(reserved, `${name} is reserved before :owner/:repo`).toContain(name);
+    }
+    // Nothing of the app's own is registered after the pattern, where an
+    // owner/repo link would shadow it.
+    const after = paths
+      .slice(forgeIdx)
+      .filter((path) => path !== '*' && !path.startsWith(':owner/:repo'));
+    expect(after).toEqual([]);
+  });
 });
 
 describe('signed-out pages outside the shell', () => {

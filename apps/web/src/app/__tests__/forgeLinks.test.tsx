@@ -47,7 +47,11 @@ async function follow(from: string): Promise<string> {
 }
 
 describe('forge-shaped repository links', () => {
+  /** Which providers the fixture list says carry `acme/widgets`. */
+  let hosts: string[] = [HOST];
+
   beforeEach(() => {
+    hosts = [HOST];
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const rawUrl = input instanceof Request ? input.url : String(input);
       const { pathname } = new URL(rawUrl, 'http://localhost');
@@ -55,14 +59,12 @@ describe('forge-shaped repository links', () => {
         return new Response(
           JSON.stringify({
             generated_at: '2026-10-03T00:00:00Z',
-            total: 1,
-            repositories: [
-              {
-                id: { host: HOST, owner: OWNER, name: NAME },
-                default_branch: 'main',
-                visibility: 'public',
-              },
-            ],
+            total: hosts.length,
+            repositories: hosts.map((host) => ({
+              id: { host, owner: OWNER, name: NAME },
+              default_branch: 'main',
+              visibility: 'public',
+            })),
             facets: {},
           }),
           { status: 200, headers: { 'content-type': 'application/json' } }
@@ -106,5 +108,47 @@ describe('forge-shaped repository links', () => {
   it('takes the provider from the repository list, not from the link', async () => {
     const landed = await follow(`/${OWNER}/${NAME}/pull/31`);
     expect(landed.startsWith(`/repos/${HOST}/`)).toBe(true);
+  });
+
+  it.each([
+    [`/${OWNER}/${NAME}/pull/31/files`, `${FRONT}/pulls/31/files`],
+    [`/${OWNER}/${NAME}/pull/31/checks?only=failing`, `${FRONT}/pulls/31/checks?only=failing`],
+    [`/${OWNER}/${NAME}/pull/31/commits#c1`, `${FRONT}/pulls/31/commits#c1`],
+    // A segment that is not one of the tabs is not passed on as one.
+    [`/${OWNER}/${NAME}/pull/31/nonsense`, `${FRONT}/pulls/31`],
+  ])('a tab deep link keeps its tab: %s', async (from, to) => {
+    expect(await follow(from)).toBe(to);
+  });
+
+  it('means the repository this forge hosts when two providers carry the name', async () => {
+    hosts = [HOST, 'jeryu'];
+    expect(await follow(`/${OWNER}/${NAME}/pull/31`)).toBe(
+      `/repos/jeryu/${OWNER}/${NAME}/pulls/31`
+    );
+  });
+
+  it('asks which one when the name is on two other providers', async () => {
+    hosts = [HOST, 'other-forge'];
+    const routes = forgeRoutes();
+    const memoryRouter = createMemoryRouter(
+      [...routes, { path: '/repos/:provider/*', element: <p>repository page</p> }],
+      { initialEntries: [`/${OWNER}/${NAME}/pull/31`] }
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <RouterProvider router={memoryRouter} />
+      </QueryClientProvider>
+    );
+    await vi.waitFor(() => {
+      expect(view.getByTestId('forge-link-ambiguous')).toBeTruthy();
+    });
+    // It opened nothing on its own, and both repositories are offered.
+    expect(memoryRouter.state.location.pathname).toBe(`/${OWNER}/${NAME}/pull/31`);
+    for (const host of hosts) {
+      expect(
+        view.getByRole('link', { name: `${host}/${OWNER}/${NAME}` }).getAttribute('href')
+      ).toBe(`/repos/${host}/${OWNER}/${NAME}`);
+    }
   });
 });

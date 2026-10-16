@@ -145,6 +145,8 @@ export const router = createBrowserRouter([
       { path: ':owner/:repo', element: <ForgeLinkRedirect /> },
       { path: ':owner/:repo/pulls', element: <ForgeLinkRedirect subPath="pulls" /> },
       { path: ':owner/:repo/pull/:number', element: <ForgeLinkRedirect subPath="pulls" /> },
+      // A pull request's own tabs, so a deep link to Files or Checks keeps it.
+      { path: ':owner/:repo/pull/:number/:tab', element: <ForgeLinkRedirect subPath="pulls" /> },
       { path: ':owner/:repo/issues/:number', element: <ForgeLinkRedirect subPath="issues" /> },
       { path: ':owner/:repo/blob/*', element: <ForgeLinkRedirect subPath="blob" /> },
       { path: ':owner/:repo/tree/*', element: <ForgeLinkRedirect subPath="tree" /> },

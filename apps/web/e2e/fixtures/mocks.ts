@@ -678,6 +678,12 @@ export interface MockPullRequestDetail {
   superseded_by?: number | null;
   /** Where that replacement stands (`open`, `merged`, ...). */
   superseded_by_state?: string | null;
+  /**
+   * The canonical browser link the forge returns beside the payload. Left
+   * out, the mock emits the shape the server does
+   * (`/<owner>/<repo>/pull/<n>`), so a page under test reads a real one.
+   */
+  html_url?: string | null;
   /** The pull requests this one replaced, ascending. */
   supersedes?: number[];
 }
@@ -761,6 +767,8 @@ export async function mockPullRequestDetail(
     superseded_by: pr.superseded_by ?? null,
     superseded_by_state: pr.superseded_by_state ?? null,
     supersedes: pr.supersedes ?? [],
+    html_url: pr.html_url ?? `/neverhuman/jeryu/pull/${pr.number}`,
+    api_url: `/api/v1/repos/neverhuman/jeryu/pulls/${pr.number}`,
   };
   await page.route(
     /\/api\/v1\/repos\/[^/]+\/pulls\/[^/]+$/,
