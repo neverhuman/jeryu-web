@@ -100,15 +100,18 @@ provisioning is tracked in https://github.com/neverhuman/jeryu-web/issues/2.
 All checks, including that existing job, must pass before this PR is ready.
 
 The owner-path endpoint is exercised through the authenticated Axum router in
-jeryu-deploy's `web::tests::browser_link_tests::owner_paths_are_served_to_readers_without_private_repository_disclosure`.
-That test is the non-owner case too: a reader of a public repository receives
-the blockers with `enforce_admins` null, a reader without access to a private
-one receives 403, and an unauthenticated caller 401. Its handler tests
-(`web::tests::owner_paths_tests`) cover administrator protection settings and
-their masking for other readers. The web client therefore asks for the route
-for any viewer of a blocked pull request and renders whatever comes back: the
-standing note needs `viewer_may_clear_as_owner`, `viewer_is_admin` and
-`enforce_admins: false` together, so a masked answer claims nothing.
+jeryu-deploy's `web::tests::pulls_tests::owner_paths_refuse_strangers_and_keep_protection_from_readers`.
+That test is the non-owner case too: a caller without access to a private
+repository receives 401 unauthenticated and 403 as another account, while a
+reader of a public pull request receives the blockers with `enforce_admins`
+null. Its handler tests (`web::tests::pulls_tests::an_admin_reads_which_blockers_are_theirs_to_clear_and_how`,
+`a_non_admin_sees_the_same_blockers_and_is_told_whose_they_are` and
+`protection_that_enforces_admins_offers_no_owner_standing`) cover
+administrator protection settings and their masking for other readers. The web
+client therefore asks for the route for any viewer of a blocked pull request
+and renders whatever comes back: the standing note needs
+`viewer_may_clear_as_owner`, `viewer_is_admin` and `enforce_admins: false`
+together, so a masked answer claims nothing.
 
 The web route-index fixture checks client spelling only; it is not evidence
 that a running server provides the route. Older servers may answer 404, in
