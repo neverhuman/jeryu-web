@@ -4,6 +4,7 @@
     "/api/v1/admin/repos/{owner}/{repo}/grants/{login}",
     "/api/v1/admin/site-settings",
     "/api/v1/admin/users",
+    "/api/v1/admin/waitlist",
     "/api/v1/admin/users/{login}/kind",
     "/api/v1/admin/users/{login}/reset-password",
     "/api/v1/agent-runs",

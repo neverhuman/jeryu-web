@@ -53,6 +53,8 @@ vi.mock('../api/client', async (importOriginal) => ({
 }));
 // The Email section has its own tests (AccountRecoveryPages.test.tsx).
 vi.mock('./account/EmailSection', () => ({ EmailSection: () => null }));
+// The Waitlist panel has its own tests (AdminWaitlistPanel.test.tsx).
+vi.mock('./AdminWaitlistPanel', () => ({ AdminWaitlistPanel: () => null }));
 vi.mock('./InternalWikiPanel', () => ({
   InternalWikiPanel: () => <section aria-label="Internal wiki panel" />,
 }));

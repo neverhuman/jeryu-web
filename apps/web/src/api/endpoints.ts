@@ -45,6 +45,9 @@ export const endpoints = {
   providerLogin: (id: string): string =>
     `/api/v1/me/provider-connections/login/${encodeURIComponent(id)}`,
   adminUsers: (): string => '/api/v1/admin/users',
+  /** Public waitlist sign-ups, newest request first (admin-only). */
+  adminWaitlist: (limit: number, offset: number): string =>
+    `/api/v1/admin/waitlist?limit=${limit}&offset=${offset}`,
   adminUserKind: (login: string): string =>
     `/api/v1/admin/users/${encodeURIComponent(login)}/kind`,
   adminResetPassword: (login: string): string =>

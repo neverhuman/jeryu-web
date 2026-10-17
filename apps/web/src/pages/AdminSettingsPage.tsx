@@ -1,7 +1,7 @@
 // AdminSettingsPage.tsx — the Settings page, for every role.
 //
 // Theme preferences and the session are everyone's; the internal wiki choice,
-// users and per-repository access are the administrator's and are the only
+// users, the waitlist and per-repository access are the administrator's and are the only
 // parts an administrator sees more of, so the page says whose settings these
 // are rather than promising admin controls to a reader who has none.
 
@@ -18,6 +18,7 @@ import { ErrorState, LoadingState } from '../components/state';
 import { useAuth } from '../hooks/useAuth';
 import { AccessTokensPanel } from './AccessTokensPanel';
 import { AdminUsersPanel } from './AdminUsersPanel';
+import { AdminWaitlistPanel } from './AdminWaitlistPanel';
 import { AgentProvidersPanel } from './AgentProvidersPanel';
 import { InternalWikiPanel } from './InternalWikiPanel';
 import { EmailSection } from './account/EmailSection';
@@ -60,6 +61,7 @@ const ADMIN_NAV_GROUP: NavGroup = {
   items: [
     { id: 'settings-wiki', label: 'Internal wiki' },
     { id: 'settings-users', label: 'Users' },
+    { id: 'settings-waitlist', label: 'Waitlist' },
     { id: 'settings-repo-access', label: 'Repository access' },
   ],
 };
@@ -157,6 +159,9 @@ export function AdminSettingsPage(): JSX.Element {
               </div>
               <div id="settings-users">
                 <AdminUsersPanel />
+              </div>
+              <div id="settings-waitlist">
+                <AdminWaitlistPanel />
               </div>
               <div id="settings-repo-access">
                 <RepoAccessPanel />

@@ -37,6 +37,7 @@ const endpointSamples = {
   authTokens: [],
   authToken: ['token-1'],
   adminUsers: [],
+  adminWaitlist: [100, 0],
   adminUserKind: ['alex'],
   adminResetPassword: ['alex'],
   adminRepoGrants: ['acme', 'widget-api'],
