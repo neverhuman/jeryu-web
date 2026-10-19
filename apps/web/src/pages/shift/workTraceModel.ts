@@ -129,12 +129,21 @@ export interface PullTraceInput {
   queueFailed?: boolean;
   /** The todos the pull request carries, when the queue is readable. */
   carries?: ShiftTodo[];
+  /** True when the forge says the pull request can merge as it stands. */
+  canMerge?: boolean;
+  /** True when the release ladder has the merge in the deepest channel. */
+  released?: boolean;
 }
 
 /**
  * A pull request stands where its own posture puts it, never earlier than the
  * todos it carries: the work was filed, claimed and committed before the PR
- * existed, and it is released only once every todo on it is.
+ * existed. It is released when the release ladder has it in the deepest
+ * channel, or once every todo on it is.
+ *
+ * A red check is a person's turn only while it can still stop the merge: once
+ * the forge says the PR can merge, or it has merged, the failure is on a check
+ * the base does not require (a mirror, say). The timeline reads it the same way.
  */
 export function pullFacts(pull: PullTraceInput): WorkTraceFacts {
   const merged = pull.state === 'merged';
@@ -156,10 +165,12 @@ export function pullFacts(pull: PullTraceInput): WorkTraceFacts {
     reviewed: approved || merged,
     queued: pull.inQueue === true || pull.queueFailed === true || merged,
     merged,
-    released: carried.length > 0 && carried.every((todo) => todo.released === true),
+    released:
+      pull.released === true ||
+      (carried.length > 0 && carried.every((todo) => todo.released === true)),
     needsHuman:
       pull.review.changes_requested > 0 ||
-      pull.checks.failing > 0 ||
+      (pull.checks.failing > 0 && !merged && pull.canMerge !== true) ||
       pull.queueFailed === true ||
       (pull.draft && pull.state === 'open'),
   };

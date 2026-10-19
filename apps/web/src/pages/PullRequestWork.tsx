@@ -13,11 +13,13 @@ import { Link } from 'react-router-dom';
 import type { PullRequestSummary, ShiftTodo } from '../api/types';
 import { queueEntryFor } from '../components/merge/mergeQueueModel';
 import { useRepoMergeQueue } from '../hooks/useMergeQueue';
+import { EMPTY_CHANNELS, useRepoChannels } from '../hooks/useRepoChannels';
 import { useShiftTodos } from '../hooks/useShift';
 import { NeedsYouAbout } from './needsYou';
 import { carriedTodoIds, type PullCommit } from './pullCommitsModel';
 import { WorkTrace } from './shift/WorkTrace';
 import { todoHref } from './shift/workPaths';
+import { ladderReach, releaseLadder } from './releaseChannelsModel';
 import { pullFacts, workTrace } from './shift/workTraceModel';
 
 import './page.css';
@@ -49,6 +51,13 @@ export function PullRequestWork({
 
   const queue = useRepoMergeQueue(repoId, summary.state === 'open');
   const entry = queueEntryFor(queue.data, prNumber);
+  // The same release ladder the pull request lists read: a change with no
+  // todo is released once the deepest channel carries it.
+  const merged = summary.state === 'merged';
+  const channels = useRepoChannels(merged ? [repoFullName] : []);
+  const ladder = channels.byRepo.get(repoFullName) ?? EMPTY_CHANNELS;
+  const released =
+    merged && ladderReach(releaseLadder(summary, ladder.baselines, ladder.compares)) === 'done';
   const stages = workTrace(
     pullFacts({
       state: summary.state,
@@ -58,6 +67,8 @@ export function PullRequestWork({
       inQueue: Boolean(entry),
       queueFailed: entry?.state === 'failed' || entry?.state === 'dequeued',
       carries: carried,
+      canMerge: summary.mergeable.can_merge,
+      released,
     })
   );
   const subject = `${repoFullName}#${summary.number}`;

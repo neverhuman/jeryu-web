@@ -131,4 +131,17 @@ describe('pullFacts', () => {
       )?.key
     ).toBe('released');
   });
+
+  it('is released when the release ladder carries it, with no todo at all', () => {
+    const merged = { ...PULL, state: 'merged' as const };
+    expect(currentStage(workTrace(pullFacts({ ...merged, released: true })))?.key).toBe('released');
+    expect(currentStage(workTrace(pullFacts({ ...merged, released: false })))?.key).toBe('merged');
+  });
+
+  it('does not call a red check a person’s turn once it cannot stop the merge', () => {
+    const failing = { ...PULL, checks: { total: 4, passing: 3, failing: 1, pending: 0 } };
+    expect(currentStage(workTrace(pullFacts({ ...failing, state: 'merged' })))?.needsHuman).toBe(false);
+    expect(currentStage(workTrace(pullFacts({ ...failing, canMerge: true })))?.needsHuman).toBe(false);
+    expect(currentStage(workTrace(pullFacts({ ...failing, canMerge: false })))?.needsHuman).toBe(true);
+  });
 });
