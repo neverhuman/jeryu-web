@@ -13,6 +13,7 @@ import type { ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
 import { MarkdownSource } from '../../components/browser/MarkdownSource';
 import { relativeText } from '../../format/when';
+import { useAuth } from '../../hooks/useAuth';
 import { useAddShiftTodoComment, useShiftTodoComments } from '../../hooks/useShift';
 
 export function TodoComments({
@@ -23,7 +24,9 @@ export function TodoComments({
   /** Whether this reader may act on todos, which is who may comment. */
   canComment: boolean;
 }): JSX.Element {
-  const thread = useShiftTodoComments(todo.family, todo.id);
+  const { user } = useAuth();
+  const signedIn = user != null;
+  const thread = useShiftTodoComments(todo.family, todo.id, signedIn);
   const add = useAddShiftTodoComment(todo.family, todo.id);
   const [draft, setDraft] = useState('');
   const now = new Date();
@@ -41,6 +44,11 @@ export function TodoComments({
       data-testid={`todo-comments-${todo.id}`}
     >
       <h2 className="shift-comments__title">Comments</h2>
+      {signedIn ? null : (
+        <p className="shift__muted" data-testid={`todo-comments-signed-out-${todo.id}`}>
+          Sign in to read the comments.
+        </p>
+      )}
       {thread.isError ? (
         <p className="shift__error" role="alert">
           Could not load the comments: {thread.error.message}

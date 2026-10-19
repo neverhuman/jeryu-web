@@ -272,6 +272,39 @@ describe('ChecksPanel expected rows', () => {
     ).toContain('No runner reports a gate pass on this head');
   });
 
+  it('links the runner only when the forge sent a readable page', () => {
+    for (const runner_url of ['/api/v1/runners/build-1', 'http://forge.invalid/runners', 'javascript:alert(1)']) {
+      const unreadable = {
+        ...expectedOnly,
+        checks: [
+          { ...expectedOnly.checks[0], claim: { ...expectedOnly.checks[0].claim, runner_url } },
+        ],
+      } as unknown as PullRequestChecks;
+      const { unmount } = render(<ChecksPanel checks={unreadable} />);
+      const expectation = screen.getByTestId('check-expectation-ai-veox-app/required');
+      expect(within(expectation).queryByRole('link'), runner_url).toBeNull();
+      expect(expectation.textContent).toContain('build-1/slot1');
+      unmount();
+    }
+  });
+
+  it('claims nothing about requirements when the forge sends no expectations', () => {
+    const empty = { passing: 0, failing: 0, pending: 0, skipped: 0, checks: [] };
+    const { unmount } = render(
+      <ChecksPanel checks={empty as unknown as PullRequestChecks} />
+    );
+    expect(screen.getByTestId('checks-empty').textContent).toBe(
+      'No checks have run on this head.'
+    );
+    unmount();
+    render(
+      <ChecksPanel checks={{ ...empty, expected: 0 } as unknown as PullRequestChecks} />
+    );
+    expect(screen.getByTestId('checks-empty').textContent).toBe(
+      'Nothing has run on this head, and nothing requires or declares a check for it.'
+    );
+  });
+
   it('names each row’s source: protection, the CI declaration, or the report alone', async () => {
     const mixed = {
       total: 2,

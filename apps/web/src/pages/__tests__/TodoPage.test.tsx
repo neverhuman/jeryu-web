@@ -17,8 +17,9 @@ import {
 import { FAMILIES, TODOS, attempt, todo } from './shiftTestData';
 
 let role: 'admin' | 'user' = 'user';
+let signedIn = true;
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { login: 'operator', role } }),
+  useAuth: () => ({ user: signedIn ? { login: 'operator', role } : null }),
 }));
 
 function renderTodo(path: string): void {
@@ -36,6 +37,7 @@ function serveTodos(todos: typeof TODOS): void {
 describe('TodoPage', () => {
   beforeEach(() => {
     role = 'user';
+    signedIn = true;
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-19T16:00:00Z'));
   });
@@ -434,6 +436,16 @@ describe('TodoPage', () => {
       expect(items[1]).toHaveTextContent('Measured 40s of downtime.');
       // A reader who cannot act on todos reads the thread and adds nothing.
       expect(within(thread).queryByLabelText(/^Comment on/)).toBeNull();
+    });
+
+    it('asks a signed-out reader to sign in and never fetches the thread', async () => {
+      signedIn = false;
+      const calls = serveThread();
+      renderTodo('/work/20260919-0900-q1q');
+      const thread = await screen.findByTestId('todo-comments-20260919-0900-q1q');
+      expect(thread).toHaveTextContent('Sign in to read the comments.');
+      expect(within(thread).queryByRole('alert')).toBeNull();
+      expect(calls.filter((c) => c.pathname.endsWith('/comments'))).toHaveLength(0);
     });
 
     it('says so when a todo has no comments yet', async () => {

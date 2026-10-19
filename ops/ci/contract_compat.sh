@@ -23,7 +23,8 @@ if [ ! -d "$dir" ]; then
   exit 1
 fi
 
-actual="$(cd "$dir" && for f in *.ts; do [ -e "$f" ] && printf '%s  %s\n' "$(sha256sum "$f" | cut -d' ' -f1)" "$f"; done | LC_ALL=C sort -k2)"
+# Every file under the mirror, at any depth, so nothing in it changes unseen.
+actual="$(cd "$dir" && find . -type f | sed 's|^\./||' | LC_ALL=C sort | while IFS= read -r f; do printf '%s  %s\n' "$(sha256sum "$f" | cut -d' ' -f1)" "$f"; done)"
 
 if [ "${1:-}" = "--write" ]; then
   {

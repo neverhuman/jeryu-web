@@ -319,9 +319,12 @@ export function ChecksPanel({
       </header>
 
       {list.length === 0 ? (
-        <p className="checks-panel__empty">
-          Nothing has run on this head, and nothing requires or declares a check
-          for it.
+        <p className="checks-panel__empty" data-testid="checks-empty">
+          {checks?.expected === undefined
+            ? // An older forge sends no expectations, so nothing can be said
+              // about what this head still needs.
+              'No checks have run on this head.'
+            : 'Nothing has run on this head, and nothing requires or declares a check for it.'}
         </p>
       ) : (
         <ul className="checks-panel__list">
@@ -398,12 +401,12 @@ export function ChecksPanel({
                     data-testid={`check-expectation-${check.name}`}
                   >
                     {expectation.join(' ')}
-                    {check.claim?.runner_url ? (
+                    {check.claim?.runner_url && isReadablePageUrl(check.claim.runner_url) ? (
                       <>
                         {' '}
                         <a
                           className="checks-panel__page-link"
-                          href={check.claim.runner_url}
+                          href={check.claim.runner_url.trim()}
                         >
                           Open the runner
                         </a>

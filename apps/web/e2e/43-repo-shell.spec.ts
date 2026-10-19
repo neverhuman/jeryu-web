@@ -163,7 +163,6 @@ test('every repository page carries the same header and tab bar @action:repo.she
     await expect(page.getByTestId('repo-tab-automation-warning')).toBeVisible();
   }
 
-  await page.screenshot({ path: 'test-results/repo-shell-mirror.png' });
 
   // The Activity tab is the event log pinned to this repository.
   await shell.goto(`${BASE}/activity`);

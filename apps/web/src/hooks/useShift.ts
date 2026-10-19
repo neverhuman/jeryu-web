@@ -210,7 +210,9 @@ export function useShiftTodoAction(): UseMutationResult<
 /** One todo's comment thread, oldest first. Any logged-in account reads it. */
 export function useShiftTodoComments(
   family: string,
-  id: string
+  id: string,
+  /** Whether a signed-in account is reading: the route refuses anyone else. */
+  signedIn: boolean
 ): UseQueryResult<ShiftTodoCommentsResponse, Error> {
   return useQuery({
     queryKey: [...SHIFT_KEY, 'comments', family, id],
@@ -220,7 +222,7 @@ export function useShiftTodoComments(
     staleTime: 10_000,
     // A comment somebody else posts while the page is open shows up on its own.
     refetchInterval: 30_000,
-    enabled: family !== '' && id !== '',
+    enabled: signedIn && family !== '' && id !== '',
     retry: false,
   });
 }
