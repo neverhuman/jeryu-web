@@ -470,6 +470,15 @@ export interface FamilyCount {
   count: number;
 }
 
+/** Busiest first, the forge last. */
+function byBusiest(a: FamilyCount, b: FamilyCount): number {
+  return (
+    Number(a.family === FORGE_FAMILY) - Number(b.family === FORGE_FAMILY) ||
+    b.count - a.count ||
+    a.family.localeCompare(b.family)
+  );
+}
+
 /** Families with something waiting, busiest first, the forge last. */
 export function familyCounts(
   items: Pick<AttentionItem, 'family' | 'repo'>[],
@@ -480,14 +489,24 @@ export function familyCounts(
     const family = familyOf(item, repoFamilies);
     counts.set(family, (counts.get(family) ?? 0) + 1);
   }
-  return [...counts]
-    .map(([family, count]) => ({ family, count }))
-    .sort(
-      (a, b) =>
-        Number(a.family === FORGE_FAMILY) - Number(b.family === FORGE_FAMILY) ||
-        b.count - a.count ||
-        a.family.localeCompare(b.family)
-    );
+  return [...counts].map(([family, count]) => ({ family, count })).sort(byBusiest);
+}
+
+/**
+ * The rows waiting on a person (critical + action) in each family, from the
+ * server's whole-inbox `families` summary (schema v1.5). It counts rows the
+ * way this page draws them, one per pull request, todo or shift, so a pill, a
+ * badge and the page header agree. Null from a server that sends none.
+ */
+export function summaryFamilyCounts(data: AttentionResponse | undefined): FamilyCount[] | null {
+  if (!data?.families) return null;
+  const counts = new Map<string, number>();
+  for (const entry of data.families) {
+    const family = familyName(entry.family) ?? FORGE_FAMILY;
+    const waiting = entry.subjects.critical + entry.subjects.action;
+    if (waiting > 0) counts.set(family, (counts.get(family) ?? 0) + waiting);
+  }
+  return [...counts].map(([family, count]) => ({ family, count })).sort(byBusiest);
 }
 
 /** Keep one family's items; an empty filter keeps everything. */
@@ -589,12 +608,20 @@ function scopedCount(
   return { count: inScope.length, elsewhere: items.length - inScope.length };
 }
 
-/** The "Needs you" badge, for the family in scope. */
+/**
+ * The "Needs you" badge, for the family in scope: the server's per-family
+ * row counts when it sends them, else the urgent items in hand.
+ */
 export function attentionBadge(
   data: AttentionResponse | undefined,
   scope?: AttentionScope
 ): BadgeCount {
-  return scopedCount(urgentAttention(data), scope);
+  const summary = summaryFamilyCounts(data);
+  if (!summary) return scopedCount(urgentAttention(data), scope);
+  const total = summary.reduce((sum, entry) => sum + entry.count, 0);
+  if (!scope?.family) return { count: total, elsewhere: 0 };
+  const count = summary.find((entry) => entry.family === scope.family)?.count ?? 0;
+  return { count, elsewhere: total - count };
 }
 
 /** One page's nav badge, for the family in scope. */

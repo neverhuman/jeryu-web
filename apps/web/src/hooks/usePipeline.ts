@@ -14,6 +14,7 @@ import {
 } from '@tanstack/react-query';
 
 import { ApiError, apiGet } from '../api/client';
+import { fetchAttention } from '../api/attentionPages';
 import { endpoints } from '../api/endpoints';
 import type {
   AttentionResponse,
@@ -107,11 +108,14 @@ export function usePipelineNudge(
   }, [enabled, queryClient]);
 }
 
-/** What needs a human right now. Polls every 15 s; stops once known-unavailable. */
+/**
+ * What needs a human right now, every page of it (see `fetchAttention`).
+ * Polls every 15 s; stops once known-unavailable.
+ */
 export function useAttention(enabled = true): UseQueryResult<AttentionResponse, Error> {
   return useQuery({
     queryKey: ATTENTION_QUERY_KEY,
-    queryFn: ({ signal }) => apiGet<AttentionResponse>(endpoints.attention(), { signal }),
+    queryFn: ({ signal }) => fetchAttention(signal),
     enabled,
     ...OPERATOR_REFRESH,
     staleTime: 5_000,

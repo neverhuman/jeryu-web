@@ -13,6 +13,7 @@ import {
   filterByFamily,
   needsYouHref,
   repoFamilyMap,
+  summaryFamilyCounts,
   urgentAttention,
   urgentInArea,
   type AttentionArea,
@@ -37,17 +38,24 @@ export function useNeedsYou(family = '', area?: AttentionArea): NeedsYouSummary 
     () => repoFamilyMap(repositories.data?.repositories ?? []),
     [repositories.data]
   );
-  const count = useMemo(
-    () =>
-      attention.data
-        ? filterByFamily(
-            area ? urgentInArea(attention.data, area) : urgentAttention(attention.data),
-            family,
-            families
-          ).length
-        : null,
-    [attention.data, area, family, families]
-  );
+  const count = useMemo(() => {
+    if (!attention.data) return null;
+    // The whole pipeline's count is the server's, row for row with Needs you;
+    // a page's own area is counted from the items in hand.
+    if (!area) {
+      const summary = summaryFamilyCounts(attention.data);
+      if (summary) {
+        return family
+          ? (summary.find((entry) => entry.family === family)?.count ?? 0)
+          : summary.reduce((sum, entry) => sum + entry.count, 0);
+      }
+    }
+    return filterByFamily(
+      area ? urgentInArea(attention.data, area) : urgentAttention(attention.data),
+      family,
+      families
+    ).length;
+  }, [attention.data, area, family, families]);
   return { count, href: needsYouHref(family) };
 }
 

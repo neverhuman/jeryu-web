@@ -4,6 +4,8 @@ import {
   FORGE_FAMILY,
   acknowledgeTarget,
   familyCounts,
+  summaryFamilyCounts,
+  attentionBadge,
   familyName,
   familyOf,
   filterByFamily,
@@ -422,6 +424,29 @@ describe('needsYouModel', () => {
     expect(filterByFamily(items, 'jeryu', repoFamilies)).toHaveLength(2);
     expect(filterByFamily(items, FORGE_FAMILY, repoFamilies)).toHaveLength(3);
     expect(filterByFamily(items, '', repoFamilies)).toHaveLength(6);
+  });
+
+  it("reads each family's waiting rows off the server summary, the forge last", () => {
+    const families = [
+      { family: 'globex', family_label: 'globex', subjects: { critical: 0, action: 0, watch: 4 } },
+      { family: 'acme-split', family_label: 'acme', subjects: { critical: 1, action: 49, watch: 7 } },
+      { family: 'initech', family_label: 'initech', subjects: { critical: 0, action: 2, watch: 0 } },
+      { family: null, family_label: null, subjects: { critical: 3, action: 70, watch: 0 } },
+    ];
+    // Only the first page's items are in hand; the summary covers the rest.
+    const data = { ...ATTENTION, families };
+    expect(summaryFamilyCounts(data)).toEqual([
+      { family: 'acme', count: 50 },
+      { family: 'initech', count: 2 },
+      { family: FORGE_FAMILY, count: 73 },
+    ]);
+    expect(summaryFamilyCounts(ATTENTION)).toBeNull();
+    const repoFamilies = new Map<string, string>();
+    expect(attentionBadge(data, { family: 'acme', repoFamilies })).toEqual({ count: 50, elsewhere: 75 });
+    expect(attentionBadge(data, { family: 'globex', repoFamilies })).toEqual({ count: 0, elsewhere: 125 });
+    expect(attentionBadge(data)).toEqual({ count: 125, elsewhere: 0 });
+    // A server before v1.5 still gets a badge, from the items in hand.
+    expect(attentionBadge(ATTENTION).count).toBe(attentionBadgeCount(ATTENTION));
   });
 
   it('keeps a scope to its own repositories, and the forge-wide rows with it', () => {

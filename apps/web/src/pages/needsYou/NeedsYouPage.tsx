@@ -32,6 +32,7 @@ import { AttentionRow, useRepoFamilies, type FamilyProps } from './AttentionRow'
 import {
   groupSubjects,
   familyCounts,
+  summaryFamilyCounts,
   familyOf,
   filterByFamily,
   severityTone,
@@ -59,10 +60,12 @@ export function NeedsYouPage(): JSX.Element {
     scope.setFamily(next === family ? '' : next);
   };
   const allItems = attention.data?.items ?? [];
-  // The pills count the rows this page shows in red — `urgentAttention`, the
-  // one derivation of that set, so a row with an unknown severity is counted
-  // as the `watch` row it is displayed as.
-  const counts = familyCounts(urgentAttention(attention.data), repoFamilies);
+  // The pills count the rows this page shows in red: the server's per-family
+  // row counts over the whole inbox, else `urgentAttention`, the one
+  // derivation of that set, so a row with an unknown severity is counted as
+  // the `watch` row it is displayed as.
+  const counts =
+    summaryFamilyCounts(attention.data) ?? familyCounts(urgentAttention(attention.data), repoFamilies);
   const groups = groupSubjects(filterByFamily(allItems, family, repoFamilies));
   const urgent = groups.filter((group) => group.severity !== 'watch');
   const watch = groups.find((group) => group.severity === 'watch');

@@ -189,6 +189,7 @@ describe('endpoint contract', () => {
       '/api/v1/events?repo=jeryu%2Fjeryu-web&pr=35',
     );
     expect(endpoints.attention()).toBe('/api/v1/attention');
+    expect(endpoints.attention({ limit: 500, page: 2 })).toBe('/api/v1/attention?limit=500&page=2');
     expect(endpoints.attentionAcks()).toBe('/api/v1/attention/acks');
     expect(endpoints.pins()).toBe('/api/v1/pins');
   });

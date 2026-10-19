@@ -350,7 +350,13 @@ export const endpoints = {
     return suffix ? `/api/v1/usage?${suffix}` : '/api/v1/usage';
   },
   /** "Needs you": what is waiting on a human right now (admin-only). */
-  attention: (): string => '/api/v1/attention',
+  attention: (params?: { limit?: number; page?: number }): string => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.page) qs.set('page', String(params.page));
+    const suffix = qs.toString();
+    return suffix ? `/api/v1/attention?${suffix}` : '/api/v1/attention';
+  },
   /** Hide attention items by id until a date (admin-only; `until: null` lists them again). */
   attentionAcks: (): string => '/api/v1/attention/acks',
   /** What each deploy repo pins versus its dependencies' main (admin-only). */

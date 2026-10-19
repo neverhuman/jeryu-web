@@ -82,12 +82,29 @@ export interface AttentionCounts {
   watch: number;
 }
 
+/**
+ * How many rows wait in one family (schema v1.5), over the whole inbox: one
+ * per pull request, todo or shift, at its worst severity, the rows Needs you
+ * draws. `family` is null for the forge's own rows.
+ */
+export interface AttentionFamilyCounts {
+  family: string | null;
+  family_label?: string | null;
+  subjects: AttentionCounts;
+}
+
 export interface AttentionResponse {
   /** Contract version. Unknown fields anywhere in these payloads are ignored. */
   schema_version?: string | number;
   generated_at: string;
   items: AttentionItem[];
   counts: AttentionCounts;
+  /** Every family's waiting rows, whatever page or filter; absent before v1.5. */
+  families?: AttentionFamilyCounts[];
+  /** Items matching the request before paging. */
+  total?: number;
+  /** What the server applied; `has_more` says another page follows. */
+  page?: { limit: number; page: number; total: number; has_more: boolean };
 }
 
 export interface PipelineEvent {
