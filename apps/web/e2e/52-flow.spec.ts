@@ -12,7 +12,7 @@ import {
   persistRenderedEvidence,
   runAxe,
 } from './fixtures/accessibility';
-import { mockBootstrap } from './fixtures/mocks';
+import { mockBootstrap, mockRepoList } from './fixtures/mocks';
 import { lot, mockFlowApi, mockFlowForbidden } from './fixtures/flowMocks';
 import { mockPullRoom } from './fixtures/pullRoomMocks';
 import {
@@ -55,7 +55,7 @@ test.describe('Flow', () => {
     // their own decision: the pin opens a second pull request.
     await expect(page.getByText('◇ Current revision satisfies configured merge requirements?')).toHaveCount(2);
     await expect(page.getByText('Yes → ⏸ awaiting activation authorization')).toBeVisible();
-    await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
+    await expect(page.getByTestId('flow-line-strip')).toContainText('Gate holds the most waiting');
     for (const id of ['pin', 'stage', 'deploy']) await expect(page.getByTestId(`flow-card-${id}`)).toBeVisible();
     // The default view is the family's product journey: every configured
     // repository, including one with no current work, converging on the chain
@@ -66,7 +66,7 @@ test.describe('Flow', () => {
     await expect(page.getByTestId('flow-card-consumer-gate')).toContainText('1 waiting');
     await expect(page.getByText('Route configuration unavailable')).toHaveCount(0);
 
-    await page.getByTestId('flow-card-gate').click();
+    await page.getByTestId('flow-line-strip-station-gate').click();
     await expect(page.getByTestId('flow-daily-chart')).toBeVisible();
     await page.getByRole('button', { name: '2026-10-13: Returned for fixes 1' }).click();
     await expect(page.getByText('Repair the queue')).toBeVisible();
@@ -131,28 +131,36 @@ test.describe('Flow', () => {
     await mockPipelineApi(page);
     await mockFlowApi(page);
 
-    await page.goto('/activity');
-    await expect(page.getByTestId('activity-page')).toBeVisible({ timeout: 15_000 });
-    const strip = page.getByTestId('flow-line-strip');
-    await expect(strip).toContainText('Gate holds the most waiting');
-    // Where the work is, above when it happened.
-    const order = await page.evaluate(() => {
-      const ids = Array.from(document.querySelectorAll('[data-testid]')).map((node) =>
-        node.getAttribute('data-testid')
-      );
-      return [ids.indexOf('flow-line-strip'), ids.indexOf('activity-volume')];
-    });
-    expect(order[0]).toBeGreaterThanOrEqual(0);
-    expect(order[0]).toBeLessThan(order[1]);
-
-    await strip.getByTestId('flow-line-strip-station-gate').click();
-    await expect(page).toHaveURL(/\/flow\?station=gate/);
-    await expect(page.getByTestId('flow-lots')).toContainText('At Gate, oldest first');
-
-    await page.goto('/activity');
-    await expect(page.getByTestId('flow-line-strip')).toBeVisible();
-    const rendered = await persistRenderedEvidence(page, 'flow-activity-strip');
-    expect(rendered.geometry.width, 'Activity rendered with the strip above it').toBeGreaterThan(0);
+    await mockRepoList(page, [{
+      id: { host: 'jeryu', owner: 'acme', name: 'widgets' },
+      default_branch: 'main', visibility: 'private', family: 'acme',
+    }]);
+    for (const [route, scope] of [
+      ['/activity', 'flow-activity-strip'],
+      ['/repos/jeryu/acme/widgets/activity', 'flow-repo-activity-strip'],
+    ]) {
+      await page.goto(route);
+      const strip = page.getByTestId('flow-line-strip');
+      await expect(strip).toContainText('Gate holds the most waiting');
+      const stations = ['queue', 'work', 'shift', 'review', 'gate', 'merge', 'pin', 'stage', 'deploy'];
+      await expect(strip.getByRole('link')).toHaveCount(stations.length);
+      for (const station of stations) {
+        await expect(strip.getByTestId(`flow-line-strip-station-${station}`)).toHaveAttribute(
+          'href', `/flow?station=${station}${route.startsWith('/repos') ? '&family=acme' : ''}`
+        );
+      }
+      const stripBox = await strip.boundingBox();
+      const histogramBox = await page.getByTestId('activity-volume').boundingBox();
+      expect(stripBox!.y + stripBox!.height).toBeLessThanOrEqual(histogramBox!.y);
+      const result = await runAxe(page, { include: '.line-strip' });
+      await persistAxeResult(scope, result);
+      expect(blockingViolations(result)).toEqual([]);
+      expect((await persistRenderedEvidence(page, scope)).geometry.width).toBeGreaterThan(0);
+      await strip.getByTestId('flow-line-strip-station-gate').click();
+      await expect(page).toHaveURL(/\/flow\?station=gate/);
+      await expect(page.getByTestId('flow-lots')).toContainText('At Gate, oldest first');
+      await expect(page.getByTestId('flow-line-strip-station-gate')).toHaveAttribute('aria-pressed', 'true');
+    }
 
     // The wall is the feed itself: no strip on it.
     await page.goto('/activity?wall=1');

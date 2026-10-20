@@ -86,6 +86,20 @@ describe('FlowPage', () => {
     expect(screen.getByText(/Current revision satisfies configured/)).toBeInTheDocument();
     expect(screen.queryByText(/awaiting activation authorization/)).toBeNull();
     expect(screen.queryByTestId('flow-bottleneck-badge')).toBeNull();
+    expect(screen.getByTestId('flow-line-strip')).toHaveTextContent('Gate holds the most waiting');
+  });
+
+  it('shares the nine-station strip and selects a station without losing the window', async () => {
+    mockFlowApi();
+    renderAt('/flow?days=7', '/flow', <FlowPage />);
+    const strip = await screen.findByTestId('flow-line-strip');
+    expect(within(strip).getAllByRole('button')).toHaveLength(9);
+    expect(within(strip).getByTestId('flow-line-strip-station-review')).toHaveTextContent('1');
+    fireEvent.click(within(strip).getByTestId('flow-line-strip-station-gate'));
+    expect(await screen.findByTestId('flow-lots')).toHaveTextContent('At Gate, oldest first');
+    expect(within(strip).getByTestId('flow-line-strip-station-gate')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '7 d' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByTestId('flow-mode-layout'));
     expect(screen.queryByTestId('flow-line-strip')).toBeNull();
   });
 

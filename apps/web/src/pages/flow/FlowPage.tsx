@@ -8,6 +8,7 @@ import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { FlowMap } from './FlowMap';
+import { LineStrip } from '../../components/flow/LineStrip';
 import { FlowDetail } from './FlowDetail';
 import { FlowClosures } from './FlowClosures';
 import { FlowLayoutView } from './FlowLayout';
@@ -111,6 +112,8 @@ export function FlowPage(): JSX.Element {
                 : `Updating… showing the last ${shownDays} days until the ${days}-day read lands.`}
             </p>
           ) : null}
+
+          <LineStrip report={data} activeStation={station} onStation={pickStation} />
 
           <div className="flow-summary"><strong>{data.line.wip} recorded work in progress</strong><span>{data.line.finished} verified completions in {shownDays} days</span><span>Parallel visits overlap. Uncorrelated work remains unresolved.</span></div>
 
