@@ -11,6 +11,7 @@ import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPla
 import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
 import { useRepoPullLists } from '../hooks/useRepoPullLists';
 import { useAuth } from '../hooks/useAuth';
+import { useFlow } from '../hooks/useFlow';
 import { useAttention } from '../hooks/usePipeline';
 import { useForgeHost } from '../hooks/useForgeHost';
 import { useRepositories } from '../hooks/useRepositories';
@@ -292,6 +293,8 @@ export function PullRoomPage(): JSX.Element {
   // What waits on a person here is marked on its own row; only what no row
   // below carries is counted above the list, with the way to Needs you.
   const { user } = useAuth();
+  // Estimates on the rows; refused for a non-admin, which shows none.
+  const flow = useFlow({});
   const attention = useAttention(user?.role === 'admin');
   const repoFamilies = useRepoFamilies();
   const waiting = useMemo(
@@ -546,6 +549,7 @@ export function PullRoomPage(): JSX.Element {
                 ghosts={ghosts}
                 repoKeyFor={repoKeyFor}
                 attention={waitingByPull}
+                flow={flow.data}
               />
             )}
           </>

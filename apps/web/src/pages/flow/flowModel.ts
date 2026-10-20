@@ -25,6 +25,7 @@ export const STATION_PARAM = 'station';
 /** The page's two modes. Layout is the runners serving each station. */
 export type FlowMode = 'live' | 'layout';
 export const DEFAULT_MODE: FlowMode = 'live';
+export const FLOW_MODES: readonly FlowMode[] = ['live', 'layout'];
 
 /** The window the address asks for; anything else is the default. */
 export function parseWindow(params: URLSearchParams): number {

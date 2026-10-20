@@ -9,7 +9,7 @@
 import { flowHistory, FLOW_LAYOUT } from './flowHistory';
 import type { Page, Route } from '@playwright/test';
 
-type Over = Record<string, unknown>;
+export type Over = Record<string, unknown>;
 
 function station(id: string, label: string, order: number, over: Over = {}): Over {
   return {
@@ -31,7 +31,7 @@ function station(id: string, label: string, order: number, over: Over = {}): Ove
   };
 }
 
-function lot(lotId: string, at: string, state: string, over: Over = {}): Over {
+export function lot(lotId: string, at: string, state: string, over: Over = {}): Over {
   return {
     lot_id: lotId,
     station: at,
@@ -96,7 +96,7 @@ function repositoryWip(): Over[] {
   ];
 }
 
-function flowBody(params: URLSearchParams): Over {
+function flowBody(params: URLSearchParams, extraLots: Over[] = []): Over {
   return {
     topology: topology(),
     repository_wip: repositoryWip(),
@@ -172,6 +172,7 @@ function flowBody(params: URLSearchParams): Over {
         slowest_ahead: null,
       }),
       lot('acme-0004', 'queue', 'waiting', { since: '2026-10-14T11:30:00.000Z' }),
+      ...extraLots,
     ],
   };
 }
@@ -180,7 +181,8 @@ export interface FlowLog {
   queries: URLSearchParams[];
 }
 
-export async function mockFlowApi(page: Page): Promise<FlowLog> {
+/** `extraLots` are added to the report: lots of the page under test, by id. */
+export async function mockFlowApi(page: Page, extraLots: Over[] = []): Promise<FlowLog> {
   const log: FlowLog = { queries: [] };
   await page.route('**/api/v1/flow**', async (route: Route) => {
     const params = new URL(route.request().url()).searchParams;
@@ -193,7 +195,7 @@ export async function mockFlowApi(page: Page): Promise<FlowLog> {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(flowBody(params)),
+      body: JSON.stringify(flowBody(params, extraLots)),
     });
   });
   return log;

@@ -1,8 +1,8 @@
 // Flow maps repository decisions and immutable item evidence (Deploy ADR 0013).
 
-import { Route as RouteIcon, ServerOff } from 'lucide-react';
+import { Route as RouteIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
@@ -10,27 +10,23 @@ import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { FlowMap } from './FlowMap';
 import { FlowDetail } from './FlowDetail';
 import { FlowClosures } from './FlowClosures';
+import { FlowLayoutView } from './FlowLayout';
+import { FlowQueryState } from './FlowQueryState';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  PermissionDeniedState,
-} from '../../components/state';
+import { LoadingState } from '../../components/state';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import {
-  isPipelineForbidden,
-  isPipelineUnavailable,
-  isPipelineUnreachable,
-} from '../../hooks/usePipeline';
 import { useFlow } from '../../hooks/useFlow';
 import { UseThisWhen } from '../../layout/UseThisWhen';
 import {
+  DEFAULT_MODE,
   DEFAULT_WINDOW_DAYS,
+  FLOW_MODES,
   FLOW_WINDOWS,
+  MODE_PARAM,
   WINDOW_PARAM,
   parseMode,
+  type FlowMode,
   parseStation,
   parseWindow,
 } from './flowModel';
@@ -91,16 +87,13 @@ export function FlowPage(): JSX.Element {
 
       <FlowControls
         days={days}
+        mode={mode}
+        onMode={(value) => setParam(MODE_PARAM, value, DEFAULT_MODE)}
         onDays={(value) => setParam(WINDOW_PARAM, String(value), String(DEFAULT_WINDOW_DAYS))}
       />
 
       {mode === 'layout' ? (
-        <EmptyState
-          icon={RouteIcon}
-          title="Layout is not on this page yet."
-          description="Live mode shows repository decisions and station history. Reporting services are linked from each station and on Runners."
-          action={<Link to="/runners">Runners</Link>}
-        />
+        <FlowLayoutView report={data} />
       ) : isPending ? (
         <LoadingState title="Loading the delivery line…" variant="message" />
       ) : isError ? (
@@ -155,9 +148,13 @@ export function FlowPage(): JSX.Element {
 
 function FlowControls({
   days,
+  mode,
+  onMode,
   onDays,
 }: {
   days: number;
+  mode: FlowMode;
+  onMode: (mode: FlowMode) => void;
   onDays: (days: number) => void;
 }): JSX.Element {
   const scope = useFamilyScope();
@@ -171,6 +168,21 @@ function FlowControls({
           onPick={(name) => scope.setFamily(name)}
         />
       ) : null}
+      <div className="flow__segmented" role="group" aria-label="Mode">
+        {FLOW_MODES.map((value) => (
+          <button
+            key={value}
+            type="button"
+            className="flow__segment"
+            aria-pressed={value === mode}
+            data-testid={`flow-mode-${value}`}
+            onClick={() => onMode(value)}
+          >
+            {value === 'live' ? 'Live' : 'Layout'}
+          </button>
+        ))}
+      </div>
+      {mode === 'layout' ? null : (
       <div className="flow__segmented" role="group" aria-label="Window">
         {FLOW_WINDOWS.map((value) => (
           <button
@@ -184,37 +196,7 @@ function FlowControls({
           </button>
         ))}
       </div>
+      )}
     </div>
   );
-}
-
-/** The non-data states: older server, not an admin, unreachable, failed. */
-function FlowQueryState({ error, onRetry }: { error: unknown; onRetry: () => void }): JSX.Element {
-  if (isPipelineUnavailable(error)) {
-    return (
-      <EmptyState
-        icon={ServerOff}
-        title="Not available on this server version."
-        description="This server does not report the delivery line yet. It appears once the forge is released with the flow API."
-      />
-    );
-  }
-  if (isPipelineForbidden(error)) {
-    return (
-      <PermissionDeniedState
-        title="Only admins can see the delivery line."
-        description="The line is read from every family's events, so it is admin-only for now."
-      />
-    );
-  }
-  if (isPipelineUnreachable(error)) {
-    return (
-      <ErrorState
-        title="Cannot reach the forge."
-        description="The request for the delivery line did not arrive. The forge may be restarting, or this browser may be offline."
-        onRetry={onRetry}
-      />
-    );
-  }
-  return <ErrorState title="Could not load the delivery line." error={error} onRetry={onRetry} />;
 }

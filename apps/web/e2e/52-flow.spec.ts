@@ -13,7 +13,14 @@ import {
   runAxe,
 } from './fixtures/accessibility';
 import { mockBootstrap } from './fixtures/mocks';
-import { mockFlowApi, mockFlowForbidden } from './fixtures/flowMocks';
+import { lot, mockFlowApi, mockFlowForbidden } from './fixtures/flowMocks';
+import { mockPullRoom } from './fixtures/pullRoomMocks';
+import {
+  FOUR_CHANNELS,
+  mockReleaseChannels,
+  mockShiftTodos,
+  snapshotWithReleaseHistory,
+} from './fixtures/releaseChannelMocks';
 import { mockPipelineApi } from './fixtures/pipelineMocks';
 
 const PHONE = { width: 390, height: 844 };
@@ -152,6 +159,84 @@ test.describe('Flow', () => {
     await expect(page.getByTestId('activity-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
 
+  });
+
+  test('Layout mode shows each station\'s runners and flags a station short of tools @action:flow.layout', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockFlowApi(page);
+
+    await page.goto('/flow');
+    await expect(page.getByTestId('flow-body')).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('flow-mode-layout').click();
+    await expect(page).toHaveURL(/[?&]mode=layout\b/);
+
+    const gate = page.getByTestId('flow-layout-card-gate');
+    await expect(gate).toHaveAttribute('data-tone', 'human');
+    await expect(page.getByTestId('flow-layout-capacity-gate')).toContainText('2 of 4 expected reporting');
+    const busy = gate.getByTestId('flow-layout-tool-gate-b');
+    await expect(busy).toContainText('node-b');
+    await expect(busy).toContainText('online · busy');
+    await expect(busy).toContainText('2.0.9 (1234567)');
+    await expect(gate.getByTestId('flow-layout-tool-gate-c')).toContainText('offline · idle');
+    await expect(busy.getByRole('link', { name: 'gate-b' })).toHaveAttribute('href', '/runners?runners=gate-b');
+    // Nothing reports for Merge: a red card that says so.
+    const merge = page.getByTestId('flow-layout-card-merge');
+    await expect(merge).toHaveAttribute('data-tone', 'human');
+    await expect(merge).toContainText('No tool is reporting for this station.');
+    await expect(page.getByTestId('flow-layout-card-review')).toHaveAttribute('data-tone', 'ok');
+    await expect(page.getByTestId('flow-layout-summary')).toContainText('Gate, Merge');
+
+    const result = await runAxe(page, { disableRules: ['color-contrast'] });
+    await persistAxeResult('flow-layout', result);
+    const rendered = await persistRenderedEvidence(page, 'flow-layout');
+    expect(rendered.geometry.width, 'the Flow Layout rendered with width').toBeGreaterThan(0);
+    expect(blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`)).toEqual([]);
+
+    await page.getByTestId('flow-mode-live').click();
+    await expect(page.getByTestId('flow-body')).toBeVisible();
+    await expect(page).not.toHaveURL(/mode=layout/);
+  });
+
+  test('Activity links each event to its station on Flow @action:flow.activity_links', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPipelineApi(page);
+    await mockFlowApi(page);
+
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-page')).toBeVisible({ timeout: 15_000 });
+    const merged = page.getByRole('link', { name: 'Merge on Flow' }).first();
+    await expect(merged).toHaveAttribute('href', '/flow?station=merge');
+    await merged.click();
+    await expect(page).toHaveURL(/\/flow\?station=merge$/);
+    await expect(page.getByTestId('flow-page')).toBeVisible();
+  });
+
+  test('the In flight timeline shows each open pull request its ETA @action:flow.eta', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockPullRoom(page, snapshotWithReleaseHistory());
+    await mockShiftTodos(page, []);
+    await mockReleaseChannels(page, [FOUR_CHANNELS]);
+    await mockFlowApi(page, [
+      lot('alice/jeryu#8', 'gate', 'waiting', { href: '/alice/jeryu/pull/8', slowest_ahead: 'deploy' }),
+    ]);
+
+    await page.goto('/pull-room');
+    const eta = page.getByTestId('pull-eta-alice/jeryu-8');
+    await expect(eta).toBeVisible({ timeout: 15_000 });
+    await expect(eta).toContainText('ETA 30m (p90 bound 1h 30m)');
+    await expect(eta).toContainText('slowest ahead: Deploy');
+    await expect(eta.getByRole('link', { name: 'Gate' })).toHaveAttribute('href', '/flow?station=gate');
+    // A pull request the line has no estimate for shows none.
+    await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible();
+    await expect(page.getByTestId('pull-eta-alice/jeryu-7')).toHaveCount(0);
+    const rendered = await persistRenderedEvidence(page, 'flow-eta-in-flight');
+    expect(rendered.geometry.width, 'the In flight timeline rendered with ETAs').toBeGreaterThan(0);
   });
 
   test('phone dark mode stacks the line with no sideways scroll @action:flow.phone_dark', async ({

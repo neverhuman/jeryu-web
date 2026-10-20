@@ -209,7 +209,36 @@ export interface FlowHistoryQuery {
   family?: string; repo?: string; station?: string; days: number; day?: string;
   state?: string; lot?: string; offset?: number;
 }
+/** One runner serving a station, from its latest heartbeat. */
+export interface FlowLayoutTool {
+  runnerId: string;
+  host: string;
+  online: 'online' | 'offline' | string;
+  load: 'busy' | 'idle' | string;
+  lastSeen: string;
+  code: { repo?: string | null; commit?: string | null; version?: string | null; installedAt?: string | null } | null;
+  /** True when the runner's last beat shows it failing. */
+  failing?: boolean;
+  failureReason?: string | null;
+}
+
+/** `GET /api/v1/flow/layout` (admin-only): the tools behind each station. */
+export interface FlowLayoutStation {
+  id: string;
+  label?: string;
+  order?: number;
+  tools: FlowLayoutTool[];
+  /** Reporting is the online tools; `expected` is site configuration, null when unset. */
+  capacity?: { reporting: number; busy: number; expected: number | null };
+  flagged?: boolean;
+  /** `no_reporting_tool`, `fewer_than_expected`, `tool_failing`, `expected_capacity_invalid`. */
+  warnings?: string[];
+  /** `no_heartbeat`, `expected_capacity`. */
+  unknown?: string[];
+}
+
 export interface FlowLayout {
-  stations: { id: string; tools: { runnerId: string; host: string; online: string; load: string;
-    lastSeen: string; code: { version?: string; commit?: string } | null }[] }[];
+  schema_version?: string;
+  generated_at?: string;
+  stations: FlowLayoutStation[];
 }

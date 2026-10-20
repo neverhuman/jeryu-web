@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 import { fetchPullList } from '../api/pullLists';
 import { ErrorState, LoadingState } from '../components/state';
+import { useFlow } from '../hooks/useFlow';
 import { useResolveRepo } from '../hooks/useResolveRepo';
 import {
   PULL_DRAFT_FILTERS,
@@ -57,6 +58,7 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   const setState = (next: PullState) => setSearch(query({ state: next }), { replace: true });
   const setQ = (next: string) => setSearch(query({ q: next }), { replace: true });
   const repoId = resolved.data?.id ?? null;
+  const flow = useFlow({});
   const pulls = useQuery({
     queryKey: ['repo-pulls', repoId],
     queryFn: ({ signal }) =>
@@ -153,7 +155,7 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
           testId="repo-pulls-error"
         />
       ) : view === 'timeline' ? (
-        <PullRequestTimeline pulls={shown} emptyMessage={emptyMessage(drafts, state, q)} />
+        <PullRequestTimeline pulls={shown} emptyMessage={emptyMessage(drafts, state, q)} flow={flow.data} />
       ) : (
         <PullRequestListView lanes={lanes} emptyMessage={emptyMessage(drafts, state, q)} />
       )}

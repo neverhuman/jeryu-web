@@ -343,6 +343,46 @@ export function eventLinks(event: PipelineEvent, host: string): EventLink[] {
   return links;
 }
 
+/**
+ * The Flow station an event belongs to (docs/flow.md, Stations), or null for a
+ * kind the route has no station for. Matching is by kind prefix so a new
+ * `gate.*` or `queue.*` kind lands on its station without a list to update.
+ */
+export function eventStationId(kind: string): string | null {
+  if (kind === 'todo.filed') return 'queue';
+  if (kind.startsWith('todo.') || kind.startsWith('worker.')) return 'work';
+  if (kind.startsWith('shift.')) return 'shift';
+  if (kind.startsWith('review.') || kind === 'pr.opened' || kind === 'pr.review' || kind === 'pr.approved') {
+    return 'review';
+  }
+  if (kind.startsWith('gate.')) return 'gate';
+  if (kind.startsWith('queue.') || kind === 'pr.merged') return 'merge';
+  if (kind.startsWith('pin.')) return 'pin';
+  if (kind.startsWith('release.')) return 'stage';
+  if (kind.startsWith('deploy.')) return 'deploy';
+  return null;
+}
+
+/** Station ids in the words a link says. */
+const STATION_NAMES: Record<string, string> = {
+  queue: 'Queue',
+  work: 'Work',
+  shift: 'Shift',
+  review: 'Review',
+  gate: 'Gate',
+  merge: 'Merge',
+  pin: 'Pin',
+  stage: 'Stage',
+  deploy: 'Deploy',
+};
+
+/** The link from an event to its station on Flow, or null when it has none. */
+export function eventStationLink(kind: string): EventLink | null {
+  const id = eventStationId(kind);
+  if (!id) return null;
+  return { label: `${STATION_NAMES[id] ?? id} on Flow`, to: `/flow?station=${encodeURIComponent(id)}` };
+}
+
 export function formatSeconds(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '';
   if (seconds < 60) return `${Math.round(seconds)}s`;

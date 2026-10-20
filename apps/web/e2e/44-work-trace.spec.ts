@@ -13,6 +13,7 @@ import {
   mockPullRequestDetail,
   mockRepoLookup,
 } from './fixtures/mocks';
+import { lot, mockFlowApi } from './fixtures/flowMocks';
 import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { mockShiftApi } from './fixtures/shiftMocks';
 
@@ -129,5 +130,41 @@ test.describe('the work trace', () => {
       'data-state',
       'pending'
     );
+  });
+
+  test('a PR page shows the ETA of the lot it carries, with the slowest station ahead @action:flow.eta_pr', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockRepoLookup(page, { id: REPO, default_branch: 'main' });
+    await mockPullRequestDetail(page, {
+      repoId: `${REPO.host}:${REPO.owner}/${REPO.name}`,
+      number: PR_NUMBER,
+      title: 'Nightshift 2026-09-18',
+      state: 'open',
+      head_sha: PR_SHA,
+      approvals: 0,
+      required_approvals: 1,
+      passport: 'blocked',
+    });
+    await mockShiftApi(page);
+    await mockPullRequestCommits(page, [
+      {
+        sha: 'dddddddddddddddddddddddddddddddddddddddd',
+        message: 'Ship heartbeats\n\nSlots had no pulse.\n\nTodo: 20260918-2200-bbb\nWorked-by: w1\n',
+        date: '2026-09-28T08:00:00Z',
+      },
+    ]);
+    // The lot is the todo the pull request carries.
+    await mockFlowApi(page, [
+      lot('20260918-2200-bbb', 'review', 'waiting', { slowest_ahead: 'deploy' }),
+    ]);
+
+    await page.goto(PR_URL);
+    const eta = page.getByTestId('pr-work-eta');
+    await expect(eta).toBeVisible({ timeout: 15_000 });
+    await expect(eta).toContainText('ETA 30m (p90 bound 1h 30m)');
+    await expect(eta).toContainText('slowest ahead: Deploy');
+    await expect(eta.getByRole('link', { name: 'Review' })).toHaveAttribute('href', '/flow?station=review');
   });
 });

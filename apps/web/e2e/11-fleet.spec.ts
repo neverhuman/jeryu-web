@@ -20,6 +20,7 @@ import {
   mockControlPlaneRunners,
   mockFleetBootstrap,
 } from './fixtures/mocks';
+import { mockFlowApi } from './fixtures/flowMocks';
 import { mockPipelineApi } from './fixtures/pipelineMocks';
 import { mockBoards, mockEnvironments } from './fixtures/releaseBoardMocks';
 import type {
@@ -773,4 +774,24 @@ test.describe('Fleet runner-network dashboard (Slice C-web)', () => {
     await expect(page.getByTestId('fleet-audits')).toHaveCount(0);
   });
 
+});
+
+test('Runners links to Flow Layout, where each runner sits at its station @action:flow.runners_link', async ({
+  page,
+}) => {
+  await mockBootstrap(page, { auth: { role: 'admin' } });
+  await mockFleetBootstrap(page, [
+    { pool: 'trusted', tags: ['rust-hot'], running_jobs: 1, active_slots: 4, online_runners: 4 },
+  ]);
+  await mockControlPlaneRunners(page, runnerFabric(true));
+  await mockFlowApi(page);
+
+  const shell = new AppShellPage(page);
+  await shell.goto('/runners');
+  await shell.assertShellLoaded();
+  const link = page.getByTestId('fleet-flow-layout');
+  await expect(link).toHaveAttribute('href', '/flow?mode=layout');
+  await link.click();
+  await expect(page).toHaveURL(/\/flow\?mode=layout$/);
+  await expect(page.getByTestId('flow-layout-card-gate')).toBeVisible({ timeout: 15_000 });
 });

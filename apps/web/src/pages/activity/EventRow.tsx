@@ -41,6 +41,7 @@ import {
   eventDetailFields,
   eventLabel,
   eventLinks,
+  eventStationLink,
   eventJson,
   eventTone,
   exactSecondsText,
@@ -127,6 +128,7 @@ export function EventRow({
   const host = forgeHost(event.repo ?? undefined);
   const summary = summaryParts(event, host);
   const others = eventLinks(event, host).filter((link) => link.to !== summary.link?.to);
+  const station = eventStationLink(event.kind);
   const detailId = `activity-event-detail-${event.seq}`;
   const toggleLabel = open ? 'Hide' : event.log_tail ? 'Log' : event.reason ? 'Why' : 'More';
   const quiet = !open && !hasDetail(event);
@@ -228,6 +230,17 @@ export function EventRow({
             )}
             <span className="activity-row__meta">{duration}</span>
           </span>
+        ) : null}
+        {station ? (
+          <Link
+            to={station.to}
+            className="activity-row__station"
+            tabIndex={insideTab}
+            data-testid={`activity-event-station-${event.seq}`}
+            aria-label={`${station.label} for event ${event.seq}`}
+          >
+            {station.label}
+          </Link>
         ) : null}
         <button
           type="button"

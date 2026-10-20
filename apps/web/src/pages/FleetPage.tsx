@@ -223,6 +223,11 @@ export function FleetPage(): JSX.Element {
         }
       >
         <UseThisWhen id="nav.runners" />
+        <p className="fleet__flow-link">
+          <Link to="/flow?mode=layout" data-testid="fleet-flow-layout">
+            See which station each runner serves on Flow Layout
+          </Link>
+        </p>
         {build ? (
           <p
             className={`fleet__build${build.webMismatch ? ' fleet__tone--warn' : ''}`}

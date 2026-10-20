@@ -1619,3 +1619,8 @@
     opacity: 0.5;
   }
 }
+
+.activity-row__station {
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}

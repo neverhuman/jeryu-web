@@ -1,9 +1,10 @@
-import { screen, within } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { PullRequestSummary, PullSummaryRow } from '../../api/types';
+import type { FlowReport, PullRequestSummary, PullSummaryRow } from '../../api/types';
 import { PullRequestTimeline } from '../PullRequestTimeline';
+import { FLOW_REPORT } from './flowTestData';
 import { renderAt } from './shiftPageHelpers';
 
 const sha = (c: string) => c.repeat(40);
@@ -19,6 +20,18 @@ describe('the timeline ordered by base', () => {
     expect(screen.getByTestId('pull-order-state')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByTestId('pull-graph-acme/widgets')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('shows an open pull request its ETA from the flow report, and none without one', () => {
+    render('/pull-room', [pull(42, 'a')], FLOW_REPORT);
+    const eta = screen.getByTestId('pull-eta-acme/widgets-42');
+    expect(eta).toHaveTextContent('Gate · ETA 40m (p90 bound 2h), not counting Pin · slowest ahead: Gate');
+    expect(within(eta).getByRole('link', { name: 'Gate' })).toHaveAttribute('href', '/flow?station=gate');
+    // A pull request the report does not list shows no estimate rather than a guess.
+    expect(screen.queryByTestId('pull-eta-acme/widgets-7')).toBeNull();
+    cleanup();
+    render('/pull-room', [pull(42, 'a')]);
+    expect(screen.queryByTestId('pull-eta-acme/widgets-42')).toBeNull();
   });
 
   it('hangs each open pull request off the commit it was opened against', async () => {
@@ -107,12 +120,8 @@ describe('the timeline ordered by base', () => {
   });
 });
 
-function render(path: string, pulls: PullSummaryRow[]): void {
-  renderAt(
-    path,
-    '/pull-room',
-    <PullRequestTimeline pulls={pulls} emptyMessage="none" showRepo />
-  );
+function render(path: string, pulls: PullSummaryRow[], flow?: FlowReport): void {
+  renderAt(path, '/pull-room', <PullRequestTimeline pulls={pulls} emptyMessage="none" showRepo flow={flow} />);
 }
 
 /** main's history, one commit per letter, newest first. */

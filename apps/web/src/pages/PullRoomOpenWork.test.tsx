@@ -9,6 +9,7 @@ import { PullRoomPage } from './PullRoomPage';
 // What waits on a person is marked on its own row (PullTimelineRepoStates,
 // pullAttentionModel, e2e 29-pipeline); these tests mock every data hook.
 vi.mock('../hooks/useAuth', () => ({ useAuth: () => ({ user: null }) }));
+vi.mock('../hooks/useFlow', () => ({ useFlow: () => ({ data: undefined }) }));
 vi.mock('../hooks/usePipeline', () => ({ useAttention: () => ({ data: undefined }) }));
 // Ghost rows wear red from the same list; here it names no todo.
 vi.mock('./needsYou/useNeedsYou', () => ({ useAttentionTodoIds: () => new Set<string>() }));

@@ -11,9 +11,11 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { PullRequestSummary, ShiftTodo } from '../api/types';
+import { LotEta } from '../components/flow/LotEta';
 import { queueEntryFor } from '../components/merge/mergeQueueModel';
 import { useRepoMergeQueue } from '../hooks/useMergeQueue';
 import { EMPTY_CHANNELS, useRepoChannels } from '../hooks/useRepoChannels';
+import { useFlow } from '../hooks/useFlow';
 import { useShiftTodos } from '../hooks/useShift';
 import { NeedsYouAbout } from './needsYou';
 import { carriedTodoIds, type PullCommit } from './pullCommitsModel';
@@ -44,6 +46,7 @@ export function PullRequestWork({
   // The whole queue, the same request Work makes; a forge without one answers
   // an error and the ids below stand on their own.
   const todos = useShiftTodos(undefined);
+  const flow = useFlow({});
   const carried = useMemo<ShiftTodo[]>(() => {
     const byId = new Map((todos.data?.todos ?? []).map((todo) => [todo.id, todo]));
     return ids.map((id) => byId.get(id)).filter((todo): todo is ShiftTodo => Boolean(todo));
@@ -80,6 +83,15 @@ export function PullRequestWork({
         Work
       </h2>
       <WorkTrace stages={stages} subject={subject} testId="pr-work-trace" />
+      {summary.state === 'open' ? (
+        <p className="pr-work__eta">
+          <LotEta
+            report={flow.data}
+            lotRef={{ todoIds: ids, pull: { repo: repoFullName, number: summary.number } }}
+            testId="pr-work-eta"
+          />
+        </p>
+      ) : null}
       {ids.length === 0 ? (
         <p className="pr-work__empty" data-testid="pr-work-empty">
           No commit on this pull request names a todo.

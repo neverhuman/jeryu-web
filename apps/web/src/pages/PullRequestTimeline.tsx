@@ -2,8 +2,9 @@ import { Fragment, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAttentionAction } from '../hooks/useAttentionAction';
 
-import type { AttentionItem, PullRequestSummary, PullSummaryRow } from '../api/types';
+import type { AttentionItem, FlowReport, PullRequestSummary, PullSummaryRow } from '../api/types';
 import { ActionPreviewDialog } from '../components/action/ActionPreviewDialog';
+import { LotEta, LotEtaReport } from '../components/flow/LotEta';
 import { CopyCommand } from '../components/shellCommand/CopyCommand';
 import { usePullBaseHistory, type BaseHistoryLookup } from '../hooks/usePullBaseHistory';
 import { useViewState } from '../hooks/useViewState';
@@ -65,6 +66,7 @@ export function PullRequestTimeline({
   ghosts = [],
   repoKeyFor,
   attention = NO_ATTENTION,
+  flow,
 }: {
   pulls: PullSummaryRow[];
   emptyMessage: string;
@@ -78,6 +80,8 @@ export function PullRequestTimeline({
   repoKeyFor?: (repo: string) => string | null;
   /** "Needs you" rows by `owner/name#number` (see `attentionByPull`). */
   attention?: ReadonlyMap<string, AttentionItem[]>;
+  /** The flow report the rows' ETAs are read from; none shows no ETA. */
+  flow?: FlowReport | undefined;
 }): JSX.Element {
   const view = useViewState();
   const order = parsePullOrder(view.read(PULL_ORDER_PARAM));
@@ -94,6 +98,7 @@ export function PullRequestTimeline({
     return <p className="pull-list__empty">{emptyMessage}</p>;
   }
   return (
+    <LotEtaReport.Provider value={flow}>
     <div
       className={`pull-timeline${order === 'base' ? ' pull-timeline--base' : ''}`}
       data-testid="pull-timeline"
@@ -165,6 +170,7 @@ export function PullRequestTimeline({
         />
       ))}
     </div>
+    </LotEtaReport.Provider>
   );
 }
 
@@ -543,6 +549,9 @@ function PullRowView({
             </span>
           ) : null}
         </span>
+        {pr.state === 'open' ? (
+          <LotEta lotRef={{ pull: { repo, number: pr.number } }} testId={`pull-eta-${id}`} />
+        ) : null}
         {waiting.map((item) => (
           <PullWaiting key={item.id} item={item} />
         ))}
@@ -687,7 +696,8 @@ function BranchRowView({ row, scope }: { row: BranchRow; scope: string }): JSX.E
                 className={todo.attention ? 'needs-human' : undefined}
                 data-testid={`pull-ghost-${todo.todoId}`}
               >
-                {todo.title} <span className="pull-timeline__meta">· {todo.when}</span>
+                {todo.title} <span className="pull-timeline__meta">· {todo.when}</span>{' '}
+                <LotEta lotRef={{ todoIds: [todo.todoId] }} testId={`pull-ghost-eta-${todo.todoId}`} />
               </li>
             ))}
           </ul>

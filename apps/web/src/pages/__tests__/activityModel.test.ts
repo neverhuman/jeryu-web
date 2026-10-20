@@ -13,6 +13,8 @@ import {
   eventJson,
   eventLabel,
   eventLinks,
+  eventStationId,
+  eventStationLink,
   eventTone,
   eventsApiPath,
   filtersToQuery,
@@ -963,5 +965,17 @@ describe('the live tail status', () => {
     expect(updatedAgoText(now + 5_000, now)).toBe('updated 0s ago');
     // Nothing has arrived yet: the pill says nothing it does not know.
     expect(updatedAgoText(null, now)).toBe('');
+  });
+
+  it('maps each event kind to its station on Flow, and leaves unrouted kinds unlinked', () => {
+    const stations: Record<string, string> = {
+      'todo.filed': 'queue', 'todo.claimed': 'work', 'worker.stage': 'work', 'shift.pr_opened': 'shift',
+      'pr.opened': 'review', 'review.finished': 'review', 'gate.finished': 'gate', 'queue.landed': 'merge',
+      'pr.merged': 'merge', 'pin.bump_opened': 'pin', 'release.staged': 'stage', 'deploy.status': 'deploy',
+    };
+    for (const [kind, id] of Object.entries(stations)) expect(eventStationId(kind), kind).toBe(id);
+    expect(eventStationId('something.else')).toBeNull();
+    expect(eventStationLink('gate.started')).toEqual({ label: 'Gate on Flow', to: '/flow?station=gate' });
+    expect(eventStationLink('something.else')).toBeNull();
   });
 });

@@ -357,3 +357,51 @@
 .flow-map__coverage ul { margin:var(--space-2) 0 0; padding-left:var(--space-4); display:flex; flex-direction:column; gap:var(--space-1); }
 .flow-map__edge button { font:inherit; color:var(--color-fg-primary); background:transparent; border:0; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
 @media(max-width:600px) { .flow-map__repos { grid-template-columns:minmax(0,1fr); } }
+
+/* Layout mode: the same cards, listing runners instead of work. */
+.flow-layout__summary {
+  margin: 0;
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.flow-layout__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-layout__tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-layout__tool {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-fg-secondary);
+}
+
+.flow-card__problem {
+  color: var(--color-accent-danger);
+}
+
+.flow-card--failed {
+  border-color: var(--color-accent-warning);
+  border-style: dashed;
+}
+
+/* A layout card is not a button, so the pointer stays an arrow. */
+section.flow-card {
+  cursor: default;
+}

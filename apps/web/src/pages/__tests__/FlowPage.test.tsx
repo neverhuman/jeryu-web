@@ -180,11 +180,39 @@ describe('FlowPage', () => {
     expect(await screen.findByText('Only admins can see the delivery line.')).toBeInTheDocument();
   });
 
-  it('sends Layout mode to Runners until it is built', async () => {
+  it('Layout mode lists the runners of each station and flags a station short of tools', async () => {
     mockFlowApi();
     renderAt('/flow?mode=layout', '/flow', <FlowPage />);
-    expect(await screen.findByText('Layout is not on this page yet.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Runners' })).toHaveAttribute('href', '/runners');
+    const gate = await screen.findByTestId('flow-layout-card-gate');
+    expect(gate).toHaveAttribute('data-tone', 'human');
+    expect(screen.getByTestId('flow-layout-capacity-gate')).toHaveTextContent('2 of 4 expected reporting');
+    const gateB = within(gate).getByTestId('flow-layout-tool-gate-b');
+    expect(gateB).toHaveTextContent('node-b');
+    expect(gateB).toHaveTextContent('online · busy');
+    expect(gateB).toHaveTextContent('2.0.9 (1234567)');
+    expect(within(gate).getByTestId('flow-layout-tool-gate-c')).toHaveTextContent('offline · idle');
+    // No tool reports for Merge: red, and the summary names it.
+    expect(screen.getByTestId('flow-layout-card-merge')).toHaveAttribute('data-tone', 'human');
+    expect(screen.getByTestId('flow-layout-summary')).toHaveTextContent('Gate, Merge');
+    // A healthy station without a configured expectation is not red and says so.
+    const review = screen.getByTestId('flow-layout-card-review');
+    expect(review).toHaveAttribute('data-tone', 'ok');
+    expect(screen.getByTestId('flow-layout-capacity-review')).toHaveTextContent('expected capacity not set');
+  });
+
+  it('Layout mode says so when the server has no layout route', async () => {
+    mockFlowApi((req) => (req.pathname === '/api/v1/flow/layout' ? errorResponse(404, 'no route') : undefined));
+    renderAt('/flow?mode=layout', '/flow', <FlowPage />);
+    expect(await screen.findByText('Not available on this server version.')).toBeInTheDocument();
+  });
+
+  it('switches mode in the address and keeps the window', async () => {
+    mockFlowApi();
+    renderAt('/flow?days=7', '/flow', <FlowPage />);
+    fireEvent.click(await screen.findByTestId('flow-mode-layout'));
+    expect(await screen.findByTestId('flow-layout')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('flow-mode-live'));
+    expect(await screen.findByTestId('flow-body')).toBeInTheDocument();
   });
 });
 
