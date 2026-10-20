@@ -58,3 +58,27 @@ test('monthly Outcomes exposes missing hypotheses and both shares @action:scorec
   await expect(outcomes.getByRole('link', { name: 'Improve checkout' })).toHaveAttribute('href', `/work/${ID}`);
   await persistRenderedEvidence(page, 'hypothesis-scorecard');
 });
+
+test('work page lists acceptance criteria with evidence and unmet reasons @action:shift.criteria', async ({ page }) => {
+  await mockBootstrap(page, { auth: { role: 'admin' } });
+  await mockPipelineApi(page);
+  await mockShiftApi(page);
+  const todo = { ...SHIFT_TODOS[0], id: ID, family: 'acme', title: 'Improve checkout', repos: ['widget'], status: 'done',
+    acceptance: { state: 'set', total: 2, met: 1, items: [
+      { text: 'shows Failing CI', checked: true, evidence: 'test_label' },
+      { text: 'links the run', checked: false, evidence: 'no run id on the wire' },
+    ] } };
+  await page.route('**/api/v1/shift/todos**', async (route) => {
+    if (new URL(route.request().url()).pathname.endsWith('/comments')) {
+      await route.fulfill({ json: { comments: [], total: 0 } });
+    } else {
+      await route.fulfill({ json: { generated_at: new Date().toISOString(), todos: [todo], total: 1 } });
+    }
+  });
+  await page.goto(`/work/${ID}`);
+  const section = page.getByRole('region', { name: 'Acceptance criteria' });
+  await expect(section).toContainText('1 of 2 met');
+  await expect(section).toContainText('checked: test_label');
+  await expect(section).toContainText('unmet: no run id on the wire');
+  await persistRenderedEvidence(page, 'work-criteria');
+});

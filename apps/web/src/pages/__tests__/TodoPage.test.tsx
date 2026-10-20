@@ -78,6 +78,43 @@ describe('TodoPage', () => {
     expect(screen.queryByRole('button', { name: /Block|Release/ })).toBeNull();
   });
 
+  it('lists each acceptance criterion with its evidence or unmet reason', async () => {
+    serveTodos([
+      todo({
+        id: '20260919-0900-ac1',
+        title: 'Has criteria',
+        status: 'done',
+        acceptance: {
+          state: 'set',
+          total: 2,
+          met: 1,
+          items: [
+            { text: 'shows Failing CI', checked: true, evidence: 'test_label' },
+            { text: 'links the run', checked: false, evidence: 'no run id on the wire' },
+          ],
+        },
+      }),
+    ]);
+    renderTodo('/work/20260919-0900-ac1');
+    const section = await screen.findByRole('region', { name: 'Acceptance criteria' });
+    expect(section).toHaveTextContent('1 of 2 met');
+    const [met, unmet] = within(section).getAllByRole('listitem');
+    expect(met).toHaveTextContent('shows Failing CI');
+    expect(met).toHaveTextContent('checked: test_label');
+    expect(unmet).toHaveTextContent('links the run');
+    expect(unmet).toHaveTextContent('unmet: no run id on the wire');
+  });
+
+  it('shows no criteria section for a todo filed before the checklist existed', async () => {
+    serveTodos([
+      todo({ id: '20260919-0900-ac2', title: 'Old todo', acceptance: { state: 'unknown', total: 0, met: 0, items: [] } }),
+      todo({ id: '20260919-0900-ac3', title: 'Older todo' }),
+    ]);
+    renderTodo('/work/20260919-0900-ac2');
+    await screen.findByRole('heading', { name: 'Old todo' });
+    expect(screen.queryByRole('region', { name: 'Acceptance criteria' })).toBeNull();
+  });
+
   it('ends the attempts table with the attempt a worker is running now', async () => {
     serveTodos([
       todo({

@@ -1,4 +1,5 @@
 import { TodoOutcome } from './TodoOutcome';
+import { TodoCriteria } from './TodoCriteria';
 // TodoPage.tsx — one todo's own page (`/work/<id>`).
 //
 // Needs you, Activity, the workers line and a queue row's id all land here, so a
@@ -214,6 +215,7 @@ function TodoView({
         hrefs={prHref ? { pr: prHref } : {}}
       />
       <NeedsYouAbout subject={{ todoId: todo.id }} />
+      {todo.acceptance ? <TodoCriteria acceptance={todo.acceptance} /> : null}
       {'hypothesis' in todo ? (
         <TodoOutcome
           key={`${todo.family}:${todo.id}`}

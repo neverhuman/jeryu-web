@@ -68,6 +68,25 @@ export interface ShiftAttempt {
   shift: string | null;
 }
 
+/** One acceptance criterion: its box and the evidence/reason line under it. */
+export interface ShiftCriterion {
+  text: string;
+  checked: boolean;
+  evidence?: string | null;
+}
+
+/**
+ * The body's `## Acceptance criteria` checklist. `state` is `set` when the body
+ * has it, `none` when the filer recorded no criteria, `unknown` for a todo
+ * filed before the block existed.
+ */
+export interface ShiftAcceptance {
+  state: 'set' | 'none' | 'unknown' | string;
+  total: number;
+  met: number;
+  items: ShiftCriterion[];
+}
+
 export interface ShiftTodo {
   hypothesis?: string;
   check_after?: string | number | null;
@@ -123,6 +142,8 @@ export interface ShiftTodo {
   claimed_at?: string | null;
   claim_model?: string | null;
   worked_by: ShiftAttempt[];
+  /** Absent on servers that predate the checklist. */
+  acceptance?: ShiftAcceptance;
 }
 
 export interface ShiftTodosResponse {
