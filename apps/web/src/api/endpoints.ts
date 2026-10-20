@@ -389,6 +389,9 @@ export const endpoints = {
   qualityGateDispute: (findingId: string): string =>
     `/api/v1/quality-gate/findings/${encodeURIComponent(findingId)}/dispute`,
 
+  /** Report one incident (global admins and event reporters). */
+  incidents: (): string => '/api/v1/incidents',
+
   /** Spend against what reached main: cost per merged change (admin-only). */
   yieldReport: (query: YieldQuery): string => {
     const qs = new URLSearchParams();

@@ -1,0 +1,51 @@
+/* Incidents.css — the Report incident form. */
+
+.incident-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  max-width: 880px;
+}
+
+.incident-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.incident-form__field--wide {
+  grid-column: 1 / -1;
+}
+
+.incident-form__field input:not([type='checkbox']),
+.incident-form__field select,
+.incident-form__field textarea {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  background: var(--color-bg-0);
+  color: var(--color-fg-primary);
+  font: inherit;
+}
+
+.incident-form__field input:not([type='checkbox']),
+.incident-form__field select {
+  min-height: 34px;
+}
+
+.incident-form__error {
+  color: var(--color-fg-danger, var(--color-fg-primary));
+  font-size: var(--font-size-sm);
+}
+
+.incident-form__actions {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 840px) {
+  .incident-form {
+    grid-template-columns: 1fr;
+  }
+}

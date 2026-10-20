@@ -19,6 +19,7 @@ import {
   Bot,
   Brain,
   ClipboardList,
+  Flame,
   Coins,
   Cog,
   FolderGit2,
@@ -44,6 +45,7 @@ import { NEEDS_YOU_PATH } from './HomeRedirect';
 import { SESSIONS_PATH } from '../pages/SessionsPage';
 import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { WORK_PATH } from '../pages/shift/workPaths';
+import { REPORT_INCIDENT_PATH } from '../pages/incidents/incidentModel';
 import { YIELD_PATH } from '../pages/yield/yieldModel';
 import { SCORECARD_PATH } from '../pages/scorecard';
 import type { AttentionArea } from '../pages/needsYou/needsYouModel';
@@ -314,6 +316,20 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     useWhen:
       'Use this when you want to know what a merged change costs: spend against what reached main, by model, agent and experiment arm.',
     // `/api/v1/yield` is admin-only, like the pipeline event feed it is read from.
+    adminOnly: true,
+    group: 'system',
+  },
+  {
+    id: 'nav.report-incident',
+    label: 'Report incident',
+    path: REPORT_INCIDENT_PATH,
+    icon: Flame,
+    paletteIcon: 'flame',
+    shortcut: 'g j',
+    keywords: ['incident', 'outage', 'report', 'ledger', 'restore', 'failure', 'major'],
+    useWhen:
+      'Use this when something is broken in production and the incident ledger should know: say what is wrong, and add what caused and restored it.',
+    // `POST /api/v1/incidents` takes global admins and event reporters.
     adminOnly: true,
     group: 'system',
   },

@@ -117,6 +117,7 @@ const endpointSamples = {
   qualityGateRule: ['no-empty-state', 7],
   qualityGateHead: ['acme/widget-api', 'abc1234'],
   qualityGateDispute: ['finding-1'],
+  incidents: [],
   yieldReport: [{ family: 'acme', since: '2026-10-01', until: '2026-10-10', by: 'experiment' }],
   scorecard: [{ window: '30d', family: 'acme', repo: 'acme/widget-api' }],
   flow: [{ family: 'acme', days: 28 }],

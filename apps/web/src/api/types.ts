@@ -30,3 +30,4 @@ export type * from './types/sessions';
 
 // Live agent terminal types (defined in ./agentTerminal).
 export type { AgentTtyFrame, AgentControl, AgentControlClientMessage, RepoAgentSummary, RepoAgentRunsResponse, CreateSessionResponse } from './agentTerminal';
+export type * from './types/incidents';

@@ -59,6 +59,7 @@ import {
 } from '../pages/account/AccountRecoveryPages';
 import { CreateAccountPage } from '../pages/account/CreateAccountPage';
 import { WikiPage } from '../pages/wiki/WikiPage';
+import { ReportIncidentPage } from '../pages/incidents';
 import { YieldPage } from '../pages/yield';
 
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
@@ -102,6 +103,7 @@ export const router = createBrowserRouter([
       { path: 'intelligence', element: <IntelligencePage /> },
       // Spend against what reached main: cost per merged change.
       { path: 'yield', element: <YieldPage /> },
+      { path: 'report-incident', element: <ReportIncidentPage /> },
       // Outcome delivery scorecard: speed, quality, recovery and economics.
       { path: 'scorecard', element: <ScorecardPage /> },
       // The delivery line: what is at each station, and which one holds the waiting.

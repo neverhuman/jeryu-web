@@ -81,6 +81,7 @@ describe('LeftNav', () => {
       'Quality gate',
       'Scorecard',
       'Yield',
+      'Report incident',
       'Shared tools',
     ]);
   });
