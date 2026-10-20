@@ -10,6 +10,14 @@ import { errorResponse, json, recordHeaders, renderAt, type Override, type Recor
 
 afterEach(() => vi.restoreAllMocks());
 
+/** The `incident_id` a recorded request body carries; fails the test when it has none. */
+function incidentIdOf(body: unknown): string {
+  if (typeof body === 'object' && body !== null && 'incident_id' in body && typeof body.incident_id === 'string') {
+    return body.incident_id;
+  }
+  throw new Error('the request body names no incident_id');
+}
+
 function mockIncidentsApi(override?: Override): Recorded[] {
   const calls: Recorded[] = [];
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
@@ -19,14 +27,14 @@ function mockIncidentsApi(override?: Override): Recorded[] {
       method: init?.method ?? 'GET',
       pathname: url.pathname,
       search: url.search,
-      body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
       headers: recordHeaders(init?.headers),
     };
     calls.push(req);
     const custom = override?.(req);
     if (custom) return custom;
     if (url.pathname === '/api/v1/incidents' && req.method === 'POST') {
-      const id = (req.body as { incident_id: string }).incident_id;
+      const id = incidentIdOf(req.body);
       return json({ schema_version: '1', ok: true, incident_id: id, seqs: [1, 2] }, 201);
     }
     return errorResponse(404, `unmocked ${url.pathname}`);
@@ -67,7 +75,7 @@ describe('ReportIncidentPage', () => {
       severity: 'high',
       changes: ['lot-1', 'lot-2'],
     });
-    const sent = (post?.body as { incident_id: string }).incident_id;
+    const sent = incidentIdOf(post?.body);
     expect(done).toHaveTextContent(sent);
   });
 
@@ -84,7 +92,7 @@ describe('ReportIncidentPage', () => {
     expect(await screen.findByTestId('report-incident-error')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Report incident' }));
     await screen.findByTestId('report-incident-done');
-    const ids = posts(calls).map((call) => (call.body as { incident_id: string }).incident_id);
+    const ids = posts(calls).map((call) => incidentIdOf(call.body));
     expect(ids).toHaveLength(2);
     expect(ids[0]).toBe(ids[1]);
   });
