@@ -135,7 +135,10 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
     return () => setPr(null);
   }, [prNumber, setPr]);
 
-  useRealtime(prNumber ? [`pull.${prNumber}`] : []);
+  // Live frames for a pull request ride its repository's scope: a bare PR
+  // number names no repository, and the server authorizes repo scopes only.
+  const liveScope = repoScope(fullName);
+  useRealtime(liveScope ? [liveScope] : []);
 
   const detail = usePullRequest(repoId, prNumber);
   const diff = usePrDiff(repoId, prNumber);
