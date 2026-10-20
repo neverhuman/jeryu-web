@@ -51,7 +51,7 @@ export interface AttentionBudget {
 
 /**
  * The one question a `pr_needs_owner_decision` row asks and the two calls that
- * answer it (`jeryu.attention/v1.5`). The row carries no `action.api`: the step
+ * answer it (`jeryu.attention/v1.6`). The row carries no `action.api`: the step
  * is the owner's Yes or No, so nothing replays it for them.
  */
 export interface AttentionDecision {

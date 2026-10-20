@@ -260,6 +260,12 @@ export interface RunnerLastActivity {
   sha: string;
   recipe: string;
   conclusion: string;
+  /**
+   * What stage this slot is in, in the runner's own words ("held: round 2 of 4,
+   * fix todo <id>", "waiting on the owner: <question>"). Absent from an older
+   * forge and from a runner that sends none.
+   */
+  reason?: string;
   seconds: number;
   finishedAt: string;
   /** Reviewer only: the forge's answer to the last merge attempt on this PR. */

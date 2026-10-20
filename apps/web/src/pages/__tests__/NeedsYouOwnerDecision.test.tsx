@@ -51,7 +51,7 @@ function row(over: Partial<AttentionItem> = {}): AttentionItem {
 
 function inbox(item: AttentionItem): AttentionResponse {
   return {
-    schema_version: 'jeryu.attention/v1.5',
+    schema_version: 'jeryu.attention/v1.6',
     generated_at: '2026-10-14T09:10:00Z',
     counts: { critical: 0, action: 1, watch: 0 },
     items: [item],

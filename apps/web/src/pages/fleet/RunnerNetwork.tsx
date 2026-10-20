@@ -276,6 +276,14 @@ function RunnerRow({
                       {' '}- merge blocked: {last.blocked}
                     </span>
                   ) : null}
+                  {last.stage ? (
+                    <span
+                      className="fleet__tone--warn"
+                      data-testid={`${testId}-stage-${nodeId}`}
+                    >
+                      {' '}- {last.stage}
+                    </span>
+                  ) : null}
                 </>
               ) : (
                 <>

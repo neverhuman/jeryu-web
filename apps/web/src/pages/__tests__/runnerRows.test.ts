@@ -231,6 +231,30 @@ describe('runner rows in words', () => {
     expect(landed).toMatchObject({ tone: 'ok', blocked: null });
   });
 
+  it('names the hold-loop stage a reviewer reports, and nothing when it sends none', () => {
+    const held = {
+      repo: 'veox-ai/ai-veox-app',
+      pr: 8,
+      sha: '3926cbd7',
+      recipe: 'redteam-review',
+      conclusion: 'hold',
+      reason: 'held: round 2 of 4, fix todo 20261014-052023-b4deca',
+      seconds: 14,
+      finishedAt: '2026-09-19T19:00:30Z'
+    };
+    expect(rowLast(node({ kind: 'reviewer', lastActivity: held }))).toMatchObject({
+      verb: 'held',
+      stage: 'held: round 2 of 4, fix todo 20261014-052023-b4deca'
+    });
+    const waiting = { ...held, reason: 'waiting on the owner: Accept this head as it is?' };
+    expect(rowLast(node({ kind: 'reviewer', lastActivity: waiting }))?.stage).toBe(
+      'waiting on the owner: Accept this head as it is?'
+    );
+    // An older forge sends no reason at all: the row reads as it always did.
+    const { reason: _reason, ...silent } = held;
+    expect(rowLast(node({ kind: 'reviewer', lastActivity: silent }))?.stage).toBeNull();
+  });
+
   it('reads the merge attempt and grant gaps a reviewer row carries', () => {
     const state = runnerNetworkFromResponse({
       local: {

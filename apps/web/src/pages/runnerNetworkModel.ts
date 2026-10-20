@@ -404,6 +404,9 @@ function lastActivityFromRaw(value: unknown): RunnerLastActivity | null {
     sha,
     recipe: str(record.recipe),
     conclusion,
+    // The stage in the runner's own words. Absent from an older forge, which
+    // leaves the row exactly as it reads today.
+    ...(str(record.reason) ? { reason: str(record.reason) } : {}),
     seconds: num(record.seconds),
     finishedAt,
     mergeAttempt: mergeAttemptFromRaw(record.mergeAttempt),
@@ -751,6 +754,11 @@ export interface RowLast {
    * ..."), from the forge's last merge attempt or a missing merge grant.
    */
   blocked: string | null;
+  /**
+   * Reviewer only: what stage it says it is in ("held: round 2 of 4, fix todo
+   * <id>", "waiting on the owner: <question>"); null when it reports none.
+   */
+  stage: string | null;
 }
 
 /** A runner's last finished job, in words; null when it reports none. */
@@ -762,6 +770,7 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
     ? `${pull.repo}#${pull.pr}`
     : `${last.repo}@${shortSha(last.sha)}`;
   const duration = durationWords(last.seconds);
+  const stage = last.reason ?? null;
   if (node.kind === 'reviewer') {
     const verdict = reviewVerdict(last.conclusion);
     const gap = node.mergeGrantGaps?.find((item) => item.repo === last.repo);
@@ -789,7 +798,8 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
           : verdict === 'hold'
             ? 'failed'
             : 'warn',
-      blocked
+      blocked,
+      stage
     };
   }
   if (node.kind === 'audit') {
@@ -802,7 +812,8 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
       duration,
       finishedAt: last.finishedAt,
       tone: audit.tone,
-      blocked: null
+      blocked: null,
+      stage: null
     };
   }
   const passed = last.conclusion === 'success';
@@ -818,7 +829,8 @@ export function rowLast(node: RunnerNetworkNode): RowLast | null {
     duration,
     finishedAt: last.finishedAt,
     tone: passed ? 'ok' : 'failed',
-    blocked: null
+    blocked: null,
+    stage: null
   };
 }
 
