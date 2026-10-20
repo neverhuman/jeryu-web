@@ -164,7 +164,8 @@ function LaneView({
       onToggle={() =>
         view.write(
           { stage: withOpenStage(entries, lane.id, openId === stage.id ? null : stage.id) },
-          'push'
+          'push',
+          { preventScrollReset: true }
         )
       }
     />

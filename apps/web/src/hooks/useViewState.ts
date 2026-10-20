@@ -13,7 +13,7 @@
 // entirely, so the plain address is the default view.
 
 import { useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, type NavigateOptions } from 'react-router-dom';
 
 /** Whether writing a value adds a history entry or overwrites the current one. */
 export type ViewHistory = 'push' | 'replace';
@@ -30,7 +30,7 @@ export interface ViewState {
   /** The parameter read as the comma-separated list `write` stores. */
   readList(param: string): string[];
   /** Writes parameters, leaving the rest of the query string alone. */
-  write(values: ViewStateWrite, history: ViewHistory): void;
+  write(values: ViewStateWrite, history: ViewHistory, options?: Pick<NavigateOptions, 'preventScrollReset'>): void;
 }
 
 export function useViewState(): ViewState {
@@ -54,7 +54,7 @@ export function useViewState(): ViewState {
       return {
         read: (param, fallback = '') => base.get(param) ?? fallback,
         readList: (param) => (base.get(param) ?? '').split(',').filter(Boolean),
-        write: (values, history) => {
+        write: (values, history, options) => {
           const from = latest.current;
           const next = new URLSearchParams(from);
           for (const [param, value] of Object.entries(values)) {
@@ -64,7 +64,7 @@ export function useViewState(): ViewState {
           }
           written.current = { from: shown, to: next.toString() };
           latest.current = written.current.to;
-          setParams(next, { replace: history === 'replace' });
+          setParams(next, { ...options, replace: history === 'replace' });
         },
       };
     },

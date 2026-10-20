@@ -151,6 +151,37 @@ test('a stage opens into its targets, what promoting ships and the command @acti
   );
 });
 
+test('stage selection preserves scroll while updating the URL @action:releases.board.stage-detail', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await openBoard(page, '/releases/family/globex');
+  const main = page.getByTestId('release-board-stage-forge-server-main');
+  const dev = page.getByTestId('release-board-stage-forge-server-dev');
+  await main.scrollIntoViewIfNeeded();
+  const depth = await page.evaluate(() => window.scrollY);
+  expect(depth).toBeGreaterThan(0);
+
+  await main.click();
+  await expect(main).toHaveAttribute('aria-expanded', 'true');
+  await expect(page).toHaveURL(/stage=forge-server%3Amain$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
+
+  await dev.click();
+  await expect(dev).toHaveAttribute('aria-expanded', 'true');
+  await expect(main).toHaveAttribute('aria-expanded', 'false');
+  await expect(page).toHaveURL(/stage=forge-server%3Adev$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
+
+  await dev.click();
+  await expect(dev).toHaveAttribute('aria-expanded', 'false');
+  await expect(page).toHaveURL(/\/releases\/family\/globex$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
+
+  await page.goBack();
+  await expect(dev).toHaveAttribute('aria-expanded', 'true');
+  await expect(page).toHaveURL(/stage=forge-server%3Adev$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
+});
+
 test('pinned vs released lists every repo with how far behind it is @action:releases.board.pins', async ({
   page,
 }) => {
