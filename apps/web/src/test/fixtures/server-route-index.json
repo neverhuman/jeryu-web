@@ -65,6 +65,8 @@
     "/api/v1/quality-gate/rules/{rule}",
     "/api/v1/release-board",
     "/api/v1/release-board/{family}",
+    "/api/v1/release-board/{family}/promote",
+    "/api/v1/release-board/{family}/promote/{id}",
     "/api/v1/release-pins",
     "/api/v1/scorecard",
     "/api/v1/repos",

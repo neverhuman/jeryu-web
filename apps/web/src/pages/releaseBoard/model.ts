@@ -11,6 +11,7 @@ import { sameFamily } from '../../components/family/familyScope';
 import type { EnvironmentSummary } from '../../api/types/deployments';
 import { relativeText } from '../../format/when';
 import type {
+  PromoteActionState,
   BoardColumn,
   BoardLane,
   BoardPins,
@@ -284,6 +285,24 @@ export function noPromoteText(stage: BoardStage): string {
   if (neverDeployed(stage)) return 'Declared but never deployed to, so there is nothing to promote.';
   if (stage.status === 'source') return "This is the lane's source; nothing promotes into it.";
   return 'No promote command is recorded for this stage.';
+}
+
+/** The state of a stage's newest deploy ask, as the cell and the detail word it. */
+export function promoteActionText(state: PromoteActionState): string {
+  switch (state) {
+    case 'pending':
+      return 'Deploy queued';
+    case 'claimed':
+      return 'Deploy running';
+    case 'succeeded':
+      return 'Deploy succeeded';
+    case 'failed':
+      return 'Deploy failed';
+    case 'expired':
+      return 'Deploy expired, outcome unknown';
+    case 'cancelled':
+      return 'Deploy cancelled';
+  }
 }
 
 /** Who runs a stage's promote command, one line above it. */

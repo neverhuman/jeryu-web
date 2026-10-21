@@ -394,6 +394,18 @@
   background-color: var(--color-bg-2);
 }
 
+.release-board__run {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.release-board__run-state {
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
+}
+
 /* ── Work bar ─────────────────────────────────────────────────────────── */
 
 .release-board__bar {

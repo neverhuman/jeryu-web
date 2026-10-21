@@ -8,11 +8,11 @@
 // that names shift slots links to those workers on /work.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ReleaseBoard } from '../../api/types/releaseBoard';
+import type { BoardPromoteRun, ReleaseBoard } from '../../api/types/releaseBoard';
 import { removeBrowserText } from '../../storage/browserStorage';
 import {
   ACME_BOARD,
@@ -603,5 +603,156 @@ describe('ReleasesPage — family release board', () => {
     open('/releases/family/acme');
     fireEvent.click(await screen.findByTestId('release-board-stage-cloud-app-prod'));
     expect(screen.queryByTestId('release-board-target-runners')).toBeNull();
+  });
+
+  describe('Promote runs the deploy', () => {
+    const RELEASE = 'prod-20261012T171717Z-f1b1fb4-unsigned';
+    const ASK = {
+      id: 'ra-1',
+      state: 'pending' as const,
+      requested_by: 'operator',
+      requested_at: '2026-10-12T17:30:00Z',
+      log_href: '/api/v1/release-board/acme/promote/ra-1'
+    };
+
+    /** The acme board with its prod stage naming a staged release and the forge's run verdict. */
+    function withRun(run: BoardPromoteRun | undefined): ReleaseBoard {
+      const board = structuredClone(ACME_BOARD);
+      const prod = board.lanes
+        .find((lane) => lane.id === 'cloud-app')
+        ?.stages.find((stage) => stage.id === 'prod');
+      if (!prod?.promote) throw new Error('fixture prod stage has no promote');
+      prod.promote = {
+        ...prod.promote,
+        deploy: { repo: 'acme/app', release: RELEASE },
+        run
+      };
+      return board;
+    }
+
+    it("is disabled with the forge's reason when no poller is alive, and sends nothing", async () => {
+      const reason =
+        'No release poller is running for acme/app: start the poller on its deploy host.';
+      const calls = serveBoards([
+        withRun({ available: false, reason, confirm: 'unused', action: null })
+      ]);
+      open('/releases/family/acme');
+      fireEvent.click(
+        await screen.findByTestId('release-board-stage-cloud-app-prod')
+      );
+      const detail = within(
+        screen.getByTestId('release-board-detail-cloud-app')
+      );
+      expect(
+        detail.getByRole('button', { name: 'Promote Cloud app prod' })
+      ).toBeDisabled();
+      expect(
+        detail.getByTestId('release-board-promote-reason')
+      ).toHaveTextContent(reason);
+      expect(calls.filter((call) => call.method === 'POST')).toEqual([]);
+    });
+
+    it('confirms with the release and target, then queues it and shows the ask on the cell', async () => {
+      const confirm = `Deploy ${RELEASE} to Cloud app prod (node-a)? The release host runs it now.`;
+      let run: BoardPromoteRun = {
+        available: true,
+        reason: null,
+        confirm,
+        action: null
+      };
+      const calls = serveBoards([withRun(run)], (req) => {
+        if (
+          req.method === 'POST' &&
+          req.pathname === '/api/v1/release-board/acme/promote'
+        ) {
+          run = {
+            available: false,
+            reason: 'Asked by operator.',
+            confirm,
+            action: ASK
+          };
+          return json({ created: true, action: ASK }, 201);
+        }
+        if (req.pathname === '/api/v1/release-board/acme') {
+          return json({ ...withRun(run), accepted_at: ACME_BOARD.observed_at });
+        }
+        return undefined;
+      });
+      open('/releases/family/acme');
+      fireEvent.click(
+        await screen.findByTestId('release-board-stage-cloud-app-prod')
+      );
+      const detail = within(
+        screen.getByTestId('release-board-detail-cloud-app')
+      );
+      fireEvent.click(
+        detail.getByRole('button', { name: 'Promote Cloud app prod' })
+      );
+      // Nothing is sent until the confirm step names the release and target.
+      const dialog = within(await screen.findByRole('dialog'));
+      expect(dialog.getByText(confirm)).toBeInTheDocument();
+      expect(calls.filter((call) => call.method === 'POST')).toEqual([]);
+      fireEvent.click(dialog.getByRole('button', { name: 'Promote' }));
+      await waitFor(() =>
+        expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1)
+      );
+      const post = calls.find((call) => call.method === 'POST');
+      expect(post?.pathname).toBe('/api/v1/release-board/acme/promote');
+      expect(post?.body).toEqual({ lane: 'cloud-app', stage: 'prod' });
+      // The board refetches: the cell carries the state, the detail the log link.
+      expect(
+        await screen.findByTestId('release-board-promote-state')
+      ).toHaveTextContent('Deploy queued');
+      expect(
+        screen.getByRole('button', { name: 'Promote Cloud app prod' })
+      ).toBeDisabled();
+      expect(screen.getByRole('link', { name: 'log' })).toHaveAttribute(
+        'href',
+        ASK.log_href
+      );
+    });
+
+    it("words the forge's refusal on the control instead of dropping it", async () => {
+      const confirm = 'Deploy it?';
+      serveBoards(
+        [withRun({ available: true, reason: null, confirm, action: null })],
+        (req) =>
+          req.method === 'POST'
+            ? errorResponse(
+                403,
+                'Promote needs a deployer: an admin named in JERYU_DEPLOYERS'
+              )
+            : undefined
+      );
+      open('/releases/family/acme');
+      fireEvent.click(
+        await screen.findByTestId('release-board-stage-cloud-app-prod')
+      );
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Promote Cloud app prod' })
+      );
+      fireEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('button', {
+          name: 'Promote'
+        })
+      );
+      expect(await screen.findByRole('alert')).toHaveTextContent(/deployer/);
+    });
+
+    it('shows no Promote button for an older server that sends no run verdict', async () => {
+      serveBoards([withRun(undefined)]);
+      open('/releases/family/acme');
+      fireEvent.click(
+        await screen.findByTestId('release-board-stage-cloud-app-prod')
+      );
+      expect(
+        screen.queryByRole('button', { name: 'Promote Cloud app prod' })
+      ).toBeNull();
+      expect(
+        screen.getByRole('button', {
+          name: 'Copy promote command for Cloud app prod'
+        })
+      ).toBeInTheDocument();
+    });
   });
 });

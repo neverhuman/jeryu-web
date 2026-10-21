@@ -113,6 +113,7 @@ const endpointSamples = {
   pins: [],
   releaseBoards: [],
   releaseBoard: ['acme'],
+  releaseBoardPromote: ['acme'],
   qualityGateOverview: [7],
   qualityGateRule: ['no-empty-state', 7],
   qualityGateHead: ['acme/widget-api', 'abc1234'],
@@ -200,6 +201,7 @@ describe('endpoint contract', () => {
     expect(endpoints.releaseBoards()).toBe('/api/v1/release-board');
     expect(endpoints.releaseBoard('acme')).toBe('/api/v1/release-board/acme');
     expect(endpoints.releaseBoard('a/b c')).toBe('/api/v1/release-board/a%2Fb%20c');
+    expect(endpoints.releaseBoardPromote('acme')).toBe('/api/v1/release-board/acme/promote');
   });
 
   it('builds account and repository bot routes', () => {

@@ -369,6 +369,9 @@ export const endpoints = {
   /** One family's newest release board (admin-only; 404 until one is reported). */
   releaseBoard: (family: string): string =>
     `/api/v1/release-board/${encodeURIComponent(family)}`,
+  /** Queue the deploy a stage's Promote names (deployer-only). */
+  releaseBoardPromote: (family: string): string =>
+    `/api/v1/release-board/${encodeURIComponent(family)}/promote`,
 
   /** How the jankurai/proof gate behaved over the last `days` days. */
   qualityGateOverview: (days: number): string =>

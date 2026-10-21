@@ -49,6 +49,7 @@ import {
   NOT_USED_TEXT,
   openStageId,
   pillClass,
+  promoteActionText,
   promoteWho,
   stageCellClass,
   stageConnector,
@@ -64,6 +65,7 @@ import {
   type StageOverlay,
 } from './model';
 import { When } from '../../format/When';
+import { PromoteRun } from './PromoteRun';
 import { StageChanges } from './StageChanges';
 
 export function BoardLanes({
@@ -218,7 +220,12 @@ function LaneView({
       )}
       <div id={detailId} data-testid={`release-board-detail-${lane.id}`}>
         {open ? (
-          <StageDetail lane={lane} stage={open} overlay={overlays.get(open.id) ?? null} />
+          <StageDetail
+            family={board.family}
+            lane={lane}
+            stage={open}
+            overlay={overlays.get(open.id) ?? null}
+          />
         ) : null}
       </div>
     </section>
@@ -352,15 +359,22 @@ function StageCell({
           {overlay.note}
         </span>
       ) : null}
+      {stage.promote?.run?.action ? (
+        <span className="release-board__run-state" data-testid="release-board-promote-state">
+          {promoteActionText(stage.promote.run.action.state)}
+        </span>
+      ) : null}
     </button>
   );
 }
 
 function StageDetail({
+  family,
   lane,
   stage,
   overlay,
 }: {
+  family: string;
   lane: BoardLane;
   stage: BoardStage;
   overlay: StageOverlay | null;
@@ -478,6 +492,9 @@ function StageDetail({
       {stage.promote ? (
         <div className="release-board__promote">
           <p className="release-board__label">Promote</p>
+          {stage.promote.run ? (
+            <PromoteRun family={family} lane={lane} stage={stage} run={stage.promote.run} />
+          ) : null}
           <p className="release-board__muted">{promoteWho(stage.promote)}</p>
           <CopyCommand
             command={stage.promote.command}

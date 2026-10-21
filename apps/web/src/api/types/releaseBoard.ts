@@ -62,10 +62,50 @@ export interface BoardLane {
   stages: BoardStage[];
 }
 
+export type PromoteActionState =
+  | 'pending'
+  | 'claimed'
+  | 'succeeded'
+  | 'failed'
+  | 'expired'
+  | 'cancelled';
+
+/** The newest deploy ask for a stage's staged release (release-actions queue). */
+export interface BoardPromoteAction {
+  id: string;
+  state: PromoteActionState;
+  requested_by: string;
+  requested_at: string;
+  finished_at?: string | null;
+  message?: string | null;
+  /** `GET` it for the ask with its redacted log tail. */
+  log_href: string;
+}
+
+/** What Promote may do right now; the server fills it on a read. */
+export interface BoardPromoteRun {
+  available: boolean;
+  /** Why Promote is disabled; null when it is available. */
+  reason: string | null;
+  /** The confirm text: names the release, the stage and the target. */
+  confirm: string;
+  action: BoardPromoteAction | null;
+}
+
 export interface BoardPromote {
   command: string;
   human_only: boolean;
   automatic: boolean;
+  /** The staged release Promote deploys. Absent from an older collector. */
+  deploy?: { repo: string; release: string };
+  /** Absent from an older server. */
+  run?: BoardPromoteRun;
+}
+
+/** `POST /api/v1/release-board/{family}/promote` answer. */
+export interface PromoteResponse {
+  created: boolean;
+  action: BoardPromoteAction;
 }
 
 export interface BoardForgeLink {
