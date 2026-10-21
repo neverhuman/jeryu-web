@@ -37,6 +37,7 @@ import { otherFamiliesWords } from '../components/family/OtherFamilies';
 import { useRepoFamilyScope } from '../components/family/useRepoFamilyScope';
 import {
   AREA_LABEL,
+  personalAttention,
   areaBadge,
   attentionBadge,
   type BadgeCount,
@@ -120,7 +121,7 @@ export function LeftNav(): JSX.Element {
   const primary = navGroup('primary', isAdmin);
   const system = navGroup('system', isAdmin);
   const [wikiDestination] = navGroup('wiki', isAdmin);
-  const needsYou = attentionBadge(attention.data, badgeScope);
+  const needsYou = attentionBadge(personalAttention(attention.data, user?.login), badgeScope);
   // Shown only when a wiki is set and this viewer can read its repository.
   const wiki = useSiteSettings().data?.internal_wiki ?? null;
 

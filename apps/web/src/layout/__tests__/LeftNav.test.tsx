@@ -66,6 +66,7 @@ describe('LeftNav', () => {
   it('keeps seven daily destinations in the order the work flows', () => {
     expect(PRIMARY_NAV.map((item) => item.label)).toEqual([
       'Needs you',
+      'Blocked',
       'Activity',
       'Flow',
       'Work',

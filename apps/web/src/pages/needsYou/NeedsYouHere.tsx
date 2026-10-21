@@ -1,9 +1,9 @@
-// NeedsYouHere.tsx — the slice of "Needs you" that belongs to the page it sits
+// NeedsYouHere.tsx — the slice of "Blocked" that belongs to the page it sits
 // on, shown above that page's own content: staged or failed releases on
 // Releases, downed workers and gate runners on Runners, the Work share on Work.
 // Every page a nav badge counts for shows this strip, so the badge always leads
 // to the rows it counted. (In flight marks each pull request's own row instead.)
-// It lists the rows /needs-you lists, from one shared query, so the left-nav
+// It lists the rows /blocked lists, from one shared query, so the left-nav
 // count, this strip and that page always agree. Nothing waiting here renders
 // nothing: calm pages stay calm.
 
@@ -17,11 +17,11 @@ import { AttentionRow, useRepoFamilies } from './AttentionRow';
 import {
   AREA_LABEL,
   attentionSubjects,
-  NEEDS_YOU_PATH,
+  BLOCKED_PATH,
   familyOf,
   filterByFamily,
   filterByRepos,
-  needsYouHref,
+  blockedHref,
   severityTone,
   urgentInArea,
   type AttentionArea
@@ -29,7 +29,7 @@ import {
 
 import './NeedsYou.css';
 
-/** Rows shown before the strip hands over to /needs-you. */
+/** Rows shown before the strip hands over to /blocked. */
 const SHOWN = 5;
 
 export function NeedsYouHere({
@@ -46,17 +46,17 @@ export function NeedsYouHere({
    * about another repository is not what that page is waiting on.
    */
   repos?: readonly string[] | null;
-  /** How the page narrows to a family; without it a pill opens /needs-you for that family. */
+  /** How the page narrows to a family; without it a pill opens /blocked for that family. */
   onFamily?: (family: string) => void;
 }): JSX.Element | null {
   const { user } = useAuth();
-  // The one polled attention query, shared with the nav badge and Needs you.
+  // The one polled attention query, shared with the nav badge and Blocked.
   // The read is admin-only, so other roles never ask.
   const attention = useAttention(user?.role === 'admin');
   const repoFamilies = useRepoFamilies();
   const scope = useFamilyScope();
 
-  // One row per subject here too, so this strip and /needs-you count the same
+  // One row per subject here too, so this strip and /blocked count the same
   // things: three items about one pull request are one row on both.
   const subjects = attentionSubjects(
     filterByRepos(
@@ -68,10 +68,10 @@ export function NeedsYouHere({
 
   const shown = subjects.slice(0, SHOWN);
   const more = subjects.length - shown.length;
-  // Without a filter of its own, a pill takes the family to Needs you — as
+  // Without a filter of its own, a pill takes the family to Blocked — as
   // the shell's scope, so the pages after it open on that family too.
   const pick =
-    onFamily ?? ((next: string): void => scope.setFamily(next, { to: NEEDS_YOU_PATH }));
+    onFamily ?? ((next: string): void => scope.setFamily(next, { to: BLOCKED_PATH }));
   const now = new Date();
   const title = `${subjects.length} blocked in ${AREA_LABEL[area]}`;
 
@@ -84,10 +84,10 @@ export function NeedsYouHere({
       <h2 className="page__section-title">
         <span className={pillClass('human')}>{subjects.length}</span>{' '}
         Blocked in {AREA_LABEL[area]}
-        {/* The family the strip is showing stays on the link: Needs you opens
+        {/* The family the strip is showing stays on the link: Blocked opens
             on the same rows, not on every family's. */}
-        <Link className="needs-you__here-all" to={needsYouHref(family)}>
-          {more > 0 ? `${more} more in Needs you →` : 'All of Needs you →'}
+        <Link className="needs-you__here-all" to={blockedHref(family)}>
+          {more > 0 ? `${more} more in Blocked →` : 'All of Blocked →'}
         </Link>
       </h2>
       <ul className="needs-you__list">

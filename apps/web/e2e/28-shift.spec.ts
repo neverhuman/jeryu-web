@@ -215,9 +215,9 @@ test.describe('Work, one page', () => {
     // The red count does not decide for itself what waits on a person: it is one
     // link to Needs you, which is the list the operator was promised.
     const chip = page.getByTestId('shift-needs-human');
-    await expect(chip).toContainText('in Work · open Needs you');
+    await expect(chip).toContainText('in Work · open Blocked');
     await chip.click();
-    await expect(page).toHaveURL(/\/needs-you$/);
+    await expect(page).toHaveURL(/\/blocked$/);
   });
 
   test('a todo has its own page: the row id opens it, and a Needs-you link lands on it @action:shift.todo_page', async ({

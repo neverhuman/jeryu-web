@@ -16,6 +16,7 @@ describe('useShellCommands', () => {
     const ids = useCommandStore.getState().commands.map((c) => c.id);
     expect(ids).toEqual([
       'nav.needs-you',
+      'nav.blocked',
       'nav.activity',
       'nav.flow',
       'nav.work',
@@ -123,6 +124,7 @@ describe('useShellCommands', () => {
     );
     expect(shortcuts).toEqual({
       'g n': '/needs-you',
+      'g x': '/blocked',
       'g a': '/activity',
       'g f': '/flow',
       'g w': '/work',

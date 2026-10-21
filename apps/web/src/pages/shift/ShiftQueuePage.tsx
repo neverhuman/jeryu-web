@@ -258,7 +258,7 @@ function FamilyQueue({
               data-testid="shift-needs-human"
             >
               <span className={pillClass('human')}>{waiting}</span> in{' '}
-              {AREA_LABEL.work} · open Needs you
+              {AREA_LABEL.work} · open Blocked
             </Link>
           ) : null}
           <details className="shift__more-filters" open={filtersInUse || undefined}>

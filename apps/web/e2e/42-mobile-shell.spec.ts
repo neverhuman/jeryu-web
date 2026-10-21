@@ -63,7 +63,7 @@ async function sidewaysOverflow(page: Page): Promise<number> {
 }
 
 async function mockEveryPage(page: Page): Promise<void> {
-  await mockBootstrap(page, { auth: { role: 'admin' } });
+  await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
   await mockPipelineApi(page);
   await mockShiftApi(page);
   await mockRepoList(page, repoRows());
@@ -146,7 +146,7 @@ test.describe('Mobile shell', () => {
     const needsYou = drawer.getByRole('link', { name: /^Needs you/ });
     await expect(needsYou).toBeVisible();
     await expect(needsYou).toContainText('Needs you');
-    await expect(drawer.getByTestId('needs-you-badge')).toHaveText('3');
+    await expect(drawer.getByTestId('needs-you-badge')).toHaveText('1');
 
     // Nothing is clipped: each label fits the box it is drawn in.
     const clipped = await drawer.evaluate((root) =>

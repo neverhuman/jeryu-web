@@ -127,11 +127,11 @@ describe('the family scope on every family-aware page', () => {
         ? json({ schema_version: '1', generated_at: '2026-10-03T09:00:00Z', items: [] })
         : undefined
     );
-    renderAt('/needs-you?family=acme', '/needs-you', <NeedsYouPage />);
+    renderAt('/needs-you?family=acme', '/needs-you', <NeedsYouPage blocked />);
 
     expect(await screen.findByText('Nothing for acme here')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('family-scope-show-all'));
-    expect(await screen.findByText('Nothing needs you.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing is blocked.')).toBeInTheDocument();
   });
 
   it('Activity shows the scoped family on a pill, and its own pills move the scope', async () => {

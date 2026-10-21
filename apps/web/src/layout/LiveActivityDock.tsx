@@ -26,7 +26,7 @@ import { absoluteText, clockText, zoneLabel } from '../format/when';
 import { useAuth } from '../hooks/useAuth';
 import { PIPELINE_KEY, useAttention, usePipelineEvents, usePipelineNudge } from '../hooks/usePipeline';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
-import { attentionBadgeCount, needsYouHref } from '../pages/needsYou/needsYouModel';
+import { attentionBadge, personalAttention, needsYouHref } from '../pages/needsYou/needsYouModel';
 import {
   ACTIVITY_PATH,
   eventLabel,
@@ -79,7 +79,10 @@ export function LiveActivityDock(): JSX.Element | null {
   // a cached answer in the query client might still hold.
   if (!isAdmin || !feed.isSuccess) return null;
   const events = foldEchoes(feed.data.events).slice(0, DOCK_EVENTS);
-  const waiting = attentionBadgeCount(attention.data);
+  const waiting = attentionBadge(personalAttention(attention.data, user?.login), {
+    family: scope.family,
+    repoFamilies: new Map(),
+  }).count;
 
   const toggle = (): void => {
     setCollapsed((prev) => {

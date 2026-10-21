@@ -12,7 +12,7 @@ import { ATTENTION, DEPLOY_COMMAND, DEPLOY_RUN_IN, attentionItem } from './pipel
 import { errorResponse, json, renderAt } from './shiftPageHelpers';
 
 function renderPage(): void {
-  renderAt('/needs-you', '/needs-you', <NeedsYouPage />);
+  renderAt('/needs-you', '/needs-you', <NeedsYouPage blocked />);
 }
 
 describe('NeedsYouPage', () => {
@@ -419,7 +419,7 @@ describe('NeedsYouPage', () => {
       return undefined;
     });
     renderPage();
-    expect(await screen.findByText('Nothing needs you.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing is blocked.')).toBeInTheDocument();
     const pulse = await screen.findByTestId('needs-you-pulse');
     await waitFor(() => expect(pulse).toHaveTextContent('1 of 2 worker slots busy'));
     await waitFor(() => expect(pulse).toHaveTextContent(/last event .*: Staged prod-20260919T130210Z/));
@@ -439,7 +439,7 @@ describe('NeedsYouPage', () => {
         : undefined
     );
     renderPage();
-    expect(await screen.findByText('Nothing needs you.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing is blocked.')).toBeInTheDocument();
     expect(screen.getByTestId('needs-you-watch')).toBeInTheDocument();
   });
 
@@ -458,3 +458,5 @@ describe('NeedsYouPage', () => {
     expect(await screen.findByText('Only admins can see the Needs you list.')).toBeInTheDocument();
   });
 });
+
+vi.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { login: 'operator', role: 'admin' } }) }));

@@ -17,7 +17,7 @@ test.describe('Keyboard operation of lists', () => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     await expect(page.getByTestId('needs-you-page')).toBeVisible({ timeout: 15_000 });
 
     // `:visible` because the "worth a look" rows are folded away in a closed
@@ -45,7 +45,7 @@ test.describe('Keyboard operation of lists', () => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     await expect(page.getByTestId('needs-you-page')).toBeVisible({ timeout: 15_000 });
 
     // `k` with nothing focused starts at the bottom of the list and walks up.
@@ -78,7 +78,7 @@ test.describe('Keyboard operation of lists', () => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     await expect(page.getByTestId('needs-you-page')).toBeVisible({ timeout: 15_000 });
 
     // The staged release row's act happens off-site: `x` copies its command.

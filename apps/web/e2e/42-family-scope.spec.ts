@@ -39,6 +39,7 @@ async function mockShiftFamilies(page: Page): Promise<void> {
 /** Every left-nav destination, and the address it has while acme is in scope. */
 const DESTINATIONS = [
   { label: 'Needs you', scoped: '/needs-you?family=acme', bare: '/needs-you' },
+  { label: 'Blocked', scoped: '/blocked?family=acme', bare: '/blocked' },
   { label: 'Activity', scoped: '/activity?family=acme', bare: '/activity' },
   { label: 'Flow', scoped: '/flow?family=acme', bare: '/flow' },
   { label: 'Work', scoped: '/work?family=acme', bare: '/work' },

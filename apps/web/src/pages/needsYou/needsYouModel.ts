@@ -3,6 +3,7 @@
 import type { Tone } from '../../components/tone/tone';
 import type {
   AttentionApiAction,
+  AttentionCounts,
   AttentionItem,
   AttentionResponse,
   AttentionSeverity,
@@ -12,6 +13,7 @@ import { compareInstants } from '../../format/when';
 
 /** Where "what needs a human" lives; every other surface links here. */
 export const NEEDS_YOU_PATH = '/needs-you';
+export const BLOCKED_PATH = '/blocked';
 
 export const SEVERITIES: readonly AttentionSeverity[] = ['critical', 'action', 'watch'];
 
@@ -740,6 +742,12 @@ export function needsYouHref(family?: string | null): string {
   return name ? `${NEEDS_YOU_PATH}?family=${encodeURIComponent(name)}` : NEEDS_YOU_PATH;
 }
 
+/** A family-wide inbox link under the shared scope. */
+export function blockedHref(family?: string | null): string {
+  const name = familyName(family);
+  return name ? `${BLOCKED_PATH}?family=${encodeURIComponent(name)}` : BLOCKED_PATH;
+}
+
 /**
  * The rows Needs you shows in red: a person is the next step. This is the one
  * derivation of that set — other surfaces read it rather than deciding for
@@ -771,4 +779,29 @@ export function repoFamilyMap(
     if (repo.family) map.set(`${repo.id.owner}/${repo.id.name}`, repo.family);
   }
   return map;
+}
+
+/** Personal relevance uses canonical account logins supplied by the API. */
+export function personalAttention(
+  data: AttentionResponse | undefined,
+  login: string | undefined
+): AttentionResponse | undefined {
+  if (!data) return undefined;
+  const items = login
+    ? data.items.filter((item) =>
+        item.requested_by === login ||
+        (['todo_blocked', 'todo_waiting_on_blocker', 'todo_handoff'].includes(item.kind) &&
+          item.assignee === login)
+      )
+    : [];
+  // Count the same subjects the page draws, after personal filtering.
+  const byFamily = new Map<string | null, AttentionCounts>();
+  for (const subject of attentionSubjects(items)) {
+    const family = subject.primary.family;
+    const counts = byFamily.get(family) ?? { critical: 0, action: 0, watch: 0 };
+    counts[subject.severity] += 1;
+    byFamily.set(family, counts);
+  }
+  const families = [...byFamily].map(([family, subjects]) => ({ family, subjects }));
+  return { ...data, items, families };
 }

@@ -242,7 +242,7 @@ describe('ShiftQueuePage', () => {
       expect(found).toHaveTextContent('1 in Work');
       return found;
     });
-    expect(chip).toHaveAttribute('href', '/needs-you');
+    expect(chip).toHaveAttribute('href', '/blocked');
     // And the rows themselves are on the page, as on every other page.
     const strip = screen.getByTestId('needs-you-here-work');
     expect(within(strip).getByText(/^Blocked todo · jeryu/)).toBeInTheDocument();
@@ -258,7 +258,7 @@ describe('ShiftQueuePage', () => {
       expect(found).toHaveTextContent('1 in Work');
       return found;
     });
-    expect(chip).toHaveAttribute('href', '/needs-you?family=jeryu');
+    expect(chip).toHaveAttribute('href', '/blocked?family=jeryu');
   });
 
   it('says nothing waits while the Needs you list is unavailable, rather than a second count', async () => {

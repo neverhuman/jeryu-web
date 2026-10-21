@@ -109,6 +109,17 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     group: 'primary',
   },
   {
+    id: 'nav.blocked',
+    label: 'Blocked',
+    path: '/blocked',
+    shortcut: 'g x',
+    icon: Siren,
+    paletteIcon: 'siren',
+    keywords: ['blocked', 'waiting', 'pipeline', 'fix'],
+    adminOnly: true,
+    group: 'primary',
+  },
+  {
     id: 'nav.activity',
     label: 'Activity',
     path: '/activity',

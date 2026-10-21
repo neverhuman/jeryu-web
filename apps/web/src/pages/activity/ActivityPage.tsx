@@ -820,7 +820,7 @@ function Filters({
     <section className="activity__filters" aria-label="Activity filters">
       <div className="activity__chip-row">
         {familySlot ? (
-          // Far left of the chips, as on Needs you and In flight: the page
+          // Far left of the chips, as on Blocked and In flight: the page
           // shows everything and a pill narrows it to one family.
           <div className="activity__family-slot">
             {names.length > 1 || filters.family ? (
@@ -886,7 +886,7 @@ function Filters({
         // chip and no field.
         <p className="activity__needs-you" data-testid="activity-needs-you">
           These are events that were flagged. What is waiting on a person right now
-          is on <Link to={needsYou.href}>Needs you</Link>
+          is on <Link to={needsYou.href}>Blocked</Link>
           {needsYou.count === null ? '' : ` (${formatBadgeCount(needsYou.count)})`}.
         </p>
       ) : null}

@@ -565,7 +565,7 @@ test.describe('Accessibility scans — Pull requests and Releases @a11y', () => 
 
 test.describe('Accessibility scans — pipeline visibility @a11y', () => {
   for (const target of [
-    { scope: 'needs-you', path: '/needs-you', testId: 'needs-you-action' },
+    { scope: 'needs-you', path: '/blocked', testId: 'needs-you-action' },
     { scope: 'activity', path: '/activity', testId: 'activity-event-12' },
     { scope: 'activity-wall', path: '/activity?wall=1', testId: 'activity-event-12' },
   ]) {
@@ -665,7 +665,7 @@ test.describe('Accessibility scans — the rows that must be read @a11y', () => 
     }
     await mockBootstrap(page, { auth: { role: 'admin' } });
     await mockPipelineApi(page, { attention: body as unknown as Record<string, unknown> });
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     await expect(page.getByTestId('needs-you-action')).toBeVisible({ timeout: 15_000 });
 
     const box = page.locator('.copy-command__text').first();

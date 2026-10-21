@@ -29,7 +29,7 @@ test.describe('Intelligence control-plane page', () => {
     });
     // What needs a person is one list, in Needs you; this page links there.
     await expect(page.getByTestId('priority-pr-63-checks-missing')).toHaveCount(0);
-    await expect(page.getByTestId('intelligence-needs-you').getByRole('link', { name: 'Needs you' })).toHaveAttribute('href', '/needs-you');
+    await expect(page.getByTestId('intelligence-needs-you').getByRole('link', { name: 'Blocked' })).toHaveAttribute('href', '/blocked');
     await expect(page.getByText('none recorded yet')).toBeVisible();
     await expect(page.getByText('absence=evidence')).toHaveCount(0);
     await expect(page.getByTestId('operator-graph-console')).toBeVisible();

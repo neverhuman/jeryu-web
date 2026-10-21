@@ -55,7 +55,7 @@ export function NeedsYouAbout({
             tone={severityTone(row.severity)}
             now={now}
             familyFor={(item) => familyOf(item, repoFamilies)}
-            onPick={(family) => void navigate(`/needs-you?family=${encodeURIComponent(family)}`)}
+            onPick={(family) => void navigate(`/blocked?family=${encodeURIComponent(family)}`)}
             picked=""
           />
         ))}

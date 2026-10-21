@@ -77,6 +77,8 @@ export interface AttentionItem {
   budget?: AttentionBudget | null;
   /** Set on a todo item when a person has taken the todo on (attention v1.4). */
   assignee?: string | null;
+  /** Canonical todo creator login (attention v1.7). */
+  requested_by?: string | null;
   /** Set on `pr_needs_owner_decision` only (attention v1.5). */
   decision?: AttentionDecision | null;
   /** In-app path to the place to act. */

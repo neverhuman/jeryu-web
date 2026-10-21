@@ -57,7 +57,7 @@ describe('LiveActivityDock', () => {
             generated_at: '2026-09-19T13:15:00Z',
             counts: { critical: 0, action: 100, watch: 0 },
             items: Array.from({ length: 100 }, (_, index) =>
-              attentionItem({ id: `todo-blocked:acme:${index}`, kind: 'todo_blocked' })
+              attentionItem({ id: `todo-blocked:acme:${index}`, kind: 'todo_blocked', assignee: 'operator' })
             ),
           })
         : undefined
@@ -77,7 +77,7 @@ describe('LiveActivityDock', () => {
     expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search === '?limit=16')).toBe(true);
     // The count is the Needs you list (3 urgent rows), not how many of the
     // last few events were flagged, and it opens that list.
-    expect(screen.getByText('3 need you')).toBeInTheDocument();
+    expect(screen.getByText('1 need you')).toBeInTheDocument();
     expect(screen.getByTestId('activity-dock-needs-you')).toHaveAttribute('href', '/needs-you');
     expect(screen.getByRole('link', { name: 'All activity' })).toHaveAttribute('href', '/activity');
 

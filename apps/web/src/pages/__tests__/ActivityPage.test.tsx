@@ -375,9 +375,9 @@ describe('ActivityPage', () => {
     expect(screen.getByRole('button', { name: 'Needed a human' })).toHaveAttribute('aria-pressed', 'true');
     // The log does not answer "what needs a human now": Needs you does, on the same family.
     expect(screen.getByTestId('activity-needs-you')).toHaveTextContent('waiting on a person right now');
-    expect(screen.getByRole('link', { name: 'Needs you' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Blocked' })).toHaveAttribute(
       'href',
-      '/needs-you?family=jeryu'
+      '/blocked?family=jeryu'
     );
     // The family is a pill at the far left of the chip row, not a select.
     const strip = screen.getByRole('group', { name: 'Filter by family' });

@@ -66,7 +66,7 @@ function renderWith(item: AttentionItem, refuse = false): ReturnType<typeof mock
       ? errorResponse(403, 'only a forge admin records an owner decision')
       : json({ decision: 'yes' });
   });
-  renderAt('/needs-you', '/needs-you', <NeedsYouPage />);
+  renderAt('/needs-you', '/needs-you', <NeedsYouPage blocked />);
   return calls;
 }
 
@@ -159,3 +159,5 @@ describe('an owner decision on /needs-you', () => {
     });
   });
 });
+
+vi.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { login: 'operator', role: 'admin' } }) }));

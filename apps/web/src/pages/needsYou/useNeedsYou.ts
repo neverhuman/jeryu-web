@@ -1,8 +1,5 @@
-// useNeedsYou.ts — one reading of "what needs a human" for the pages that are
-// not Needs you. Work's red chip and Activity's human filter used to each
-// decide for themselves which rows wait on a person, so the three could
-// disagree; both now take the count from here and link to `/needs-you`, which
-// is the answer the operator was promised.
+// The family-wide attention summary used by Work and Activity. These links
+// open Blocked; the personal Needs you view and badges filter by viewer.
 
 import { useMemo } from 'react';
 
@@ -10,8 +7,8 @@ import { useAttention } from '../../hooks/usePipeline';
 import { useRepositories } from '../../hooks/useRepositories';
 import {
   attentionTodoIds,
+  blockedHref,
   filterByFamily,
-  needsYouHref,
   repoFamilyMap,
   summaryFamilyCounts,
   urgentAttention,
@@ -56,7 +53,7 @@ export function useNeedsYou(family = '', area?: AttentionArea): NeedsYouSummary 
       families
     ).length;
   }, [attention.data, area, family, families]);
-  return { count, href: needsYouHref(family) };
+  return { count, href: blockedHref(family) };
 }
 
 /**

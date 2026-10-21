@@ -28,7 +28,7 @@ test.describe('Pipeline visibility', () => {
     // Needs you polls every 15 s; the socket is only a nudge. Change what the
     // read answers, then push one `pipeline` event: the row must follow well
     // inside the poll interval, which only the nudge can do.
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
     let recovered = false;
     await page.route(/\/api\/v1\/attention(\?.*)?$/, (route) => {
@@ -43,7 +43,7 @@ test.describe('Pipeline visibility', () => {
       });
     });
 
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     const critical = page.getByTestId('needs-you-critical');
     await expect(critical).toContainText('No healthy worker slot for jain', { timeout: 15_000 });
 
@@ -63,13 +63,15 @@ test.describe('Pipeline visibility', () => {
   test('admins land on Needs you: red rows, one action each, badge on every page @action:needs_you.render @action:needs_you.badge', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
     await page.goto('/');
     await expect(page).toHaveURL(/\/needs-you$/);
     await expect(page.getByTestId('needs-you-page')).toBeVisible({ timeout: 15_000 });
 
+    await page.getByRole('link', { name: 'Blocked', exact: true }).click();
+    await expect(page).toHaveURL(/\/blocked$/);
     const critical = page.getByTestId('needs-you-critical');
     await expect(critical).toContainText('No healthy worker slot for jain');
     await expect(critical).toContainText('Workers down');
@@ -127,7 +129,7 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('needs-you-badge')).toHaveText('1');
     await expect(page.getByTestId('needs-you-badge')).toHaveAttribute(
       'aria-label',
-      '1 item need you. +2 need you in other families.'
+      '1 item need you.'
     );
     // Each page carries its own share in the nav; a page with nothing of this
     // family's on it says how many wait elsewhere.
@@ -148,7 +150,7 @@ test.describe('Pipeline visibility', () => {
   test('a Needs-you row about a todo is acknowledged until a date @action:needs_you.acknowledge', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
     const shift = await mockShiftApi(page);
     const acks: unknown[] = [];
@@ -157,7 +159,7 @@ test.describe('Pipeline visibility', () => {
       return route.fulfill({ status: 201, contentType: 'application/json', body: '{}' });
     });
 
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     const blocked = page.getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66');
     await expect(blocked).toBeVisible({ timeout: 15_000 });
     // It is folded away: a row still reads as one title, one reason, one act.
@@ -184,7 +186,7 @@ test.describe('Pipeline visibility', () => {
     // The row names one API call; its button makes it, once, behind a confirm
     // step, and the title still leads to the pull request behind the row.
     const queuePath = '/api/v1/repos/jeryu:acme%2Fweb/pulls/7/queue';
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page, { attention: queueFailedBody() });
     const posts: Array<{ method: string; key: string | undefined }> = [];
     let refuse = true;
@@ -212,7 +214,7 @@ test.describe('Pipeline visibility', () => {
       });
     });
 
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     const row = page.getByTestId('needs-you-item-queue_failed:acme/web:7');
     await expect(row).toBeVisible({ timeout: 15_000 });
     // The next step only repeats the button and the title link, so the second
@@ -239,7 +241,7 @@ test.describe('Pipeline visibility', () => {
     await expect(row.getByRole('alert')).toContainText(
       'enqueueing needs write access to the repository'
     );
-    expect(new URL(page.url()).pathname).toBe('/needs-you');
+    expect(new URL(page.url()).pathname).toBe('/blocked');
 
     // Asked again it is one more call and no more, on a fresh key.
     refuse = false;
@@ -257,10 +259,10 @@ test.describe('Pipeline visibility', () => {
     // that could not finish and a failed queue entry. Three red rows with
     // three different acts would read as three problems, so they are one row:
     // the act of the first by precedence, the rest named under it.
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page, { attention: reviewHoldBody() });
 
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     const rows = page.getByTestId('needs-you-page').locator('.needs-you__row');
     await expect(rows).toHaveCount(1, { timeout: 15_000 });
     const row = page.getByTestId('needs-you-item-reviewer_stuck:acme/widgets:7');
@@ -290,17 +292,17 @@ test.describe('Pipeline visibility', () => {
     // The row waits as long as the oldest of the three.
     await expect(row.locator('time')).toHaveAttribute('datetime', /.+/);
     // The badge still counts the items the server counted.
-    await expect(page.getByTestId('needs-you-badge')).toHaveText('3');
+    await expect(page.getByTestId('needs-you-badge')).toHaveCount(0);
   });
 
   test('narrow screens: the header never overflows and a Needs-you title keeps its width @action:chrome.narrow_header', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
     for (const width of [900, 480]) {
       await page.setViewportSize({ width, height: 800 });
-      await page.goto('/needs-you');
+      await page.goto('/blocked');
       await expect(page.getByTestId('needs-you-page')).toBeVisible({ timeout: 15_000 });
       const header = page.locator('.global-header');
       const overflow = await header.evaluate((el) => el.scrollWidth - el.clientWidth);
@@ -336,12 +338,14 @@ test.describe('Pipeline visibility', () => {
     await expect(page).toHaveURL(/\/repos$/);
     await expect(page.getByTestId('needs-you-badge')).toHaveCount(0);
     // The destinations whose reads are admin-only are not offered at all.
-    for (const label of ['Needs you', 'Activity', 'Work']) {
+    for (const label of ['Needs you', 'Blocked', 'Activity', 'Work']) {
       await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: label })).toHaveCount(0);
     }
 
+    // An admin on a server without pipeline endpoints gets the availability message.
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     // No pipeline mocks: the shared fallback answers 404, like an old server.
-    await page.goto('/needs-you');
+    await page.goto('/blocked');
     await expect(page.getByText('Not available on this server version.')).toBeVisible({ timeout: 15_000 });
     await page.goto('/activity');
     await expect(page.getByText('Not available on this server version.')).toBeVisible({ timeout: 15_000 });
@@ -351,7 +355,7 @@ test.describe('Pipeline visibility', () => {
   test('Activity lists events with log tails, filters through the URL, and has a wall mode @action:activity.feed @action:activity.filters @action:activity.volume @action:activity.wall', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     const log = await mockPipelineApi(page);
 
     await page.goto('/activity');
@@ -436,7 +440,7 @@ test.describe('Pipeline visibility', () => {
     await expect(strip).toContainText('42');
     await expect(strip).toContainText('$12.34');
     await expect(strip).not.toContainText('loaded here');
-    await expect(strip.getByRole('link', { name: /Blocked/ })).toHaveAttribute('href', '/needs-you');
+    await expect(strip.getByRole('link', { name: /Blocked/ })).toHaveAttribute('href', '/blocked');
 
     await page.getByTestId('activity-page').screenshot({ path: 'playwright-report/activity.png' });
 
@@ -465,7 +469,7 @@ test.describe('Pipeline visibility', () => {
     await expect(note).toContainText('waiting on a person right now');
     // The same 3 rows the nav badge and Needs you show, not a fourth count.
     await expect(note).toContainText('(3)');
-    await expect(note.getByRole('link', { name: 'Needs you' })).toHaveAttribute('href', '/needs-you');
+    await expect(note.getByRole('link', { name: 'Blocked' })).toHaveAttribute('href', '/blocked');
     // A chip is a whole view: it replaces the kind filter rather than stacking on it.
     await expect(page).not.toHaveURL(/kind=/);
     await expect(page.getByTestId('activity-event-12')).toBeVisible();
@@ -517,7 +521,7 @@ test.describe('Pipeline visibility', () => {
     // it is asked for: the reader got a blank band under the words. The line
     // wraps the summary's words, not the row's parts.
     await page.setViewportSize({ width: 1440, height: 900 });
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page, {
       events: [
         pipelineEvent({
@@ -570,7 +574,7 @@ test.describe('Pipeline visibility', () => {
     // paint, put the pills beside the chips and push the row’s neighbours onto
     // a new line, moving the feed under them. Hold the answer, measure, let it
     // land, measure again: the controls must be where they were drawn.
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
     let answer = (): void => {};
     const held = new Promise<void>((resolve) => {
@@ -647,7 +651,7 @@ test.describe('Pipeline visibility', () => {
         configurable: true,
       });
     });
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
     const copied = (): Promise<string | undefined> =>
       page.evaluate(() => (window as unknown as { __copied?: string }).__copied);
@@ -699,7 +703,7 @@ test.describe('Pipeline visibility', () => {
         configurable: true,
       });
     });
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
     await page.goto('/activity');
@@ -739,7 +743,7 @@ test.describe('Pipeline visibility', () => {
   test('Activity freezes the list on Pause and picks the tail back up on Resume @action:activity.pause', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
     await page.goto('/activity');
@@ -769,7 +773,7 @@ test.describe('Pipeline visibility', () => {
   test('Activity is walkable from the keyboard: j/k, the arrows, Enter and / @action:activity.row_keys', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
     await page.goto('/activity');
@@ -818,7 +822,7 @@ test.describe('Pipeline visibility', () => {
     page,
     realtime,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     let spent = false;
     await mockPipelineApi(page);
     // The usage read answers more tokens once the socket says a slot reported:
@@ -872,7 +876,7 @@ test.describe('Pipeline visibility', () => {
   test('the live dock is one quiet line on any page, opens to the newest events, and remembers @action:chrome.activity_dock', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
     await page.goto('/settings');
@@ -884,7 +888,7 @@ test.describe('Pipeline visibility', () => {
     await expect(dock.getByRole('log')).toHaveCount(0);
     // The count is the Needs you list, the same number the nav badge shows,
     // and the pill opens that list.
-    await expect(dock).toContainText('3 need you');
+    await expect(dock).toContainText('1 need you');
     await expect(dock.getByTestId('activity-dock-needs-you')).toHaveAttribute(
       'href',
       '/needs-you'
@@ -925,7 +929,7 @@ test.describe('Pipeline visibility', () => {
   test('Releases says what is merged but not pinned, with one next step @action:releases.ready_to_pin', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
     await mockRepo(page, 'jeryu-deploy', {
       environments: [production],
@@ -963,7 +967,7 @@ test.describe('Pipeline visibility', () => {
   test('an open bump PR is the next step, and an older server stays quiet @action:releases.ready_to_pin', async ({
     page,
   }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page, {
       pins: pinsBody({ number: 53, state: 'open', url: '/repos/jeryu/jeryu/jeryu-deploy/pulls/53' }),
     });

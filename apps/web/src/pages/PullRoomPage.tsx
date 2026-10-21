@@ -17,7 +17,7 @@ import { useForgeHost } from '../hooks/useForgeHost';
 import { useRepositories } from '../hooks/useRepositories';
 import { useShiftTodos } from '../hooks/useShift';
 import { useRepoFamilies } from './needsYou/AttentionRow';
-import { filterByFamily, needsYouHref, urgentInArea } from './needsYou/needsYouModel';
+import { filterByFamily, blockedHref, urgentInArea } from './needsYou/needsYouModel';
 import { useAttentionTodoIds } from './needsYou/useNeedsYou';
 import { attentionByPull, attentionOffRows, pullAttentionKey } from './pullAttentionModel';
 import { PullRequestListView } from './PullRequestListView';
@@ -383,7 +383,7 @@ export function PullRoomPage(): JSX.Element {
         <p className="pull-room__needs-off" data-testid="pull-room-needs-off">
           <span className={pillClass('human')}>{waitingOffRows.length}</span>{' '}
           {board ? 'waiting on you' : 'more waiting on you, not on a row below'} ·{' '}
-          <Link to={needsYouHref(family)}>open Needs you</Link>
+          <Link to={blockedHref(family)}>open Blocked</Link>
         </p>
       ) : null}
 

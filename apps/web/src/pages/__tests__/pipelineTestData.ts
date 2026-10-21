@@ -54,6 +54,7 @@ export const ATTENTION: AttentionResponse = {
     attentionItem({
       id: 'todo-blocked:jeryu:20260919-130515-f8cc66',
       kind: 'todo_blocked',
+        requested_by: 'operator',
       severity: 'action',
       title: 'Allow PATCH of repo default_branch',
       reason: 'Both halves of this todo need jeryu-core changes.',

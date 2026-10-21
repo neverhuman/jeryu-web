@@ -203,6 +203,11 @@ test.describe('Primary left navigation', () => {
         testId: 'needs-you-page',
       },
       {
+        label: 'Blocked',
+        path: '/blocked',
+        testId: 'needs-you-page',
+      },
+      {
         label: 'Activity',
         path: '/activity',
         testId: 'activity-page',

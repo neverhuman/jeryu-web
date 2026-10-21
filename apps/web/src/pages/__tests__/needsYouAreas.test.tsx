@@ -80,6 +80,7 @@ const THREE_IN_WORK = attention([
   attentionItem({
     id: 'todo_blocked:acme:1',
     kind: 'todo_blocked',
+    requested_by: 'operator',
     severity: 'action',
     title: 'Split the acme gate',
     family: 'acme',
@@ -88,6 +89,7 @@ const THREE_IN_WORK = attention([
   attentionItem({
     id: 'todo_handoff:acme:2',
     kind: 'todo_handoff',
+    assignee: 'operator',
     severity: 'action',
     title: 'Hand back the acme bump',
     family: 'acme',
@@ -115,6 +117,7 @@ const ONE_PER_AREA: Record<AttentionArea, AttentionItem> = {
   work: attentionItem({
     id: 'todo_blocked:globex:1',
     kind: 'todo_blocked',
+    requested_by: 'operator',
     severity: 'action',
     title: 'Blocked globex todo',
     family: 'globex',
@@ -213,20 +216,20 @@ describe('every needs-you count', () => {
     vi.restoreAllMocks();
     mockAttention(THREE_IN_WORK);
     renderAt('/work', '/work', <LeftNav />);
-    expect(await screen.findByTestId('needs-you-badge')).toHaveTextContent('3');
+    expect(await screen.findByTestId('needs-you-badge')).toHaveTextContent('2');
     expect(screen.getByTestId('nav-badge-work')).toHaveTextContent('3');
 
     vi.restoreAllMocks();
     mockAttention(THREE_IN_WORK);
     renderAt('/work', '/work', <LiveActivityDock />);
     // One event is flagged; the dock still says three, and opens that list.
-    expect(await screen.findByText('3 need you')).toBeInTheDocument();
+    expect(await screen.findByText('2 need you')).toBeInTheDocument();
     expect(screen.getByTestId('activity-dock-needs-you')).toHaveAttribute('href', '/needs-you');
 
     vi.restoreAllMocks();
     mockAttention(THREE_IN_WORK);
     renderAt('/needs-you', '/needs-you', <NeedsYouPage />);
-    expect(await screen.findByTestId('needs-you-count')).toHaveTextContent('3');
+    expect(await screen.findByTestId('needs-you-count')).toHaveTextContent('2');
   });
 
   it('is capped the same way everywhere once it passes two digits', async () => {
@@ -238,6 +241,7 @@ describe('every needs-you count', () => {
         attentionItem({
           id: `todo_blocked:acme:${index}`,
           kind: 'todo_blocked',
+    requested_by: 'operator',
           severity: 'action',
           title: `Blocked acme todo ${index}`,
           family: 'acme',
@@ -260,7 +264,7 @@ describe('every needs-you count', () => {
     mockAttention(hundred);
     renderAt('/activity?needs_human=1', '/activity', <ActivityPage />);
     await waitFor(() =>
-      expect(screen.getByTestId('activity-needs-you')).toHaveTextContent('Needs you (99+).')
+      expect(screen.getByTestId('activity-needs-you')).toHaveTextContent('Blocked (99+).')
     );
   });
 
@@ -288,9 +292,9 @@ describe('every needs-you count', () => {
         // the one globex row is that count.
         const off = await screen.findByTestId('pull-room-needs-off');
         expect(within(off).getByText('1')).toBeInTheDocument();
-        expect(within(off).getByRole('link', { name: 'open Needs you' })).toHaveAttribute(
+        expect(within(off).getByRole('link', { name: 'open Blocked' })).toHaveAttribute(
           'href',
-          '/needs-you'
+          '/blocked'
         );
       } else {
         const strip = await screen.findByTestId(`needs-you-here-${area}`);

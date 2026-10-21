@@ -31,6 +31,7 @@ import { relativeText } from '../../format/when';
 import { AttentionRow, useRepoFamilies, type FamilyProps } from './AttentionRow';
 import {
   groupSubjects,
+  personalAttention,
   familyCounts,
   summaryFamilyCounts,
   familyOf,
@@ -42,13 +43,17 @@ import {
 } from './needsYouModel';
 import { useListKeys } from '../../hooks/useListKeys';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { useAuth } from '../../hooks/useAuth';
 
 import '../page.css';
 import './NeedsYou.css';
 
-export function NeedsYouPage(): JSX.Element {
-  usePageTitle('Needs you');
-  const attention = useAttention();
+export function NeedsYouPage({ blocked = false }: { blocked?: boolean }): JSX.Element {
+  const title = blocked ? 'Blocked' : 'Needs you';
+  usePageTitle(title);
+  const { user, isPending: authPending } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const attention = useAttention(isAdmin);
   usePipelineNudge(attention.isSuccess, ATTENTION_QUERY_KEY);
   // The shell's family scope keeps one family's rows: a pill on any row, or in
   // the strip above, sets it, so "everything waiting on me for one family" is
@@ -59,13 +64,14 @@ export function NeedsYouPage(): JSX.Element {
   const setFamily = (next: string): void => {
     scope.setFamily(next === family ? '' : next);
   };
-  const allItems = attention.data?.items ?? [];
+  const data = blocked ? attention.data : personalAttention(attention.data, user?.login);
+  const allItems = data?.items ?? [];
   // The pills count the rows this page shows in red: the server's per-family
   // row counts over the whole inbox, else `urgentAttention`, the one
   // derivation of that set, so a row with an unknown severity is counted as
   // the `watch` row it is displayed as.
   const counts =
-    summaryFamilyCounts(attention.data) ?? familyCounts(urgentAttention(attention.data), repoFamilies);
+    summaryFamilyCounts(data) ?? familyCounts(urgentAttention(data), repoFamilies);
   const groups = groupSubjects(filterByFamily(allItems, family, repoFamilies));
   const urgent = groups.filter((group) => group.severity !== 'watch');
   const watch = groups.find((group) => group.severity === 'watch');
@@ -77,11 +83,20 @@ export function NeedsYouPage(): JSX.Element {
   // `j`/`k` list, in the order it is read.
   const rows = useListKeys<HTMLDivElement>();
 
+  if (authPending) return <LoadingState title="Checking access…" variant="message" />;
+  if (!isAdmin) {
+    return <p role="alert">Only admins can see the {title} list.</p>;
+  }
+
   return (
     <div className="page page--wide" data-testid="needs-you-page" ref={rows}>
       <PageHeader
-        title="Needs you"
-        subtitle="Where the pipeline is waiting on a person. Rows clear themselves when the cause is fixed."
+        title={title}
+        subtitle={
+          blocked
+            ? 'Where the pipeline is waiting on a person. Rows clear themselves when the cause is fixed.'
+            : 'Attention for todos you filed or blocked work assigned to you.'
+        }
         testId="needs-you-header"
         freshness={queryFreshness(attention)}
         badges={
@@ -106,7 +121,7 @@ export function NeedsYouPage(): JSX.Element {
             <>
               <ScopedEmptyState
                 icon={CircleCheck}
-                title="Nothing needs you."
+                title={blocked ? 'Nothing is blocked.' : 'Nothing needs you.'}
                 description={`Checked ${relativeText(attention.data.generated_at, now)}.`}
               />
               <SystemPulse now={now} />

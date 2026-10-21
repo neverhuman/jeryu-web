@@ -150,7 +150,7 @@ describe('SummaryStrip', () => {
       return link;
     });
     expect(blocked).toHaveClass('activity__counter--human');
-    expect(blocked).toHaveAttribute('href', '/needs-you');
+    expect(blocked).toHaveAttribute('href', '/blocked');
 
     cleanup();
     vi.restoreAllMocks();

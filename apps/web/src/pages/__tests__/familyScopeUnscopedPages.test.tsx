@@ -259,6 +259,7 @@ const ACROSS_FAMILIES: AttentionItem[] = [
   attentionItem({
     id: 'todo_blocked:acme:1',
     kind: 'todo_blocked',
+    requested_by: 'operator',
     severity: 'action',
     title: 'Blocked acme todo',
     family: 'acme',
@@ -275,6 +276,7 @@ const ACROSS_FAMILIES: AttentionItem[] = [
   attentionItem({
     id: 'todo_blocked:globex:3',
     kind: 'todo_blocked',
+    requested_by: 'operator',
     severity: 'action',
     title: 'Blocked globex todo',
     family: 'globex',
@@ -469,10 +471,10 @@ describe('the left nav’s counts under a family scope', () => {
     // Two of the four rows are acme's: its own todo, and the pull request of
     // its repository, which names no family itself.
     const needsYou = await screen.findByTestId('needs-you-badge');
-    expect(needsYou).toHaveTextContent('2');
+    expect(needsYou).toHaveTextContent('1');
     expect(needsYou).toHaveAttribute(
       'aria-label',
-      '2 items need you. +2 need you in other families.'
+      '1 item need you. +1 need you in other families.'
     );
 
     // Work: acme's one blocked todo, globex's other one said beside it.
@@ -486,8 +488,8 @@ describe('the left nav’s counts under a family scope', () => {
     renderAt('/needs-you', '/needs-you', <LeftNav />);
 
     const needsYou = await screen.findByTestId('needs-you-badge');
-    expect(needsYou).toHaveTextContent('4');
-    expect(needsYou).toHaveAttribute('aria-label', '4 items need you.');
+    expect(needsYou).toHaveTextContent('2');
+    expect(needsYou).toHaveAttribute('aria-label', '2 items need you.');
   });
 
   it('says a destination has nothing here but something elsewhere', async () => {
