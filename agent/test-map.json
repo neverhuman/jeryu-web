@@ -184,6 +184,16 @@
       "command": "just security",
       "lane": "security",
       "purpose": "verify the family-standard security lane (gitleaks, npm audit, cargo audit, SBOM) still runs"
+    },
+    "CONTRIBUTING.md": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify root navigation remains current"
+    },
+    "SECURITY.md": {
+      "command": "just check",
+      "lane": "check",
+      "purpose": "verify root navigation remains current"
     }
   },
   "workspace": "jeryu-web"

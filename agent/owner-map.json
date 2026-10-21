@@ -35,7 +35,9 @@
     "ux-qa/": "jeryu-web",
     "agent/tool-adoption.toml": "agent",
     "db/": "jeryu-web",
-    "tools/": "ops"
+    "tools/": "ops",
+    "CONTRIBUTING.md": "docs",
+    "SECURITY.md": "docs"
   },
   "workspace": "jeryu-web"
 }
