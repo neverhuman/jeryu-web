@@ -64,6 +64,7 @@ bash ops/ci/fast.sh
 JERYU_SPLIT_FULL_CHECK=1 bash ops/ci/check.sh
 bash ops/ci/score.sh
 bash ops/ci/security.sh
+bash ops/ci/proof_evidence.sh
 bash ops/ci/artifact_support.sh
 
 echo "[pr-ci] web required checks" >&2
