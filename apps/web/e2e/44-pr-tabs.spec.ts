@@ -210,7 +210,7 @@ test('the merge box states the verdict once and lists what is waiting @action:pr
   const box = page.getByTestId('pr-merge-box');
   await expect(box).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('pr-merge-headline')).toHaveText(
-    'Blocked: 2 things need doing'
+    /^Blocked at [0-9a-f]{7}: 2 things need doing$/
   );
 
   // Exactly two rows are waiting on somebody, and each links to its tab.
@@ -227,7 +227,9 @@ test('the merge box states the verdict once and lists what is waiting @action:pr
   );
 
   // BLOCKED was on the page four times; it is one sentence now.
-  expect(await blockedStatements(page)).toEqual(['Blocked: 2 things need doing']);
+  expect(await blockedStatements(page)).toEqual([
+    expect.stringMatching(/^Blocked at [0-9a-f]{7}: 2 things need doing$/),
+  ]);
 
   // The primary action is the approval of this exact head, with Request
   // changes beside it — and Merge still on the page, disabled, saying what

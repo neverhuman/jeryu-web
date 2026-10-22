@@ -139,13 +139,15 @@ describe('mergeChecklist', () => {
 });
 
 describe('mergeHeadline', () => {
-  it('counts the blockers, singular and plural', () => {
+  // The head is named in the verdict: a reader who came from a review of an
+  // earlier head has to be able to see which head this is about.
+  it('counts the blockers, singular and plural, and names the current head', () => {
     expect(mergeHeadline(pullDetail(), rowsFor())).toBe(
-      'Blocked: 2 things need doing'
+      'Blocked at abcdef1: 2 things need doing'
     );
     const oneLeft = mergeChecklist(pullDetail(), pullChecks(), HREFS);
     expect(mergeHeadline(pullDetail(), oneLeft)).toBe(
-      'Blocked: 1 thing needs doing'
+      'Blocked at abcdef1: 1 thing needs doing'
     );
   });
 
@@ -157,7 +159,7 @@ describe('mergeHeadline', () => {
     });
     expect(
       mergeHeadline(detail, mergeChecklist(detail, pullChecks(), HREFS))
-    ).toBe('Ready to merge');
+    ).toBe('Ready to merge at abcdef1');
   });
 
   it('states a settled pull request rather than a verdict', () => {

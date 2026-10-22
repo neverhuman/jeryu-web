@@ -245,8 +245,11 @@ export function mergeHeadline(
     return detail.summary.state === 'merged' ? 'Merged' : 'Closed';
   }
   const count = mergeBlockers(rows).length;
-  if (count === 0) return 'Ready to merge';
+  const head = detail.summary.head_sha.slice(0, 7);
+  if (count === 0) return `Ready to merge at ${head}`;
+  // Named head, always: every row below is about one head, and a reader who
+  // came from a stale verdict has to be able to see which head this is.
   return count === 1
-    ? 'Blocked: 1 thing needs doing'
-    : `Blocked: ${count} things need doing`;
+    ? `Blocked at ${head}: 1 thing needs doing`
+    : `Blocked at ${head}: ${count} things need doing`;
 }

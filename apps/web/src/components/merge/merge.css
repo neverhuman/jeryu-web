@@ -1305,3 +1305,47 @@
 .merge-box__owner-row--owner .merge-box__owner-icon {
   color: var(--color-accent-primary);
 }
+
+/* ── Review by head: one line per head, the current one in force. ──────── */
+
+.review-heads__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.review-heads__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-heads__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+/* A verdict on a head that has been replaced is history: it is readable, and
+   visibly not the answer. */
+.review-heads__item--stale {
+  color: var(--color-fg-muted);
+}
+
+.review-heads__state {
+  font-weight: var(--font-weight-medium);
+}
+
+.review-heads__item--stale .review-heads__state {
+  font-weight: var(--font-weight-regular);
+}
+
+.review-heads__note {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}

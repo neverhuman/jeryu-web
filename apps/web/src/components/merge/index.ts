@@ -26,6 +26,10 @@ export {
 export type { OwnerPathRow } from './ownerPathsModel';
 export { QueueToMerge } from './QueueToMerge';
 export type { QueueToMergeProps } from './QueueToMerge';
+export { ReviewHeads } from './ReviewHeads';
+export type { ReviewHeadsProps } from './ReviewHeads';
+export { reviewHeadLine, reviewHeads } from './reviewHeadsModel';
+export type { ReviewHeadRow, ReviewHeadState } from './reviewHeadsModel';
 export { ReviewList } from './ReviewList';
 export type { ReviewListProps } from './ReviewList';
 export { ThreadList } from './ThreadList';

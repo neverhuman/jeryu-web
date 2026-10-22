@@ -1,7 +1,8 @@
 // PullConversationTab.tsx — the front page of a pull request: what it says it
 // does, where the merge stands, the threads, and the pipeline's record of it.
 //
-// One column, in reading order: the description, the reviews with what each
+// One column, in reading order: the description, where the review stands on
+// each head the pull request has had, the reviews with what each
 // reviewer wrote, the one merge box (which carries the merge queue's own act
 // when the queue is the way to land this change), the review
 // threads (each linking into the Files tab), where the change stands on the
@@ -11,7 +12,7 @@
 
 import { useCallback, type ReactNode } from 'react';
 
-import { MergeBox, ReviewList, ThreadList } from '../components/merge';
+import { MergeBox, ReviewHeads, ReviewList, ThreadList } from '../components/merge';
 import type { MergeBoxProps } from '../components/merge/MergeBox';
 import { ErrorState, LoadingState } from '../components/state';
 import type { PullRequestReview, ReviewThread } from '../api/types';
@@ -66,6 +67,8 @@ export function PullConversationTab({
           <p>{description}</p>
         </section>
       ) : null}
+
+      <ReviewHeads detail={merge.detail} conversationHref={base} />
 
       <ReviewList reviews={reviews} fileHref={findingHref} />
 

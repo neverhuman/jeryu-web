@@ -253,6 +253,7 @@ const KIND_LABEL: Record<string, string> = {
   pr_already_landed: 'Already on the base branch',
   queue_failed: 'Merge queue failed',
   reviewer_stuck: 'Reviewer stuck',
+  reviewer_rereviewing: 'Reviewing the current head',
   gate_runner_down: 'Gate runners down',
   workers_down: 'Workers down',
   release_staged: 'Release ready to deploy',

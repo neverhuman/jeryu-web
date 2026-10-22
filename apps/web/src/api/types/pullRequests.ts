@@ -210,10 +210,28 @@ export interface CanonicalLinks {
 /** A pull request row or summary, with its replacement and canonical links. */
 export type PullSummaryRow = PullRequestSummary & PullReplacement & CanonicalLinks;
 
+/**
+ * The review pass the automated reviewer reports as running on this pull
+ * request: the one review fact the review rows cannot carry, because the pass
+ * has not finished. `sha` is the head being read, which is not always the pull
+ * request's own head — the page compares the two and says which. Absent from
+ * an older forge; null when no reviewer is reading this pull request.
+ */
+export interface PullReviewActivity {
+  sha: string;
+  /** When the pass started (RFC3339). */
+  started_at: string;
+  /** Which reviewer is reading it; absent for an anonymous reader. */
+  runner_id?: string | null;
+}
+
 /** The pull request page's payload, with both link sets on both levels. */
 export type PullDetailPayload = PullRequestDetail &
   PullReplacement &
-  CanonicalLinks & { summary: PullSummaryRow };
+  CanonicalLinks & {
+    summary: PullSummaryRow;
+    review_activity?: PullReviewActivity | null;
+  };
 
 /** Wire shape of `GET /api/v1/repos/{id}/pulls`. */
 export interface PullRequestListResponse {

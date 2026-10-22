@@ -230,5 +230,7 @@ test('a running required gate keeps Merge on the page, disabled, and says how lo
   await expect(merge).toBeEnabled({ timeout: 15_000 });
   await expect(page.getByTestId('pr-owner-paths')).toHaveCount(0);
   await expect(page.getByTestId('pr-merge-gate')).toHaveCount(0);
-  await expect(page.getByTestId('pr-merge-headline')).toHaveText('Ready to merge');
+  await expect(page.getByTestId('pr-merge-headline')).toHaveText(
+    /^Ready to merge at [0-9a-f]{7}$/
+  );
 });

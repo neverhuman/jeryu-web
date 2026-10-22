@@ -76,7 +76,7 @@ describe('MergeBox', () => {
   it('states the verdict once, with a checklist of what is waiting', () => {
     show();
     expect(screen.getByTestId('pr-merge-headline')).toHaveTextContent(
-      'Blocked: 2 things need doing'
+      `Blocked at ${HEAD_SHA.slice(0, 7)}: 2 things need doing`
     );
     expect(blockedStatements()).toHaveLength(1);
 
