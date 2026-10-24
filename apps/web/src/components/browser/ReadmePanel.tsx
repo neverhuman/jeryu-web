@@ -25,10 +25,19 @@ export interface ReadmePanelProps {
   ref?: string;
   /** SPA path relative README links resolve against, ending in `/`. */
   linkBase?: string;
+  /**
+   * A folder (no trailing `/`): show its README, as a folder view does, with
+   * its relative images and links resolved from that folder.
+   */
+  dir?: string;
 }
 
-export function ReadmePanel({ repoId, ref, linkBase }: ReadmePanelProps): JSX.Element {
-  const query = useMarkdown(repoId, ref);
+export function ReadmePanel({ repoId, ref, linkBase, dir = '' }: ReadmePanelProps): JSX.Element {
+  const query = useMarkdown(repoId, ref, dir);
+  const noReadme = dir ? `No README in ${dir}` : 'No README found';
+  const noReadmeWhy = dir
+    ? 'This folder does not include a README at the selected ref.'
+    : 'This repository does not include a README at the selected ref.';
 
   if (query.isPending) {
     return <LoadingState title="Loading README…" rows={6} />;
@@ -39,11 +48,7 @@ export function ReadmePanel({ repoId, ref, linkBase }: ReadmePanelProps): JSX.El
     if (err instanceof ApiError) {
       if (err.status === 404 || err.code === 'not_found') {
         return (
-          <EmptyState
-            title="No README found"
-            description="This repository does not include a README at the selected ref."
-            icon={FileText}
-          />
+          <EmptyState title={noReadme} description={noReadmeWhy} icon={FileText} />
         );
       }
       if (err.status === 403 || err.code === 'permission_denied') {
@@ -66,11 +71,7 @@ export function ReadmePanel({ repoId, ref, linkBase }: ReadmePanelProps): JSX.El
   const data = query.data;
   if (!data || !data.html) {
     return (
-      <EmptyState
-        title="No README found"
-        description="This repository does not include a README at the selected ref."
-        icon={FileText}
-      />
+      <EmptyState title={noReadme} description={noReadmeWhy} icon={FileText} />
     );
   }
 
@@ -82,8 +83,9 @@ export function ReadmePanel({ repoId, ref, linkBase }: ReadmePanelProps): JSX.El
       <MarkdownSource
         markdown={source}
         linkBase={linkBase}
+        docDir={dir}
         imageSrc={
-          repoId && ref ? (path) => endpoints.raw(repoId, { ref, path }) : undefined
+          repoId && ref ? (path) => endpoints.rawPath(repoId, { ref, path }) : undefined
         }
       />
     );

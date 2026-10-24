@@ -73,6 +73,11 @@ describe('MarkdownSource', () => {
     expect(resolveMarkdownHref('../x.md', '/repos/jeryu/root/r/blob/main/docs/')).toBe('/repos/jeryu/root/r/blob/main/x.md');
     expect(resolveMarkdownHref('https://example.com', base)).toBe('https://example.com');
     expect(resolveMarkdownHref('#layout', base)).toBe('#layout');
+    // A folder link opens the folder view, where its README is shown.
+    expect(resolveMarkdownHref('shots/', base)).toBe('/repos/jeryu/root/r/tree/main/shots');
+    expect(resolveMarkdownHref('../', '/repos/jeryu/root/r/blob/main/docs/a/')).toBe(
+      '/repos/jeryu/root/r/tree/main/docs'
+    );
     expect(resolveMarkdownHref('docs/a.md')).toBe('docs/a.md');
   });
 });

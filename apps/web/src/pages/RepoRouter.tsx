@@ -134,8 +134,14 @@ export function RepoRouter(): JSX.Element {
       // The Files panel of the front page is the code browser.
       return <Navigate to={{ pathname: front, search }} replace />;
     case 'tree': {
-      // A link to a folder: the front page at that ref, that folder open in the Files panel.
+      // A link to a folder: that folder open in the Files panel and its
+      // README in the main column. A link to the root is the front page.
       const { ref, path } = parseRefAndPath(subTail);
+      if (path.replace(/\/+$/, '') !== '') {
+        return inShell(
+          <RepositoryBrowserPage provider={provider} fullName={fullName} treeSplat={subTail} />
+        );
+      }
       return (
         <Navigate
           to={{ pathname: front, search: ref ? `?ref=${encodeURIComponent(ref)}` : '' }}

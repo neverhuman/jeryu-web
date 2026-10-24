@@ -105,9 +105,14 @@ export const endpoints = {
       value.split('/').filter(Boolean).map(encodeURIComponent).join('/');
     return `/api/v1/repos/${encodeURIComponent(id)}/raw/${segments(params.ref)}/${segments(params.path)}`;
   },
-  readme: (id: string, ref?: string): string => {
+  /** The root README, or with `dir` that folder's README. */
+  readme: (id: string, ref?: string, dir?: string): string => {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/readme`;
-    return ref ? `${base}?ref=${encodeURIComponent(ref)}` : base;
+    const qs = new URLSearchParams();
+    if (ref) qs.set('ref', ref);
+    if (dir) qs.set('path', dir);
+    const query = qs.toString();
+    return query ? `${base}?${query}` : base;
   },
   /** Every Markdown page in the commit `ref` names, at any depth. */
   pages: (id: string, ref?: string): string => {

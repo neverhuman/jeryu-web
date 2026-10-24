@@ -55,12 +55,19 @@ export interface RepositoryBrowserPageProps {
   fullName: string;
   /** `<ref>/<path>` of the open file; absent on the front page. */
   blobSplat?: string;
+  /**
+   * `<ref>/<dir>` of an open folder (the tree route): the folder is revealed
+   * in the Files panel and its README fills the main column, as a folder view
+   * does on any forge.
+   */
+  treeSplat?: string;
 }
 
 export function RepositoryBrowserPage({
   provider,
   fullName,
   blobSplat,
+  treeSplat,
 }: RepositoryBrowserPageProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,12 +78,17 @@ export function RepositoryBrowserPage({
 
   const onFile = blobSplat !== undefined;
   const file = parseRefAndPath(blobSplat ?? '');
+  const folder = parseRefAndPath(onFile ? '' : (treeSplat ?? ''));
+  const folderPath = folder.path.replace(/\/+$/, '');
+  const onFolder = !onFile && folderPath !== '';
   const repoId = resolved.data?.id ?? null;
   const summary = resolved.data?.summary ?? null;
   const defaultBranch = summary?.default_branch ?? '';
   // One ref for the panel and the content: the URL's on a file page, `?ref=`
   // or the default branch on the front page.
-  const activeRef = onFile ? file.ref : searchParams.get('ref') || defaultBranch;
+  const activeRef = onFile
+    ? file.ref
+    : (onFolder ? folder.ref : '') || searchParams.get('ref') || defaultBranch;
   const front = repoFrontPath(provider, fullName);
 
   const [finderOpen, setFinderOpen] = useState(false);
@@ -114,13 +126,17 @@ export function RepositoryBrowserPage({
       navigate(blobPath(provider, fullName, next, file.path));
       return;
     }
+    if (onFolder) {
+      navigate(treePath(provider, fullName, next, folderPath));
+      return;
+    }
     const params = new URLSearchParams(searchParams);
     if (next === defaultBranch) params.delete('ref');
     else params.set('ref', next);
     setSearchParams(params, { replace: true });
   };
 
-  const testId = onFile ? 'repo-file-page' : 'repo-overview-page';
+  const testId = onFile ? 'repo-file-page' : onFolder ? 'repo-folder-page' : 'repo-overview-page';
 
   if (resolved.isPending) {
     return (
@@ -177,8 +193,8 @@ export function RepositoryBrowserPage({
   // starting at the repository it is in, so no crumb is said twice. Every
   // segment but the last (the open file) is a link: the repository opens its
   // front, a folder opens that folder at the current ref.
-  const parts = file.path.split('/').filter(Boolean);
-  const pathCrumbs: BreadcrumbSegment[] = onFile
+  const parts = (onFile ? file.path : folderPath).split('/').filter(Boolean);
+  const pathCrumbs: BreadcrumbSegment[] = onFile || onFolder
     ? [
         { label: summary.id.name, to: frontWithRef },
         ...parts.map((part, index) =>
@@ -195,7 +211,7 @@ export function RepositoryBrowserPage({
   return (
     <div className="page" data-testid={testId}>
       {pathCrumbs.length > 0 ? (
-        <Breadcrumbs segments={pathCrumbs} ariaLabel="File path" />
+        <Breadcrumbs segments={pathCrumbs} ariaLabel={onFile ? 'File path' : 'Folder path'} />
       ) : null}
 
       {/* The repository's name, health, score and badges are the shell's
@@ -224,7 +240,7 @@ export function RepositoryBrowserPage({
 
       <section
         className={`repo-browser${treeMissing ? '' : ' repo-browser--with-files'}`}
-        aria-label={onFile ? 'File' : 'Repository overview'}
+        aria-label={onFile ? 'File' : onFolder ? 'Folder' : 'Repository overview'}
       >
         {/* Fixed on the left and always shown; a repository whose source is
             hosted elsewhere has no tree, so there is no panel for it. */}
@@ -243,7 +259,7 @@ export function RepositoryBrowserPage({
               repoId={repoId}
               refName={activeRef}
               selectedPath={onFile ? file.path : undefined}
-              revealDir={folderToReveal(location.state) ?? undefined}
+              revealDir={(onFolder ? folderPath : folderToReveal(location.state)) ?? undefined}
               onSelectFile={openFile}
             />
           </aside>
@@ -261,6 +277,13 @@ export function RepositoryBrowserPage({
               repoId={repoId}
               refName={activeRef}
               path={file.path}
+            />
+          ) : onFolder ? (
+            <ReadmePanel
+              repoId={repoId}
+              ref={activeRef}
+              dir={folderPath}
+              linkBase={blobPath(provider, fullName, activeRef, `${folderPath}/`)}
             />
           ) : (
             <ReadmePanel

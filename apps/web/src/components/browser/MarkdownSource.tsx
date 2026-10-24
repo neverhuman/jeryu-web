@@ -50,7 +50,9 @@ export function resolveMarkdownHref(href: string, linkBase?: string): string {
     return href;
   }
   const url = new URL(href, `https://spa.invalid${linkBase}`);
-  return `${url.pathname}${url.search}${url.hash}`;
+  // `[set](shots/)` names a folder: open the folder view, not a file view.
+  const pathname = url.pathname.replace(/\/blob\/(.+)\/$/, '/tree/$1');
+  return `${pathname}${url.search}${url.hash}`;
 }
 
 /** The source of a ```mermaid fence, given the `<pre>`'s children. */

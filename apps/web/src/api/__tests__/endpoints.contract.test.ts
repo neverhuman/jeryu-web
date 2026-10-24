@@ -208,6 +208,11 @@ describe('endpoint contract', () => {
   });
 
   it('builds path-form raw URLs whose relative links reach siblings', () => {
+    expect(endpoints.readme('repo-1', 'main', 'showcase/set a')).toBe(
+      '/api/v1/repos/repo-1/readme?ref=main&path=showcase%2Fset+a',
+    );
+    expect(endpoints.readme('repo-1', 'main')).toBe('/api/v1/repos/repo-1/readme?ref=main');
+    expect(endpoints.readme('repo-1')).toBe('/api/v1/repos/repo-1/readme');
     expect(endpoints.rawPath('repo-1', { ref: 'main', path: 'docs/index.html' })).toBe(
       '/api/v1/repos/repo-1/raw/main/docs/index.html',
     );

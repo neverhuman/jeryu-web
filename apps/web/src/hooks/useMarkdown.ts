@@ -14,19 +14,24 @@ import type { RenderedMarkdown } from '../api/types';
 
 export function markdownQueryKey(
   repoId: string | null,
-  ref: string | undefined
+  ref: string | undefined,
+  dir = ''
 ): readonly unknown[] {
-  return ['repo', repoId, 'readme', ref ?? null] as const;
+  return dir
+    ? (['repo', repoId, 'readme', ref ?? null, dir] as const)
+    : (['repo', repoId, 'readme', ref ?? null] as const);
 }
 
 export function useMarkdown(
   repoId: string | null,
-  ref?: string
+  ref?: string,
+  /** A folder: its README instead of the repository's. */
+  dir = ''
 ): UseQueryResult<RenderedMarkdown, Error> {
   return useQuery({
-    queryKey: markdownQueryKey(repoId, ref),
+    queryKey: markdownQueryKey(repoId, ref, dir),
     queryFn: ({ signal }) =>
-      apiGet<RenderedMarkdown>(endpoints.readme(repoId as string, ref), {
+      apiGet<RenderedMarkdown>(endpoints.readme(repoId as string, ref, dir || undefined), {
         signal,
       }),
     enabled: typeof repoId === 'string' && repoId.length > 0,

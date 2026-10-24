@@ -108,6 +108,18 @@ describe('RepositoryBrowserPage (one repository page)', () => {
           });
         case '/api/v1/repos/repo-1/readme':
           if (!hasCode) return json({ code: 'not_found', message: 'no readme' }, 404);
+          if (path === 'src') return json({ code: 'not_found', message: 'no readme' }, 404);
+          if (path === 'shots') {
+            return json({
+              html: '<p>Shots</p>',
+              markdown: '# Shots\n\n![sign in](01-sign-in.webp)\n\n[back](../)\n',
+              toc: [],
+              links: [],
+              renderer_version: 'test',
+              sanitizer_version: null,
+              rendered_at: '2026-05-26T00:00:00Z',
+            });
+          }
           return json({
             html: '<p>Portal</p>',
             markdown: '# Portal\n\nSee [docs](docs/testing.md).\n',
@@ -217,6 +229,27 @@ describe('RepositoryBrowserPage (one repository page)', () => {
       '/repos?host=jeryu'
     );
     expect(within(crumbs).getByText('host')).toBeInTheDocument();
+  });
+
+  it('shows a folder\'s README on its tree route, images from the files beside it', async () => {
+    renderAt(`${FRONT}/tree/main/shots`);
+    expect(await screen.findByTestId('repo-folder-page')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Shots' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'sign in' })).toHaveAttribute(
+      'src',
+      '/api/v1/repos/repo-1/raw/main/shots/01-sign-in.webp'
+    );
+    expect(screen.getByRole('link', { name: 'back' })).toHaveAttribute('href', `${FRONT}/tree/main`);
+    const trail = screen.getByRole('navigation', { name: 'Folder path' });
+    expect(within(trail).getByRole('link', { name: 'jeryu' })).toHaveAttribute('href', FRONT);
+    expect(within(trail).getByText('shots')).toBeInTheDocument();
+  });
+
+  it('says so when a folder has no README, and keeps the Files panel', async () => {
+    renderAt(`${FRONT}/tree/main/src`);
+    expect(await screen.findByText('No README in src')).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'Files' })).toBeVisible();
+    expect(await screen.findByRole('treeitem', { name: 'src' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('says the trail once: the repository front has no breadcrumb of its own', async () => {
