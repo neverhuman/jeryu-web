@@ -97,6 +97,7 @@
     "/api/v1/repos/{id}/pulls/{number}/reviews",
     "/api/v1/repos/{id}/pulls/{number}/threads",
     "/api/v1/repos/{id}/raw",
+    "/api/v1/repos/{id}/raw/{*rest}",
     "/api/v1/repos/{id}/readme",
     "/api/v1/repos/{id}/refs",
     "/api/v1/repos/{id}/release-tag",

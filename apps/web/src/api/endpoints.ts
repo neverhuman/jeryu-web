@@ -95,6 +95,16 @@ export const endpoints = {
     const qs = new URLSearchParams({ ref: params.ref, path: params.path });
     return `/api/v1/repos/${encodeURIComponent(id)}/raw?${qs.toString()}`;
   },
+  /**
+   * The same bytes at `/raw/{ref}/{path}`, so a raw HTML page's relative
+   * links (`<img src="shot.png">`) resolve to its sibling files. Each segment
+   * is encoded on its own; a ref with slashes is matched longest-first.
+   */
+  rawPath: (id: string, params: { ref: string; path: string }): string => {
+    const segments = (value: string): string =>
+      value.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    return `/api/v1/repos/${encodeURIComponent(id)}/raw/${segments(params.ref)}/${segments(params.path)}`;
+  },
   readme: (id: string, ref?: string): string => {
     const base = `/api/v1/repos/${encodeURIComponent(id)}/readme`;
     return ref ? `${base}?ref=${encodeURIComponent(ref)}` : base;

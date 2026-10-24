@@ -52,6 +52,7 @@ const endpointSamples = {
   tree: ['repo-1', { ref: 'main', path: 'src' }],
   blob: ['repo-1', { ref: 'main', path: 'README.md', render: 'html' }],
   raw: ['repo-1', { ref: 'main', path: 'logo.png' }],
+  rawPath: ['repo-1', { ref: 'release/v1', path: 'docs/shots/logo one.png' }],
   readme: ['repo-1', 'main'],
   pages: ['repo-1', 'main'],
   blame: ['repo-1', { ref: 'main', path: 'README.md' }],
@@ -169,6 +170,15 @@ function pathnameOf(path: string): string {
 function routeMatches(template: string, path: string): boolean {
   const routeSegments = template.split('/').filter(Boolean);
   const pathSegments = path.split('/').filter(Boolean);
+  // `{*rest}` is the server's trailing wildcard: one or more segments.
+  const last = routeSegments[routeSegments.length - 1] ?? '';
+  if (last.startsWith('{*')) {
+    const head = routeSegments.slice(0, -1);
+    return (
+      pathSegments.length > head.length &&
+      routeMatches(head.join('/'), pathSegments.slice(0, head.length).join('/'))
+    );
+  }
   return (
     routeSegments.length === pathSegments.length &&
     routeSegments.every((segment, index) =>
@@ -195,6 +205,23 @@ describe('endpoint contract', () => {
     expect(endpoints.attention({ limit: 500, page: 2 })).toBe('/api/v1/attention?limit=500&page=2');
     expect(endpoints.attentionAcks()).toBe('/api/v1/attention/acks');
     expect(endpoints.pins()).toBe('/api/v1/pins');
+  });
+
+  it('builds path-form raw URLs whose relative links reach siblings', () => {
+    expect(endpoints.rawPath('repo-1', { ref: 'main', path: 'docs/index.html' })).toBe(
+      '/api/v1/repos/repo-1/raw/main/docs/index.html',
+    );
+    const page = endpoints.rawPath('repo-1', {
+      ref: 'release/v1',
+      path: 'docs/shots/index.html',
+    });
+    expect(page).toBe('/api/v1/repos/repo-1/raw/release/v1/docs/shots/index.html');
+    expect(new URL('a b.png', `https://forge.example${page}`).pathname).toBe(
+      '/api/v1/repos/repo-1/raw/release/v1/docs/shots/a%20b.png',
+    );
+    expect(endpoints.rawPath('r', { ref: 'main', path: 'x/100% #1.png' })).toBe(
+      '/api/v1/repos/r/raw/main/x/100%25%20%231.png',
+    );
   });
 
   it('reads release boards from /api/v1/release-board', () => {

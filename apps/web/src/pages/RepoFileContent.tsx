@@ -82,6 +82,8 @@ export function RepoFileContent({
   }
 
   const rawUrl = endpoints.raw(repoId, { ref: refName, path });
+  // "Raw" opens the path form so an HTML file shows with its sibling images.
+  const rawViewUrl = endpoints.rawPath(repoId, { ref: refName, path });
   const permalink = `${window.location.origin}${blobPath(provider, fullName, blob.data.sha, path)}`;
   const dir = path.includes('/') ? `${path.slice(0, path.lastIndexOf('/'))}/` : '';
 
@@ -100,7 +102,7 @@ export function RepoFileContent({
   return (
     <>
       <div className="code-browser-layout__top">
-        <a href={rawUrl} target="_blank" rel="noopener noreferrer" aria-label="View raw file">
+        <a href={rawViewUrl} target="_blank" rel="noopener noreferrer" aria-label="View raw file">
           <ActionButton variant="default" icon={<ExternalLink size={12} aria-hidden="true" />}>
             Raw
           </ActionButton>

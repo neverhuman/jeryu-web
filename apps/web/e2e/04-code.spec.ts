@@ -170,7 +170,7 @@ test.describe('Code browser (W-T-12)', () => {
     await expect(page.getByText(/Loading editor/)).toHaveCount(0);
 
     const raw = page.getByRole('link', { name: 'View raw file' });
-    await expect(raw).toHaveAttribute('href', /\/api\/v1\/repos\/.*\/raw\?/);
+    await expect(raw).toHaveAttribute('href', /\/api\/v1\/repos\/.*\/raw\/main\/README\.md$/);
     await expect(
       page.getByRole('link', { name: 'Download file' })
     ).toHaveAttribute('download', 'README.md');
