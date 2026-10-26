@@ -180,6 +180,14 @@ export interface PipelineHistogramBucket {
   by_group?: Record<string, number> | null;
   failures?: number | null;
   needs_human?: number | null;
+  /**
+   * Commits authored in the bucket on the scope's default branches, and the
+   * lines they added and deleted (generated files left out). Not events: not
+   * in `total`. Absent on a server that does not count code.
+   */
+  commits?: number | null;
+  lines_added?: number | null;
+  lines_deleted?: number | null;
 }
 
 /**
@@ -193,6 +201,9 @@ export interface PipelineHistogramTotals {
   prs_merged?: number | null;
   deploys?: number | null;
   spent_usd?: number | null;
+  commits?: number | null;
+  lines_added?: number | null;
+  lines_deleted?: number | null;
 }
 
 export interface PipelineHistogramResponse {

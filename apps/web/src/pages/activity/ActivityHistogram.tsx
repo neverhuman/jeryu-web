@@ -5,6 +5,10 @@
 // scaled to the container, a CSS class per mark so both themes come from
 // tokens, role="img" with a text summary, and a <title> on every bar.
 //
+// A second pair of views (`?view=commits`, `?view=lines`) draws the code that
+// landed instead: commits on the scope's default branches by author time, or
+// the lines they added and deleted. Those bars filter nothing.
+//
 // The band is a filter, not decoration: a bar's group, or its legend button,
 // sets the same chip the row of chips below sets, and clicking the active one
 // again goes back to All. A picked group is drawn alone on its own scale.
@@ -18,10 +22,21 @@ import { useEventsHistogram } from '../../hooks/usePipeline';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { ACTIVITY_CHIPS, activeChip, applyChip, parseActivityFilters } from './activityModel';
 import {
+  COMMIT_GROUPS,
   HISTOGRAM_GROUPS,
   HISTOGRAM_RANGES,
+  HISTOGRAM_VIEWS,
+  LINE_GROUPS,
   activeGroupId,
   applyRange,
+  applyView,
+  codeBuckets,
+  codeSummary,
+  codeText,
+  codeTotals,
+  countsCode,
+  parseView,
+  type HistogramViewId,
   chipOfGroup,
   histogramBuckets,
   histogramGeometry,
@@ -56,7 +71,10 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
     refetchInterval: histogramRefetchMs(range),
   });
   const current = activeChip(parseActivityFilters(params));
-  const activeGroup = activeGroupId(current);
+  // A server that does not count code offers only the events view.
+  const view: HistogramViewId = countsCode(histogram.data) ? parseView(params) : 'events';
+  const code = view === 'events' ? null : view;
+  const activeGroup = code ? null : activeGroupId(current);
 
   // A missing route leaves the band out. Other errors keep the range controls
   // available so a saved wide range can recover. Until the answer is in, it keeps its
@@ -66,14 +84,17 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
     histogram.isError && histogram.error instanceof ApiError && histogram.error.status === 404 ? 'absent' : 'served';
   if (band === 'absent') return null;
 
-  const buckets = histogramBuckets(histogram.data);
+  const buckets = code ? codeBuckets(histogram.data, code) : histogramBuckets(histogram.data);
   const readout = histogramReadout(histogram.data, rangeHours(range));
+  const groups = code === 'commits' ? COMMIT_GROUPS : code === 'lines' ? LINE_GROUPS : undefined;
   const geometry = histogramGeometry(buckets, {
     width: WIDTH,
     height: PLOT,
     spanHours: rangeHours(range),
     only: activeGroup,
+    groups,
   });
+  const codeTotal = codeTotals(histogram.data);
   const rangeLabel = HISTOGRAM_RANGES.find((candidate) => candidate.id === range)?.label ?? range;
   const onlyLabel = HISTOGRAM_GROUPS.find((group) => group.id === activeGroup)?.label;
   const hasOther = activeGroup === null && buckets.some((bucket) => (bucket.counts[OTHER_GROUP.id] ?? 0) > 0);
@@ -85,12 +106,14 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
       : readout.answeredHours !== null
         ? `Only ${readout.answeredHours}h of history available for the ${rangeLabel} range.`
         : histogram.data !== undefined && buckets.length > 0 && geometry.events === 0
-          ? `No ${onlyLabel ? onlyLabel.toLowerCase() : 'events'} in the last ${rangeLabel}.`
+          ? `No ${code ? 'commits' : onlyLabel ? onlyLabel.toLowerCase() : 'events'} in the last ${rangeLabel}.`
           : null;
 
   const summary = histogram.isError || readout.unreadable
     ? note ?? ''
-    : readout.answeredHours !== null
+    : code
+      ? codeSummary(codeTotal, rangeLabel)
+      : readout.answeredHours !== null
       ? `${note} ${histogramSummary(geometry, `${readout.answeredHours}h available`, onlyLabel)}`
       : histogramSummary(geometry, rangeLabel, onlyLabel);
 
@@ -105,6 +128,10 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
     setParams(applyRange(params, next), { replace: true });
   };
 
+  const setView = (next: HistogramViewId): void => {
+    setParams(applyView(params, next), { replace: true });
+  };
+
   return (
     <section
       className={`activity-volume${reduced ? ' activity-volume--still' : ''}`}
@@ -113,10 +140,29 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
     >
       <div className="activity-volume__head">
         <h2 className="activity-volume__title">
-          Volume · {rangeLabel}
+          {code ? 'Code' : 'Volume'} · {rangeLabel}
           {onlyLabel ? ` · ${onlyLabel} only` : null}
-          {geometry.events > 0 ? <span className="activity-volume__count"> {geometry.events} events</span> : null}
+          {code && codeTotal ? (
+            <span className="activity-volume__count"> {codeText(codeTotal)}</span>
+          ) : geometry.events > 0 ? (
+            <span className="activity-volume__count"> {geometry.events} events</span>
+          ) : null}
         </h2>
+        {countsCode(histogram.data) ? (
+          <div className="activity-volume__ranges" role="group" aria-label="View">
+            {HISTOGRAM_VIEWS.map((candidate) => (
+              <button
+                key={candidate.id}
+                type="button"
+                className={`activity-volume__range${candidate.id === view ? ' is-active' : ''}`}
+                aria-pressed={candidate.id === view}
+                onClick={() => setView(candidate.id)}
+              >
+                {candidate.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="activity-volume__ranges" role="group" aria-label="Range">
           {HISTOGRAM_RANGES.map((candidate) => (
             <button
@@ -165,7 +211,7 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
                   width={bar.width}
                   height={segment.height}
                   onClick={
-                    segment.groupId === OTHER_GROUP.id
+                    code || segment.groupId === OTHER_GROUP.id
                       ? undefined
                       : () => setChip(HISTOGRAM_GROUPS.find((g) => g.id === segment.groupId)?.chipId ?? 'all')
                   }
@@ -202,7 +248,14 @@ export function ActivityHistogram({ family, repo }: ActivityHistogramProps): JSX
         </svg>
       </div>
       <div className="activity-volume__legend">
-        {HISTOGRAM_GROUPS.map((group) => (
+        {groups?.map((group) => (
+          // Code bars filter nothing, so their keys are labels, not buttons.
+          <span key={group.id} className="activity-volume__key activity-volume__key--plain">
+            <span className={`activity-volume__swatch is-${group.id}`} aria-hidden="true" />
+            {group.label}
+          </span>
+        ))}
+        {code ? null : HISTOGRAM_GROUPS.map((group) => (
           <button
             key={group.id}
             type="button"

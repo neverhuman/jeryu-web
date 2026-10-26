@@ -11,7 +11,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ActivityPage } from '../activity';
 import {
   HISTOGRAM_GROUPS,
+  LINE_GROUPS,
   applyRange,
+  applyView,
+  codeBuckets,
+  codeSummary,
+  codeTotals,
+  countsCode,
+  parseView,
   bucketTitle,
   histogramBuckets,
   chipCounts,
@@ -35,6 +42,19 @@ import { errorResponse, json, renderAt } from './shiftPageHelpers';
 const SERVER_ANSWER = JSON.parse(
   readFileSync(join(process.cwd(), 'src/test/fixtures/events-histogram.server.json'), 'utf8')
 ) as PipelineHistogramResponse;
+
+// The histogram once the server counts code: the events of HISTOGRAM plus the
+// commits authored in each bucket and the lines they changed.
+const CODE_HISTOGRAM: PipelineHistogramResponse = {
+  ...HISTOGRAM,
+  buckets: HISTOGRAM.buckets.map((bucket, index) => ({
+    ...bucket,
+    commits: [3, 0, 1][index],
+    lines_added: [400, 0, 12][index],
+    lines_deleted: [380, 0, 30][index],
+  })),
+  totals: { todos_finished: 1, commits: 4, lines_added: 412, lines_deleted: 410 },
+};
 
 function renderPage(path = '/activity'): void {
   renderAt(path, '/activity', <ActivityPage />);
@@ -213,8 +233,77 @@ describe('histogramModel', () => {
   });
 });
 
+describe('histogramModel code views', () => {
+  it('reads the view from the URL, events by default, keeping the other filters', () => {
+    expect(parseView(new URLSearchParams(''))).toBe('events');
+    expect(parseView(new URLSearchParams('view=lines'))).toBe('lines');
+    expect(parseView(new URLSearchParams('view=bytes'))).toBe('events');
+    const next = applyView(new URLSearchParams('range=30d'), 'commits');
+    expect(next.toString()).toBe('range=30d&view=commits');
+    expect(applyView(next, 'events').has('view')).toBe(false);
+  });
+
+  it('counts commits one each, and lines as added plus deleted', () => {
+    const commits = codeBuckets(CODE_HISTOGRAM, 'commits');
+    expect(commits.map((bucket) => bucket.total)).toEqual([3, 0, 1]);
+    // A rewrite of 400 lines is 780 lines changed, not a net 20.
+    const lines = codeBuckets(CODE_HISTOGRAM, 'lines');
+    expect(lines[0].counts).toEqual({ added: 400, deleted: 380 });
+    expect(lines[0].total).toBe(780);
+    const geometry = histogramGeometry(lines, { width: 300, height: 100, spanHours: 3, groups: LINE_GROUPS });
+    expect(geometry.bars[0].segments.map((segment) => segment.groupId)).toEqual(['added', 'deleted']);
+    expect(geometry.bars[0].title).toContain('3 commits · +400 −380 lines (net +20)');
+    expect(geometry.bars[2].title).toContain('(net −18)');
+    expect(geometry.bars[1].title).toMatch(/: 0 commits$/);
+  });
+
+  it('knows a server that does not count code, and sums one that does', () => {
+    expect(countsCode(HISTOGRAM)).toBe(false);
+    expect(codeTotals(HISTOGRAM)).toBeNull();
+    expect(codeTotals(CODE_HISTOGRAM)).toEqual({ commits: 4, added: 412, deleted: 410 });
+    expect(codeSummary(codeTotals(CODE_HISTOGRAM), '24h')).toBe(
+      'Code over 24h: 4 commits, 412 lines added and 410 deleted (net +2).'
+    );
+    expect(codeSummary({ commits: 0, added: 0, deleted: 0 }, '6h')).toBe('Code over 6h: no commits.');
+  });
+});
+
 describe('ActivityHistogram', () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it('offers no code views on a server that does not count code', async () => {
+    mockPipelineApi();
+    renderPage();
+    await screen.findByTestId('activity-volume-svg');
+    expect(screen.queryByRole('group', { name: 'View' })).not.toBeInTheDocument();
+  });
+
+  it('draws commits or lines changed when the view is switched, and holds it in the URL', async () => {
+    mockPipelineApi((req) => (req.pathname === '/api/v1/events/histogram' ? json(CODE_HISTOGRAM) : undefined));
+    renderPage();
+    const band = await screen.findByTestId('activity-volume');
+    const view = await screen.findByRole('group', { name: 'View' });
+    expect(view).toHaveTextContent('EventsCommitsLines');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Commits' }));
+    await waitFor(() => expect(band.querySelector('.activity-volume__title')?.textContent).toContain('Code'));
+    expect(band.querySelector('.activity-volume__title')?.textContent).toContain('4 commits · +412 −410 lines');
+    const segs = [...band.querySelectorAll('.activity-volume__seg')];
+    expect(segs.length).toBe(2);
+    expect(segs.every((seg) => seg.classList.contains('is-commits'))).toBe(true);
+    // Commits filter nothing: the event keys are gone, a plain label stands.
+    expect(screen.queryByRole('button', { name: 'Filter to gates' })).not.toBeInTheDocument();
+    fireEvent.click(segs[0]);
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lines' }));
+    await waitFor(() => expect(band.querySelectorAll('.activity-volume__seg.is-added')).toHaveLength(2));
+    expect(band.querySelectorAll('.activity-volume__seg.is-deleted')).toHaveLength(2);
+    expect(screen.getByTestId('activity-volume-svg').getAttribute('aria-label')).toContain('(net +2)');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Events' }));
+    await waitFor(() => expect(band.querySelector('.activity-volume__title')?.textContent).toContain('Volume'));
+  });
 
   it('draws one bar per bucket above the chips, with a title and a summary', async () => {
     mockPipelineApi();

@@ -388,19 +388,39 @@ export function histogramBody(range = '24h', hours: number | null = null): Recor
     { gates: 4, pulls: 1, releases: 1, deploys: 1 },
     { todos: 2, gates: 2, reviews: 1 },
   ];
+  // Commits authored per bucket and the lines they changed: a quiet bucket,
+  // a small fix, a feature, and a rewrite that deletes more than it adds.
+  const code = [
+    { commits: 0, lines_added: 0, lines_deleted: 0 },
+    { commits: 2, lines_added: 40, lines_deleted: 12 },
+    { commits: 5, lines_added: 620, lines_deleted: 80 },
+    { commits: 3, lines_added: 150, lines_deleted: 410 },
+  ];
   const buckets = Array.from({ length: count }, (_, i) => ({
     start: new Date(Date.now() - (count - 1 - i) * step).toISOString(),
     by_group: shape[i % shape.length],
     failures: i % 3 === 1 ? 2 : 0,
     needs_human: i % 4 === 2 ? 1 : 0,
+    ...code[i % code.length],
   }));
+  const sum = (key: 'commits' | 'lines_added' | 'lines_deleted'): number =>
+    buckets.reduce((total, bucket) => total + bucket[key], 0);
   return {
     schema_version: 1,
     bucket_seconds: step / 1000,
     buckets,
     // Window totals: what the 24-hour strip reads, counted over the whole
     // range rather than over the page of events the browser holds.
-    totals: { todos_finished: 42, blocked: 3, prs_merged: 17, deploys: 5, spent_usd: 12.34 },
+    totals: {
+      todos_finished: 42,
+      blocked: 3,
+      prs_merged: 17,
+      deploys: 5,
+      spent_usd: 12.34,
+      commits: sum('commits'),
+      lines_added: sum('lines_added'),
+      lines_deleted: sum('lines_deleted'),
+    },
   };
 }
 

@@ -404,6 +404,21 @@ test.describe('Pipeline visibility', () => {
     await expect(band.locator('.activity-volume__bar')).toHaveCount(30);
     expect(log.histogramQueries.some((qs) => new URLSearchParams(qs).get('hours') === '720')).toBe(true);
     expect(log.histogramQueries.some((qs) => new URLSearchParams(qs).get('range') === '30d')).toBe(false);
+    // The code views draw the same window as commits, or as lines changed
+    // (added under deleted), from the same request; the view is in the URL.
+    await band.getByRole('button', { name: 'Commits' }).click();
+    await expect(page).toHaveURL(/view=commits/);
+    await expect(band.locator('.activity-volume__title')).toContainText('Code · 30d');
+    await expect(band.locator('.activity-volume__title')).toContainText(/\d+ commits · \+[\d,]+ −[\d,]+ lines/);
+    await expect(band.locator('.activity-volume__seg.is-commits').first()).toBeVisible();
+    await band.screenshot({ path: test.info().outputPath('activity-volume-commits.png') });
+    await band.getByRole('button', { name: 'Lines' }).click();
+    await expect(page).toHaveURL(/view=lines/);
+    await expect(band.locator('.activity-volume__seg.is-deleted').first()).toBeVisible();
+    await expect(band.locator('.activity-volume__bar title').nth(3)).toContainText('net −260');
+    await band.screenshot({ path: test.info().outputPath('activity-volume-lines.png') });
+    await band.getByRole('button', { name: 'Events' }).click();
+    await expect(page).not.toHaveURL(/view=/);
     await band.getByRole('button', { name: 'Filter to gates' }).click();
     await expect(page).toHaveURL(/kind=gate\./);
     await expect(page.getByRole('button', { name: 'Gates', exact: true })).toHaveAttribute('aria-pressed', 'true');

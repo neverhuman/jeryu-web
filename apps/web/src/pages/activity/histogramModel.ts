@@ -123,6 +123,120 @@ export interface HistogramBucket {
   failures: number;
   needsHuman: number;
   total: number;
+  /** Set on a bucket of the code views: what its bar's title tells. */
+  code?: CodeChange;
+}
+
+/**
+ * What the band draws (`?view=`): pipeline events, or the code that landed on
+ * the scope's default branches, counted as commits or as lines changed.
+ */
+export type HistogramViewId = 'events' | 'commits' | 'lines';
+
+export const HISTOGRAM_VIEWS: ReadonlyArray<{ id: HistogramViewId; label: string }> = [
+  { id: 'events', label: 'Events' },
+  { id: 'commits', label: 'Commits' },
+  { id: 'lines', label: 'Lines' },
+];
+
+export const DEFAULT_VIEW: HistogramViewId = 'events';
+
+export function parseView(params: URLSearchParams): HistogramViewId {
+  const asked = (params.get('view') ?? '').trim();
+  return HISTOGRAM_VIEWS.find((view) => view.id === asked)?.id ?? DEFAULT_VIEW;
+}
+
+/** The URL params a view button sets, keeping every other filter. */
+export function applyView(params: URLSearchParams, id: HistogramViewId): URLSearchParams {
+  const next = new URLSearchParams(params);
+  if (id === DEFAULT_VIEW) next.delete('view');
+  else next.set('view', id);
+  return next;
+}
+
+/** Commits and the lines they added and deleted, over a bucket or a window. */
+export interface CodeChange {
+  commits: number;
+  added: number;
+  deleted: number;
+}
+
+/** The commits view draws one series. Nothing to filter to: chip `all`. */
+export const COMMIT_GROUPS: readonly HistogramGroup[] = [{ id: 'commits', label: 'Commits', chipId: 'all' }];
+
+/**
+ * The lines view stacks what was added under what was deleted, so a bar's
+ * height is the lines changed: a rewrite of 400 lines is 800, not a net 0.
+ */
+export const LINE_GROUPS: readonly HistogramGroup[] = [
+  { id: 'added', label: 'Added', chipId: 'all' },
+  { id: 'deleted', label: 'Deleted', chipId: 'all' },
+];
+
+/** Whether the server counts code at all; an older one sends no commit totals. */
+export function countsCode(response: PipelineHistogramResponse | undefined): boolean {
+  return typeof response?.totals?.commits === 'number';
+}
+
+/** The code views' buckets, oldest first, drawn from the same answer. */
+export function codeBuckets(
+  response: PipelineHistogramResponse | undefined,
+  view: Exclude<HistogramViewId, 'events'>
+): HistogramBucket[] {
+  const raw: PipelineHistogramBucket[] = response?.buckets ?? [];
+  return raw
+    .filter((bucket) => typeof bucket?.start === 'string' && !Number.isNaN(Date.parse(bucket.start)))
+    .map((bucket) => {
+      const code = {
+        commits: count(bucket.commits),
+        added: count(bucket.lines_added),
+        deleted: count(bucket.lines_deleted),
+      };
+      const counts: Record<string, number> =
+        view === 'commits' ? { commits: code.commits } : { added: code.added, deleted: code.deleted };
+      return {
+        at: bucket.start,
+        counts,
+        failures: 0,
+        needsHuman: 0,
+        total: Object.values(counts).reduce((sum, n) => sum + n, 0),
+        code,
+      };
+    })
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+
+/** The window's code totals, or null on a server that does not count code. */
+export function codeTotals(response: PipelineHistogramResponse | undefined): CodeChange | null {
+  if (!countsCode(response)) return null;
+  return {
+    commits: count(response?.totals?.commits),
+    added: count(response?.totals?.lines_added),
+    deleted: count(response?.totals?.lines_deleted),
+  };
+}
+
+const thousands = new Intl.NumberFormat('en-US');
+
+/** `+1,570`, `−12`, `0`: a net change with its sign. */
+export function signed(n: number): string {
+  return `${n > 0 ? '+' : n < 0 ? '−' : ''}${thousands.format(Math.abs(n))}`;
+}
+
+/** `31 commits · +2,210 −640 lines`, as the heading and a bar's title say it. */
+export function codeText(code: CodeChange): string {
+  const commits = `${thousands.format(code.commits)} commit${code.commits === 1 ? '' : 's'}`;
+  if (code.commits === 0) return commits;
+  return `${commits} · +${thousands.format(code.added)} −${thousands.format(code.deleted)} lines`;
+}
+
+/** The band's summary in a code view, read instead of the picture. */
+export function codeSummary(code: CodeChange | null, rangeLabel: string): string {
+  if (!code || code.commits === 0) return `Code over ${rangeLabel}: no commits.`;
+  return (
+    `Code over ${rangeLabel}: ${code.commits} commit${code.commits === 1 ? '' : 's'}, ` +
+    `${code.added} lines added and ${code.deleted} deleted (net ${signed(code.added - code.deleted)}).`
+  );
 }
 
 function count(value: unknown): number {
@@ -250,9 +364,17 @@ const MIN_BAR = 2;
 
 export function histogramGeometry(
   buckets: HistogramBucket[],
-  options: { width: number; height: number; spanHours: number; only?: string | null }
+  options: {
+    width: number;
+    height: number;
+    spanHours: number;
+    only?: string | null;
+    /** The stack, bottom to top; the events view's groups unless given. */
+    groups?: readonly HistogramGroup[];
+  }
 ): HistogramGeometry {
   const { width, height, spanHours } = options;
+  const groups = options.groups ?? DRAWN_GROUPS;
   const only = options.only ? HISTOGRAM_GROUPS.find((group) => group.id === options.only) : undefined;
   // One group picked: draw that group alone, scaled to its own busiest bucket,
   // so a thin series (Deploys) is read on its own axis, not under the gates.
@@ -276,7 +398,7 @@ export function histogramGeometry(
     const barTop = height - barHeight;
     let top = height;
     const segments: HistogramSegment[] = [];
-    for (const group of DRAWN_GROUPS) {
+    for (const group of groups) {
       const value = bucket.counts[group.id] ?? 0;
       if (value <= 0) continue;
       const segHeight = (value / bucket.total) * barHeight;
@@ -318,6 +440,10 @@ export function histogramGeometry(
 /** The `<title>` of one bar: the time, the stack, and what went wrong. */
 export function bucketTitle(bucket: HistogramBucket, spanHours: number): string {
   const when = tickText(Date.parse(bucket.at), spanHours);
+  if (bucket.code) {
+    const net = bucket.code.commits > 0 ? ` (net ${signed(bucket.code.added - bucket.code.deleted)})` : '';
+    return `${when}: ${codeText(bucket.code)}${net}`;
+  }
   const parts = DRAWN_GROUPS.filter((group) => (bucket.counts[group.id] ?? 0) > 0).map(
     (group) => `${group.label.toLowerCase()} ${bucket.counts[group.id]}`
   );
