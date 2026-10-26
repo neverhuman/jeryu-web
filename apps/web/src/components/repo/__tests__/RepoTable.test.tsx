@@ -124,14 +124,33 @@ describe('RepoTable', () => {
     expect(names()).toEqual(['jeryu-web', 'jeryu-core']);
   });
 
-  it('renders split-member role badges in rows', () => {
+  it('renders each repository role as a labelled icon', () => {
+    const tool: RepositorySummary = {
+      ...REPO,
+      id: { ...REPO.id, id: 'repo-uuid-tool', name: 'jeryu-tool' },
+      repo_role: 'tool_control_plane',
+    };
+    const portal: RepositorySummary = {
+      ...REPO,
+      id: { ...REPO.id, id: 'repo-uuid-portal', name: 'jeryu' },
+      repo_role: 'public_portal',
+    };
     render(
       <MemoryRouter>
-        <RepoTable repos={[REPO]} />
+        <RepoTable repos={[REPO, tool, portal]} />
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Split member')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Split member' })).toHaveAttribute(
+      'title',
+      expect.stringMatching(/^Split member: /)
+    );
+    // The tool control plane is not a split member.
+    expect(
+      screen.getByRole('img', { name: 'Tool control plane' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Public portal' })).toBeInTheDocument();
+    expect(screen.queryByText('Split member')).not.toBeInTheDocument();
   });
 
   it('names a repository owner/name as a link, so equal names stay distinguishable', () => {
