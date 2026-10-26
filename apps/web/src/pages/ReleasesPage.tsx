@@ -14,10 +14,9 @@
 //      line and given no row.
 //   2. Ready to pin: merged in a dependency, not yet in the deploy repo's pin.
 //
-// A staged release waiting for its deploy command is a row of the "Waiting on
-// you here" strip at the top, not a banner of its own: the strip is the one
-// place this page shows what needs a person, so the same release is never both
-// a row and a banner.
+// A staged release waiting for its deploy command is a row on Needs you, which
+// the Releases nav badge counts, not a banner or a strip here: what needs a
+// person is listed in one place, so the same release is never shown twice.
 //
 // This page is about ENVIRONMENTS: what each one runs and what is holding the
 // next release. How far an individual change has got — opened, checked,
@@ -66,7 +65,6 @@ import {
   type EnvironmentRow,
 } from './releasesModel';
 
-import { NeedsYouHere } from './needsYou/NeedsYouHere';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 import './page.css';
@@ -107,10 +105,6 @@ export function ReleasesPage(): JSX.Element {
   usePageTitle(boardFamily ? `Releases · ${boardFamily}` : 'Releases');
   const repoScope = perRepository ? scopeFrom(params, scope.family) : DEFAULT_SCOPE;
   const repositoryView = <RepositoryReleases scope={repoScope} />;
-  // A view of one repository is about that repository: a release staged in
-  // another one is not what this page is waiting on. A family scope is already
-  // a family filter, and the board is about a whole family.
-  const scopeRepos = perRepository && repoScope.repo ? [repoScope.repo] : null;
   // The board's own read, so the freshness stamp says how old the board on
   // screen is without a request of its own. The per-repository view is many
   // reads (environments, compares) with no one age, so it carries no stamp
@@ -163,12 +157,6 @@ export function ReleasesPage(): JSX.Element {
           </Link>
         </nav>
       </PageHeader>
-
-      <NeedsYouHere
-        area="releases"
-        family={pathFamily ?? params.get('family') ?? scope.family}
-        repos={scopeRepos}
-      />
 
       {perRepository ? (
         repositoryView

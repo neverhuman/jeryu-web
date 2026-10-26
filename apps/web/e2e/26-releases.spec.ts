@@ -200,22 +200,20 @@ test('a staged release waits with its deploy command and a failed attempt links 
   await mockPipelineApi(page);
 
   await page.goto('/releases?repo=jeryu%2Fjeryu-deploy');
-  // One row, in the strip of what needs a person: the page has no banner of
-  // its own, so the same release is never shown twice.
+  // The page shows what the environment runs and the failed attempt's log;
+  // the staged release that needs a person is listed once, on Needs you.
+  await expect(
+    page.getByTestId('releases-env-production').getByRole('link', { name: 'deploy log' })
+  ).toHaveAttribute('href', 'https://git.neverhuman.org/logs/rel-e.txt', { timeout: 15_000 });
   const staged = page.getByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy');
+  await expect(staged).toHaveCount(0);
+  await expect(page.getByTestId('releases-staged')).toHaveCount(0);
+  await expect(page.getByTestId('needs-you-here-releases')).toHaveCount(0);
+
+  // There it waits with its deploy command and where to run it.
+  await page.goto('/needs-you?view=all');
   await expect(staged).toHaveCount(1, { timeout: 15_000 });
   await expect(staged).toContainText(DEPLOY_COMMAND);
   await expect(staged.getByRole('button', { name: /^Copy Deploy command for/ })).toBeVisible();
   await expect(staged.getByTestId('copy-command-where')).toHaveText(`Run on ${DEPLOY_RUN_IN}`);
-  await expect(page.getByTestId('releases-staged')).toHaveCount(0);
-  await expect(
-    page.getByTestId('releases-env-production').getByRole('link', { name: 'deploy log' })
-  ).toHaveAttribute('href', 'https://git.neverhuman.org/logs/rel-e.txt');
-
-  // Scoped to another repository, that staged release is not what the page is
-  // waiting on, so the strip has nothing to say here.
-  await page.goto('/releases?repo=globex%2Fglobex-web');
-  await expect(page.getByTestId('releases-page')).toBeVisible({ timeout: 15_000 });
-  await expect(staged).toHaveCount(0);
-  await expect(page.getByTestId('needs-you-here-releases')).toHaveCount(0);
 });

@@ -58,15 +58,22 @@ describe('LeftNav', () => {
     Object.defineProperty(window, 'localStorage', { configurable: true, value: makeStorage() });
   });
 
-  it('carries the running build at its foot, on every page', () => {
+  it('leaves the running build to Help instead of every page', () => {
     renderAt('/activity');
-    expect(screen.getByTestId('version-line')).toHaveTextContent('jeryu 5.0.0 · web 2d4a869');
+    expect(screen.queryByTestId('version-line')).toBeNull();
+  });
+
+  it('lights Agents on each of its tabs', () => {
+    for (const path of ['/agents', '/sessions', '/bots']) {
+      const { unmount } = renderAt(path);
+      expect(screen.getByTestId('left-nav-agents')).toHaveAttribute('aria-current', 'page');
+      unmount();
+    }
   });
 
   it('keeps seven daily destinations in the order the work flows', () => {
     expect(PRIMARY_NAV.map((item) => item.label)).toEqual([
       'Needs you',
-      'Blocked',
       'Activity',
       'Flow',
       'Work',
@@ -75,7 +82,7 @@ describe('LeftNav', () => {
       'Repositories',
     ]);
     expect(SYSTEM_NAV.map((item) => item.label)).toEqual([
-      'Active agents',
+      'Agents',
       'Runners',
       'Intelligence',
       'Dependencies',

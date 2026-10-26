@@ -74,7 +74,6 @@ export const router = createBrowserRouter([
       { path: 'login', element: <HomeRedirect /> },
       { path: 'signup', element: <HomeRedirect /> },
       { path: 'needs-you', element: <NeedsYouPage /> },
-      { path: 'blocked', element: <NeedsYouPage blocked /> },
       { path: 'activity', element: <ActivityPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'repos', element: <RepositoriesPage /> },

@@ -22,6 +22,7 @@ import { ActionButton } from '../../components/action/ActionButton';
 import { ErrorState, LoadingState } from '../../components/state';
 import { When } from '../../format/When';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { AgentsTabs } from '../agents/AgentsTabs';
 import { AgentTokens } from './AgentTokens';
 import { TeamBots } from './TeamBots';
 import { BotKindBadge } from './BotKindBadge';
@@ -73,7 +74,7 @@ function upsertBot(
 }
 
 export function BotsPage(): JSX.Element {
-  usePageTitle('Agents');
+  usePageTitle('Agents · Enrolled');
   const [params] = useSearchParams();
   const presetRepo = params.get('repo');
   const queryClient = useQueryClient();
@@ -155,11 +156,8 @@ export function BotsPage(): JSX.Element {
     <div className="page" data-testid="enroll-page">
       <header className="page__header">
         <h1 className="page__title">Agents</h1>
-        <p className="page__subtitle">
-          Enroll an agent on your account and choose what it can reach. The
-          enrollment key is shown once, when you create it or rotate it.
-        </p>
       </header>
+      <AgentsTabs current="enrolled" />
 
       {receipt ? (
         <section className="page__card enroll-setup" data-testid="bot-setup" aria-live="polite">

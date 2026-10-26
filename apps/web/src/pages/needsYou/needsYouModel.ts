@@ -13,7 +13,8 @@ import { compareInstants } from '../../format/when';
 
 /** Where "what needs a human" lives; every other surface links here. */
 export const NEEDS_YOU_PATH = '/needs-you';
-export const BLOCKED_PATH = '/blocked';
+/** Every row, not only the viewer's: the All tab of Needs you (once `/blocked`). */
+export const BLOCKED_PATH = `${NEEDS_YOU_PATH}?view=all`;
 
 export const SEVERITIES: readonly AttentionSeverity[] = ['critical', 'action', 'watch'];
 
@@ -746,7 +747,7 @@ export function needsYouHref(family?: string | null): string {
 /** A family-wide inbox link under the shared scope. */
 export function blockedHref(family?: string | null): string {
   const name = familyName(family);
-  return name ? `${BLOCKED_PATH}?family=${encodeURIComponent(name)}` : BLOCKED_PATH;
+  return name ? `${BLOCKED_PATH}&family=${encodeURIComponent(name)}` : BLOCKED_PATH;
 }
 
 /**

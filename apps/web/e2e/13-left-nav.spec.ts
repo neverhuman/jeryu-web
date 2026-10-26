@@ -203,11 +203,6 @@ test.describe('Primary left navigation', () => {
         testId: 'needs-you-page',
       },
       {
-        label: 'Blocked',
-        path: '/blocked',
-        testId: 'needs-you-page',
-      },
-      {
         label: 'Activity',
         path: '/activity',
         testId: 'activity-page',
@@ -241,12 +236,12 @@ test.describe('Primary left navigation', () => {
       },
     ] as const;
 
-    // Six daily destinations; the machinery sits behind one closed disclosure.
+    // Seven daily destinations; the machinery sits behind one closed disclosure.
     const nav = page.getByRole('navigation', { name: 'Primary' });
     const system = nav.getByRole('button', { name: 'System' });
 
-    // The build that is answering, read from `GET /api/v1/version`.
-    await expect(nav.getByTestId('version-line')).toHaveText('jeryu 5.0.0 · web 2d4a869');
+    // The build that is answering is said on Help, not at the foot of the nav.
+    await expect(nav.getByTestId('version-line')).toHaveCount(0);
 
     await expect(system).toHaveAttribute('aria-expanded', 'false');
     await expect(nav.getByRole('link', { name: 'Runners', exact: true })).toHaveCount(0);
@@ -291,5 +286,11 @@ test.describe('Primary left navigation', () => {
     await expect(page.getByTestId('settings-page')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Session' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
+
+    // Help says which build is answering, read from `GET /api/v1/version`.
+    await page.goto('/help');
+    await expect(page.getByTestId('version-line')).toHaveText('jeryu 5.0.0 · web 2d4a869', {
+      timeout: 15_000,
+    });
   });
 });

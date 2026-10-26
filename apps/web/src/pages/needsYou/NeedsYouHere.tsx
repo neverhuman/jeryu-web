@@ -1,11 +1,10 @@
-// NeedsYouHere.tsx — the slice of "Blocked" that belongs to the page it sits
-// on, shown above that page's own content: staged or failed releases on
-// Releases, downed workers and gate runners on Runners, the Work share on Work.
-// Every page a nav badge counts for shows this strip, so the badge always leads
-// to the rows it counted. (In flight marks each pull request's own row instead.)
-// It lists the rows /blocked lists, from one shared query, so the left-nav
-// count, this strip and that page always agree. Nothing waiting here renders
-// nothing: calm pages stay calm.
+// NeedsYouHere.tsx — the slice of Needs you (All) that belongs to the page it
+// sits on, shown above that page's own content: the Work share on Work.
+// Releases and Runners no longer carry one — their rows are on Needs you,
+// which their nav badges count. (In flight marks each pull request's own row
+// instead.) It lists the rows the All tab lists, from one shared query, so the
+// left-nav count, this strip and that page always agree. Nothing waiting here
+// renders nothing: calm pages stay calm.
 
 import { Link } from 'react-router-dom';
 

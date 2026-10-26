@@ -47,7 +47,6 @@ import {
   windowSummary,
 } from './qualityGateModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import { UseThisWhen } from '../../layout/UseThisWhen';
 
 import '../page.css';
 import './QualityGate.css';
@@ -91,9 +90,7 @@ export function QualityGatePage(): JSX.Element {
             often the person reading a finding disagreed with it.
           </>
         }
-      >
-        <UseThisWhen id="nav.quality-gate" />
-      </PageHeader>
+      />
 
       {isPending ? (
         <LoadingState title="Loading the quality gate overview…" variant="message" />

@@ -30,7 +30,6 @@ import {
 import { OtherFamilies } from '../components/family/OtherFamilies';
 import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
 import { useRepoFamilyScope } from '../components/family/useRepoFamilyScope';
-import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
 import './ToolsPage.css';
@@ -85,7 +84,6 @@ export function ToolsPage(): JSX.Element {
           </div>
         }
       >
-        <UseThisWhen id="nav.shared-tools" />
         <SharedToolsTabs />
         {scan.startError ? (
           <p className="tools-scan__error">{scan.startError.message}</p>

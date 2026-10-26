@@ -221,7 +221,7 @@ describe('SessionsPage', () => {
     const header = await screen.findByTestId('sessions-header');
     expect(header).toHaveAttribute('data-page-header');
     expect(
-      within(header).getByRole('heading', { level: 1, name: 'Sessions' })
+      within(header).getByRole('heading', { level: 1, name: 'Agents' })
     ).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(within(header).getByTestId('sessions-filter')).toBeInTheDocument();

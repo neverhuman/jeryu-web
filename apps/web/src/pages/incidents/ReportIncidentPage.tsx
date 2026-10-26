@@ -18,7 +18,6 @@ import { EmptyState, PermissionDeniedState } from '../../components/state';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { isPipelineForbidden, isPipelineUnavailable } from '../../hooks/usePipeline';
 import { useReportIncident } from '../../hooks/useReportIncident';
-import { UseThisWhen } from '../../layout/UseThisWhen';
 import {
   EMPTY_FORM,
   MAX_INCIDENT_ID_CHARS,
@@ -67,9 +66,7 @@ export function ReportIncidentPage(): JSX.Element {
         title="Report incident"
         testId="report-incident-header"
         subtitle="Tell the incident ledger something is wrong. Only the summary is required; add what you know now and report again on the same incident later."
-      >
-        <UseThisWhen id="nav.report-incident" />
-      </PageHeader>
+      />
 
       {filed ? (
         <p className="page__note" role="status" data-testid="report-incident-done">

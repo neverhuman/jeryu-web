@@ -1,18 +1,17 @@
 // LeftNav.tsx — primary navigation (W-FE-01).
 //
-// Six destinations an operator uses daily (plus Wiki, when an administrator
-// has chosen a repository for it), then a "System" disclosure for the
-// five that explain the machinery (Runners, Intelligence, Dependencies,
-// Quality gate, Shared tools). The destinations themselves — label, path,
+// The destinations an operator uses daily (plus Wiki, when an administrator
+// has chosen a repository for it), then a "System" disclosure for the pages
+// that explain the machinery. The destinations themselves — label, path,
 // icon, badge and shortcut — come from NAV_DESTINATIONS, the one registry the
-// palette and the keyboard read too. A destination the registry marks
-// `adminOnly` reads an admin-only endpoint, so it is left out entirely for
-// another role rather than offered as a link into a refusal. The disclosure is
-// closed by default, remembers what the operator chose, and is open whenever
-// the current page is inside it.
+// palette and the keyboard read too, so this comment names no count that could
+// go stale. A destination the registry marks `adminOnly` reads an admin-only
+// endpoint, so it is left out entirely for another role rather than offered as
+// a link into a refusal. The disclosure is closed by default, remembers what
+// the operator chose, and is open whenever the current page is inside it.
 //
-// At the foot, <VersionLine /> says which build is answering, so the version
-// is on every page instead of only in `GET /api/v1/version`.
+// Which build is answering is said once, on Help (VersionLine), not at the
+// foot of every page.
 //
 // One repository is navigated from its own tab bar, at the top of every one of
 // its pages (components/repo/RepoLayout) — not from here.
@@ -44,7 +43,6 @@ import {
 } from '../pages/needsYou/needsYouModel';
 import { readBrowserText, writeBrowserText } from '../storage/browserStorage';
 import { NAV_DESTINATIONS, navGroup, type NavDestination } from './navDestinations';
-import { VersionLine } from './VersionLine';
 
 /** The daily destinations, in the order the work flows. */
 export const PRIMARY_NAV = NAV_DESTINATIONS.filter((d) => d.group === 'primary');
@@ -100,7 +98,7 @@ function NavBadge({
 
 /** True when `pathname` is one of the System destinations or inside one. */
 export function isSystemPath(pathname: string): boolean {
-  return SYSTEM_NAV.some((item) => isActivePath(pathname, item.path, item.end));
+  return SYSTEM_NAV.some((item) => isActiveItem(pathname, item));
 }
 
 export function LeftNav(): JSX.Element {
@@ -158,9 +156,9 @@ export function LeftNav(): JSX.Element {
       title={title ?? `${item.label} (${item.shortcut})`}
       aria-keyshortcuts={item.shortcut}
       className={`left-nav__item${
-        isActivePath(pathname, item.path, item.end) ? ' is-active' : ''
+        isActiveItem(pathname, item) ? ' is-active' : ''
       }`}
-      aria-current={isActivePath(pathname, item.path, item.end) ? 'page' : undefined}
+      aria-current={isActiveItem(pathname, item) ? 'page' : undefined}
       data-testid={`left-nav-${item.id.replace(/^nav\./, '')}`}
     >
       <item.icon aria-hidden="true" size={16} />
@@ -200,9 +198,13 @@ export function LeftNav(): JSX.Element {
         {systemOpen ? system.map((item) => renderItem(item)) : null}
       </div>
 
-      <VersionLine />
     </nav>
   );
+}
+
+/** The destination's own path, or one of the other tabs it holds (`also`). */
+function isActiveItem(pathname: string, item: NavDestination): boolean {
+  return [item.path, ...(item.also ?? [])].some((to) => isActivePath(pathname, to, item.end));
 }
 
 function isActivePath(pathname: string, to: string, end = false): boolean {

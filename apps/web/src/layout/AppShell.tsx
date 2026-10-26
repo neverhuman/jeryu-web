@@ -5,15 +5,14 @@
 //   ├──────────┬─────────────────────────────────────────┤
 //   │ <LeftNav  │ <Outlet />                              │
 //   │   />      │                                         │
-//   │           ├─────────────────────────────────────────┤
-//   │           │ <LiveActivityDock /> (docked, collapsed)│
 //   ├──────────┴─────────────────────────────────────────┤
 //   │ <StatusBar />                                       │
 //   └────────────────────────────────────────────────────┘
 //
-// The dock and the status bar are pinned to the foot of the viewport rather
-// than laid out at the end of the page; the shell reserves both their heights,
-// so the last row of content is never underneath them.
+// The status bar is pinned to the foot of the viewport rather than laid out at
+// the end of the page; the shell reserves its height, so the last row of
+// content is never underneath it. The live event feed is the Activity page,
+// not a strip on every page.
 //
 // Below 720px there is no room beside the content: the LeftNav column leaves
 // the layout and the header's menu button slides the same nav in over the page
@@ -30,7 +29,6 @@ import { CommandPalette } from './CommandPalette';
 import { GlobalHeader } from './GlobalHeader';
 import { LeftNav } from './LeftNav';
 import { NavShortcuts } from './NavShortcuts';
-import { LiveActivityDock } from './LiveActivityDock';
 import { StatusBar } from './StatusBar';
 import { useCommandStore } from '../stores/commandStore';
 import { useFocusMainOnNavigate, MAIN_CONTENT_ID } from '../hooks/useFocusMainOnNavigate';
@@ -325,7 +323,6 @@ function Shell(): JSX.Element {
       <main className="app-shell__main" id={MAIN_CONTENT_ID} tabIndex={-1}>
         <Outlet />
       </main>
-      {fullScreen ? null : <LiveActivityDock />}
       {fullScreen ? null : <StatusBar />}
       <CommandPalette />
       <KeyboardShortcutsOverlay />

@@ -32,6 +32,8 @@ import { repoRefOf, repoUrl } from './repoBrowserModel';
 import { todoHref } from './shift/workPaths';
 
 import './page.css';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { AgentsTabs } from './agents/AgentsTabs';
 import './SessionsPage.css';
 
 export const SESSIONS_PATH = '/sessions';
@@ -70,6 +72,7 @@ export function stopChannel(session: SessionSummary): string {
 }
 
 export function SessionsPage(): JSX.Element {
+  usePageTitle('Agents · Sessions');
   const [state, setState] = useState<SessionStateFilter>('running');
   const sessions = useQuery({
     queryKey: [...SESSIONS_KEY, state],
@@ -99,10 +102,9 @@ export function SessionsPage(): JSX.Element {
   return (
     <div className="page sessions" data-testid="sessions-page">
       <PageHeader
-        title="Sessions"
+        title="Agents"
         testId="sessions-header"
         freshness={queryFreshness(sessions)}
-        subtitle="Your agent sessions across repositories, newest first. Each one runs in its own Firecracker VM, started from its repository's default branch."
       >
         <label className="sessions__filter">
           <span className="sr-only">Show</span>
@@ -122,6 +124,7 @@ export function SessionsPage(): JSX.Element {
           </select>
         </label>
       </PageHeader>
+      <AgentsTabs current="sessions" />
 
       <RunnerLine runner={runner} />
 

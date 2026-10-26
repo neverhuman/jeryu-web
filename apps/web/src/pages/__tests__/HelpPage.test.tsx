@@ -14,6 +14,12 @@ vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: { login: 'operator', role: 'user' } }),
 }));
 
+vi.mock('../../hooks/useServerVersion', () => ({
+  useServerVersion: () => ({
+    data: { version: '5.0.0', name: 'jeryu-api', commit: '6f22958', webCommit: '2d4a869ab' },
+  }),
+}));
+
 function renderHelp(): void {
   // No wiki is set: the site-settings read answers 404 like an older server.
   vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
@@ -46,6 +52,11 @@ describe('HelpPage', () => {
         screen.getByText(destination.useWhen as string, { exact: false })
       ).toBeInTheDocument();
     }
+  });
+
+  it('says which build is answering, once, here rather than on every page', () => {
+    renderHelp();
+    expect(screen.getByTestId('version-line')).toHaveTextContent('jeryu 5.0.0 · web 2d4a869');
   });
 
   it('offers no admin-only page to another role', () => {

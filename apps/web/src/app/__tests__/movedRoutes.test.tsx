@@ -35,6 +35,8 @@ function follow(path: string, from: string): string {
 
 /** One pasted URL per entry of the table, and where it has to land. */
 const CASES: Record<string, { from: string; to: string }> = {
+  // The destination's own view comes first; the family the old link named stays.
+  blocked: { from: '/blocked?family=acme#top', to: '/needs-you?view=all&family=acme#top' },
   fleet: { from: '/fleet?busy=1#runner-acme-1', to: '/runners?busy=1#runner-acme-1' },
   'pull-room': {
     from: '/pull-room?repo=acme%2Fwidgets&view=queue#top',

@@ -18,7 +18,6 @@ import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { LoadingState } from '../../components/state';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useFlow } from '../../hooks/useFlow';
-import { UseThisWhen } from '../../layout/UseThisWhen';
 import {
   DEFAULT_MODE,
   DEFAULT_WINDOW_DAYS,
@@ -82,9 +81,7 @@ export function FlowPage(): JSX.Element {
         freshness={queryFreshness(report)}
         subtitle="Follow changes across repositories, decisions, review, checks, and release. Pick a station to inspect its work and daily history."
 
-      >
-        <UseThisWhen id="nav.flow" />
-      </PageHeader>
+      />
 
       <FlowControls
         days={days}

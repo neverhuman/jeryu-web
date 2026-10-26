@@ -1,11 +1,12 @@
 // needsYouAreas.test.tsx — one answer to "what needs you", on every surface.
 //
 // Four numbers used to disagree on screen: the nav badge counted the attention
-// list, the dock counted flagged events among the last few, Work counted its own
-// queue, and a page's strip counted something else again. Here one fixture is
-// rendered through the nav badge, the dock, the Needs you header and each page's
-// own surface for it — a strip, or In flight's mark on the row itself — and
-// every one of them says the same thing.
+// list, a live dock counted flagged events among the last few, Work counted its
+// own queue, and a page's strip counted something else again. Here one fixture
+// is rendered through the nav badge, the Needs you header and each page's own
+// surface for it — a strip, or In flight's mark on the row itself — and every
+// one of them says the same thing. Releases and Runners list none of their own:
+// their rows are on Needs you.
 //
 // Invented families only (acme, globex, initech): jeryu is public.
 
@@ -14,7 +15,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AttentionItem, AttentionResponse } from '../../api/types';
 import { LeftNav, PRIMARY_NAV, SYSTEM_NAV } from '../../layout/LeftNav';
-import { LiveActivityDock } from '../../layout/LiveActivityDock';
 import { ActivityPage } from '../activity';
 import { FleetPage } from '../FleetPage';
 import { NeedsYouPage } from '../needsYou';
@@ -204,7 +204,7 @@ const BADGES = [...PRIMARY_NAV, ...SYSTEM_NAV].flatMap((item) =>
 describe('every needs-you count', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('is the same number in the nav, the dock, the Needs you header and the area strip', async () => {
+  it('is the same number in the nav, the Needs you header and the area strip', async () => {
     mockAttention(THREE_IN_WORK);
     renderAt('/work', '/work', <ShiftQueuePage />);
     // The page's own strip, and its chip, count Work's share: all three.
@@ -221,20 +221,13 @@ describe('every needs-you count', () => {
 
     vi.restoreAllMocks();
     mockAttention(THREE_IN_WORK);
-    renderAt('/work', '/work', <LiveActivityDock />);
-    // One event is flagged; the dock still says three, and opens that list.
-    expect(await screen.findByText('2 need you')).toBeInTheDocument();
-    expect(screen.getByTestId('activity-dock-needs-you')).toHaveAttribute('href', '/needs-you');
-
-    vi.restoreAllMocks();
-    mockAttention(THREE_IN_WORK);
     renderAt('/needs-you', '/needs-you', <NeedsYouPage />);
     expect(await screen.findByTestId('needs-you-count')).toHaveTextContent('2');
   });
 
   it('is capped the same way everywhere once it passes two digits', async () => {
     // The badge has room for two digits, so a longer count reads as "99+" —
-    // and the dock and Activity's note say the same, from one helper, instead
+    // and Activity's note says the same, from one helper, instead
     // of the badge saying "99+" beside a note saying "(100)".
     const hundred = attention(
       Array.from({ length: 100 }, (_, index) =>
@@ -257,18 +250,13 @@ describe('every needs-you count', () => {
 
     vi.restoreAllMocks();
     mockAttention(hundred);
-    renderAt('/needs-you', '/needs-you', <LiveActivityDock />);
-    expect(await screen.findByText('99+ need you')).toBeInTheDocument();
-
-    vi.restoreAllMocks();
-    mockAttention(hundred);
     renderAt('/activity?needs_human=1', '/activity', <ActivityPage />);
     await waitFor(() =>
       expect(screen.getByTestId('activity-needs-you')).toHaveTextContent('Blocked (99+).')
     );
   });
 
-  it('leads from every badge to a page showing the rows it counted', async () => {
+  it('leads from every badge to the page the rows are about, listing them once', async () => {
     expect(BADGES.map((badge) => badge.area).sort()).toEqual([
       'pulls',
       'releases',
@@ -294,8 +282,13 @@ describe('every needs-you count', () => {
         expect(within(off).getByText('1')).toBeInTheDocument();
         expect(within(off).getByRole('link', { name: 'open Blocked' })).toHaveAttribute(
           'href',
-          '/blocked'
+          '/needs-you?view=all'
         );
+      } else if (area === 'releases' || area === 'system') {
+        // The page lists its own state; the row that needs a person is on
+        // Needs you, so it is not repeated in a strip here.
+        await screen.findByTestId(area === 'releases' ? 'releases-page' : 'fleet-page');
+        expect(screen.queryByTestId(`needs-you-here-${area}`)).toBeNull();
       } else {
         const strip = await screen.findByTestId(`needs-you-here-${area}`);
         expect(within(strip).getByText(item.title)).toBeInTheDocument();

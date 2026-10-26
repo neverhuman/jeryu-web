@@ -28,7 +28,7 @@ import { absoluteText, relativeText } from '../format/when';
 import { useForgeHost } from '../hooks/useForgeHost';
 import { BotActivityList } from './bots/BotActivityList';
 import { repoRefOf, repoUrl, type RepoRef } from './repoBrowserModel';
-import { SESSIONS_KEY, isLiveSession, stopChannel } from './SessionsPage';
+import { SESSIONS_KEY, SESSIONS_PATH, isLiveSession, stopChannel } from './SessionsPage';
 import { todoHref } from './shift/workPaths';
 
 import './page.css';
@@ -75,8 +75,8 @@ export function SessionPage(): JSX.Element {
       <PageHeader
         title={<span className="sessions__mono">{sessionId}</span>}
         testId="session-header"
-        parent="nav.sessions"
-        crumbs={[{ label: sessionId }]}
+        parent="nav.agents"
+        crumbs={[{ label: 'Your sessions', to: SESSIONS_PATH }, { label: sessionId }]}
         freshness={data ? queryFreshness(session) : undefined}
         subtitle="One Firecracker VM: the agent and a shell beside it."
         actions={

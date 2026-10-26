@@ -33,7 +33,6 @@ import {
   Share2,
   ShieldCheck,
   Siren,
-  SquareTerminal,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -42,7 +41,6 @@ import { FLOW_PATH } from '../pages/flow/flowModel';
 import { HELP_PATH } from '../pages/helpPath';
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 import { NEEDS_YOU_PATH } from './HomeRedirect';
-import { SESSIONS_PATH } from '../pages/SessionsPage';
 import { WIKI_PATH } from '../pages/wiki/wikiModel';
 import { WORK_PATH } from '../pages/shift/workPaths';
 import { REPORT_INCIDENT_PATH } from '../pages/incidents/incidentModel';
@@ -80,10 +78,10 @@ export interface NavDestination {
   /** Extra words the palette and `/search` match on. */
   keywords: string[];
   /**
-   * One line of "use this when…": the question this page answers, said on the
-   * page itself (see `UseThisWhen`) and on Help. Every `system` destination
-   * carries one — those pages are read when something is off, by somebody who
-   * has to pick the right one first.
+   * One line of "use this when…": the question this page answers, said on
+   * Help, which lists the System pages with it. Pages themselves carry no
+   * explainer line. Every `system` destination has one — those pages are read
+   * when something is off, by somebody who has to pick the right one first.
    */
   useWhen?: string;
   /** Hidden from the nav and the palette unless the viewer is an administrator. */
@@ -91,6 +89,8 @@ export interface NavDestination {
   group: NavGroup;
   /** True when a longer path below this one is its own destination. */
   end?: boolean;
+  /** Other paths that are this destination too: the tabs of one page. */
+  also?: readonly string[];
 }
 
 export const NAV_DESTINATIONS: readonly NavDestination[] = [
@@ -105,17 +105,6 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     aliases: ['g d'],
     keywords: ['needs you', 'attention', 'inbox', 'blocked', 'waiting', 'home', 'dashboard'],
     // `/api/v1/attention` is admin-only: another role would land on a denial.
-    adminOnly: true,
-    group: 'primary',
-  },
-  {
-    id: 'nav.blocked',
-    label: 'Blocked',
-    path: '/blocked',
-    shortcut: 'g x',
-    icon: Siren,
-    paletteIcon: 'siren',
-    keywords: ['blocked', 'waiting', 'pipeline', 'fix'],
     adminOnly: true,
     group: 'primary',
   },
@@ -239,16 +228,36 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     group: 'wiki',
   },
   {
-    // The presence API is authenticated and filters scopes per reader; private
-    // metadata is reporter/admin-only, so the inventory itself is not admin-only.
-    id: 'nav.active-agents',
+    // One page for agents, in three tabs: which are running anywhere (the
+    // presence API is authenticated and filters scopes per reader, so it is
+    // not admin-only), your own sessions, and the agents enrolled on your
+    // account. Each tab keeps the address it always had.
+    id: 'nav.agents',
     shortcut: 'g v',
-    label: 'Active agents',
+    label: 'Agents',
     path: '/agents',
+    also: ['/sessions', '/bots'],
     icon: Bot,
     paletteIcon: 'bot',
-    keywords: ['active agents', 'sessions', 'claude', 'codex', 'cursor', 'grok', 'agy', 'host', 'worktree'],
-    useWhen: 'Use this when you need to find running agents and locate their sessions and checkouts.',
+    keywords: [
+      'agents',
+      'active agents',
+      'sessions',
+      'vm',
+      'terminal',
+      'enrollment',
+      'tokens',
+      'claude',
+      'codex',
+      'cursor',
+      'grok',
+      'muse',
+      'agy',
+      'host',
+      'worktree',
+    ],
+    useWhen:
+      'Use this when you need to find running agents, your own sessions, or the agents enrolled on your account.',
     group: 'system',
   },
   {
@@ -387,28 +396,6 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     paletteIcon: 'cog',
     shortcut: 'g s',
     keywords: ['settings', 'admin', 'preferences', 'account'],
-    group: 'account',
-  },
-  {
-    id: 'nav.bots',
-    label: 'Agents',
-    path: '/bots',
-    icon: Bot,
-    paletteIcon: 'bot',
-    shortcut: 'g b',
-    keywords: ['agents', 'agent', 'tokens', 'grokbot', 'musebot', 'enrollment', 'reach', 'grok', 'muse'],
-    group: 'account',
-  },
-  {
-    // Your own agent sessions, across repositories; each repository's Agents
-    // tab, where sessions start, links here too.
-    id: 'nav.sessions',
-    label: 'Sessions',
-    path: SESSIONS_PATH,
-    icon: SquareTerminal,
-    paletteIcon: 'square-terminal',
-    shortcut: 'g o',
-    keywords: ['sessions', 'agents', 'vm', 'firecracker', 'claude', 'codex', 'grok', 'terminal'],
     group: 'account',
   },
 ];

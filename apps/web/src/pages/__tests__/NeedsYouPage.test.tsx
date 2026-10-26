@@ -12,7 +12,7 @@ import { ATTENTION, DEPLOY_COMMAND, DEPLOY_RUN_IN, attentionItem } from './pipel
 import { errorResponse, json, renderAt } from './shiftPageHelpers';
 
 function renderPage(): void {
-  renderAt('/needs-you', '/needs-you', <NeedsYouPage blocked />);
+  renderAt('/needs-you?view=all', '/needs-you', <NeedsYouPage />);
 }
 
 describe('NeedsYouPage', () => {
@@ -363,37 +363,34 @@ describe('NeedsYouPage', () => {
     expect(within(staged).queryByText('More')).toBeNull();
   });
 
-  it('filters to one family from the pill on a row, and back from the strip', async () => {
+  it('filters to one family from the pill on a row, and back from the same pill', async () => {
     mockPipelineApi();
     renderPage();
     const blocked = await screen.findByTestId(
       'needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66'
     );
-    // Every row wears its family at the far left; the strip counts what waits on a person.
-    const strip = screen.getByRole('group', { name: 'Filter by family' });
-    expect(within(strip).getByRole('button', { name: /^All 3$/ })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-    expect(within(strip).getByRole('button', { name: /^jeryu 1$/ })).toBeInTheDocument();
-    expect(within(strip).getByRole('button', { name: /^jain 1$/ })).toBeInTheDocument();
-    // No family and no known repository family: the forge itself, listed last.
-    expect(within(strip).getAllByRole('button').at(-1)).toHaveTextContent(/^forge 1$/);
+    // The family control is the header's: the page draws no strip of its own.
+    expect(screen.queryByRole('group', { name: 'Filter by family' })).toBeNull();
 
     fireEvent.click(within(blocked).getByRole('button', { name: 'Show only jeryu' }));
     expect(screen.queryByTestId('needs-you-item-workers_down:jain')).toBeNull();
     expect(screen.queryByTestId('needs-you-item-release_staged:jeryu/jeryu-deploy')).toBeNull();
-    expect(
-      screen.getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66')
-    ).toBeInTheDocument();
-    expect(within(strip).getByRole('button', { name: /^jeryu 1$/ })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    const kept = screen.getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66');
 
-    // Pressing the same pill again, or All, shows every family.
-    fireEvent.click(within(strip).getByRole('button', { name: /^All 3$/ }));
+    // Pressing the same pill again shows every family.
+    fireEvent.click(within(kept).getByRole('button', { name: /every family/ }));
     expect(screen.getByTestId('needs-you-item-workers_down:jain')).toBeInTheDocument();
+  });
+
+  it('has two tabs, Mine and All, each an address that keeps the family', async () => {
+    mockPipelineApi();
+    renderAt('/needs-you?family=jeryu', '/needs-you', <NeedsYouPage />);
+    const tabs = await screen.findByTestId('needs-you-tabs');
+    expect(within(tabs).getByRole('link', { name: 'Mine' })).toHaveAttribute('aria-current', 'page');
+    expect(within(tabs).getByRole('link', { name: 'All' })).toHaveAttribute(
+      'href',
+      '/needs-you?view=all&family=jeryu'
+    );
   });
 
   it('says nothing needs you in one sentence, with a line about what the system is doing', async () => {

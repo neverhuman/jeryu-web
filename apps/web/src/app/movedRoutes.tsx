@@ -12,13 +12,16 @@
 // not one to extend.
 //
 // A redirect keeps the query string and the fragment: `?family=`, `?view=`,
-// `#lane-<id>` all name something on the destination page.
+// `#lane-<id>` all name something on the destination page. A destination may
+// name a query of its own (`?view=all`); what the old address asked is added
+// to it.
 
 import { Navigate, useLocation, useParams } from 'react-router-dom';
 
 import { ACTIVITY_CHIPS, isKindFilter } from '../pages/activity/activityModel';
 import { IN_FLIGHT_PATH } from '../pages/pullRoomModel';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { NEEDS_YOU_PATH } from '../pages/needsYou/needsYouModel';
 import { ADOPTION_PATH, FINDINGS_PATH } from '../pages/sharedTools/SharedToolsTabs';
 import { WORK_PATH, todoHref } from '../pages/shift';
 
@@ -26,8 +29,8 @@ export interface MovedRoute {
   /** The path as the route map declares it (no leading slash). */
   path: string;
   /**
-   * Where it goes now. A `:param` is filled from the URL, and a `#place`
-   * names a section of the destination page.
+   * Where it goes now. A `:param` is filled from the URL, a `?query` names a
+   * view of the destination page, and a `#place` names a section of it.
    */
   to: string;
   /** Why the path moved — what a reader of this table needs to know. */
@@ -57,6 +60,13 @@ export interface MovedRoute {
 }
 
 export const MOVED_ROUTES: readonly MovedRoute[] = [
+  {
+    path: 'blocked',
+    to: `${NEEDS_YOU_PATH}?view=all`,
+    why: 'Blocked was Needs you for everyone: it is the All tab of Needs you.',
+    added: '2026-10-26',
+    removeAfter: '2027-04-26',
+  },
   {
     path: 'fleet',
     to: '/runners',
@@ -164,12 +174,23 @@ export const MOVED_ROUTES: readonly MovedRoute[] = [
   },
 ];
 
-/** Split `/work#add` into its path and its place on the page. */
-function splitPlace(to: string): { path: string; place: string } {
+/** Split `/needs-you?view=all` or `/work#add` into its path, its view and its place. */
+function splitPlace(to: string): { path: string; query: string; place: string } {
   const hash = to.indexOf('#');
-  return hash === -1
-    ? { path: to, place: '' }
-    : { path: to.slice(0, hash), place: to.slice(hash) };
+  const place = hash === -1 ? '' : to.slice(hash);
+  const rest = hash === -1 ? to : to.slice(0, hash);
+  const mark = rest.indexOf('?');
+  return mark === -1
+    ? { path: rest, query: '', place }
+    : { path: rest.slice(0, mark), query: rest.slice(mark + 1), place };
+}
+
+/** The destination's own view, with what the old address asked added to it. */
+export function mergeQuery(own: string, asked: string): string {
+  if (!own) return asked;
+  const params = new URLSearchParams(own);
+  for (const [key, value] of new URLSearchParams(asked)) params.set(key, value);
+  return `?${params.toString()}`;
 }
 
 /** Fill the `:param` segments of a destination from the URL that matched. */
@@ -209,8 +230,8 @@ export type MovedRouteProps = Pick<MovedRoute, 'to' | 'keepTodoLink' | 'kinds'>;
 export function MovedRouteRedirect({ to, keepTodoLink, kinds }: MovedRouteProps): JSX.Element {
   const params = useParams();
   const { search: asked, hash: current } = useLocation();
-  const search = kinds ? mapKindParam(asked, kinds) : asked;
-  const { path, place } = splitPlace(to);
+  const { path, query, place } = splitPlace(to);
+  const search = mergeQuery(query, kinds ? mapKindParam(asked, kinds) : asked);
   if (keepTodoLink && !place) {
     const ids = (new URLSearchParams(search).get('todo') ?? '').split(',').filter(Boolean);
     if (ids.length === 1) return <Navigate to={todoHref(ids[0])} replace />;

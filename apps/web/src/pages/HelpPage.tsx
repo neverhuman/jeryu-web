@@ -4,7 +4,7 @@
 // things a reader cannot discover by clicking: the keys, which page answers
 // which question, and where the account controls live. The destinations and
 // their chords come from NAV_DESTINATIONS, so a renamed page or a moved chord
-// is right here without a second edit.
+// is right here without a second edit. It also says which build is answering.
 
 import { Link } from 'react-router-dom';
 
@@ -14,6 +14,7 @@ import { formatCombo } from '../hooks/useKeyboard';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { navGroup, type NavDestination } from '../layout/navDestinations';
+import { VersionLine } from '../layout/VersionLine';
 import { useShortcutsStore } from '../stores/shortcutsStore';
 import { WIKI_PATH } from './wiki/wikiModel';
 
@@ -115,6 +116,13 @@ export function HelpPage(): JSX.Element {
             </li>
           ) : null}
         </ul>
+      </section>
+
+      <section className="page__section" aria-labelledby="help-build">
+        <h2 className="page__section-title" id="help-build">
+          This build
+        </h2>
+        <VersionLine />
       </section>
     </div>
   );

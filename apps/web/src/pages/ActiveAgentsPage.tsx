@@ -9,6 +9,7 @@ import { useForgeHost } from '../hooks/useForgeHost';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useServerNow } from '../hooks/useServerNow';
 import { AgentCards } from './agents/AgentCards';
+import { AgentsTabs } from './agents/AgentsTabs';
 import { PresenceList } from './agents/PresenceList';
 import { presenceRepoHref } from './agents/presenceModel';
 import { TimelineAxis } from './agents/PresenceTimeline';
@@ -25,7 +26,7 @@ const VIEW_KEYS = ['view', 'span'] as const;
 type AgentsView = 'list' | 'cards';
 
 export function ActiveAgentsPage(): JSX.Element {
-  usePageTitle('Active agents');
+  usePageTitle('Agents');
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const forgeHost = useForgeHost();
@@ -99,8 +100,8 @@ export function ActiveAgentsPage(): JSX.Element {
   }
   return (
     <div className="page active-agents" data-testid="active-agents-page">
-      <PageHeader title="Active agents" freshness={queryFreshness(query)}
-        subtitle="Agents running across repositories and servers. Live includes active and idle sessions." />
+      <PageHeader title="Agents" freshness={queryFreshness(query)} />
+      <AgentsTabs current="running" />
       <form className="active-agents__filters" onSubmit={filter} aria-label="Filter active agents">
         <Fragment key={textKey}>
           {FIELDS.map(([key, label]) => <label key={key}>{label}<input name={key} defaultValue={params.get(key) ?? ''} /></label>)}

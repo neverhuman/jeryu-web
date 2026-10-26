@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ReleasesPage } from '../ReleasesPage';
 import { mockPipelineApi } from './pipelinePageHelpers';
-import { DEPLOY_COMMAND, DEPLOY_RUN_IN } from './pipelineTestData';
 import { json, renderAt } from './shiftPageHelpers';
 
 let role: 'admin' | 'user' = 'admin';
@@ -88,21 +87,14 @@ describe('ReleasesPage', () => {
     role = 'admin';
   });
 
-  it('shows the staged release once, with its deploy command, the deploy log, and linked unshipped PRs', async () => {
+  it('leaves the staged release to Needs you, and shows the deploy log and linked unshipped PRs', async () => {
     mockReleases();
     renderAt('/releases?repo=jeryu%2Fjeryu-deploy', '/releases', <ReleasesPage />);
 
-    const staged = await screen.findByTestId(STAGED_ROW);
-    // The strip is the one place the page shows what needs a person, so the
-    // staged release is a row there and nowhere else.
-    expect(screen.getAllByTestId(STAGED_ROW)).toHaveLength(1);
-    expect(within(staged).getByText(DEPLOY_COMMAND)).toBeInTheDocument();
-    // The where-line Needs you shows, and it describes the copy button.
-    expect(
-      within(staged).getByRole('button', { name: /^Copy Deploy command for/ })
-    ).toHaveAccessibleDescription(`Run on ${DEPLOY_RUN_IN}`);
-
     const prod = await screen.findByTestId('releases-env-production');
+    // What needs a person is listed once, on Needs you (the nav badge counts
+    // it): the staged release is not repeated in a strip here.
+    expect(screen.queryByTestId(STAGED_ROW)).toBeNull();
     expect(within(prod).getByRole('link', { name: 'deploy log' })).toHaveAttribute(
       'href',
       'https://git.neverhuman.org/logs/rel-c.txt'

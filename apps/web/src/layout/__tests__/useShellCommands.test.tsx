@@ -16,7 +16,6 @@ describe('useShellCommands', () => {
     const ids = useCommandStore.getState().commands.map((c) => c.id);
     expect(ids).toEqual([
       'nav.needs-you',
-      'nav.blocked',
       'nav.activity',
       'nav.flow',
       'nav.work',
@@ -24,7 +23,7 @@ describe('useShellCommands', () => {
       'nav.releases',
       'nav.repos',
       'nav.wiki',
-      'nav.active-agents',
+      'nav.agents',
       'nav.runners',
       'nav.intelligence',
       'nav.dependencies',
@@ -35,8 +34,6 @@ describe('useShellCommands', () => {
       'nav.shared-tools',
       'nav.help',
       'nav.settings',
-      'nav.bots',
-      'nav.sessions',
       'nav.work-add',
       'nav.activity-wall',
       'help.shortcuts',
@@ -62,7 +59,7 @@ describe('useShellCommands', () => {
       'nav.releases',
       'nav.repos',
       'nav.wiki',
-      'nav.active-agents',
+      'nav.agents',
       'nav.runners',
       'nav.intelligence',
       'nav.dependencies',
@@ -70,8 +67,6 @@ describe('useShellCommands', () => {
       'nav.shared-tools',
       'nav.help',
       'nav.settings',
-      'nav.bots',
-      'nav.sessions',
       'help.shortcuts',
       'family.switch',
       'family.all',
@@ -124,7 +119,6 @@ describe('useShellCommands', () => {
     );
     expect(shortcuts).toEqual({
       'g n': '/needs-you',
-      'g x': '/blocked',
       'g a': '/activity',
       'g f': '/flow',
       'g w': '/work',
@@ -143,8 +137,6 @@ describe('useShellCommands', () => {
       'g t': '/shared-tools',
       'g h': '/help',
       'g s': '/settings',
-      'g b': '/bots',
-      'g o': '/sessions',
     });
   });
 

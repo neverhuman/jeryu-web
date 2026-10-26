@@ -9,14 +9,18 @@
 // the next step; `watch` rows stay neutral, folded behind a count. When
 // nothing is waiting, one sentence says so and a single line shows what the
 // system is doing, so calm reads as alive rather than broken.
+//
+// Two tabs: Mine (the default) keeps the rows about todos the viewer filed or
+// holds; All (`?view=all`, once its own page at `/blocked`) is every row the
+// pipeline is waiting on a person for. The family is the header's scope.
 
 import { CircleCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
-import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
+import { PageTabs } from '../../components/pageTabs';
 import { pillClass } from '../../components/tone/tone';
 import { LoadingState, PipelineQueryState } from '../../components/state';
 import { useControlPlaneRunners } from '../../hooks/useControlPlaneRunners';
@@ -31,14 +35,12 @@ import { relativeText } from '../../format/when';
 import { AttentionRow, useRepoFamilies, type FamilyProps } from './AttentionRow';
 import {
   groupSubjects,
+  NEEDS_YOU_PATH,
   personalAttention,
-  familyCounts,
-  summaryFamilyCounts,
   familyOf,
   filterByFamily,
   severityTone,
   systemPulse,
-  urgentAttention,
   type SubjectGroup,
 } from './needsYouModel';
 import { useListKeys } from '../../hooks/useListKeys';
@@ -48,30 +50,29 @@ import { useAuth } from '../../hooks/useAuth';
 import '../page.css';
 import './NeedsYou.css';
 
-export function NeedsYouPage({ blocked = false }: { blocked?: boolean }): JSX.Element {
-  const title = blocked ? 'Blocked' : 'Needs you';
-  usePageTitle(title);
+/** The tab that shows every row, not only the viewer's. */
+export const ALL_VIEW = 'all';
+
+export function NeedsYouPage(): JSX.Element {
+  const [params] = useSearchParams();
+  const all = params.get('view') === ALL_VIEW;
+  const title = 'Needs you';
+  usePageTitle(all ? 'Needs you · All' : title);
   const { user, isPending: authPending } = useAuth();
   const isAdmin = user?.role === 'admin';
   const attention = useAttention(isAdmin);
   usePipelineNudge(attention.isSuccess, ATTENTION_QUERY_KEY);
-  // The shell's family scope keeps one family's rows: a pill on any row, or in
-  // the strip above, sets it, so "everything waiting on me for one family" is
-  // one click, a link (`?family=`), and the scope every page after this opens with.
+  // The shell's family scope keeps one family's rows: the header's family
+  // control, or a pill on any row, sets it, so "everything waiting on me for
+  // one family" is a link (`?family=`) and the scope every page after this opens with.
   const scope = useFamilyScope();
   const family = scope.family;
   const repoFamilies = useRepoFamilies();
   const setFamily = (next: string): void => {
     scope.setFamily(next === family ? '' : next);
   };
-  const data = blocked ? attention.data : personalAttention(attention.data, user?.login);
+  const data = all ? attention.data : personalAttention(attention.data, user?.login);
   const allItems = data?.items ?? [];
-  // The pills count the rows this page shows in red: the server's per-family
-  // row counts over the whole inbox, else `urgentAttention`, the one
-  // derivation of that set, so a row with an unknown severity is counted as
-  // the `watch` row it is displayed as.
-  const counts =
-    summaryFamilyCounts(data) ?? familyCounts(urgentAttention(data), repoFamilies);
   const groups = groupSubjects(filterByFamily(allItems, family, repoFamilies));
   const urgent = groups.filter((group) => group.severity !== 'watch');
   const watch = groups.find((group) => group.severity === 'watch');
@@ -92,11 +93,6 @@ export function NeedsYouPage({ blocked = false }: { blocked?: boolean }): JSX.El
     <div className="page page--wide" data-testid="needs-you-page" ref={rows}>
       <PageHeader
         title={title}
-        subtitle={
-          blocked
-            ? 'Where the pipeline is waiting on a person. Rows clear themselves when the cause is fixed.'
-            : 'Attention for todos you filed or blocked work assigned to you.'
-        }
         testId="needs-you-header"
         freshness={queryFreshness(attention)}
         badges={
@@ -107,6 +103,15 @@ export function NeedsYouPage({ blocked = false }: { blocked?: boolean }): JSX.El
           ) : null
         }
       />
+      <PageTabs
+        label="Whose rows"
+        testId="needs-you-tabs"
+        current={all ? ALL_VIEW : 'mine'}
+        tabs={[
+          { id: 'mine', label: 'Mine', to: scope.scopedPath(NEEDS_YOU_PATH) },
+          { id: ALL_VIEW, label: 'All', to: scope.scopedPath(`${NEEDS_YOU_PATH}?view=${ALL_VIEW}`) },
+        ]}
+      />
 
       {attention.isPending ? (
         <LoadingState title="Checking what needs you…" variant="message" />
@@ -114,14 +119,11 @@ export function NeedsYouPage({ blocked = false }: { blocked?: boolean }): JSX.El
         <PipelineQueryState what="the Needs you list" error={attention.error} />
       ) : (
         <>
-          {counts.length > 1 || family ? (
-            <FamilyStrip counts={counts} family={family} onPick={setFamily} />
-          ) : null}
           {urgent.length === 0 ? (
             <>
               <ScopedEmptyState
                 icon={CircleCheck}
-                title={blocked ? 'Nothing is blocked.' : 'Nothing needs you.'}
+                title={all ? 'Nothing is blocked.' : 'Nothing needs you.'}
                 description={`Checked ${relativeText(attention.data.generated_at, now)}.`}
               />
               <SystemPulse now={now} />

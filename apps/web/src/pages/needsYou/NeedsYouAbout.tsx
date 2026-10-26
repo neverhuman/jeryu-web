@@ -15,6 +15,7 @@ import { useAttention } from '../../hooks/usePipeline';
 import { AttentionRow, useRepoFamilies } from './AttentionRow';
 import {
   attentionAbout,
+  blockedHref,
   familyOf,
   severityTone,
   type AboutSubject,
@@ -55,7 +56,7 @@ export function NeedsYouAbout({
             tone={severityTone(row.severity)}
             now={now}
             familyFor={(item) => familyOf(item, repoFamilies)}
-            onPick={(family) => void navigate(`/blocked?family=${encodeURIComponent(family)}`)}
+            onPick={(family) => void navigate(blockedHref(family))}
             picked=""
           />
         ))}

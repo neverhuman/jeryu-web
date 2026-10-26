@@ -20,7 +20,6 @@ import {
 import { usePageTitle } from '../hooks/usePageTitle';
 import { OtherFamilies } from '../components/family/OtherFamilies';
 import { useRepoFamilyScope } from '../components/family/useRepoFamilyScope';
-import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
 import './IntelligencePage.css';
@@ -70,9 +69,7 @@ export function DependenciesPage(): JSX.Element {
         testId="dependencies-header"
         freshness={queryFreshness(query)}
         subtitle="Every repository by how deep it sits in the dependency chain, with each edge coloured by the pin behind it: where a re-pin wave has landed and where it has not."
-      >
-        <UseThisWhen id="nav.dependencies" />
-      </PageHeader>
+      />
 
       <section className="page__section" aria-labelledby="dependencies-graph">
         <div className="intelligence__section-head">

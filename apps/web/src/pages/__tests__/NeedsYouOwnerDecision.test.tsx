@@ -66,7 +66,7 @@ function renderWith(item: AttentionItem, refuse = false): ReturnType<typeof mock
       ? errorResponse(403, 'only a forge admin records an owner decision')
       : json({ decision: 'yes' });
   });
-  renderAt('/needs-you', '/needs-you', <NeedsYouPage blocked />);
+  renderAt('/needs-you?view=all', '/needs-you', <NeedsYouPage />);
   return calls;
 }
 

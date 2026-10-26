@@ -377,7 +377,7 @@ describe('ActivityPage', () => {
     expect(screen.getByTestId('activity-needs-you')).toHaveTextContent('waiting on a person right now');
     expect(screen.getByRole('link', { name: 'Blocked' })).toHaveAttribute(
       'href',
-      '/blocked?family=jeryu'
+      '/needs-you?view=all&family=jeryu'
     );
     // The family is a pill at the far left of the chip row, not a select.
     const strip = screen.getByRole('group', { name: 'Filter by family' });

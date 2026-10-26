@@ -21,9 +21,7 @@ import type {
   YieldRow,
   YieldTodoRef,
 } from '../../api/types';
-import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
-import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import {
@@ -39,7 +37,6 @@ import {
   isPipelineUnreachable,
 } from '../../hooks/usePipeline';
 import { useYield } from '../../hooks/useYield';
-import { UseThisWhen } from '../../layout/UseThisWhen';
 import { pillClass } from '../../components/tone/tone';
 import { todoHref } from '../shift/workPaths';
 import { ScrollTable } from './ScrollTable';
@@ -109,9 +106,7 @@ export function YieldPage(): JSX.Element {
         testId="yield-header"
         freshness={queryFreshness(report)}
         subtitle="What the agents' work cost against what reached main: cost per merged change first, then where the rest of the spend went."
-      >
-        <UseThisWhen id="nav.yield" />
-      </PageHeader>
+      />
 
       <YieldControls
         days={days}
@@ -175,17 +170,8 @@ function YieldControls({
   days: number;
   onDays: (days: number) => void;
 }): JSX.Element {
-  const scope = useFamilyScope();
-  const families = useFamilyNames();
   return (
     <div className="yield__controls" data-testid="yield-controls">
-      {families.names.length > 1 || scope.family ? (
-        <FamilyStrip
-          counts={families.names.map((name) => ({ family: name }))}
-          family={scope.family}
-          onPick={(name) => scope.setFamily(name)}
-        />
-      ) : null}
       <div className="yield__segmented" role="group" aria-label="Window">
         {YIELD_WINDOWS.map((value) => (
           <button

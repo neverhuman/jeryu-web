@@ -70,8 +70,9 @@ test.describe('Pipeline visibility', () => {
     await expect(page).toHaveURL(/\/needs-you$/);
     await expect(page.getByTestId('needs-you-page')).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole('link', { name: 'Blocked', exact: true }).click();
-    await expect(page).toHaveURL(/\/blocked$/);
+    // Every row, not only the viewer's, is the All tab of the same page.
+    await page.getByTestId('needs-you-tabs').getByRole('link', { name: 'All', exact: true }).click();
+    await expect(page).toHaveURL(/\/needs-you\?view=all$/);
     const critical = page.getByTestId('needs-you-critical');
     await expect(critical).toContainText('No healthy worker slot for jain');
     await expect(critical).toContainText('Workers down');
@@ -241,7 +242,7 @@ test.describe('Pipeline visibility', () => {
     await expect(row.getByRole('alert')).toContainText(
       'enqueueing needs write access to the repository'
     );
-    expect(new URL(page.url()).pathname).toBe('/blocked');
+    expect(new URL(page.url()).pathname).toBe('/needs-you');
 
     // Asked again it is one more call and no more, on a fresh key.
     refuse = false;
@@ -440,7 +441,7 @@ test.describe('Pipeline visibility', () => {
     await expect(strip).toContainText('42');
     await expect(strip).toContainText('$12.34');
     await expect(strip).not.toContainText('loaded here');
-    await expect(strip.getByRole('link', { name: /Blocked/ })).toHaveAttribute('href', '/blocked');
+    await expect(strip.getByRole('link', { name: /Blocked/ })).toHaveAttribute('href', '/needs-you?view=all');
 
     await page.getByTestId('activity-page').screenshot({ path: 'playwright-report/activity.png' });
 
@@ -469,7 +470,7 @@ test.describe('Pipeline visibility', () => {
     await expect(note).toContainText('waiting on a person right now');
     // The same 3 rows the nav badge and Needs you show, not a fourth count.
     await expect(note).toContainText('(3)');
-    await expect(note.getByRole('link', { name: 'Blocked' })).toHaveAttribute('href', '/blocked');
+    await expect(note.getByRole('link', { name: 'Blocked' })).toHaveAttribute('href', '/needs-you?view=all');
     // A chip is a whole view: it replaces the kind filter rather than stacking on it.
     await expect(page).not.toHaveURL(/kind=/);
     await expect(page.getByTestId('activity-event-12')).toBeVisible();
@@ -873,57 +874,21 @@ test.describe('Pipeline visibility', () => {
     await expect(w1).toContainText('980k', { timeout: 8_000 });
   });
 
-  test('the live dock is one quiet line on any page, opens to the newest events, and remembers @action:chrome.activity_dock', async ({
+  test('the live feed is the Activity page, not a strip on every page @action:chrome.activity_dock', async ({
     page,
   }) => {
     await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
 
+    // Another page carries no feed of its own: the nav badge says what needs
+    // you, and Activity is where the events are read.
     await page.goto('/settings');
-    const dock = page.getByTestId('activity-dock');
-    // One quiet line until opened: the newest event and how many need you.
-    await expect(dock.getByRole('button', { name: 'Live activity' })).toHaveAttribute('aria-expanded', 'false', {
-      timeout: 15_000,
-    });
-    await expect(dock.getByRole('log')).toHaveCount(0);
-    // The count is the Needs you list, the same number the nav badge shows,
-    // and the pill opens that list.
-    await expect(dock).toContainText('1 need you');
-    await expect(dock.getByTestId('activity-dock-needs-you')).toHaveAttribute(
-      'href',
-      '/needs-you'
-    );
-    // Docked: it is at the foot of the viewport whatever the page below it
-    // does, not at the end of a page the reader would have to scroll to.
-    await page.mouse.wheel(0, 2_000);
-    const box = (await dock.boundingBox())!;
-    const viewport = page.viewportSize()!;
-    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
-    expect(box.y).toBeGreaterThan(viewport.height / 2);
-    // On the bottom edge itself: the status bar it used to sit on renders only
-    // while the connection is in trouble, and its empty band stayed reserved.
-    await expect(page.locator('.app-shell__status')).toHaveCount(0);
-    expect(box.y + box.height).toBeGreaterThanOrEqual(viewport.height - 1);
+    await expect(page.getByTestId('needs-you-badge')).toHaveText('1', { timeout: 15_000 });
+    await expect(page.getByTestId('activity-dock')).toHaveCount(0);
+    await expect(page.getByText('Live activity')).toHaveCount(0);
 
-    await dock.getByRole('button', { name: 'Live activity' }).click();
-    await expect(dock.getByRole('log')).toContainText('Merged neverhuman/jeryu#99');
-    await expect(dock.getByRole('log')).toContainText('Pull request merged');
-    // Each row opens its subject, the link the Activity page gives it.
-    await expect(
-      dock.getByRole('link', { name: /Merged neverhuman\/jeryu#99/ })
-    ).toHaveAttribute('href', '/repos/jeryu/neverhuman/jeryu/pulls/99');
-
-    // Opening it is remembered.
-    await page.reload();
-    await expect(page.getByTestId('activity-dock').getByRole('button', { name: 'Live activity' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-      { timeout: 15_000 }
-    );
-    await page.getByTestId('activity-dock').getByRole('link', { name: 'All activity' }).click();
-    await expect(page).toHaveURL(/\/activity$/);
-    // The Activity page is the same feed at full size, so the dock steps aside.
-    await expect(page.getByTestId('activity-event-12')).toBeVisible();
+    await page.goto('/activity');
+    await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('activity-dock')).toHaveCount(0);
   });
   test('Releases says what is merged but not pinned, with one next step @action:releases.ready_to_pin', async ({

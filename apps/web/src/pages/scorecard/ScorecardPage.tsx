@@ -6,15 +6,12 @@ import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import type { ScorecardMetric, ScorecardWindow } from '../../api/types';
-import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
-import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { EmptyState, ErrorState, LoadingState, PermissionDeniedState } from '../../components/state';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { isPipelineForbidden, isPipelineUnavailable, isPipelineUnreachable } from '../../hooks/usePipeline';
 import { useScorecard } from '../../hooks/useScorecard';
-import { UseThisWhen } from '../../layout/UseThisWhen';
 import {
   DEFAULT_SCORECARD_WINDOW,
   HEADLINE_TILES,
@@ -68,9 +65,7 @@ export function ScorecardPage(): JSX.Element {
         testId="scorecard-header"
         freshness={queryFreshness(report)}
         subtitle="Delivery outcomes across speed, quality, recovery, economics and capacity."
-      >
-        <UseThisWhen id="nav.scorecard" />
-      </PageHeader>
+      />
 
       <ScorecardControls
         key={repo}
@@ -110,18 +105,9 @@ function ScorecardControls({
   onTab: (value: ScorecardTab) => void;
   onRepo: (value: string) => void;
 }): JSX.Element {
-  const scope = useFamilyScope();
-  const families = useFamilyNames();
   const [repoDraft, setRepoDraft] = useState(repo);
   return (
     <div className="scorecard__controls" data-testid="scorecard-controls">
-      {families.names.length > 1 || scope.family ? (
-        <FamilyStrip
-          counts={families.names.map((name) => ({ family: name }))}
-          family={scope.family}
-          onPick={(name) => scope.setFamily(name)}
-        />
-      ) : null}
       <div className="scorecard__segmented" role="group" aria-label="Window">
         {SCORECARD_WINDOWS.map((value) => (
           <button

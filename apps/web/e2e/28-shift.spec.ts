@@ -217,7 +217,7 @@ test.describe('Work, one page', () => {
     const chip = page.getByTestId('shift-needs-human');
     await expect(chip).toContainText('in Work · open Blocked');
     await chip.click();
-    await expect(page).toHaveURL(/\/blocked$/);
+    await expect(page).toHaveURL(/\/needs-you\?view=all$/);
   });
 
   test('a todo has its own page: the row id opens it, and a Needs-you link lands on it @action:shift.todo_page', async ({

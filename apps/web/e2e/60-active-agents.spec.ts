@@ -26,8 +26,15 @@ async function seed(page: Page, login = 'ada', role: 'admin' | 'user' = 'user'):
 test('global inventory links from System and filters, pages and opens by keyboard @action:agents.global_inventory', async ({ page }) => {
   await seed(page);
   await page.goto('/agents');
-  await expect(page.getByRole('heading', { name: 'Active agents', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Active agents', exact: true }).first()).toHaveAttribute('href', '/agents');
+  await expect(page.getByRole('heading', { name: 'Agents', exact: true, level: 1 })).toBeVisible();
+  // One System destination, lit on each of its three tabs.
+  const navAgents = page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Agents', exact: true });
+  await expect(navAgents).toHaveAttribute('href', '/agents');
+  await expect(navAgents).toHaveAttribute('aria-current', 'page');
+  const tabs = page.getByTestId('agents-tabs');
+  await expect(tabs.getByRole('link', { name: 'Running' })).toHaveAttribute('aria-current', 'page');
+  await expect(tabs.getByRole('link', { name: 'Your sessions' })).toHaveAttribute('href', '/sessions');
+  await expect(tabs.getByRole('link', { name: 'Enrolled' })).toHaveAttribute('href', '/bots');
   const list = page.getByTestId('agents-presence-list');
   await expect(list.getByRole('listitem')).toHaveCount(5);
   await expect(list).toContainText('No repository assigned');
@@ -145,7 +152,7 @@ test('global private metadata is visible only to reporter or admin @action:agent
   await expect(page.getByTestId('agents-presence-list').getByRole('listitem')).toHaveCount(5);
   await expect(page.locator('[data-testid^="presence-location-"]')).toHaveCount(0);
   await expect(page.locator('[data-testid^="presence-host-"]')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Active agents', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Agents', exact: true })).toBeVisible();
   await seed(page, 'root', 'admin');
   await page.reload();
   await expect(page.locator('[data-testid^="presence-location-"]')).toHaveCount(5);

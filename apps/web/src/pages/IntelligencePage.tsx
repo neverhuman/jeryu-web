@@ -34,7 +34,6 @@ import {
   useGraphViewState,
 } from './intelligence';
 import { useGlobalFamilyPage } from '../components/family/useGlobalFamilyPage';
-import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
 import './IntelligencePage.css';
@@ -61,9 +60,7 @@ export function IntelligencePage(): JSX.Element {
             </span>
           ) : null
         }
-      >
-        <UseThisWhen id="nav.intelligence" />
-      </PageHeader>
+      />
       {query.isLoading ? (
         <LoadingState variant="message" title="Loading intelligence snapshot." />
       ) : query.isError || !query.data ? (
@@ -193,13 +190,6 @@ function IntelligenceSnapshot({
           state={snapshot.codegraph.state}
         />
       </div>
-
-      {/* What needs a person is one list, in one place. This page used to rank its
-          own "priorities" from an older rule set (generic items such as "latest
-          artifacts are absent"), and its count never matched Needs you. */}
-      <p className="page__roadmap-note" data-testid="intelligence-needs-you">
-        Looking for what is blocked on a person? That is <Link to="/blocked">Blocked</Link>.
-      </p>
 
       <section className="page__section" aria-labelledby="intelligence-graph">
         <div className="intelligence__section-head">

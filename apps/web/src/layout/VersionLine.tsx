@@ -2,9 +2,9 @@
 //
 // Reading a deploy used to mean calling `/api/v1/version` by hand: no page
 // said which build was answering, so an operator comparing what they saw with
-// what was released had nothing to compare. It sits at the foot of the left
-// navigation, where every page carries it, and says the API's version and the
-// commits behind it; hovering gives the full shas.
+// what was released had nothing to compare. It sits on Help, the page that
+// says how the app itself works, and says the API's version and the commits
+// behind it; hovering gives the full shas.
 
 import { useServerVersion } from '../hooks/useServerVersion';
 import type { ServerVersion } from '../api/types/version';
@@ -35,11 +35,11 @@ export function versionTitle(version: ServerVersion): string {
 export function VersionLine(): JSX.Element | null {
   const version = useServerVersion();
   // Until the server answers there is nothing honest to show, and a server
-  // without the route never will: either way the foot of the nav stays empty.
+  // without the route never will: either way the line is left out.
   if (!version.data) return null;
 
   return (
-    <p className="left-nav__version" title={versionTitle(version.data)} data-testid="version-line">
+    <p className="page__fact" title={versionTitle(version.data)} data-testid="version-line">
       {versionLabel(version.data)}
     </p>
   );

@@ -1,0 +1,31 @@
+/* pageTabs.css — one page's views, as a strip of links under its header. */
+
+.page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--color-border-subtle);
+  margin-bottom: var(--space-4);
+}
+
+.page-tabs__tab {
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-fg-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.page-tabs__tab:hover {
+  color: var(--color-fg-primary);
+}
+
+.page-tabs__tab:focus-visible {
+  outline: 2px solid var(--color-accent-info);
+  outline-offset: -2px;
+}
+
+.page-tabs__tab.is-active {
+  color: var(--color-fg-primary);
+  border-bottom-color: var(--color-accent-info);
+}

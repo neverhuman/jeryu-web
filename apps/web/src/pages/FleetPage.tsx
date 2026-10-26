@@ -60,7 +60,6 @@ import {
   idleReviewerSentence
 } from './runnerNetworkModel';
 import { AuditList, AutomationList, ReviewerList, RunnerNodeList } from './fleet';
-import { NeedsYouHere } from './needsYou/NeedsYouHere';
 import { scorerSummary } from './fleet/runnerTools';
 import {
   forgeReleaseLane,
@@ -75,7 +74,6 @@ import { OtherFamilies } from '../components/family/OtherFamilies';
 import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
 import { RUNNERS_PARAM } from './releaseBoard/links';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { UseThisWhen } from '../layout/UseThisWhen';
 
 import './page.css';
 import './FleetPage.css';
@@ -222,7 +220,6 @@ export function FleetPage(): JSX.Element {
           </>
         }
       >
-        <UseThisWhen id="nav.runners" />
         <p className="fleet__flow-link">
           <Link to="/flow?mode=layout" data-testid="fleet-flow-layout">
             See which station each runner serves on Flow Layout
@@ -276,10 +273,6 @@ export function FleetPage(): JSX.Element {
           </p>
         ) : null}
       </PageHeader>
-
-      {/* The Runners badge counts worker and gate-runner rows; this is where
-          they are, so the badge leads to the rows it counted. */}
-      <NeedsYouHere area="system" />
 
       <section className="page__section" aria-labelledby="fleet-runners">
         <h2 className="page__section-title" id="fleet-runners">
