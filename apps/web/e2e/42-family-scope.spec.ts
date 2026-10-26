@@ -293,22 +293,23 @@ test.describe('Family scope, page by page', () => {
       'true'
     );
 
-    // 2. Work: the family strip and the composer both open on that family.
+    // 2. Work: its rows and the composer both open on that family.
     await Promise.all([
       page.waitForURL('**/work?family=acme'),
       navTo(NAV_PATH['Work']).click(),
     ]);
-    const strip = page.getByRole('group', { name: 'Filter by family' });
-    await expect(strip.getByRole('button', { name: /^acme 1$/ })).toHaveAttribute(
+    // Work has no strip of its own: its rows wear the family, picked.
+    const acmeRow = page.getByTestId('shift-todo-20261003-0001-aaa');
+    await expect(acmeRow).toBeVisible();
+    await expect(acmeRow.getByRole('button', { name: /^Showing only acme/ })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
-    await expect(page.getByTestId('shift-todo-20261003-0001-aaa')).toBeVisible();
     await expect(page.getByTestId('shift-todo-20261003-0002-bbb')).toHaveCount(0);
     await expect(page.getByLabel('Family', { exact: true })).toHaveValue('acme-split');
 
-    // A pill on a row of another family moves the one scope, for every page.
-    await strip.getByRole('button', { name: /^globex 1$/ }).click();
+    // The header's family control moves the one scope, for every page.
+    await page.getByTestId('family-scope-select').selectOption('globex');
     await page.waitForURL('**/work?family=globex');
     await expectScope(page, 'globex');
 

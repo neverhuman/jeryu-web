@@ -138,14 +138,12 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('nav-badge-elsewhere-releases')).toHaveText('+1');
     await expect(page.getByTestId('nav-badge-elsewhere-system')).toHaveText('+1');
     await expect(page.getByTestId('nav-badge-pulls')).toHaveCount(0);
-    // Work shows its own share of Needs you, as every other page does: the
-    // rows the Work badge counted, above the queue's own state. (Its red count
-    // of that share is in the queue's toolbar; 28-shift holds that.)
+    // Work does not repeat Needs you's rows above its queue: the nav badge
+    // counts them, and the queue's red chip links to them (28-shift holds that).
     await page.getByTestId('todo-page').getByRole('link', { name: 'Work', exact: true }).click();
     await expect(page.getByTestId('shift-queue-page')).toBeVisible();
-    const here = page.getByTestId('needs-you-here-work');
-    await expect(here).toHaveAttribute('aria-label', '1 blocked in Work');
-    await expect(here.getByText('Allow PATCH of repo default_branch')).toBeVisible();
+    await expect(page.getByTestId('nav-badge-work')).toHaveText('1');
+    await expect(page.getByTestId('needs-you-here-work')).toHaveCount(0);
   });
 
   test('a Needs-you row about a todo is acknowledged until a date @action:needs_you.acknowledge', async ({

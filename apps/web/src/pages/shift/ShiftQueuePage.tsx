@@ -3,14 +3,17 @@
 // Top to bottom, in the order the work flows: add work (a one-row composer that
 // opens to the full form), who is working (one line that opens to the workers
 // panel), then the queue of EVERY family: live todos first, what needs a human
-// on top, finished todos and finished shifts folded away. Each row wears its
-// family at the far left; the pill filters the whole page to that family
-// (`?family=`), and pressing it again, or All, shows every family. A row expands
-// to the body, note and attempt history; its id opens the todo's own page.
-// Admins get release / block / priority / now-night row actions and "Open review
-// PR" on each shift. What waits on a person is the Work share of Needs you —
-// the same strip every other page shows, plus a red count of it labelled "in
-// Work" — never a second answer computed from the queue's own rows.
+// on top, finished todos and finished shifts folded away and drawn only when
+// opened. Each row wears its family at the far left; the pill filters the whole
+// page to that family (`?family=`, the header's scope), and pressing it again
+// shows every family. A row says where its todo stands in one pill (released,
+// merged, in review, or its queue status); the todo's own page has the full
+// rail. A row expands to the body, note and attempt history; its id opens the
+// todo's own page. A list draws fifty rows, then "Show N more". Admins get
+// release / block / priority / now-night row actions and "Open review PR" on
+// each shift. What waits on a person is a red count of the Work share of
+// Needs you, linking there — never a second answer computed from the queue's
+// own rows, and never the rows themselves repeated above the queue.
 
 import { GitBranch, Inbox } from 'lucide-react';
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
@@ -19,7 +22,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import type { ShiftBranch, ShiftFamily, ShiftTodo } from '../../api/types';
 import { ActionButton } from '../../components/action/ActionButton';
 import { relativeText } from '../../format/when';
-import { FamilyPill, FamilyStrip } from '../../components/family/FamilyPills';
+import { FamilyPill } from '../../components/family/FamilyPills';
 import { pillClass } from '../../components/tone/tone';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { EmptyState, LoadingState } from '../../components/state';
@@ -54,18 +57,18 @@ import {
   queueOptions,
   shortSha,
   sortShifts,
-  statusTone,
+  todoPrHref,
+  todoStage,
   unmergedTodosNote,
   type QueueFilters,
 } from './shiftModel';
-import { RepoName, TodoActions, TodoDetail, TodoTrace, WhyStuck } from './todoParts';
+import { RepoName, TodoActions, TodoDetail, WhyStuck } from './todoParts';
 import { WorkComposer } from './WorkComposer';
 import { todoHref } from './workPaths';
 import { WorkersStrip } from './WorkersStrip';
-import { NeedsYouHere } from '../needsYou/NeedsYouHere';
 import { AREA_LABEL } from '../needsYou/needsYouModel';
 import { useNeedsYou } from '../needsYou/useNeedsYou';
-import { groupLive, liveFamilyCounts, todoFamily, todosOfFamily } from './workPageModel';
+import { groupLive, todoFamily, todosOfFamily } from './workPageModel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 import '../page.css';
@@ -81,7 +84,7 @@ export function ShiftQueuePage(): JSX.Element {
   const isAdmin = user?.role === 'admin';
   const families = useShiftFamilies();
   const list = useMemo(() => families.data?.families ?? [], [families.data]);
-  const [params, setParams] = useSearchParams();
+  const [, setParams] = useSearchParams();
   // The shell's family scope filters the whole page, and is stated here as
   // `?family=`; a scope on a family this queue does not know means all.
   const scope = useFamilyScope();
@@ -118,11 +121,6 @@ export function ShiftQueuePage(): JSX.Element {
         testId="work-header"
         freshness={queryFreshness(todos)}
       />
-
-      {/* The rows themselves, as every other page shows them, rather than a
-          sentence of this page's own about how many wait. Above the queue's own
-          state, so a queue that cannot be read still says what waits on you. */}
-      <NeedsYouHere area="work" family={family} onFamily={setFamily} />
 
       {families.isPending ? (
         <LoadingState title="Loading shift families…" variant="message" />
@@ -186,7 +184,6 @@ function FamilyQueue({
   const repo = params.get('repo') || 'all';
   const filters = useMemo(() => ({ ...localFilters, repo }), [localFilters, repo]);
   const scoped = useMemo(() => todosOfFamily(all, family), [all, family]);
-  const counts = useMemo(() => liveFamilyCounts(all), [all]);
   const options = useMemo(() => {
     const found = queueOptions(scoped);
     // A linked repo with nothing queued still shows as the filter in use.
@@ -204,7 +201,7 @@ function FamilyQueue({
   }, [families, forgeHost]);
   // What waits on a person is Needs you's answer, not a second one computed
   // here: this is the Work share of that list, counted and listed by the same
-  // derivation the nav badge and the strip below use.
+  // derivation the nav badge uses.
   const needsYou = useNeedsYou(family, 'work');
   const waiting = needsYou.count ?? 0;
   // What is live or waits on someone is the page; what is finished folds away.
@@ -247,9 +244,6 @@ function FamilyQueue({
   return (
     <>
       <section className="shift__section" aria-label="Queue">
-        {families.length > 1 || family ? (
-          <FamilyStrip counts={counts} family={family} onPick={onFamily} />
-        ) : null}
         <div className="shift__toolbar" role="group" aria-label="Queue filters">
           {waiting > 0 ? (
             <Link
@@ -312,12 +306,13 @@ function FamilyQueue({
               ))
             )}
             {finished.length > 0 ? (
-              <details className="shift__finished" open={showFinished || undefined} data-testid="shift-finished-todos">
-                <summary>
-                  {finished.length} finished todo{finished.length === 1 ? '' : 's'}
-                </summary>
+              <Folded
+                initiallyOpen={showFinished}
+                testId="shift-finished-todos"
+                summary={`${finished.length} finished todo${finished.length === 1 ? '' : 's'}`}
+              >
                 <TodoTable todos={finished} {...tableProps} />
-              </details>
+              </Folded>
             ) : null}
           </>
         )}
@@ -347,6 +342,39 @@ function withoutFocus(params: URLSearchParams): string {
   return query ? `?${query}` : '?';
 }
 
+/**
+ * A folded list: one summary line, its rows drawn only while it is open. A
+ * closed <details> still builds everything inside it, and the finished todos
+ * and shifts were thousands of elements nobody had asked to see.
+ */
+function Folded({
+  initiallyOpen,
+  summary,
+  testId,
+  children,
+}: {
+  initiallyOpen: boolean;
+  summary: string;
+  testId: string;
+  children: ReactNode;
+}): JSX.Element {
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <details
+      className="shift__finished"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      data-testid={testId}
+    >
+      <summary>{summary}</summary>
+      {open ? children : null}
+    </details>
+  );
+}
+
+/** Rows a table draws before "Show N more". */
+const ROW_CAP = 50;
+
 interface RowFamilyProps {
   refsFor: RefsFor;
   picked: string;
@@ -370,38 +398,48 @@ function TodoTable({
 } & RowFamilyProps): JSX.Element {
   // Todos carry commits only once they land: a column of dashes says nothing.
   const showCommits = todos.some((todo) => Object.keys(todo.commits).length > 0);
+  const [all, setAll] = useState(false);
+  const shown = all ? todos : todos.slice(0, ROW_CAP);
+  const more = todos.length - shown.length;
   return (
-    <div className="table-scroll">
-      <table className="shift__table">
-        <thead>
-          <tr>
-            <th scope="col">Family</th>
-            <th scope="col">Todo</th>
-            <th scope="col">Status</th>
-            <th scope="col">Repos</th>
-            <th scope="col">Attempts</th>
-            <th scope="col">Cost</th>
-            {showCommits ? <th scope="col">Commits</th> : null}
-            {isAdmin ? <th scope="col">Action</th> : null}
-          </tr>
-        </thead>
-        <tbody>
-          {todos.map((todo) => (
-            <TodoRow
-              key={`${todo.family}/${todo.id}`}
-              todo={todo}
-              relatedTodos={relatedTodos}
-              refs={refsFor(todo.family)}
-              isAdmin={isAdmin}
-              initiallyOpen={focusIds.includes(todo.id)}
-              showCommits={showCommits}
-              picked={picked}
-              onPick={onPick}
-            />
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="table-scroll">
+        <table className="shift__table">
+          <thead>
+            <tr>
+              <th scope="col">Family</th>
+              <th scope="col">Todo</th>
+              <th scope="col">Status</th>
+              <th scope="col">Repos</th>
+              <th scope="col">Attempts</th>
+              <th scope="col">Cost</th>
+              {showCommits ? <th scope="col">Commits</th> : null}
+              {isAdmin ? <th scope="col">Action</th> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((todo) => (
+              <TodoRow
+                key={`${todo.family}/${todo.id}`}
+                todo={todo}
+                relatedTodos={relatedTodos}
+                refs={refsFor(todo.family)}
+                isAdmin={isAdmin}
+                initiallyOpen={focusIds.includes(todo.id)}
+                showCommits={showCommits}
+                picked={picked}
+                onPick={onPick}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {more > 0 ? (
+        <ActionButton className="shift__show-more" onClick={() => setAll(true)}>
+          Show {more} more
+        </ActionButton>
+      ) : null}
+    </>
   );
 }
 
@@ -456,6 +494,8 @@ function TodoRow({
   const commits = Object.entries(todo.commits);
   const attempts = attemptSummary(todo);
   const stuck = todo.status === 'blocked' || todo.status === 'handoff';
+  const stage = todoStage(todo);
+  const prHref = todoPrHref(todo, refs);
 
   return (
     <Fragment>
@@ -482,12 +522,19 @@ function TodoRow({
             · P{todo.priority} · {todo.mode}
             {todo.triaged ? '' : ' · untriaged'}
           </span>
-          <TodoTrace todo={todo} refs={refs} />
         </td>
         <td>
-          <span className={pillClass(statusTone(todo.status))}>
-            {todo.merged ? 'merged' : todo.status}
+          <span className={pillClass(stage.tone)} data-testid={`shift-todo-stage-${todo.id}`}>
+            {stage.label}
           </span>
+          {prHref && todo.pr ? (
+            <>
+              {' '}
+              <Link to={prHref} className="shift__pr-link">
+                #{todo.pr.number}
+              </Link>
+            </>
+          ) : null}
         </td>
         <td>
           {todo.repos.length > 0 ? (
@@ -628,12 +675,13 @@ function ShiftsPanel({
             cards(live)
           )}
           {finished.length > 0 ? (
-            <details className="shift__finished" open={showFinished || undefined} data-testid="shift-finished-shifts">
-              <summary>
-                {finished.length} finished shift{finished.length === 1 ? '' : 's'}
-              </summary>
+            <Folded
+              initiallyOpen={showFinished}
+              testId="shift-finished-shifts"
+              summary={`${finished.length} finished shift${finished.length === 1 ? '' : 's'}`}
+            >
               {cards(finished)}
-            </details>
+            </Folded>
           ) : null}
         </>
       )}

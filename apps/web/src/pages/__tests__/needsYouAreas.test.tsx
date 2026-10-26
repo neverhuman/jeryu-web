@@ -204,14 +204,13 @@ const BADGES = [...PRIMARY_NAV, ...SYSTEM_NAV].flatMap((item) =>
 describe('every needs-you count', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('is the same number in the nav, the Needs you header and the area strip', async () => {
+  it('is the same number in the nav, the Needs you header and the Work chip', async () => {
     mockAttention(THREE_IN_WORK);
     renderAt('/work', '/work', <ShiftQueuePage />);
-    // The page's own strip, and its chip, count Work's share: all three.
-    const strip = await screen.findByTestId('needs-you-here-work');
-    expect(within(strip).getByText('3')).toBeInTheDocument();
-    expect(strip).toHaveAttribute('aria-label', '3 blocked in Work');
+    // The page's chip counts Work's share: all three. The rows themselves are
+    // on Needs you, not repeated in a strip above the queue.
     expect(await screen.findByTestId('shift-needs-human')).toHaveTextContent('3 in Work');
+    expect(screen.queryByTestId('needs-you-here-work')).toBeNull();
 
     vi.restoreAllMocks();
     mockAttention(THREE_IN_WORK);
@@ -284,6 +283,10 @@ describe('every needs-you count', () => {
         // Needs you, so it is not repeated in a strip here.
         await screen.findByTestId(area === 'releases' ? 'releases-page' : 'fleet-page');
         expect(screen.queryByTestId(`needs-you-here-${area}`)).toBeNull();
+      } else if (area === 'work') {
+        // Work counts its share in one chip that links to the rows.
+        expect(await screen.findByTestId('shift-needs-human')).toHaveTextContent('1 in Work');
+        expect(screen.queryByTestId('needs-you-here-work')).toBeNull();
       } else {
         const strip = await screen.findByTestId(`needs-you-here-${area}`);
         expect(within(strip).getByText(item.title)).toBeInTheDocument();

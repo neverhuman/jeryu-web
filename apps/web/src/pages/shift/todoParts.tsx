@@ -21,10 +21,7 @@ import {
   liveAttempt,
   repoCodeHref,
   slotLabel,
-  todoPrHref,
   todoActions,
-  todoTrace,
-  traceSummary,
   untilInputDefault,
   untilRfc3339,
   type RepoRefs,
@@ -72,22 +69,6 @@ export function WhyStuck({ id, note }: { id: string; note: string }): JSX.Elemen
         </button>
       ) : null}
     </div>
-  );
-}
-
-/** Queued > Claimed > Done > PR > Merged > Released, with the PR step linked. */
-export function TodoTrace({ todo, refs }: { todo: ShiftTodo; refs: RepoRefs }): JSX.Element {
-  const steps = todoTrace(todo);
-  const prHref = todoPrHref(todo, refs);
-  return (
-    <ol className="shift-trace" aria-label={`Lifecycle of ${todo.id}: ${traceSummary(steps)}`}>
-      {steps.map((step) => (
-        <li key={step.key} className={`shift-trace__step is-${step.state}`}>
-          {step.key === 'pr' && prHref ? <Link to={prHref}>{step.label}</Link> : step.label}
-          {step.state === 'unknown' ? '?' : ''}
-        </li>
-      ))}
-    </ol>
   );
 }
 

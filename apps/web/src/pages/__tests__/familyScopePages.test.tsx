@@ -79,18 +79,14 @@ describe('the family scope on every family-aware page', () => {
     mockQueue([todoOf('20261003-0001-aaa', 'globex'), todoOf('20261003-0002-bbb', 'acme-split')]);
     renderAt('/work?family=globex', '/work', <ShiftQueuePage />);
 
-    // The queue's own control (the family strip) is on the scoped family …
-    const strip = await screen.findByRole('group', { name: 'Filter by family' });
-    expect(within(strip).getByRole('button', { name: /^globex/ })).toHaveAttribute(
+    // The scope is the header's control, not a strip of the page's own;
+    // only that family's rows are on the page, each pill showing it picked.
+    const row = await screen.findByTestId('shift-todo-20261003-0001-aaa');
+    expect(screen.queryByRole('group', { name: 'Filter by family' })).toBeNull();
+    expect(within(row).getByRole('button', { name: /^Showing only globex/ })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
-    expect(within(strip).getByRole('button', { name: /^All/ })).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    );
-    // … and only that family's rows are on the page.
-    expect(screen.getByTestId('shift-todo-20261003-0001-aaa')).toBeInTheDocument();
     expect(screen.queryByTestId('shift-todo-20261003-0002-bbb')).toBeNull();
     // The composer files where the operator is looking.
     expect(screen.getByLabelText('Family')).toHaveValue('globex');

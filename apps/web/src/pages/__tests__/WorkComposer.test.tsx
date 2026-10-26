@@ -118,16 +118,13 @@ describe('WorkComposer', () => {
     expect(within(composer).getByTestId('shift-add-count')).toHaveTextContent('for jain.');
 
     // Dropping the filter drops the pick with it; filtering again follows.
-    const strip = screen.getByRole('group', { name: 'Filter by family' });
-    fireEvent.click(within(strip).getByRole('button', { name: /^jeryu/ }));
+    // A row's family pill is the page's own way to narrow or widen.
+    fireEvent.click(screen.getAllByRole('button', { name: /^Showing only jeryu/ })[0]);
     await waitFor(() =>
-      expect(within(strip).getByRole('button', { name: /^All/ })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      )
+      expect(screen.queryAllByRole('button', { name: /^Showing only jeryu/ })).toHaveLength(0)
     );
     expect(within(composer).getByLabelText('Family')).toHaveValue('jain');
-    fireEvent.click(within(strip).getByRole('button', { name: /^jeryu/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Show only jeryu' })[0]);
     await waitFor(() => expect(within(composer).getByLabelText('Family')).toHaveValue('jeryu'));
   });
 

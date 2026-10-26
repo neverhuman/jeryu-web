@@ -32,6 +32,7 @@ import {
   splitWorkers,
   todoCost,
   todoPrHref,
+  todoStage,
   todoTrace,
   traceSummary,
   todoWorkers,
@@ -405,5 +406,16 @@ describe('liveAttempt', () => {
   it('is nothing once the lease lapsed or the todo is not claimed', () => {
     expect(liveAttempt({ ...claimed, lease_live: false }, WORKERS.workers)).toBeNull();
     expect(liveAttempt({ ...claimed, status: 'open' }, WORKERS.workers)).toBeNull();
+  });
+
+  it('names the furthest step a todo has reached, in one pill', () => {
+    const pr = { repo: 'acme-web', number: 7, state: 'open', url: '/repos/jeryu/acme/acme-web/pulls/7' };
+    expect(todoStage(todo({ status: 'open' }))).toEqual({ label: 'open', tone: 'unknown' });
+    expect(todoStage(todo({ status: 'blocked' }))).toEqual({ label: 'blocked', tone: 'human' });
+    expect(todoStage(todo({ status: 'done', pr }))).toEqual({ label: 'in review', tone: 'warn' });
+    // A blocked todo with a pull request still says it is blocked.
+    expect(todoStage(todo({ status: 'blocked', pr })).label).toBe('blocked');
+    expect(todoStage(todo({ status: 'done', merged: true })).label).toBe('merged');
+    expect(todoStage(todo({ status: 'done', merged: true, released: true })).label).toBe('released');
   });
 });

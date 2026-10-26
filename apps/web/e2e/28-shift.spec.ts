@@ -117,9 +117,8 @@ test.describe('Work, one page', () => {
     const jain = page.getByTestId('shift-todo-20260919-0940-eee');
     await expect(jain).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();
-    const strip = page.getByRole('group', { name: 'Filter by family' });
-    await expect(strip.getByRole('button', { name: /^All 5$/ })).toHaveAttribute('aria-pressed', 'true');
-    await expect(strip.getByRole('button', { name: /^jeryu 4$/ })).toBeVisible();
+    // The family control is the header's; the page draws no strip of its own.
+    await expect(page.getByRole('group', { name: 'Filter by family' })).toHaveCount(0);
 
     // The pill is the first thing in the row.
     await expect(jain.locator('td').first().getByRole('button', { name: 'Show only jain' })).toBeVisible();
@@ -130,13 +129,10 @@ test.describe('Work, one page', () => {
     // The composer follows the filter, and can still be pointed elsewhere.
     await expect(page.getByLabel('Family', { exact: true })).toHaveValue('jain');
 
-    // The same pill again, or All, shows every family.
+    // The same pill again shows every family.
     await jain.getByRole('button', { name: /^Showing only jain/ }).click();
     await expect(page).toHaveURL(/\/work$/);
     await expect(page.getByTestId('shift-todo-20260919-0800-aaa')).toBeVisible();
-    await strip.getByRole('button', { name: /^jeryu 4$/ }).click();
-    await expect(jain).toHaveCount(0);
-    await strip.getByRole('button', { name: /^All 5$/ }).click();
     await expect(jain).toBeVisible();
   });
 
@@ -178,7 +174,7 @@ test.describe('Work, one page', () => {
     expect(log.posts[3]).toEqual({ path: '/api/v1/shift/shifts/jeryu/pr', body: { branch: NIGHT } });
   });
 
-  test('todos that wait on a person come first, and a row traces queue to release @action:shift.needs_human @action:shift.lifecycle', async ({
+  test('todos that wait on a person come first, and a row says where it stands @action:shift.needs_human @action:shift.lifecycle', async ({
     page,
   }) => {
     // What waits on a person comes from the Needs you list, which is an
@@ -197,13 +193,17 @@ test.describe('Work, one page', () => {
     await expect(blocked.getByTestId('shift-why-20260919-0930-ddd')).toContainText(
       'The jeryu-core tag split.7 does not exist.'
     );
-    await expect(blocked.getByRole('list', { name: /blocked — needs a human/ })).toBeVisible();
+    // One pill says where the todo stands; the full rail is on its own page.
+    await expect(blocked.getByTestId('shift-todo-stage-20260919-0930-ddd')).toHaveText('blocked');
+    await expect(blocked.getByRole('list', { name: /Lifecycle of/ })).toHaveCount(0);
 
-    // The trace links to its PR, and the commit chip links to the commit page.
-    await page.getByTestId('shift-finished-todos').getByText('1 finished todo').click();
+    // Finished todos are drawn only once their fold is opened. The pill says
+    // merged, the link beside it is the PR, and the commit chip links to the commit page.
     const done = page.getByTestId('shift-todo-20260918-2200-bbb');
-    await expect(done.getByRole('list', { name: /Pull request #41, Merged, Released not yet/ })).toBeVisible();
-    await expect(done.getByRole('link', { name: 'Pull request #41' })).toHaveAttribute(
+    await expect(done).toHaveCount(0);
+    await page.getByTestId('shift-finished-todos').getByText('1 finished todo').click();
+    await expect(done.getByTestId('shift-todo-stage-20260918-2200-bbb')).toHaveText('merged');
+    await expect(done.getByRole('link', { name: '#41', exact: true })).toHaveAttribute(
       'href',
       '/repos/jeryu/jeryu/jeryu-deploy/pulls/41'
     );

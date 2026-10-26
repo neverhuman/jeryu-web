@@ -19,6 +19,13 @@ function renderQueue(path = '/work'): void {
   renderAt(path, '/work', <ShiftQueuePage />);
 }
 
+/** Open a folded list; its rows are drawn only once it is open. */
+function openFold(testId: string): HTMLElement {
+  const fold = screen.getByTestId(testId);
+  fireEvent.click(within(fold).getByText(/^\d+ finished /));
+  return fold;
+}
+
 describe('ShiftQueuePage', () => {
   beforeEach(() => {
     role = 'admin';
@@ -41,6 +48,10 @@ describe('ShiftQueuePage', () => {
       'href',
       'https://git.example/jeryu/jeryu-web/pulls/12'
     );
+    // Finished todos fold away, and a closed fold draws none of its rows.
+    await screen.findByTestId('shift-finished-todos');
+    expect(screen.queryByTestId('shift-todo-20260918-2201-a9z')).toBeNull();
+    openFold('shift-finished-todos');
     const done = await screen.findByTestId('shift-todo-20260918-2201-a9z');
     expect(within(done).getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute(
       'href',
@@ -71,6 +82,8 @@ describe('ShiftQueuePage', () => {
   it('filters and expands a row to its body, note and attempts', async () => {
     mockShiftApi();
     renderQueue();
+    await screen.findByTestId('shift-finished-todos');
+    openFold('shift-finished-todos');
     await screen.findByTestId('shift-todo-20260918-2201-a9z');
     fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'night' } });
     expect(screen.queryByTestId('shift-todo-20260918-1832-k3f')).toBeNull();
@@ -92,6 +105,8 @@ describe('ShiftQueuePage', () => {
   it('filters to one repository from ?repo=, as the Pull requests counts link it', async () => {
     mockShiftApi();
     renderQueue('/work?repo=jeryu-deploy');
+    await screen.findByTestId('shift-finished-todos');
+    openFold('shift-finished-todos');
     expect(await screen.findByTestId('shift-todo-20260918-2201-a9z')).toBeInTheDocument();
     expect(screen.queryByTestId('shift-todo-20260918-1832-k3f')).toBeNull();
     expect(screen.getByLabelText('Repo')).toHaveValue('jeryu-deploy');
@@ -188,7 +203,7 @@ describe('ShiftQueuePage', () => {
     renderQueue();
     expect(await screen.findByText("You don't have access to the shift queue.")).toBeInTheDocument();
   });
-  it('shows the needs-a-human count, the lifecycle trace, the PR link and failed attempts on the row', async () => {
+  it('shows the needs-a-human count, the stage pill, the PR link and failed attempts on the row', async () => {
     const pr = { repo: 'jeryu-deploy', number: 48, state: 'merged', url: '/repos/jeryu/jeryu/jeryu-deploy/pulls/48' };
     mockShiftApi((req) =>
       req.pathname === '/api/v1/shift/todos'
@@ -226,12 +241,15 @@ describe('ShiftQueuePage', () => {
     // A short note needs no disclosure.
     expect(within(blocked).queryByRole('button', { name: 'Show full note' })).toBeNull();
     expect(within(blocked).queryByRole('button', { name: 'Block blk-1' })).toBeNull();
-    expect(within(blocked).getByRole('list', { name: /blocked — needs a human/ })).toBeInTheDocument();
+    // One pill says where the todo stands, in place of a six-step trail.
+    expect(within(blocked).getByTestId('shift-todo-stage-blk-1')).toHaveTextContent('blocked');
+    expect(within(blocked).queryByRole('list', { name: /Lifecycle of/ })).toBeNull();
 
-    const done = screen.getByTestId('shift-todo-20260918-2201-a9z');
-    expect(within(done).getByRole('link', { name: 'Pull request #48' })).toHaveAttribute('href', pr.url);
+    openFold('shift-finished-todos');
+    const done = await screen.findByTestId('shift-todo-20260918-2201-a9z');
+    expect(within(done).getByRole('link', { name: '#48' })).toHaveAttribute('href', pr.url);
     expect(within(done).getByRole('link', { name: 'jeryu-deploy@abcdef12' })).toHaveAttribute('href', '/repos/jeryu/jeryu/jeryu-deploy/commit/abcdef1234567890');
-    expect(within(done).getByRole('list', { name: /Pull request #48, Merged, Released not yet/ })).toBeInTheDocument();
+    expect(within(done).getByTestId('shift-todo-stage-20260918-2201-a9z')).toHaveTextContent('merged');
     expect(within(done).getByText('$2.50')).toBeInTheDocument();
 
     // The chip counts Work's own share of the rows Needs you shows (one of its
@@ -243,9 +261,8 @@ describe('ShiftQueuePage', () => {
       return found;
     });
     expect(chip).toHaveAttribute('href', '/needs-you?view=all');
-    // And the rows themselves are on the page, as on every other page.
-    const strip = screen.getByTestId('needs-you-here-work');
-    expect(within(strip).getByText(/^Todo/)).toBeInTheDocument();
+    // The rows themselves are on Needs you; Work does not repeat them above its queue.
+    expect(screen.queryByTestId('needs-you-here-work')).toBeNull();
   });
 
   it('scopes the needs-a-human chip to the picked family', async () => {
@@ -340,7 +357,8 @@ describe('ShiftQueuePage', () => {
     // this forge does not host is a name, not a dead link.
     const folded = screen.getByTestId('shift-finished-shifts');
     expect(folded).toHaveTextContent('1 finished shift');
-    const done = within(folded).getByTestId('shift-branch-bulletshift/2026-09-19.3');
+    openFold('shift-finished-shifts');
+    const done = await within(folded).findByTestId('shift-branch-bulletshift/2026-09-19.3');
     expect(within(done).queryByRole('button', { name: /Open review pull request/ })).toBeNull();
     expect(within(done).queryByRole('link', { name: 'jain-gone' })).toBeNull();
     expect(within(done).getByText('jain-gone')).toBeInTheDocument();
@@ -388,10 +406,8 @@ describe('ShiftQueuePage', () => {
     expect(screen.getByRole('heading', { name: 'Queued · 2' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Waiting on a human · 1' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /^In progress/ })).toBeNull();
-    const strip = screen.getByRole('group', { name: 'Filter by family' });
-    expect(within(strip).getByRole('button', { name: /^All 3$/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(strip).getByRole('button', { name: /^jeryu 2$/ })).toBeInTheDocument();
-    expect(within(strip).getByRole('button', { name: /^jain 1$/ })).toBeInTheDocument();
+    // The family control is the header's: the page draws no strip of its own.
+    expect(screen.queryByRole('group', { name: 'Filter by family' })).toBeNull();
     // The same branch name under two families is two cards, each wearing its family.
     await waitFor(() =>
       expect(screen.getAllByTestId('shift-branch-nightshift/2026-09-18')).toHaveLength(2)
@@ -403,7 +419,6 @@ describe('ShiftQueuePage', () => {
     expect(screen.queryByTestId('shift-todo-j-1')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Waiting on a human · 1' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /^Queued/ })).toBeNull();
-    expect(within(strip).getByRole('button', { name: /^jain 1$/ })).toHaveAttribute('aria-pressed', 'true');
     await waitFor(() =>
       expect(screen.getAllByTestId('shift-branch-nightshift/2026-09-18')).toHaveLength(1)
     );
@@ -413,5 +428,21 @@ describe('ShiftQueuePage', () => {
     // Pressing the pill again shows every family.
     fireEvent.click(within(screen.getByTestId('shift-todo-n-1')).getByRole('button', { name: /^Showing only jain/ }));
     expect(screen.getByTestId('shift-todo-j-1')).toBeInTheDocument();
+  });
+
+  it('draws fifty rows of a table, and the rest on request', async () => {
+    const many = Array.from({ length: 60 }, (_, index) =>
+      todo({ id: `q-${index}`, title: `Queued ${index}`, status: 'open' })
+    );
+    mockShiftApi((req) =>
+      req.pathname === '/api/v1/shift/todos'
+        ? json({ generated_at: '2026-09-19T09:00:00Z', todos: many })
+        : undefined
+    );
+    renderQueue();
+    await screen.findByTestId('shift-todo-q-0');
+    expect(screen.getAllByTestId(/^shift-todo-q-/)).toHaveLength(50);
+    fireEvent.click(screen.getByRole('button', { name: 'Show 10 more' }));
+    expect(screen.getAllByTestId(/^shift-todo-q-/)).toHaveLength(60);
   });
 });

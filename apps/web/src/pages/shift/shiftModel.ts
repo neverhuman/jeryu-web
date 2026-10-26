@@ -285,6 +285,29 @@ export function todoTrace(todo: ShiftTodo): TraceStep[] {
   ];
 }
 
+/** Where a todo stands, as the one pill its queue row shows. */
+export interface TodoStage {
+  label: string;
+  tone: Tone;
+}
+
+/**
+ * The furthest step of `todoTrace` a todo has reached, as one word: released,
+ * merged, in review (a pull request is open), else its queue status. The
+ * queue row shows this instead of all six steps; the todo's own page keeps
+ * the full rail.
+ */
+export function todoStage(todo: ShiftTodo): TodoStage {
+  const steps = todoTrace(todo);
+  const reached = (key: TraceStep['key']): boolean =>
+    steps.find((step) => step.key === key)?.state === 'done';
+  if (reached('released')) return { label: 'released', tone: 'ok' };
+  if (reached('merged')) return { label: 'merged', tone: 'ok' };
+  const stuck = todo.status === 'blocked' || todo.status === 'handoff';
+  if (!stuck && reached('pr')) return { label: 'in review', tone: 'warn' };
+  return { label: todo.status, tone: statusTone(todo.status) };
+}
+
 /** One line for the trace's accessible name, e.g. "Queued, Claimed, Done, Pull request #35, Merged; Released not yet". */
 export function traceSummary(steps: TraceStep[]): string {
   const word: Record<TraceState, string> = {
