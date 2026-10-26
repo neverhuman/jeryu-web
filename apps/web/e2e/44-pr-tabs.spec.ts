@@ -240,6 +240,15 @@ test('the merge box states the verdict once and lists what is waiting @action:pr
     'answered 401 with an empty body'
   );
   await expect(page.getByTestId('pr-description').locator('.markdown-body')).toHaveCount(1);
+  // A long line in a fence wraps inside the description instead of widening the page.
+  await page.getByTestId('pr-description').evaluate((node) => {
+    const pre = document.createElement('pre');
+    pre.textContent = 'x'.repeat(4000);
+    node.querySelector('.markdown-body')?.appendChild(pre);
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => window.innerWidth)
+  );
 });
 
 test('a thread shows its body and opens the file it is anchored to @action:pr.thread_body', async ({
