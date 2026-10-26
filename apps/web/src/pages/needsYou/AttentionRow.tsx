@@ -37,6 +37,7 @@ import {
   primaryAction,
   repoFamilyMap,
   rowDetail,
+  rowTitle,
   attentionHref,
   type AttentionSubject,
   type DecisionAnswer,
@@ -90,10 +91,10 @@ export function AttentionRow({
         <p className="needs-you__title-line">
           {to ? (
             <Link className="needs-you__title" to={to} {...LIST_OPEN_PROP}>
-              {item.title}
+              {rowTitle(item)}
             </Link>
           ) : (
-            <span className="needs-you__title">{item.title}</span>
+            <span className="needs-you__title">{rowTitle(item)}</span>
           )}
           <span className="needs-you__context">
             {attentionContext(item)}

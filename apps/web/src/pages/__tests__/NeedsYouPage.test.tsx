@@ -53,7 +53,10 @@ describe('NeedsYouPage', () => {
 
     // In-app act: one link, a plain-language kind, one line of reason.
     const blocked = within(action).getByTestId('needs-you-item-todo-blocked:jeryu:20260919-130515-f8cc66');
-    expect(within(blocked).getByText(/^Blocked todo · jeryu/)).toBeInTheDocument();
+    // The section says Blocked and the pill says the family: the muted line
+    // says neither again.
+    expect(within(blocked).getByText(/^Todo/)).toBeInTheDocument();
+    expect(within(blocked).queryByText(/Blocked todo|Todo · jeryu/)).toBeNull();
     expect(within(blocked).queryByText(/todo_blocked/)).toBeNull();
     expect(within(blocked).getByText('Both halves of this todo need jeryu-core changes.')).toBeInTheDocument();
     // Both the title and the act lead to the same place.
@@ -391,6 +394,50 @@ describe('NeedsYouPage', () => {
       'href',
       '/needs-you?view=all&family=jeryu'
     );
+  });
+
+  it('folds month-old stranded branches into one line, drawn only when opened', async () => {
+    const stranded = (id: string, since: string): AttentionItem =>
+      attentionItem({ id, kind: 'stranded_branch', family: 'acme', repo: 'acme/web', since, title: `acme/web has work on ${id}` });
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/attention'
+        ? json({
+            generated_at: new Date().toISOString(),
+            counts: { critical: 0, action: 3, watch: 0 },
+            items: [
+              stranded('salvage-a', '2026-07-16T00:00:00Z'),
+              stranded('salvage-b', '2026-07-17T00:00:00Z'),
+              stranded('fresh', new Date().toISOString()),
+            ],
+          })
+        : undefined
+    );
+    renderPage();
+    expect(await screen.findByTestId('needs-you-item-fresh')).toBeInTheDocument();
+    const folded = screen.getByTestId('needs-you-stale-stranded');
+    expect(within(folded).getByText('2 stranded branches untouched for over 30 days')).toBeInTheDocument();
+    expect(screen.queryByTestId('needs-you-item-salvage-a')).toBeNull();
+    fireEvent.click(within(folded).getByText(/stranded branches untouched/));
+    expect(await screen.findByTestId('needs-you-item-salvage-a')).toBeInTheDocument();
+  });
+
+  it('lists fifty rows of a group, and the rest on request', async () => {
+    mockPipelineApi((req) =>
+      req.pathname === '/api/v1/attention'
+        ? json({
+            generated_at: new Date().toISOString(),
+            counts: { critical: 0, action: 60, watch: 0 },
+            items: Array.from({ length: 60 }, (_, index) =>
+              attentionItem({ id: `todo-${index}`, kind: 'todo_blocked', todo_id: `t-${index}`, family: 'acme' })
+            ),
+          })
+        : undefined
+    );
+    renderPage();
+    const group = await screen.findByTestId('needs-you-action');
+    expect(within(group).getAllByRole('listitem')).toHaveLength(50);
+    fireEvent.click(screen.getByTestId('needs-you-more-action'));
+    expect(within(group).getAllByRole('listitem')).toHaveLength(60);
   });
 
   it('says nothing needs you in one sentence, with a line about what the system is doing', async () => {

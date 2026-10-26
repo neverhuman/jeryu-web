@@ -46,9 +46,19 @@ import {
 import { useListKeys } from '../../hooks/useListKeys';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useAuth } from '../../hooks/useAuth';
+import { useState } from 'react';
+import { ActionButton } from '../../components/action/ActionButton';
+import {
+  splitStaleStranded,
+  STALE_STRANDED_DAYS,
+  type AttentionSubject,
+} from './needsYouModel';
 
 import '../page.css';
 import './NeedsYou.css';
+
+/** Rows a group lists before "Show N more". */
+const LIST_CAP = 50;
 
 /** The tab that shows every row, not only the viewer's. */
 export const ALL_VIEW = 'all';
@@ -189,12 +199,56 @@ function AttentionList({
   ...familyProps
 }: { group: SubjectGroup; now: Date } & FamilyProps): JSX.Element {
   const tone = severityTone(group.severity);
+  const { shown, stale } = splitStaleStranded(group.subjects, now);
+  const [all, setAll] = useState(false);
+  const listed = all ? shown : shown.slice(0, LIST_CAP);
+  const more = shown.length - listed.length;
+  const row = (subject: AttentionSubject): JSX.Element => (
+    <AttentionRow key={subject.key} subject={subject} tone={tone} now={now} {...familyProps} />
+  );
   return (
-    <ul className="needs-you__list">
-      {group.subjects.map((subject) => (
-        <AttentionRow key={subject.key} subject={subject} tone={tone} now={now} {...familyProps} />
-      ))}
-    </ul>
+    <>
+      <ul className="needs-you__list">{listed.map(row)}</ul>
+      {more > 0 ? (
+        <ActionButton
+          className="needs-you__show-more"
+          onClick={() => setAll(true)}
+          data-testid={`needs-you-more-${group.severity}`}
+        >
+          Show {more} more
+        </ActionButton>
+      ) : null}
+      {stale.length > 0 ? <StaleStranded subjects={stale} render={row} /> : null}
+    </>
+  );
+}
+
+/**
+ * Stranded branches nobody has touched for a month, as one line that opens to
+ * their rows. The rows are drawn only once it is opened: closed, the line costs
+ * one element, not a few hundred.
+ */
+function StaleStranded({
+  subjects,
+  render,
+}: {
+  subjects: AttentionSubject[];
+  render: (subject: AttentionSubject) => JSX.Element;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      className="needs-you__watch"
+      data-testid="needs-you-stale-stranded"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>
+        {subjects.length} stranded branch{subjects.length === 1 ? '' : 'es'} untouched for over{' '}
+        {STALE_STRANDED_DAYS} days
+      </summary>
+      {open ? <ul className="needs-you__list">{subjects.map(render)}</ul> : null}
+    </details>
   );
 }
 

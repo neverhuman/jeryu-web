@@ -230,3 +230,8 @@
   color: var(--color-fg-muted);
   font-weight: var(--font-weight-semibold);
 }
+
+/* The rest of a long group, one click away: a group lists fifty rows first. */
+.needs-you__show-more {
+  margin-top: var(--space-2);
+}

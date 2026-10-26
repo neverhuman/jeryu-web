@@ -245,7 +245,7 @@ describe('ShiftQueuePage', () => {
     expect(chip).toHaveAttribute('href', '/needs-you?view=all');
     // And the rows themselves are on the page, as on every other page.
     const strip = screen.getByTestId('needs-you-here-work');
-    expect(within(strip).getByText(/^Blocked todo · jeryu/)).toBeInTheDocument();
+    expect(within(strip).getByText(/^Todo/)).toBeInTheDocument();
   });
 
   it('scopes the needs-a-human chip to the picked family', async () => {

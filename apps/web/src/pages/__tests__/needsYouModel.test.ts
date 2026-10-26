@@ -21,6 +21,8 @@ import {
   attentionBadgeCount,
   attentionAbout,
   attentionContext,
+  rowTitle,
+  splitStaleStranded,
   apiMethod,
   commandPlace,
   primaryAction,
@@ -339,7 +341,10 @@ describe('needsYouModel', () => {
   });
 
   it('never shows a raw kind', () => {
-    expect(kindLabel('todo_blocked')).toBe('Blocked todo');
+    // Under the Blocked heading a blocked todo is a todo.
+    expect(kindLabel('todo_blocked')).toBe('Todo');
+    expect(kindLabel('stranded_branch')).toBe('Stranded branch');
+    expect(kindLabel('pr_branch_campaign')).toBe('Branch campaign');
     expect(kindLabel('release_staged')).toBe('Release ready to deploy');
     expect(kindLabel('pin_behind')).toBe('Merged, not pinned for release');
     expect(kindLabel('pr_draft_waiting')).toBe('Draft waiting to be marked ready');
@@ -349,7 +354,51 @@ describe('needsYouModel', () => {
     expect(kindLabel('')).toBe('Needs attention');
     expect(
       attentionContext(attentionItem({ id: 'p', kind: 'pr_checks_failing', family: 'jeryu', repo: 'jeryu/jeryu-web', pr: 35 }))
-    ).toBe('Checks failing · jeryu · jeryu/jeryu-web#35');
+    ).toBe('Checks failing · jeryu/jeryu-web#35');
+    // A title that already names the pull request: the line does not repeat it.
+    expect(
+      attentionContext(
+        attentionItem({
+          id: 'q',
+          kind: 'pr_changes_requested',
+          title: 'Changes requested on acme/web#7',
+          family: 'acme',
+          repo: 'acme/web',
+          pr: 7,
+        })
+      )
+    ).toBe('Changes requested');
+  });
+
+  it('drops the leading "Blocked:" a blocked todo title carries', () => {
+    expect(rowTitle({ title: 'Blocked: Cut the core tag' })).toBe('Cut the core tag');
+    expect(rowTitle({ title: 'blocked :  Cut it' })).toBe('Cut it');
+    expect(rowTitle({ title: 'Unblock the gate' })).toBe('Unblock the gate');
+    // Nothing but the word: keep it rather than show an empty title.
+    expect(rowTitle({ title: 'Blocked:' })).toBe('Blocked:');
+  });
+
+  it('says a stranded branch once: its title, not its reason again', () => {
+    expect(
+      rowDetail({
+        kind: 'stranded_branch',
+        next_step: 'Open a pull request for the branch: open /repos/jeryu/acme/web',
+        reason: 'acme/web branch salvage/x has 3 patch-unique commits not on main.',
+      })
+    ).toBeNull();
+  });
+
+  it('folds stranded branches older than thirty days, and nothing else', () => {
+    const now = new Date('2026-10-26T12:00:00Z');
+    const subject = (id: string, kind: string, since: string | null) =>
+      attentionSubjects([attentionItem({ id, kind, since })])[0];
+    const old = subject('old', 'stranded_branch', '2026-07-16T00:00:00Z');
+    const fresh = subject('fresh', 'stranded_branch', '2026-10-20T00:00:00Z');
+    const undated = subject('undated', 'stranded_branch', null);
+    const oldTodo = subject('todo', 'todo_blocked', '2026-07-16T00:00:00Z');
+    const { shown, stale } = splitStaleStranded([old, fresh, undated, oldTodo], now);
+    expect(stale.map((s) => s.primary.id)).toEqual(['old']);
+    expect(shown.map((s) => s.primary.id)).toEqual(['fresh', 'undated', 'todo']);
   });
 
   it('describes what the system is doing in one line, skipping parts with no data', () => {

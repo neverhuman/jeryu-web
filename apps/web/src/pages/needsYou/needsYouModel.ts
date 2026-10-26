@@ -237,7 +237,8 @@ export function attentionBadgeCount(data: AttentionResponse | undefined): number
 }
 
 const KIND_LABEL: Record<string, string> = {
-  todo_blocked: 'Blocked todo',
+  // The section heading already says Blocked: the row says what it is.
+  todo_blocked: 'Todo',
   todo_check_outcome: 'Check outcome',
   todo_handoff: 'Todo handed to you',
   todo_stuck_claim: 'Stuck claim',
@@ -261,7 +262,42 @@ const KIND_LABEL: Record<string, string> = {
   release_stage_failed: 'Release staging failed',
   deploy_failed: 'Deploy failed',
   pin_behind: 'Merged, not pinned for release',
+  stranded_branch: 'Stranded branch',
+  pr_changes_own_gate: 'Changes its own gate',
+  pr_branch_campaign: 'Branch campaign',
+  pushed_after_merge: 'Pushed after merge',
+  release_board_problem: 'Release board',
 };
+
+/** A branch with work on no main and no pull request carrying it. */
+export const STRANDED_KIND = 'stranded_branch';
+
+/** Stranded branches untouched for longer than this fold into one line. */
+export const STALE_STRANDED_DAYS = 30;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The rows to list, and the stranded branches older than `days` that fold into
+ * one summary line instead: dozens of three-month-old salvage branches pushed
+ * everything that changed this week off the screen. A row with no `since` is
+ * never folded — its age is not known.
+ */
+export function splitStaleStranded(
+  subjects: AttentionSubject[],
+  now: Date,
+  days: number = STALE_STRANDED_DAYS
+): { shown: AttentionSubject[]; stale: AttentionSubject[] } {
+  const cutoff = now.getTime() - days * DAY_MS;
+  const shown: AttentionSubject[] = [];
+  const stale: AttentionSubject[] = [];
+  for (const subject of subjects) {
+    const at = subject.since ? Date.parse(subject.since) : Number.NaN;
+    const old = subject.primary.kind === STRANDED_KIND && Number.isFinite(at) && at < cutoff;
+    (old ? stale : shown).push(subject);
+  }
+  return { shown, stale };
+}
 
 /** A plain-language label; an unknown kind reads as a sentence, never raw. */
 export function kindLabel(kind: string): string {
@@ -271,10 +307,24 @@ export function kindLabel(kind: string): string {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : 'Needs attention';
 }
 
-/** "Blocked todo · jeryu · jeryu/jeryu-web#35" — the muted half of the title line. */
+/**
+ * The row's title, without a leading "Blocked:" — the section the row sits in
+ * says that already, and a todo blocked on a person was saying it three times.
+ */
+export function rowTitle(item: Pick<AttentionItem, 'title'>): string {
+  const title = item.title.replace(/^\s*blocked\s*:\s*/i, '');
+  return title || item.title;
+}
+
+/**
+ * "Changes requested · jeryu/jeryu-web#35" — the muted half of the title line.
+ * The family is the pill at the row's left, so it is not said again here, and
+ * a repository the title already names is not repeated either.
+ */
 export function attentionContext(item: AttentionItem): string {
   const where = item.repo ? `${item.repo}${item.pr ? `#${item.pr}` : ''}` : '';
-  return [kindLabel(item.kind), item.family ?? '', where].filter(Boolean).join(' · ');
+  const named = where !== '' && item.title.includes(where);
+  return [kindLabel(item.kind), named ? '' : where].filter(Boolean).join(' · ');
 }
 
 export type ApiMethod = 'POST' | 'PATCH' | 'DELETE';
@@ -410,6 +460,10 @@ export function rowDetail(
   item: Pick<AttentionItem, 'next_step' | 'reason'> &
     Partial<Pick<AttentionItem, 'kind' | 'href' | 'action'>>
 ): RowDetail | null {
+  // A stranded branch's title already names the repository, the branch, the
+  // count and the newest commit, and its reason says all of them again; the
+  // act ("Open a pull request for the branch") is the button.
+  if (item.kind === STRANDED_KIND) return null;
   const step = (item.next_step ?? '').trim();
   const reason = (item.reason ?? '').trim();
   const opened = OPEN_STEP.exec(step);

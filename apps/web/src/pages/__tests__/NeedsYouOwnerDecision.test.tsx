@@ -76,8 +76,10 @@ describe('an owner decision on /needs-you', () => {
   it('asks one question with Yes and No, each confirmed, each one call', async () => {
     const calls = renderWith(row());
     const item = await screen.findByTestId('needs-you-item-pr-owner-decision:acme/web:7');
-    // The question is on the row, and the kind reads as a sentence.
-    expect(within(item).getByText(/Needs your decision · acme\/web#7/)).toBeInTheDocument();
+    // The question is on the row, and the kind reads as a sentence; the title
+    // names the pull request, so the muted line does not name it again.
+    expect(within(item).getByText(/^Needs your decision/)).toBeInTheDocument();
+    expect(within(item).queryByText(/Needs your decision · acme\/web#7/)).toBeNull();
     expect(within(item).getByText(new RegExp(QUESTION.slice(0, 30)))).toBeInTheDocument();
     expect(
       within(item).getByRole('link', { name: 'acme/web#7 needs one decision from you' })
