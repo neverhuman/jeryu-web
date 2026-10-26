@@ -111,18 +111,25 @@ export async function mockReleaseChannels(page: Page, fixtures: ChannelFixture[]
     });
   });
 
-  await page.route('**/api/v1/repos/*/release-tag**', async (route) => {
-    const repo = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[4] ?? '');
-    const tag = byRepo.get(repo)?.tag;
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
+  // One batched read answers every repository asked; "no tag" is a status.
+  await page.route('**/api/v1/release-tags?**', async (route) => {
+    const asked = (new URL(route.request().url()).searchParams.get('repos') ?? '').split(',');
+    const releases = asked.map((repo) => {
+      const tag = byRepo.get(repo)?.tag;
+      return {
+        repo,
+        full_name: repo,
         branch: 'main',
+        status: tag ? 'tagged' : 'untagged',
         tag: tag?.tag ?? null,
         sha: tag?.sha ?? null,
         tagged_at: tag ? '2026-06-01T00:00:00Z' : null,
-      }),
+      };
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ releases }),
     });
   });
 

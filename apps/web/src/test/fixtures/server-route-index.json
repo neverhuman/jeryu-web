@@ -68,6 +68,7 @@
     "/api/v1/release-board/{family}/promote",
     "/api/v1/release-board/{family}/promote/{id}",
     "/api/v1/release-pins",
+    "/api/v1/release-tags",
     "/api/v1/scorecard",
     "/api/v1/repos",
     "/api/v1/repos/{id}",

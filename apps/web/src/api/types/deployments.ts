@@ -83,12 +83,36 @@ export interface CompareResponse {
   truncated: boolean;
 }
 
-/** `GET /api/v1/repos/{id}/release-tag`: newest tag on a branch; null = none. */
+/** The newest tag on a branch, null when there is none (`releaseTagOf` reads a batch row into it). */
 export interface ReleaseTagResponse {
   branch: string;
   tag: string | null;
   sha: string | null;
   tagged_at: string | null;
+}
+
+/**
+ * What `GET /api/v1/release-tags` found for one repository. Only `tagged`
+ * carries a tag; every other status is "no tag", never an error:
+ * `untagged` (the branch carries none), `no_branch`, `no_git_data`, and
+ * `not_found` (unknown, or one the caller may not read: the two read alike).
+ */
+export type ReleaseTagStatus = 'tagged' | 'untagged' | 'no_branch' | 'no_git_data' | 'not_found';
+
+export interface ReleaseTagRow {
+  /** The id or `owner/name` the request named. */
+  repo: string;
+  full_name: string | null;
+  branch: string | null;
+  status: ReleaseTagStatus;
+  tag: string | null;
+  sha: string | null;
+  tagged_at: string | null;
+}
+
+/** `GET /api/v1/release-tags?repos=`: one row per repository asked, in order. */
+export interface ReleaseTagsResponse {
+  releases: ReleaseTagRow[];
 }
 
 /**

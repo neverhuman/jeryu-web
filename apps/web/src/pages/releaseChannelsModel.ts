@@ -25,6 +25,7 @@ import type {
   EnvironmentsResponse,
   ReleasePin,
   ReleaseTagResponse,
+  ReleaseTagRow,
 } from '../api/types/deployments';
 
 /** Shallowest (nearest main) first; production is the deepest channel. */
@@ -104,6 +105,21 @@ export const UNKNOWN_LADDER: ReleaseLadder = {
   release: null,
   uncertain: true,
 };
+
+/**
+ * One row of `GET /api/v1/release-tags`, read like the single-repository
+ * answer: only `tagged` carries a tag. Every other status (untagged, no such
+ * branch, no git data, not found) is "no tag", never an error.
+ */
+export function releaseTagOf(row: ReleaseTagRow, branch: string): ReleaseTagResponse {
+  const tagged = row.status === 'tagged' && row.tag !== null && row.sha !== null;
+  return {
+    branch: row.branch ?? branch,
+    tag: tagged ? row.tag : null,
+    sha: tagged ? row.sha : null,
+    tagged_at: tagged ? row.tagged_at : null,
+  };
+}
 
 /**
  * One baseline per configured environment, deepest last. Only environments

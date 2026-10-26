@@ -2,9 +2,9 @@
 //
 // The strip names the nine stations with one number each and marks the
 // bottleneck; below it, the station picked in the address (the bottleneck by
-// default) lists its work in progress, oldest first. The family comes from the
-// header's family scope. What is in progress does not depend on a window, so
-// the page reads the server's default one.
+// default) lists its work in progress, newest first, a page at a time. The
+// family comes from the header's family scope. What is in progress does not
+// depend on a window, so the page reads the server's default one.
 
 import { Route as RouteIcon } from 'lucide-react';
 import { useMemo } from 'react';
@@ -15,18 +15,12 @@ import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { LoadingState } from '../../components/state';
-import { useFlow } from '../../hooks/useFlow';
+import { useFlow, useFlowStation } from '../../hooks/useFlow';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { FlowQueryState } from './FlowQueryState';
 import { StationWipList } from './StationWipList';
 import { WipStrip } from './WipStrip';
-import {
-  lineCoverage,
-  selectedStation,
-  stationSearch,
-  stationSummaries,
-  stationWip,
-} from './flowModel';
+import { lineSummary, selectedStation, stationSearch, stationSummaries, stationWip } from './flowModel';
 
 import '../page.css';
 import './Flow.css';
@@ -54,7 +48,7 @@ export function FlowPage(): JSX.Element {
       ) : isError ? (
         <FlowQueryState error={error} onRetry={() => void report.refetch()} />
       ) : (
-        <FlowBody report={data} params={params} now={now} />
+        <FlowBody report={data} family={scope.family} params={params} now={now} />
       )}
     </div>
   );
@@ -62,17 +56,19 @@ export function FlowPage(): JSX.Element {
 
 function FlowBody({
   report,
+  family,
   params,
   now,
 }: {
   report: FlowReport;
+  family: string | null;
   params: URLSearchParams;
   now: Date;
 }): JSX.Element {
   const stations = stationSummaries(report);
   const station = selectedStation(params, report);
-  const coverage = lineCoverage(report);
   const label = stations.find((candidate) => candidate.id === station)?.label ?? station ?? '';
+  const empty = stations.every((candidate) => !candidate.total);
   return (
     <div className="flow__body" data-testid="flow-body">
       <WipStrip
@@ -82,26 +78,46 @@ function FlowBody({
       />
 
       <p className="flow__coverage" data-testid="flow-coverage">
-        {coverage.listed < coverage.total
-          ? `${coverage.listed} of ${coverage.total} in progress listed`
-          : `${coverage.total} in progress`}
-        {report.topology?.families_truncated ? ' · some families are left out of this read' : ''}
+        {lineSummary(report)}
       </p>
 
-      {stations.every((candidate) => !candidate.total) ? (
+      {empty ? (
         <ScopedEmptyState
           icon={RouteIcon}
           title="Nothing is in progress."
           description="No station has work at it right now."
         />
       ) : station ? (
-        <StationWipList
-          key={station}
-          station={station}
-          label={label}
-          wip={stationWip(report, station, now)}
-        />
+        <StationPages key={station} family={family} station={station} label={label} now={now} />
       ) : null}
     </div>
+  );
+}
+
+/** The picked station's own read, newest first, one page more per ask. */
+function StationPages({
+  family,
+  station,
+  label,
+  now,
+}: {
+  family: string | null;
+  station: string;
+  label: string;
+  now: Date;
+}): JSX.Element {
+  const pages = useFlowStation(family ? { family, station } : { station });
+  if (pages.isPending) return <LoadingState title={`Loading ${label}…`} variant="message" />;
+  if (!pages.data) {
+    return <FlowQueryState error={pages.error} onRetry={() => void pages.refetch()} />;
+  }
+  return (
+    <StationWipList
+      station={station}
+      label={label}
+      wip={stationWip(pages.data.pages, station, now)}
+      more={pages.isFetchingNextPage ? 'loading' : pages.isFetchNextPageError ? 'failed' : 'idle'}
+      onMore={() => void pages.fetchNextPage()}
+    />
   );
 }

@@ -146,7 +146,8 @@
 }
 
 .flow-items__repo,
-.flow-items__waited {
+.flow-items__waited,
+.flow-items__claim {
   color: var(--color-fg-secondary);
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
@@ -166,8 +167,36 @@
   overflow-wrap: anywhere;
 }
 
+.flow-items__claim {
+  color: var(--color-fg-muted);
+}
+
+.flow-station__claims {
+  margin: 0 0 var(--space-2);
+  color: var(--color-fg-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .flow-station__stale {
   margin-top: var(--space-2);
+}
+
+.flow-station__paging {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
+.flow-station__paging .flow-items__more {
+  margin: 0;
+}
+
+.flow-items__more:disabled {
+  cursor: progress;
 }
 
 .flow-station__stale-toggle,

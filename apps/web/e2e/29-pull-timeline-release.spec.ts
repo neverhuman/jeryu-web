@@ -111,37 +111,29 @@ test('A repository that records no release says so instead of calling merged wor
   await expect(page.getByTestId('pull-timeline-alice/jeryu-9')).toBeVisible();
 
   // A repository with no deployment and no parent pin could only be released
-  // by tag, and most such repositories have none (the lookup answers 404).
-  // The tag is asked for when its History is opened; until then a merged row
-  // says the release is unknown, not that there was none.
-  expect(await rowStatuses(page, 'alice/jeryu')).toEqual([
-    'Waiting on checks',
-    'Waiting on checks',
-    'Merged · release unknown',
-  ]);
-  await expect(page.getByTestId('pull-status-alice/jeryu-9')).toHaveAttribute('title', 'not compared');
+  // by tag. Its tag is part of one batched read on load, which answers "no
+  // tag" as a status: with no release to place them by, a merged row says
+  // exactly that — not "merged, not yet released", which would be a claim
+  // about a release process this repository does not have — and the count
+  // does not call it released either.
+  await expect
+    .poll(() => rowStatuses(page, 'alice/jeryu'))
+    .toEqual(['Waiting on checks', 'Waiting on checks', 'Merged · no release recorded']);
   // The newest stands for the five, which only a release would move; the other
   // four are history, drawn once it is opened.
   await expect(page.getByTestId('pull-waiting-alice/jeryu-9')).toHaveText(' + 4 more waiting');
   await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toHaveCount(0);
   await page.getByTestId('pull-older-alice/jeryu').locator('summary').click();
   await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeVisible();
-
-  // Opened, the tag lookup has answered: with no release to place them by,
-  // every merged row says exactly that — not "merged, not yet released", which
-  // would be a claim about a release process this repository does not have —
-  // and the count does not call it released either.
-  await expect
-    .poll(() => rowStatuses(page, 'alice/jeryu'))
-    .toEqual([
-      'Waiting on checks',
-      'Waiting on checks',
-      'Merged · no release recorded',
-      'Merged · no release recorded',
-      'Merged · no release recorded',
-      'Merged · no release recorded',
-      'Merged · no release recorded',
-    ]);
+  expect(await rowStatuses(page, 'alice/jeryu')).toEqual([
+    'Waiting on checks',
+    'Waiting on checks',
+    'Merged · no release recorded',
+    'Merged · no release recorded',
+    'Merged · no release recorded',
+    'Merged · no release recorded',
+    'Merged · no release recorded',
+  ]);
   await expect(page.getByTestId('pull-repo-alice/jeryu').locator('.pull-repo__count')).toHaveText(
     '2 in flight · 5 merged, release unknown'
   );

@@ -218,12 +218,9 @@ export function PullRoomPage(): JSX.Element {
   );
 
   // Where every merged change has got to: dev, canary, stable, production.
-  // A repository released only by tag is asked for its tag once its History
-  // is opened; until then its merged rows read "release unknown".
-  const [tagRepos, setTagRepos] = useState<ReadonlySet<string>>(() => new Set());
-  const askTag = (repoKey: string): void =>
-    setTagRepos((current) => (current.has(repoKey) ? current : new Set([...current, repoKey])));
-  const channels = useRepoChannels(board ? [] : wanted.repos, 'main', tagRepos);
+  // The tags of the repositories released only by tag are one batched read;
+  // a repository the forge did not answer for reads "release unknown".
+  const channels = useRepoChannels(board ? [] : wanted.repos, 'main');
   const ladderFor = (pr: PullRequestSummary) => {
     const key = `${pr.repo.owner}/${pr.repo.name}`;
     if (channels.deferred.has(key)) return UNKNOWN_LADDER;
@@ -463,7 +460,6 @@ export function PullRoomPage(): JSX.Element {
                 repoKeyFor={repoKeyFor}
                 attention={waitingByPull}
                 flow={flow.data}
-                onHistory={askTag}
               />
             )}
           </>

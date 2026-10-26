@@ -1,5 +1,6 @@
 // releaseFixtures.ts — browser-boundary mocks for the release endpoints a
-// repository answers with: environments, pulls, release-tag and compare, plus
+// repository answers with: environments, pulls, its release tag (one batched
+// read for every repository mocked on the page) and compare, plus
 // the repo list. Shared by the Releases specs and the rendered UX QA lane so
 // both render the same surface.
 
@@ -61,6 +62,38 @@ export function compareBody(base: string, commits: string[]) {
   };
 }
 
+type Tag = { tag: string | null; sha: string | null; tagged_at: string | null };
+
+/** The tags of every repository mocked on a page, answered by one batch route. */
+const tagsByPage = new WeakMap<Page, Map<string, Tag>>();
+
+async function mockReleaseTags(page: Page, name: string, tag: Tag | undefined): Promise<void> {
+  let tags = tagsByPage.get(page);
+  if (!tags) {
+    const known = new Map<string, Tag>();
+    tags = known;
+    tagsByPage.set(page, known);
+    await page.route('**/api/v1/release-tags?**', (route) => {
+      const asked = (new URL(route.request().url()).searchParams.get('repos') ?? '').split(',');
+      const releases = asked.map((repo) => {
+        const found = known.get(repo.replace(/^jeryu\//, ''));
+        const tagged = Boolean(found?.tag && found.sha);
+        return {
+          repo,
+          full_name: found ? repo : null,
+          branch: found ? 'main' : null,
+          status: found ? (tagged ? 'tagged' : 'untagged') : 'not_found',
+          tag: tagged ? (found?.tag ?? null) : null,
+          sha: tagged ? (found?.sha ?? null) : null,
+          tagged_at: tagged ? (found?.tagged_at ?? null) : null,
+        };
+      });
+      return route.fulfill(json({ releases }));
+    });
+  }
+  tags.set(name, tag ?? { tag: null, sha: null, tagged_at: null });
+}
+
 export async function mockRepo(
   page: Page,
   name: string,
@@ -78,9 +111,7 @@ export async function mockRepo(
   await page.route(`**/api/v1/repos/${id}/pulls?state=all&limit=500&page=1`, (route) =>
     route.fulfill(json({ total: opts.pulls.length, items: opts.pulls }))
   );
-  await page.route(`**/api/v1/repos/${id}/release-tag**`, (route) =>
-    route.fulfill(json({ branch: 'main', ...(opts.tag ?? { tag: null, sha: null, tagged_at: null }) }))
-  );
+  await mockReleaseTags(page, name, opts.tag);
   await page.route(`**/api/v1/repos/${id}/compare?**`, (route) =>
     opts.compare ? route.fulfill(json(opts.compare)) : route.fulfill({ status: 404, body: '{}' })
   );

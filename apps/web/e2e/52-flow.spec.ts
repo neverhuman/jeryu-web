@@ -1,9 +1,10 @@
 // 52-flow.spec.ts — the Flow page on `GET /api/v1/flow` mocked at the browser
 // boundary: one number per station with the bottleneck marked, the picked
-// station's work in progress oldest first with the stale part folded away, the
-// station in the address and Back, the strip above the Activity feed, a phone
-// in the dark theme, the nav entry and chord, and what an older server and a
-// non-admin see.
+// station's work in progress newest first and paged from the server, the stale
+// part (no live worker, or older than 14 days) folded away and named by kind,
+// the Work claims, the station in the address and Back, the strip above the
+// Activity feed, a phone in the dark theme, the nav entry and chord, and what
+// an older server and a non-admin see.
 
 import { expect, test, type Page } from './fixtures/test';
 
@@ -14,7 +15,7 @@ import {
   runAxe,
 } from './fixtures/accessibility';
 import { mockBootstrap, mockRepoList } from './fixtures/mocks';
-import { lot, mockFlowApi, mockFlowForbidden } from './fixtures/flowMocks';
+import { ago, lot, mockFlowApi, mockFlowForbidden } from './fixtures/flowMocks';
 import { mockPullRoom } from './fixtures/pullRoomMocks';
 import {
   FOUR_CHANNELS,
@@ -58,9 +59,10 @@ test.describe('Flow', () => {
     await expect(page.getByTestId('flow-strip-station-gate')).toHaveAttribute('aria-current', 'true');
     // Nothing has reached Pin: no number, never a zero.
     await expect(page.getByTestId('flow-strip-station-pin')).toContainText('—');
-    // The server lists fewer than it counts, and the page says so.
-    await expect(page.getByTestId('flow-coverage')).toHaveText('8 of 14 in progress listed');
-    await expect(page.getByTestId('flow-station')).toContainText('Gate · 6 in progress · 5 of 6 listed');
+    // The line's count, over every family the forge hosts.
+    await expect(page.getByTestId('flow-coverage')).toHaveText('15 in progress across 2 families');
+    await expect(page.getByTestId('flow-station')).toContainText('Gate · 6 in progress');
+    await expect(page.getByTestId('flow-station-paging')).toHaveText('5 listed, newest first');
     // The removed views stay removed.
     await expect(page.getByText('Configuration and evidence not available')).toHaveCount(0);
     await expect(page.getByRole('group', { name: 'Window' })).toHaveCount(0);
@@ -72,25 +74,30 @@ test.describe('Flow', () => {
     expect(blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`)).toEqual([]);
   });
 
-  test('a station lists its work oldest first, folds the stale part, and keeps the pick in the address @action:flow.station_lots', async ({
+  test('a station lists its work newest first, folds the stale part, and keeps the pick in the address @action:flow.station_lots', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
-    await mockFlowApi(page);
+    const log = await mockFlowApi(page);
 
     await page.goto('/flow?days=7&mode=layout');
     await expect(page.getByTestId('flow-body')).toBeVisible({ timeout: 15_000 });
     const current = page.getByTestId('flow-current');
+    await expect(current.locator('.flow-items__id').first()).toHaveText('acme-0002');
     const ids = await current.locator('.flow-items__id').evaluateAll((nodes) => nodes.map((node) => node.textContent));
-    expect(ids).toEqual(['acme-0001', 'acme/widgets#42', 'acme-0002']);
-    // The two old claims are one line until it is opened.
+    expect(ids).toEqual(['acme-0002', 'acme/widgets#42', 'acme-0001']);
+    // The picked station is its own read, newest first.
+    const gate = log.queries.find((query) => query.get('station') === 'gate');
+    expect(gate?.get('lots_order')).toBe('newest');
+    expect(gate?.get('lots_limit')).toBe('50');
+    // The two old items are one line until it is opened.
     await expect(page.getByTestId('flow-stale')).toHaveCount(0);
     const toggle = page.getByTestId('flow-stale-toggle');
-    await expect(toggle).toHaveText('2 stale · older than 14 days');
+    await expect(toggle).toHaveText('2 stale · 2 older than 14 days');
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const stale = await page.getByTestId('flow-stale').locator('.flow-items__id').evaluateAll((nodes) => nodes.map((node) => node.textContent));
-    expect(stale).toEqual(['acme-0009', 'acme-0008']);
+    expect(stale).toEqual(['acme-0008', 'acme-0009']);
 
     // Picking a station is a new address; Back returns to the one before.
     await page.getByTestId('flow-strip-station-review').click();
@@ -107,11 +114,61 @@ test.describe('Flow', () => {
     // The keys walk the rows, and Enter opens the work.
     await page.getByTestId('flow-strip-station-gate').click();
     const first = current.locator('[data-list-row]').first();
-    await expect(first).toContainText('acme-0001');
+    await expect(first).toContainText('acme-0002');
     await page.keyboard.press('j');
     await expect(first).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/work\/acme-0001$/);
+    await expect(page).toHaveURL(/\/work\/acme-0002$/);
+  });
+
+  test('Work reads its claims against the heartbeats and folds the ones no live worker backs @action:flow.station_lots', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    await mockFlowApi(page);
+
+    await page.goto('/flow?station=work');
+    await expect(page.getByTestId('flow-station')).toHaveAttribute('data-station', 'work', { timeout: 15_000 });
+    await expect(page.getByTestId('flow-station-claims')).toHaveText(
+      'Claims: 1 with a live worker · 2 with no live worker · 1 not reported'
+    );
+    const ids = await page.getByTestId('flow-current').locator('.flow-items__id').evaluateAll((nodes) => nodes.map((node) => node.textContent));
+    expect(ids).toEqual(['acme-0010']);
+    const toggle = page.getByTestId('flow-stale-toggle');
+    await expect(toggle).toHaveText('3 stale · 2 with no live worker · 1 older than 14 days');
+    await toggle.click();
+    await expect(page.getByTestId('flow-item-acme-0011')).toContainText('no live worker');
+    await expect(page.getByTestId('flow-item-acme-0013')).not.toContainText('no live worker');
+
+    const result = await runAxe(page, { disableRules: ['color-contrast'] });
+    await persistAxeResult('flow-work-claims', result);
+    const rendered = await persistRenderedEvidence(page, 'flow-work-claims');
+    expect(rendered.geometry.width, 'the Work station rendered with its claims').toBeGreaterThan(0);
+    expect(blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`)).toEqual([]);
+  });
+
+  test('a long station shows 50 and asks the server for the next page on Show more @action:flow.station_lots', async ({
+    page,
+  }) => {
+    await mockBootstrap(page, { auth: { role: 'admin' } });
+    const shift = Array.from({ length: 55 }, (_, n) =>
+      lot(`acme-s${String(n).padStart(3, '0')}`, 'shift', 'waiting', { since: ago((n + 1) * 60_000) })
+    );
+    const log = await mockFlowApi(page, shift, { shift: { wip: { waiting: 55, active: 0, held: 0 } } });
+
+    await page.goto('/flow?station=shift');
+    const current = page.getByTestId('flow-current');
+    await expect(current.locator('[data-list-row]')).toHaveCount(50, { timeout: 15_000 });
+    await expect(current.locator('.flow-items__id').first()).toHaveText('acme-s000');
+    await expect(page.getByTestId('flow-station')).toContainText('Shift · 55 in progress');
+    await page.getByTestId('flow-station-more').click();
+    await expect(current.locator('[data-list-row]')).toHaveCount(55);
+    await expect(current.locator('.flow-items__id').last()).toHaveText('acme-s054');
+    await expect(page.getByTestId('flow-station-more')).toHaveCount(0);
+    await expect(page.getByTestId('flow-station-paging')).toHaveText('55 listed, newest first');
+    // Pages by offset, nothing else (the dev server may read a page twice).
+    const offsets = log.queries.filter((query) => query.get('station') === 'shift').map((query) => query.get('lots_offset'));
+    expect([...new Set(offsets)]).toEqual(['0', '50']);
   });
 
   test('the line strip is Flow\'s: Activity and a repository tab do not repeat it @action:flow.activity_strip', async ({

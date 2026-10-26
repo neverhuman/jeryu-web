@@ -137,3 +137,34 @@ export const FLOW_REPORT: FlowReport = {
     lot('acme-0004', 'queue', 'waiting', { since: '2026-10-14T11:30:00.000Z' }),
   ],
 };
+
+/**
+ * The answer the server gives `report` for `params`, paging as it does: with
+ * `station`, only that station's lots, ordered by arrival (`lots_order`),
+ * `lots_offset` skipped and at most `lots_limit` (20 by default) listed, with
+ * `lots_truncated` set when more are left. The counts never shrink.
+ */
+export function flowAnswer(report: FlowReport, params: URLSearchParams): FlowReport {
+  const station = params.get('station');
+  const family = params.get('family');
+  if (!station) return { ...report, family };
+  const order = params.get('lots_order') === 'newest' ? 'newest' : 'oldest';
+  const offset = Number(params.get('lots_offset') ?? 0);
+  const limit = Number(params.get('lots_limit') ?? 20);
+  const at = report.lots
+    .filter((candidate) => candidate.station === station)
+    .sort((a, b) => a.since.localeCompare(b.since));
+  if (order === 'newest') at.reverse();
+  const lots = at.slice(offset, offset + limit);
+  return {
+    ...report,
+    family,
+    stations: report.stations.map((candidate) => ({
+      ...candidate,
+      lots_listed: candidate.id === station ? lots.length : 0,
+    })),
+    lots,
+    lots_truncated: offset + lots.length < at.length,
+    lots_page: { station, offset, limit, order },
+  };
+}

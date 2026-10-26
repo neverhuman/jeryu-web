@@ -1,15 +1,16 @@
 // FlowPage.test.tsx — `/flow`: one number per station with the bottleneck
-// marked and opened by default, the picked station's work oldest first, the
-// stale part folded into one line, the 50-row cap, the listed-of-counted line,
-// the family from the header scope, and what the page says on a server or to a
-// reader that will not answer it.
+// marked and opened by default, the picked station's work newest first and
+// paged from the server, the stale part (no live worker, or older than 14
+// days) folded into one line that says which is which, the Work claims line,
+// the line's count over every family, the family from the header scope, and
+// what the page says on a server or to a reader that will not answer it.
 
 import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { FlowLot, FlowReport } from '../../api/types';
 import { FlowPage } from '../flow';
-import { FLOW_REPORT } from './flowTestData';
+import { flowAnswer, FLOW_REPORT } from './flowTestData';
 import {
   errorResponse,
   json,
@@ -62,9 +63,7 @@ function mockFlowApi(report: FlowReport = FLOW_REPORT, override?: Override): Rec
     calls.push(req);
     const custom = override?.(req);
     if (custom) return custom;
-    if (url.pathname === '/api/v1/flow') {
-      return json({ ...report, family: url.searchParams.get('family') });
-    }
+    if (url.pathname === '/api/v1/flow') return json(flowAnswer(report, url.searchParams));
     if (url.pathname === '/api/v1/shift/families') {
       return json({
         families: [
@@ -96,16 +95,19 @@ describe('FlowPage', () => {
     // Nothing has reached Pin: no number, never a zero.
     expect(screen.getByTestId('flow-strip-station-pin')).toHaveTextContent('Pin—');
     expect(screen.getByTestId('flow-strip-station-gate')).toHaveAttribute('aria-current', 'true');
-    expect(screen.getByTestId('flow-station')).toHaveAttribute('data-station', 'gate');
+    expect(await screen.findByTestId('flow-station')).toHaveAttribute('data-station', 'gate');
     // A pick is an address of its own, so it is linkable and Back returns.
     expect(screen.getByTestId('flow-strip-station-review')).toHaveAttribute('href', '/flow?station=review');
   });
 
-  it('lists the picked station oldest first, with why each item is held and its links', async () => {
-    mockFlowApi();
+  it('lists the picked station newest first, with why each item is held and its links', async () => {
+    const calls = mockFlowApi();
     renderAt('/flow?station=review', '/flow', <FlowPage />);
     const current = await screen.findByTestId('flow-current');
-    expect(ids(current)).toEqual(['acme-0003', 'acme/widgets#43']);
+    expect(ids(current)).toEqual(['acme/widgets#43', 'acme-0003']);
+    // The station is its own read, newest first, one page of 50.
+    const station = flowCalls(calls).find((query) => query.get('station') === 'review');
+    expect(station?.toString()).toBe('station=review&lots_offset=0&lots_limit=50&lots_order=newest');
     const held = screen.getByTestId('flow-item-acme/widgets#43');
     expect(held).toHaveTextContent('review held it · held 5h 30m by acme-reviewer');
     expect(held).toHaveTextContent('nobody acting');
@@ -122,47 +124,88 @@ describe('FlowPage', () => {
     );
   });
 
-  it('folds items older than 14 days into one stale line that lists them on click', async () => {
+  it('folds claims with no live worker and items older than 14 days into one stale line', async () => {
     mockFlowApi({
       ...FLOW_REPORT,
+      stations: FLOW_REPORT.stations.map((station) =>
+        station.id === 'work'
+          ? {
+              ...station,
+              wip: { waiting: 0, active: 5, held: 0 },
+              claims: { live: 1, no_live_worker: 3, unknown: 1 },
+            }
+          : station
+      ),
       lots: [
         ...FLOW_REPORT.lots,
-        lot('acme-old-1', 'gate', 30, { state: 'active' }),
-        lot('acme-old-2', 'gate', 15),
-        lot('acme-new', 'gate', 13),
+        lot('acme-live', 'work', 1, { state: 'active', claim: 'live' }),
+        lot('acme-dead', 'work', 2, { state: 'active', claim: 'no_live_worker' }),
+        lot('acme-quiet', 'work', 20, { state: 'active', claim: 'unknown' }),
+        // Both: counted once, by its claim.
+        lot('acme-dead-old', 'work', 30, { state: 'active', claim: 'no_live_worker' }),
       ],
     });
-    renderAt('/flow?station=gate', '/flow', <FlowPage />);
+    renderAt('/flow?station=work', '/flow', <FlowPage />);
     const current = await screen.findByTestId('flow-current');
-    expect(ids(current)).toEqual(['acme-new', 'acme-0001', 'acme/widgets#42', 'acme-0002']);
+    expect(ids(current)).toEqual(['acme-live']);
+    // Every claim at Work, listed or not, read against the heartbeats.
+    expect(screen.getByTestId('flow-station-claims')).toHaveTextContent(
+      'Claims: 1 with a live worker · 3 with no live worker · 1 not reported'
+    );
     // Collapsed means not rendered, not hidden.
     expect(screen.queryByTestId('flow-stale')).toBeNull();
     const toggle = screen.getByTestId('flow-stale-toggle');
-    expect(toggle).toHaveTextContent('2 stale · older than 14 days');
+    expect(toggle).toHaveTextContent('3 stale · 2 with no live worker · 1 older than 14 days');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(ids(screen.getByTestId('flow-stale'))).toEqual(['acme-old-1', 'acme-old-2']);
+    expect(ids(screen.getByTestId('flow-stale'))).toEqual(['acme-dead', 'acme-quiet', 'acme-dead-old']);
+    expect(screen.getByTestId('flow-item-acme-dead')).toHaveTextContent('no live worker');
+    expect(screen.getByTestId('flow-item-acme-quiet')).not.toHaveTextContent('no live worker');
   });
 
-  it('caps a list at 50 rows until the reader asks for all of them', async () => {
+  it('pages a station 50 at a time, newest first, and asks for the next page on Show more', async () => {
     const many = Array.from({ length: 60 }, (_, index) =>
       lot(`acme-${String(index).padStart(4, '0')}x`, 'queue', 1 + index / 100)
     );
-    mockFlowApi({ ...FLOW_REPORT, lots: many });
+    const calls = mockFlowApi({
+      ...FLOW_REPORT,
+      stations: FLOW_REPORT.stations.map((station) =>
+        station.id === 'queue' ? { ...station, wip: { waiting: 60, active: 0, held: 0 } } : station
+      ),
+      lots: many,
+    });
     renderAt('/flow?station=queue', '/flow', <FlowPage />);
     const current = await screen.findByTestId('flow-current');
     expect(within(current).getAllByRole('listitem')).toHaveLength(50);
-    // Oldest first: the item set furthest back leads.
-    expect(ids(current)[0]).toBe('acme-0059x');
-    fireEvent.click(screen.getByTestId('flow-current-show-all'));
-    expect(within(screen.getByTestId('flow-current')).getAllByRole('listitem')).toHaveLength(60);
-    expect(screen.queryByTestId('flow-current-show-all')).toBeNull();
+    // Newest first: the item that arrived last leads.
+    expect(ids(current)[0]).toBe('acme-0000x');
+    expect(screen.getByTestId('flow-station')).toHaveTextContent('Queue · 60 in progress');
+    expect(screen.getByTestId('flow-station-paging')).toHaveTextContent('50 listed, newest first');
+    fireEvent.click(screen.getByTestId('flow-station-more'));
+    await vi.waitFor(() =>
+      expect(within(screen.getByTestId('flow-current')).getAllByRole('listitem')).toHaveLength(60)
+    );
+    expect(ids(screen.getByTestId('flow-current'))[59]).toBe('acme-0059x');
+    expect(screen.getByTestId('flow-station-paging')).toHaveTextContent('60 listed, newest first');
+    expect(screen.queryByTestId('flow-station-more')).toBeNull();
+    const offsets = flowCalls(calls)
+      .filter((query) => query.get('station') === 'queue')
+      .map((query) => query.get('lots_offset'));
+    expect(offsets).toEqual(['0', '50']);
   });
 
-  it('says how many of the counted items the server lists, for the line and the station', async () => {
+  it('counts the line over every family, and the station from its own read', async () => {
     mockFlowApi({
       ...FLOW_REPORT,
+      topology: {
+        families: [],
+        products: [],
+        unscoped_active_lots: 0,
+        unknown: [],
+        families_truncated: false,
+        families_total: 12,
+      },
       repository_wip: [
         { repo: 'acme/widgets-deploy', station: 'gate', waiting: 1, active: 1, held: 0 },
         { repo: 'acme/widgets', station: 'gate', waiting: 2, active: 1, held: 0 },
@@ -170,10 +213,12 @@ describe('FlowPage', () => {
       ],
     });
     renderAt('/flow', '/flow', <FlowPage />);
-    expect(await screen.findByTestId('flow-coverage')).toHaveTextContent('6 of 13 in progress listed');
-    expect(screen.getByTestId('flow-station')).toHaveTextContent('Gate · 5 in progress · 3 of 5 listed');
-    // Per repository at this station only, most first.
-    expect(screen.getByTestId('flow-station-repos')).toHaveTextContent('acme/widgets 3acme/widgets-deploy 2');
+    expect(await screen.findByTestId('flow-coverage')).toHaveTextContent('13 in progress across 12 families');
+    expect(await screen.findByTestId('flow-station-repos')).toHaveTextContent(
+      'acme/widgets 3acme/widgets-deploy 2'
+    );
+    expect(screen.getByTestId('flow-station')).toHaveTextContent('Gate · 5 in progress');
+    expect(screen.getByTestId('flow-station')).not.toHaveTextContent('of 5 listed');
   });
 
   it('notes when the read left families out', async () => {

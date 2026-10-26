@@ -1,24 +1,18 @@
-// StationWipList.tsx — the work in progress at one station, oldest first: what
+// StationWipList.tsx — the work in progress at one station, newest first: what
 // it is (a pull request names its repository), how long it has waited, why it is held, and a link.
 //
-// Items past the stale cutoff fold into one "N stale" line that lists them on
-// click, so the work that is really moving is not buried under old claims.
-// Each list shows LIST_CAP rows until the reader asks for all. When the server
-// counts more at the station than it lists, the heading says how many of how
-// many.
+// Items past the stale cutoff, and Work claims no live worker backs, fold into
+// one "N stale" line that says which is which and lists them on click, so the
+// work that is really moving is not buried under old claims. At Work, a line
+// under the heading reads every claim against the heartbeats. The list is a
+// page of the station at a time; "Show more" asks the server for the next.
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { pillClass, type Tone } from '../../components/tone/tone';
 import { LIST_OPEN_PROP, listRowProps, useListKeys } from '../../hooks/useListKeys';
-import {
-  ageWords,
-  LIST_CAP,
-  STALE_AFTER_DAYS,
-  type StationWip,
-  type WipItem,
-} from './flowModel';
+import { ageWords, claimsWords, staleWords, type StationWip, type WipItem } from './flowModel';
 
 const STATE_TONE: Record<string, Tone> = {
   held: 'human',
@@ -33,17 +27,21 @@ export interface StationWipListProps {
   station: string;
   label: string;
   wip: StationWip;
+  /** The next page: idle, being read, or its read failed. */
+  more?: 'idle' | 'loading' | 'failed';
+  onMore?: () => void;
 }
 
-export function StationWipList({ station, label, wip }: StationWipListProps): JSX.Element {
+export function StationWipList({
+  station,
+  label,
+  wip,
+  more = 'idle',
+  onMore,
+}: StationWipListProps): JSX.Element {
   const listRef = useListKeys<HTMLDivElement>();
   const [staleOpen, setStaleOpen] = useState(false);
-  const count =
-    wip.total === null
-      ? 'nothing has reached it yet'
-      : wip.listed < wip.total
-        ? `${wip.total} in progress · ${wip.listed} of ${wip.total} listed`
-        : `${wip.total} in progress`;
+  const count = wip.total === null ? 'nothing has reached it yet' : `${wip.total} in progress`;
   return (
     <section
       className="page__section flow-station"
@@ -54,6 +52,12 @@ export function StationWipList({ station, label, wip }: StationWipListProps): JS
       <h2 className="page__section-title" id="flow-station-title">
         {label} <span className="flow-station__count">· {count}</span>
       </h2>
+
+      {wip.claims ? (
+        <p className="flow-station__claims" data-testid="flow-station-claims">
+          Claims: {claimsWords(wip.claims)}
+        </p>
+      ) : null}
 
       {wip.repos.length > 0 ? (
         <p className="flow-station__repos" data-testid="flow-station-repos">
@@ -78,10 +82,10 @@ export function StationWipList({ station, label, wip }: StationWipListProps): JS
         ) : null}
 
         {wip.current.length > 0 ? (
-          <CappedList items={wip.current} testId="flow-current" />
+          <ItemList items={wip.current} testId="flow-current" />
         ) : wip.listed > 0 ? (
           <p className="flow-station__empty" data-testid="flow-current-empty">
-            Nothing listed here is newer than {STALE_AFTER_DAYS} days.
+            Everything listed here is stale.
           </p>
         ) : null}
 
@@ -94,37 +98,41 @@ export function StationWipList({ station, label, wip }: StationWipListProps): JS
               onClick={() => setStaleOpen((open) => !open)}
               data-testid="flow-stale-toggle"
             >
-              {wip.stale.length} stale · older than {STALE_AFTER_DAYS} days
+              {staleWords(wip.staleBy)}
             </button>
-            {staleOpen ? <CappedList items={wip.stale} testId="flow-stale" /> : null}
+            {staleOpen ? <ItemList items={wip.stale} testId="flow-stale" /> : null}
           </div>
         ) : null}
       </div>
+
+      {wip.listed > 0 ? (
+        <p className="flow-station__paging" data-testid="flow-station-paging">
+          {wip.listed} listed, newest first
+          {wip.more ? (
+            <button
+              type="button"
+              className="flow-items__more"
+              onClick={onMore}
+              disabled={more === 'loading'}
+              data-testid="flow-station-more"
+            >
+              {more === 'loading' ? 'Loading…' : 'Show more'}
+            </button>
+          ) : null}
+          {more === 'failed' ? <span className="flow-station__more-failed"> · the next page did not load</span> : null}
+        </p>
+      ) : null}
     </section>
   );
 }
 
-function CappedList({ items, testId }: { items: WipItem[]; testId: string }): JSX.Element {
-  const [all, setAll] = useState(false);
-  const shown = all ? items : items.slice(0, LIST_CAP);
+function ItemList({ items, testId }: { items: WipItem[]; testId: string }): JSX.Element {
   return (
-    <>
-      <ol className="flow-items" data-testid={testId}>
-        {shown.map((item) => (
-          <ItemRow key={item.key} item={item} />
-        ))}
-      </ol>
-      {items.length > shown.length ? (
-        <button
-          type="button"
-          className="flow-items__more"
-          onClick={() => setAll(true)}
-          data-testid={`${testId}-show-all`}
-        >
-          Show all {items.length}
-        </button>
-      ) : null}
-    </>
+    <ol className="flow-items" data-testid={testId}>
+      {items.map((item) => (
+        <ItemRow key={item.key} item={item} />
+      ))}
+    </ol>
   );
 }
 
@@ -147,6 +155,9 @@ function ItemRow({ item }: { item: WipItem }): JSX.Element {
       {/* A pull request's id names its repository; a todo's does not. */}
       {item.repo ? null : <span className="flow-items__repo">todo</span>}
       <span className="flow-items__waited">{ageWords(item.waitedS)}</span>
+      {item.claim === 'no_live_worker' ? (
+        <span className="flow-items__claim">no live worker</span>
+      ) : null}
       {item.hold ? (
         <span className="flow-items__hold">
           {item.hold}

@@ -1,14 +1,14 @@
 // flowModel.ts — everything the Flow page decides, kept pure so it is tested
 // without a browser: which station the address picks, one number per station,
-// and the work in progress at one station, oldest first, with the stale part
+// and the work in progress at one station, newest first, with the stale part
 // set apart.
 //
 // Flow answers one question: where is the work in progress stuck right now.
 // The page never fills a gap in: a station nothing has reached has no number,
-// and when the server lists fewer items than it counts, the page says how many
-// of how many it lists.
+// and a station's list is paged from the server, newest first, so what is
+// listed is always a prefix of what the station counts.
 
-import type { FlowLot, FlowReport, FlowStation } from '../../api/types';
+import type { FlowClaim, FlowClaims, FlowLot, FlowReport, FlowStation } from '../../api/types';
 import { stationTotal, stationUnknown } from '../../components/flow/lineStripModel';
 import { spanWords } from '../../format/duration';
 
@@ -19,17 +19,12 @@ export const STATION_PARAM = 'station';
 export const STALE_AFTER_DAYS = 14;
 const STALE_AFTER_S = STALE_AFTER_DAYS * 24 * 60 * 60;
 
-/** A list renders this many rows until the reader asks for all of them. */
-export const LIST_CAP = 50;
-
 /** One station on the strip: its number in progress and its oldest wait. */
 export interface StationSummary {
   id: string;
   label: string;
   /** Active, waiting and held together; null when nothing has reached it. */
   total: number | null;
-  /** The items of this station the report lists. */
-  listed: number;
   bottleneck: boolean;
   oldestS: number | null;
   /** The oldest wait against the stale cutoff, 0 to 1. */
@@ -50,7 +45,6 @@ export function stationSummaries(report: FlowReport): StationSummary[] {
       id: station.id,
       label: station.label,
       total: stationUnknown(station) ? null : stationTotal(station),
-      listed: report.lots.filter((lot) => lot.station === station.id).length,
       bottleneck: station.bottleneck,
       oldestS: oldest,
       ageShare: oldest === null ? 0 : Math.min(1, oldest / STALE_AFTER_S),
@@ -101,13 +95,23 @@ export interface WipItem {
   state: string;
   /** Seconds at this station, read against one instant for the whole list. */
   waitedS: number | null;
-  stale: boolean;
+  /** The heartbeats' read of an unheld Work claim; null everywhere else. */
+  claim: FlowClaim | null;
+  /** Why the item is stale; null while it is current. */
+  staleReason: StaleReason | null;
   /** Why it is held, in words; null when it is not held. */
   hold: string | null;
   holdBy: string | null;
   holdAgeS: number | null;
   nobodyActing: boolean;
 }
+
+/**
+ * Why an item is set apart from the work in progress: a Work claim no live
+ * worker backs, or a wait past the stale cutoff. An item that is both is
+ * counted once, by its claim.
+ */
+export type StaleReason = 'no_live_worker' | 'age';
 
 /** The repository of a pull request item (`owner/repo#n`); a todo has none. */
 export function itemRepo(lot: FlowLot): string | null {
@@ -121,9 +125,15 @@ function waitedSeconds(lot: FlowLot, now: Date): number | null {
   return Math.max(0, (now.getTime() - since) / 1000);
 }
 
+function staleReason(claim: FlowClaim | null, waited: number | null): StaleReason | null {
+  if (claim === 'no_live_worker') return 'no_live_worker';
+  return waited !== null && waited > STALE_AFTER_S ? 'age' : null;
+}
+
 function wipItem(lot: FlowLot, now: Date): WipItem {
   const waited = waitedSeconds(lot, now);
   const held = lot.state === 'held';
+  const claim = lot.claim ?? null;
   return {
     key: `${lot.station}-${lot.lot_id}`,
     id: lot.lot_id,
@@ -133,9 +143,8 @@ function wipItem(lot: FlowLot, now: Date): WipItem {
     repo: itemRepo(lot),
     state: lot.state,
     waitedS: waited,
-    // The report carries no per-item worker evidence, so an "active" claim
-    // with no live worker cannot be told apart: age alone decides stale.
-    stale: waited !== null && waited > STALE_AFTER_S,
+    claim,
+    staleReason: staleReason(claim, waited),
     hold: lot.hold ? holdReasonWords(lot.hold.reason) : held ? 'no reason recorded' : null,
     holdBy: lot.hold?.by ?? null,
     holdAgeS: lot.hold?.age_s ?? null,
@@ -150,41 +159,94 @@ export interface RepoCount {
 }
 
 export interface StationWip {
-  /** In progress for at most the stale cutoff, oldest first. */
+  /** Neither stale by claim nor by age, in the order listed: newest first. */
   current: WipItem[];
-  /** Past the stale cutoff, oldest first. */
+  /** Stale by claim or by age, newest first. */
   stale: WipItem[];
+  /** How many of `stale` are each kind; together they are all of it. */
+  staleBy: Record<StaleReason, number>;
+  /** The items the pages read so far list. */
   listed: number;
+  /** The station has more items past the pages read so far. */
+  more: boolean;
   /** What the station counts in progress; null when nothing has reached it. */
   total: number | null;
+  /** Every unheld claim at Work, listed or not; null at the other stations. */
+  claims: FlowClaims | null;
   repos: RepoCount[];
 }
 
-/** The work in progress at one station, oldest first, the stale part apart. */
-export function stationWip(report: FlowReport, station: string, now: Date): StationWip {
-  const items = lotsAt(report, station).map((lot) => wipItem(lot, now));
-  const found = report.stations.find((candidate) => candidate.id === station);
-  const repos = (report.repository_wip ?? [])
+/**
+ * The work in progress at one station from the pages of it read so far
+ * (`GET /api/v1/flow?station=&lots_order=newest`, one answer per page): the
+ * items newest first, the stale part apart, and the station's counts from the
+ * first page. An item that moved between two pages is listed once.
+ */
+export function stationWip(pages: readonly FlowReport[], station: string, now: Date): StationWip {
+  const first = pages[0];
+  const seen = new Set<string>();
+  const items: WipItem[] = [];
+  for (const lot of pages.flatMap((page) => page.lots)) {
+    if (lot.station !== station || seen.has(lot.lot_id)) continue;
+    seen.add(lot.lot_id);
+    items.push(wipItem(lot, now));
+  }
+  const found = first?.stations.find((candidate) => candidate.id === station);
+  const repos = (first?.repository_wip ?? [])
     .filter((row) => row.station === station)
     .map((row) => ({ repo: row.repo, total: row.waiting + row.active + row.held }))
     .filter((row) => row.total > 0)
     .sort((a, b) => b.total - a.total || a.repo.localeCompare(b.repo));
+  const stale = items.filter((item) => item.staleReason !== null);
   return {
-    current: items.filter((item) => !item.stale),
-    stale: items.filter((item) => item.stale),
+    current: items.filter((item) => item.staleReason === null),
+    stale,
+    staleBy: {
+      no_live_worker: stale.filter((item) => item.staleReason === 'no_live_worker').length,
+      age: stale.filter((item) => item.staleReason === 'age').length,
+    },
     listed: items.length,
+    more: pages[pages.length - 1]?.lots_truncated === true,
     total: found && !stationUnknown(found) ? stationTotal(found) : null,
+    claims: found?.claims ?? null,
     repos,
   };
 }
 
+/** The stale line's words: how many, and which is which. */
+export function staleWords(by: Record<StaleReason, number>): string {
+  const parts = [
+    by.no_live_worker > 0 ? `${by.no_live_worker} with no live worker` : null,
+    by.age > 0 ? `${by.age} older than ${STALE_AFTER_DAYS} days` : null,
+  ].filter((part): part is string => part !== null);
+  return `${by.no_live_worker + by.age} stale · ${parts.join(' · ')}`;
+}
+
+/** The Work claims in words, from the heartbeats' read of every unheld claim. */
+export function claimsWords(claims: FlowClaims): string {
+  return [
+    `${claims.live} with a live worker`,
+    `${claims.no_live_worker} with no live worker`,
+    claims.unknown > 0 ? `${claims.unknown} not reported` : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
+}
+
 /**
- * The items the report lists against what the line counts in progress. The
- * line counts each item once; an item can visit two stations at a time, so the
- * stations' numbers can add up to more.
+ * What the line counts in progress, and over how many families when the read
+ * is not scoped to one. The line counts each item once; an item can visit two
+ * stations at a time, so the stations' numbers can add up to more.
  */
-export function lineCoverage(report: FlowReport): { listed: number; total: number } {
-  return { listed: report.lots.length, total: report.line.wip };
+export function lineSummary(report: FlowReport): string {
+  const total = `${report.line.wip} in progress`;
+  const families = report.topology?.families_total;
+  if (report.family === null && typeof families === 'number') {
+    return `${total} across ${families} ${families === 1 ? 'family' : 'families'}`;
+  }
+  // A server that predates `families_total` could leave families out.
+  if (report.topology?.families_truncated) return `${total} · some families are left out of this read`;
+  return total;
 }
 
 /** The lots at one station, oldest first. */

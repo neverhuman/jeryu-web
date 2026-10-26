@@ -67,7 +67,6 @@ export function PullRequestTimeline({
   repoKeyFor,
   attention = NO_ATTENTION,
   flow,
-  onHistory,
 }: {
   pulls: PullSummaryRow[];
   emptyMessage: string;
@@ -83,8 +82,6 @@ export function PullRequestTimeline({
   attention?: ReadonlyMap<string, AttentionItem[]>;
   /** The flow report the rows' ETAs are read from; none shows no ETA. */
   flow?: FlowReport | undefined;
-  /** A repository's History was opened: the page may now read its releases. */
-  onHistory?: (repo: string) => void;
 }): JSX.Element {
   const view = useViewState();
   const order = parsePullOrder(view.read(PULL_ORDER_PARAM));
@@ -155,7 +152,6 @@ export function PullRequestTimeline({
           attention={attention}
           order={order}
           historyFor={historyFor}
-          onHistory={onHistory}
         />
       ))}
     </div>
@@ -171,23 +167,16 @@ function RepoSection({
   attention,
   order,
   historyFor,
-  onHistory,
 }: {
   group: RepoGroup;
   showRepo: boolean;
   attention: ReadonlyMap<string, AttentionItem[]>;
   order: PullOrder;
   historyFor: BaseHistoryLookup;
-  onHistory?: (repo: string) => void;
 }): JSX.Element {
   // "16 closed" in the heading opens History, where closed work lives. Its
-  // rows are drawn only while it is open, and opening it is what asks for the
-  // repository's releases when they come from a tag.
-  const [historyOpen, setHistoryOpenState] = useState(false);
-  const setHistoryOpen = (open: boolean): void => {
-    setHistoryOpenState(open);
-    if (open) onHistory?.(group.repo);
-  };
+  // rows are drawn only while it is open.
+  const [historyOpen, setHistoryOpen] = useState(false);
   const history = useRef<HTMLDetailsElement>(null);
   const openHistory = (): void => {
     setHistoryOpen(true);

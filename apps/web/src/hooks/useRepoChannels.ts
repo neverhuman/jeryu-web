@@ -7,14 +7,13 @@
 // Three dependent rounds — environments, then the forge's release pins and
 // the tags of whatever they do not cover, then one compare per baseline — so
 // a repository that ships inside a parent release costs one shared request
-// and one that ships by deployment costs none. Everything is cached by repo,
-// so switching family or filter re-reads nothing.
+// and one that ships by deployment costs none. The tags are read in batches
+// of up to RELEASE_TAGS_BATCH repositories per request
+// (`GET /api/v1/release-tags`), where "no tag" is a status, not a 404.
+// Everything is cached, so switching family or filter re-reads nothing.
 //
-// A caller may hold the tag lookup back (`tagRepos`): only the repositories it
-// names are asked for their newest tag. Most repositories with no deployment
-// and no parent pin have no tag either, and every one of those answered 404 —
-// a page of red network errors for "no tag". A held-back repository is listed
-// in `deferred`, and its ladder should read undecided, not "never released".
+// A repository whose batch failed is listed in `deferred`, and its ladder
+// should read undecided, not "never released".
 
 import { useQueries, useQuery } from '@tanstack/react-query';
 
@@ -25,9 +24,11 @@ import type {
   EnvironmentsResponse,
   ReleasePinsResponse,
   ReleaseTagResponse,
+  ReleaseTagsResponse,
 } from '../api/types/deployments';
 import {
   ladderBaselines,
+  releaseTagOf,
   ladderCompares,
   NO_LADDER,
   type LadderBaselines,
@@ -45,22 +46,26 @@ export interface RepoChannelsMap {
   byRepo: Map<string, RepoChannels>;
   /** True while any environment, tag or compare is still in flight. */
   isLoading: boolean;
-  /**
-   * Repositories whose release falls back to a tag that was not asked for
-   * yet, because the caller's `tagRepos` does not name them.
-   */
+  /** Repositories whose release falls back to a tag the forge did not answer for. */
   deferred: ReadonlySet<string>;
+}
+
+/** The most repositories `GET /api/v1/release-tags` answers in one request. */
+export const RELEASE_TAGS_BATCH = 100;
+
+/** `items` in runs of at most `size`, in order. */
+export function chunked<T>(items: readonly T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let start = 0; start < items.length; start += size) {
+    chunks.push(items.slice(start, start + size));
+  }
+  return chunks;
 }
 
 /** The ladder of a repository that has answered nothing yet. */
 export const EMPTY_CHANNELS: RepoChannels = { baselines: NO_LADDER, compares: new Map() };
 
-export function useRepoChannels(
-  repos: string[],
-  branch = 'main',
-  /** Ask only these repositories for a tag; absent asks every one that needs it. */
-  tagRepos?: ReadonlySet<string>
-): RepoChannelsMap {
+export function useRepoChannels(repos: string[], branch = 'main'): RepoChannelsMap {
   const environments = useQueries({
     queries: repos.map((repo) => {
       const [owner = '', name = ''] = repo.split('/');
@@ -97,24 +102,33 @@ export function useRepoChannels(
     (repo, index) =>
       unDeployed[index] === true && !pins.isLoading && pinsFor(repo).length === 0
   );
-  const askTag = repos.map(
-    (repo, index) => needTag[index] === true && (tagRepos === undefined || tagRepos.has(repo))
+  // Sorted, so the same set of repositories is the same batch however the
+  // page ordered them.
+  const batches = chunked(
+    repos.filter((_repo, index) => needTag[index] === true).sort(),
+    RELEASE_TAGS_BATCH
   );
-  const tags = useQueries({
-    queries: repos.map((repo, index) => ({
-      queryKey: ['releases', 'release-tag', repo, branch],
+  const tagBatches = useQueries({
+    queries: batches.map((batch) => ({
+      queryKey: ['releases', 'release-tags', branch, ...batch],
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        apiGet<ReleaseTagResponse>(endpoints.releaseTag(repo, branch), { signal }),
-      enabled: askTag[index] === true,
+        apiGet<ReleaseTagsResponse>(endpoints.releaseTags(batch, branch), { signal }),
       staleTime: 60_000,
       retry: false,
     })),
+  });
+  const tagOf = new Map<string, ReleaseTagResponse>();
+  const tagFailed = new Set<string>();
+  batches.forEach((batch, index) => {
+    const answer = tagBatches[index];
+    if (answer?.isError) batch.forEach((repo) => tagFailed.add(repo));
+    for (const row of answer?.data?.releases ?? []) tagOf.set(row.repo, releaseTagOf(row, branch));
   });
 
   // Projections, not state: both are cheap and pure, and every query below is
   // keyed by repo and sha, so recomputing them per render refetches nothing.
   const baselines = repos.map((repo, index) =>
-    ladderBaselines(environments[index]?.data, tags[index]?.data, pinsFor(repo))
+    ladderBaselines(environments[index]?.data, tagOf.get(repo), pinsFor(repo))
   );
 
   // One compare per baseline, flattened so React Query sees a flat list.
@@ -144,7 +158,7 @@ export function useRepoChannels(
   });
   return {
     byRepo,
-    isLoading: [...environments, pins, ...tags, ...compares].some((query) => query.isLoading),
-    deferred: new Set(repos.filter((_repo, index) => needTag[index] === true && !askTag[index])),
+    isLoading: [...environments, pins, ...tagBatches, ...compares].some((query) => query.isLoading),
+    deferred: tagFailed,
   };
 }

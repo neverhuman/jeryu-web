@@ -5,6 +5,7 @@ import type {
   EnvironmentsResponse,
   ReleasePin,
   ReleaseTagResponse,
+  ReleaseTagRow,
 } from '../../api/types/deployments';
 import {
   ladderBaselines,
@@ -15,11 +16,42 @@ import {
   ladderUndecided,
   UNKNOWN_LADDER,
   releaseLadder,
+  releaseTagOf,
   type LadderBaselines,
   type PipId,
 } from '../releaseChannelsModel';
 
 const sha = (c: string) => c.repeat(40);
+
+describe('releaseTagOf', () => {
+  const row = (over: Partial<ReleaseTagRow>): ReleaseTagRow => ({
+    repo: 'acme/widgets',
+    full_name: 'acme/widgets',
+    branch: 'main',
+    status: 'tagged',
+    tag: 'v2.0.0',
+    sha: sha('t'),
+    tagged_at: '2026-10-01T00:00:00Z',
+    ...over,
+  });
+
+  it('reads a tagged row as the tag it names', () => {
+    expect(releaseTagOf(row({}), 'main')).toEqual({
+      branch: 'main',
+      tag: 'v2.0.0',
+      sha: sha('t'),
+      tagged_at: '2026-10-01T00:00:00Z',
+    });
+  });
+
+  it('reads every other status as no tag, whatever else the row carries', () => {
+    for (const status of ['untagged', 'no_branch', 'no_git_data', 'not_found'] as const) {
+      const read = releaseTagOf(row({ status, branch: null }), 'release');
+      expect(read).toEqual({ branch: 'release', tag: null, sha: null, tagged_at: null });
+      expect(ladderBaselines(undefined, read).kind).toBe('none');
+    }
+  });
+});
 
 describe('ladderBaselines', () => {
   it('takes one baseline per deployed environment, shallowest first', () => {

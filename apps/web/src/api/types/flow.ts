@@ -1,6 +1,7 @@
 // flow.ts — wire types for the delivery line:
 //
 //   GET /api/v1/flow?family=&days=7|28|90   (admin-only)
+//       [&station=<id>&lots_offset=<n>&lots_limit=1..100&lots_order=oldest|newest]
 //
 // One station per step of the route, in route order, with what is at it now,
 // how long it waits there against how long the step takes, where it loops back
@@ -14,6 +15,14 @@ export interface FlowQuery {
   family?: string;
   /** The window in days: 7, 28 or 90. */
   days?: number;
+  /** List only this station's lots: one page of it. */
+  station?: string;
+  /** Skip this many of the station's lots. */
+  lotsOffset?: number;
+  /** At most this many lots per station, 1 to 100 (the server's default is 20). */
+  lotsLimit?: number;
+  /** Which end of the station's line the page starts from (oldest by default). */
+  lotsOrder?: 'oldest' | 'newest';
 }
 
 /** Seconds at the median and the 90th percentile. */
@@ -51,6 +60,15 @@ export interface FlowCapacity {
   expected?: number | null;
 }
 
+/**
+ * The unheld claims at Work, read from the shift heartbeats: `live` when a
+ * healthy slot names the todo, `no_live_worker` when the family's slots report
+ * and none of them works it, `unknown` when nothing of the family reports.
+ */
+export type FlowClaim = 'live' | 'no_live_worker' | 'unknown';
+
+export type FlowClaims = Record<FlowClaim, number>;
+
 export interface FlowStation {
   id: string;
   label: string;
@@ -67,6 +85,10 @@ export interface FlowStation {
   utilization: number | null;
   bottleneck: boolean;
   unknown: FlowUnknown[];
+  /** Every unheld claim at Work, listed or not; null at the other stations. */
+  claims?: FlowClaims | null;
+  /** How many of this station's lots this answer lists. */
+  lots_listed?: number;
 }
 
 export interface FlowLine {
@@ -107,6 +129,8 @@ export interface FlowLot {
   /** The pull request page, when the lot is bound to a pull request. */
   pr_href?: string | null;
   hold?: FlowHold | null;
+  /** Set on an unheld Work lot; null everywhere else. */
+  claim?: FlowClaim | null;
 }
 
 export interface FlowWindow {
@@ -171,7 +195,18 @@ export interface FlowTopology {
   products: FlowProduct[];
   unscoped_active_lots: number;
   unknown: { scope: string; field: string; reason: string }[];
+  /** Always false on a server that sends `families_total`. */
   families_truncated: boolean;
+  /** How many families the forge hosts; `families` describes every one. */
+  families_total?: number;
+}
+
+/** The page of lots an answer lists. */
+export interface FlowLotsPage {
+  station: string | null;
+  offset: number;
+  limit: number;
+  order?: 'oldest' | 'newest';
 }
 
 export interface FlowReport {
@@ -189,8 +224,13 @@ export interface FlowReport {
   window: FlowWindow;
   stations: FlowStation[];
   line: FlowLine;
-  /** The oldest lots at each station, 20 per station at most. */
+  /** One page of lots per station: by default the oldest 20 of each. */
   lots: FlowLot[];
+  /** The stations' in-progress counts added up; never shrinks to the page. */
+  lots_total?: number;
+  /** A paged station has more lots past this page. */
+  lots_truncated?: boolean;
+  lots_page?: FlowLotsPage;
 }
 
 export interface FlowRepositoryWip extends FlowWip { repo: string; station: string }

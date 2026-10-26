@@ -150,10 +150,14 @@ export const endpoints = {
     const qs = new URLSearchParams({ base, head });
     return `/api/v1/repos/${encodeURIComponent(id)}/compare?${qs.toString()}`;
   },
-  /** Newest tag reachable from `branch` (default branch when omitted). */
-  releaseTag: (id: string, branch?: string): string => {
-    const base = `/api/v1/repos/${encodeURIComponent(id)}/release-tag`;
-    return branch ? `${base}?branch=${encodeURIComponent(branch)}` : base;
+  /**
+   * The newest tag of up to 100 repositories in one request (`owner/name`
+   * each); `branch` applies to all of them, else each reads its default.
+   */
+  releaseTags: (repos: string[], branch?: string): string => {
+    const qs = new URLSearchParams({ repos: repos.join(',') });
+    if (branch) qs.set('branch', branch);
+    return `/api/v1/release-tags?${qs.toString()}`;
   },
   /** Commits of other repositories that live deployments carry, forge-wide. */
   releasePins: (): string => '/api/v1/release-pins',
@@ -437,6 +441,10 @@ export const endpoints = {
     if (query.repo) qs.set('repo', query.repo);
     if (query.family) qs.set('family', query.family);
     if (query.days) qs.set('days', String(query.days));
+    if (query.station) qs.set('station', query.station);
+    if (query.lotsOffset !== undefined) qs.set('lots_offset', String(query.lotsOffset));
+    if (query.lotsLimit !== undefined) qs.set('lots_limit', String(query.lotsLimit));
+    if (query.lotsOrder) qs.set('lots_order', query.lotsOrder);
     const suffix = qs.toString();
     return suffix ? `/api/v1/flow?${suffix}` : '/api/v1/flow';
   },
