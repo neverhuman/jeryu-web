@@ -55,7 +55,7 @@ vi.mock('../../hooks/useRepoPullLists', () => ({
 }));
 vi.mock('../../hooks/useRepoChannels', () => ({
   EMPTY_CHANNELS: { baselines: { kind: 'none', baselines: [] }, compares: new Map() },
-  useRepoChannels: () => ({ byRepo: new Map(), isLoading: false }),
+  useRepoChannels: () => ({ byRepo: new Map(), isLoading: false, deferred: new Set() }),
 }));
 
 /** One event flagged as needing a human: the dock must not count from these. */
@@ -274,16 +274,11 @@ describe('every needs-you count', () => {
       mockAttention(attention(Object.values(ONE_PER_AREA)));
       renderAt(to, to, PAGES[area]);
       if (area === 'pulls') {
-        // In flight marks a waiting pull request on its own row rather than
-        // repeating it in a strip; what no row below carries is counted here,
-        // with the way to the rows themselves. This forge has nothing open, so
-        // the one globex row is that count.
-        const off = await screen.findByTestId('pull-room-needs-off');
-        expect(within(off).getByText('1')).toBeInTheDocument();
-        expect(within(off).getByRole('link', { name: 'open Blocked' })).toHaveAttribute(
-          'href',
-          '/needs-you?view=all'
-        );
+        // In flight marks a waiting pull request on its own row; what no row
+        // carries is on Needs you, which the badge counts, not in a banner
+        // here. This forge has nothing open, so nothing is said.
+        await screen.findByTestId('pull-room-page');
+        expect(screen.queryByTestId('pull-room-needs-off')).toBeNull();
       } else if (area === 'releases' || area === 'system') {
         // The page lists its own state; the row that needs a person is on
         // Needs you, so it is not repeated in a strip here.

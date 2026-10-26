@@ -135,7 +135,7 @@ vi.mock('../hooks/useRepoPullLists', () => ({
 
 vi.mock('../hooks/useRepoChannels', () => ({
   EMPTY_CHANNELS: { baselines: { kind: 'none', baselines: [] }, compares: new Map() },
-  useRepoChannels: () => ({ byRepo: new Map(), isLoading: false }),
+  useRepoChannels: () => ({ byRepo: new Map(), isLoading: false, deferred: new Set() }),
 }));
 vi.mock('../hooks/useShift', () => ({
   useShiftTodos: () => ({ data: { todos: [] }, isLoading: false, isError: false }),
@@ -168,11 +168,11 @@ function setup(entries: string[]) {
 describe('Pull Room open work on a paged snapshot', () => {
   it('counts the header from the summary and lists every open pull request', () => {
     setup(['/pull-room?view=board']);
+    // Not a count of the 100 rows the page holds: the server's own total, in
+    // the one counts line the page has.
     expect(screen.getByTestId('pull-room-sentence')).toHaveTextContent(
       '22 open · 16 waiting on checks · 2 stopped by a failing check'
     );
-    // Not a count of the 100 rows the page holds: the server's own total.
-    expect(screen.getByTestId('pull-room-families')).toHaveTextContent('All 22');
     // Every open pull request has a card, though the page holds 100 of 509 rows.
     const cards = screen.getAllByTestId(/^pull-card-.+-\d+$/);
     expect(cards).toHaveLength(OPEN_COUNT);
@@ -181,34 +181,19 @@ describe('Pull Room open work on a paged snapshot', () => {
     }
   });
 
-  it('gives every family in the repository list a toggle, a quiet one included', () => {
+  it('draws no family bar or snapshot note of its own', () => {
     setup(['/pull-room']);
-    const pills = screen.getByTestId('pull-room-families');
-    for (const [label, count] of [
-      ['jankurai', 8],
-      ['jekko', 7],
-      ['redline', 7],
-      // The repositories list spells it `jeryu-split`; the bar says `jeryu`.
-      ['jeryu', 0],
-      ['tooling', 0],
-      ['other', 0],
-    ] as const) {
-      expect(pills).toHaveTextContent(`${label} ${count}`);
-    }
-    // A family with nothing open is still selectable.
-    expect(screen.getByRole('button', { name: /^tooling/ })).toBeEnabled();
+    // The header's family control is the scope.
+    expect(screen.queryByTestId('pull-room-families')).toBeNull();
+    // Open work is ordered first, so a cut snapshot still holds every open
+    // pull request: the page does not explain the cut.
+    expect(screen.queryByTestId('pull-room-truncated')).toBeNull();
   });
 
-  it('says how much of the cut collection it is showing', () => {
-    setup(['/pull-room']);
-    expect(screen.getByTestId('pull-room-truncated')).toHaveTextContent(
-      'showing 100 of 509 pull requests'
-    );
-  });
-
-  it('scopes the page to the family the bar selects', () => {
-    const router = setup(['/pull-room?view=board']);
-    screen.getByRole('button', { name: /^jekko/ }).click();
-    expect(new URLSearchParams(router.state.location.search).get('family')).toBe('jekko');
+  it('scopes the page to the family the address names', () => {
+    setup(['/pull-room?view=board&family=jekko']);
+    const cards = screen.getAllByTestId(/^pull-card-.+-\d+$/);
+    expect(cards.length).toBeGreaterThan(0);
+    expect(cards.every((card) => card.dataset.testid?.includes('jekko'))).toBe(true);
   });
 });

@@ -79,7 +79,7 @@ vi.mock('../hooks/useRepoPullLists', () => ({
 // they answer nothing so the URL behaviour is what is under test.
 vi.mock('../hooks/useRepoChannels', () => ({
   EMPTY_CHANNELS: { baselines: { kind: 'none', baselines: [] }, compares: new Map() },
-  useRepoChannels: () => ({ byRepo: new Map(), isLoading: false }),
+  useRepoChannels: () => ({ byRepo: new Map(), isLoading: false, deferred: new Set() }),
 }));
 vi.mock('../hooks/useShift', () => ({
   useShiftTodos: () => ({ data: { todos: [] }, isLoading: false, isError: false }),
@@ -178,31 +178,17 @@ describe('Pull Room URL navigation', () => {
     expect(router.state.location.search).toBe('');
   });
 
-  it('filters by family from a pill, keeps the choice in the URL, and clears it', async () => {
-    const user = userEvent.setup();
-    const router = setup(['/pull-room']);
-    const pills = screen.getByTestId('pull-room-families');
-    expect(pills).toHaveTextContent('All 2');
-    expect(pills).toHaveTextContent('fam 1');
-    // A repo the forge gives no family falls under "other", listed last.
-    expect(pills).toHaveTextContent('other 1');
-
-    await user.click(screen.getByRole('button', { name: /^fam/ }));
-    expect(router.state.location.search).toBe('?family=fam');
-    expect(screen.getByRole('button', { name: /^fam/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTestId('pull-timeline-owner/a-1')).toBeInTheDocument();
+  it('scopes to the family the address names, with no family bar of its own', async () => {
+    const router = setup(['/pull-room?family=fam']);
+    // The header's family control is the scope; the page draws no pills.
+    expect(screen.queryByTestId('pull-room-families')).toBeNull();
+    expect(await screen.findByTestId('pull-timeline-owner/a-1')).toBeInTheDocument();
     expect(screen.queryByTestId('pull-timeline-owner/b-1')).not.toBeInTheDocument();
 
-    // A pill sets the shell-wide family scope: it replaces the address rather
-    // than stacking one, and the tab keeps it even where the URL states none.
-    await act(async () => { await router.navigate(-1); });
-    expect(screen.getByTestId('pull-timeline-owner/a-1')).toBeInTheDocument();
-
+    // A repo the forge gives no family is under "other".
     await act(async () => { await router.navigate('/pull-room?family=other'); });
     expect(screen.getByTestId('pull-timeline-owner/b-1')).toBeInTheDocument();
     expect(screen.queryByTestId('pull-timeline-owner/a-1')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^All/ }));
-    expect(router.state.location.search).toBe('');
   });
 
   // The URL contract (README §6): every filter is in the query string, so the

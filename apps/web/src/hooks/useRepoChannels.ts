@@ -9,6 +9,12 @@
 // a repository that ships inside a parent release costs one shared request
 // and one that ships by deployment costs none. Everything is cached by repo,
 // so switching family or filter re-reads nothing.
+//
+// A caller may hold the tag lookup back (`tagRepos`): only the repositories it
+// names are asked for their newest tag. Most repositories with no deployment
+// and no parent pin have no tag either, and every one of those answered 404 —
+// a page of red network errors for "no tag". A held-back repository is listed
+// in `deferred`, and its ladder should read undecided, not "never released".
 
 import { useQueries, useQuery } from '@tanstack/react-query';
 
@@ -39,12 +45,22 @@ export interface RepoChannelsMap {
   byRepo: Map<string, RepoChannels>;
   /** True while any environment, tag or compare is still in flight. */
   isLoading: boolean;
+  /**
+   * Repositories whose release falls back to a tag that was not asked for
+   * yet, because the caller's `tagRepos` does not name them.
+   */
+  deferred: ReadonlySet<string>;
 }
 
 /** The ladder of a repository that has answered nothing yet. */
 export const EMPTY_CHANNELS: RepoChannels = { baselines: NO_LADDER, compares: new Map() };
 
-export function useRepoChannels(repos: string[], branch = 'main'): RepoChannelsMap {
+export function useRepoChannels(
+  repos: string[],
+  branch = 'main',
+  /** Ask only these repositories for a tag; absent asks every one that needs it. */
+  tagRepos?: ReadonlySet<string>
+): RepoChannelsMap {
   const environments = useQueries({
     queries: repos.map((repo) => {
       const [owner = '', name = ''] = repo.split('/');
@@ -81,12 +97,15 @@ export function useRepoChannels(repos: string[], branch = 'main'): RepoChannelsM
     (repo, index) =>
       unDeployed[index] === true && !pins.isLoading && pinsFor(repo).length === 0
   );
+  const askTag = repos.map(
+    (repo, index) => needTag[index] === true && (tagRepos === undefined || tagRepos.has(repo))
+  );
   const tags = useQueries({
     queries: repos.map((repo, index) => ({
       queryKey: ['releases', 'release-tag', repo, branch],
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         apiGet<ReleaseTagResponse>(endpoints.releaseTag(repo, branch), { signal }),
-      enabled: needTag[index] === true,
+      enabled: askTag[index] === true,
       staleTime: 60_000,
       retry: false,
     })),
@@ -126,5 +145,6 @@ export function useRepoChannels(repos: string[], branch = 'main'): RepoChannelsM
   return {
     byRepo,
     isLoading: [...environments, pins, ...tags, ...compares].some((query) => query.isLoading),
+    deferred: new Set(repos.filter((_repo, index) => needTag[index] === true && !askTag[index])),
   };
 }

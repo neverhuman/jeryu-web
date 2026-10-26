@@ -413,10 +413,9 @@ test.describe('Accessibility scans — Pull requests and Releases @a11y', () => 
   });
 
   test('axe scan: the family bar over a snapshot bigger than one page', async ({ page }) => {
-    // The UX-QA surface for the family bar: every family the forge knows has a
-    // toggle with its open count — including the quiet ones at 0 — beside the
-    // header count the server sends, and the line that says how much of the
-    // snapshot this page holds.
+    // A snapshot bigger than one page, scoped by the header to one family:
+    // the board, the one counts line, and no family bar of the page's own.
+    // (The scope keeps its old name so its rendered evidence stays paired.)
     await mockBootstrap(page);
     const snapshot = truncatedSnapshot(
       { total: 509, open: 22, limit: 100 },
@@ -431,11 +430,8 @@ test.describe('Accessibility scans — Pull requests and Releases @a11y', () => 
       { id: { host: 'jeryu', owner: 'veox', name: 'tooling' }, family: 'tooling', open_pull_requests: 0 },
     ]);
     await page.goto('/pull-room?view=board');
-    const pills = page.getByTestId('pull-room-families');
-    await expect(pills).toBeVisible({ timeout: 15_000 });
-    await expect(pills.getByRole('button', { name: /^tooling/ })).toContainText('0');
-    await expect(page.getByTestId('pull-room-sentence')).toContainText('22 open');
-    await expect(page.getByTestId('pull-room-truncated')).toBeVisible();
+    await expect(page.getByTestId('pull-room-sentence')).toContainText('22 open', { timeout: 15_000 });
+    await expect(page.getByTestId('pull-room-families')).toHaveCount(0);
     await scanAndAssert(page, 'pull-requests-family-bar');
   });
 

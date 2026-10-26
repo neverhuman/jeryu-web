@@ -110,19 +110,38 @@ test('A repository that records no release says so instead of calling merged wor
   // snapshot, so wait for one before reading them all.
   await expect(page.getByTestId('pull-timeline-alice/jeryu-9')).toBeVisible();
 
-  // With no release to place them by, every merged row says exactly that —
-  // not "merged, not yet released", which would be a claim about a release
-  // process this repository does not have — and the count does not call it
-  // released either.
+  // A repository with no deployment and no parent pin could only be released
+  // by tag, and most such repositories have none (the lookup answers 404).
+  // The tag is asked for when its History is opened; until then a merged row
+  // says the release is unknown, not that there was none.
   expect(await rowStatuses(page, 'alice/jeryu')).toEqual([
     'Waiting on checks',
     'Waiting on checks',
-    'Merged · no release recorded',
-    'Merged · no release recorded',
-    'Merged · no release recorded',
-    'Merged · no release recorded',
-    'Merged · no release recorded',
+    'Merged · release unknown',
   ]);
+  await expect(page.getByTestId('pull-status-alice/jeryu-9')).toHaveAttribute('title', 'not compared');
+  // The newest stands for the five, which only a release would move; the other
+  // four are history, drawn once it is opened.
+  await expect(page.getByTestId('pull-waiting-alice/jeryu-9')).toHaveText(' + 4 more waiting');
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toHaveCount(0);
+  await page.getByTestId('pull-older-alice/jeryu').locator('summary').click();
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeVisible();
+
+  // Opened, the tag lookup has answered: with no release to place them by,
+  // every merged row says exactly that — not "merged, not yet released", which
+  // would be a claim about a release process this repository does not have —
+  // and the count does not call it released either.
+  await expect
+    .poll(() => rowStatuses(page, 'alice/jeryu'))
+    .toEqual([
+      'Waiting on checks',
+      'Waiting on checks',
+      'Merged · no release recorded',
+      'Merged · no release recorded',
+      'Merged · no release recorded',
+      'Merged · no release recorded',
+      'Merged · no release recorded',
+    ]);
   await expect(page.getByTestId('pull-repo-alice/jeryu').locator('.pull-repo__count')).toHaveText(
     '2 in flight · 5 merged, release unknown'
   );
@@ -131,12 +150,6 @@ test('A repository that records no release says so instead of calling merged wor
     'title',
     'no deployment and no release tag'
   );
-  // The newest stands for the five, which only a release would move; the other
-  // four are history.
-  await expect(page.getByTestId('pull-waiting-alice/jeryu-9')).toHaveText(' + 4 more waiting');
-  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeHidden();
-  await page.getByTestId('pull-older-alice/jeryu').locator('summary').click();
-  await expect(page.getByTestId('pull-timeline-alice/jeryu-13')).toBeVisible();
 
   // Still folded into its successor, release history or not.
   await expect(page.getByTestId('pull-timeline-alice/jeryu-14')).toHaveCount(0);
@@ -203,14 +216,10 @@ test('Shift work on a branch is one row per branch in its repository; queued tod
   await expect(branch.getByTestId('pull-ghost-t-claimed')).toContainText('hands off in');
   await expect(branch.getByTestId('pull-ghost-t-done-no-pr')).toContainText('Pull request pending');
 
-  // Queued todos have no branch yet: they are the Work page's, only counted here.
+  // Queued todos have no branch yet: they are the Work page's, which counts
+  // them; this page neither lists nor counts them.
   await expect(page.getByTestId('pull-ghost-t-open-1')).toHaveCount(0);
-  const queue = page.getByTestId('pull-shift-queue');
-  await expect(queue).toContainText('2 in flight · 2 queued');
-  await expect(queue.getByRole('link', { name: /Work/ })).toHaveAttribute(
-    'href',
-    '/work?family=core'
-  );
+  await expect(page.getByTestId('pull-shift-queue')).toHaveCount(0);
 
   // A todo that already has a pull request is not also a branch row.
   await expect(page.getByTestId('pull-ghost-t-has-pr')).toHaveCount(0);

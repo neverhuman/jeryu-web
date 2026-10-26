@@ -36,7 +36,10 @@ test('Pull requests shows every open pull request as a timeline row, filters, an
   await expect(page.getByTestId('pull-room-sentence')).toHaveText(
     '2 open · 1 waiting on checks · 1 stopped by a failing check'
   );
-  await expect(page.getByText('Every change between claimed work and release, across every repository.')).toBeVisible();
+  // No explainer line, no banner restating the counts: the sentence is the one counts line.
+  await expect(page.getByText('Every change between claimed work and release, across every repository.')).toHaveCount(0);
+  await expect(page.getByTestId('pull-room-unshipped')).toHaveCount(0);
+  await expect(page.getByTestId('pull-room-needs-off')).toHaveCount(0);
   await expect(page.getByText('Tooling opportunities')).toHaveCount(0);
   await expect(page.getByText(/tool clusters/i)).toHaveCount(0);
 
@@ -65,7 +68,7 @@ test('Pull requests shows every open pull request as a timeline row, filters, an
   await expect(page.getByText(/W-FE-11/i)).toHaveCount(0);
 });
 
-test('Pull requests filters by family from a pill, and one repo that does not answer is one quiet line @action:pull_room.family_pills', async ({
+test('Pull requests follows the header family scope, and one repo that does not answer is one quiet line @action:pull_room.family_pills', async ({
   page,
 }) => {
   await mockBootstrap(page);
@@ -77,24 +80,21 @@ test('Pull requests filters by family from a pill, and one repo that does not an
   await shell.goto('/pull-room');
   await shell.assertShellLoaded();
 
-  const pills = page.getByTestId('pull-room-families');
-  await expect(pills.getByRole('button', { name: /^All/ })).toHaveAttribute('aria-pressed', 'true');
-  await expect(pills.getByRole('button', { name: /^core/ })).toContainText('1');
-  // Repos the forge gives no family fall under "other".
-  await expect(pills.getByRole('button', { name: /^other/ })).toContainText('2');
+  // The family is the header's control: the page draws no bar of its own.
+  await expect(page.getByTestId('pull-room-families')).toHaveCount(0);
   // A repo whose list fails is named quietly; the rest of the page still works.
   await expect(page.getByText(/bob\/broken did not answer/)).toBeVisible();
   await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible();
   await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toBeVisible();
 
-  await pills.getByRole('button', { name: /^core/ }).click();
+  await page.getByTestId('family-scope-select').selectOption('core');
   await expect(page).toHaveURL(/\/in-flight\?family=core$/);
   await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeVisible();
   await expect(page.getByTestId('pull-timeline-bob/jeryu-8')).toHaveCount(0);
   await expect(page.getByText(/did not answer/)).toHaveCount(0);
 
-  // A pill sets the shell-wide family scope: it replaces the address rather
-  // than stacking one, and the tab keeps the family across a reload. The
+  // The header sets the shell-wide family scope: the tab keeps the family
+  // across a reload. The
   // chip's × in the header asks for every family again.
   await page.reload();
   await expect(page).toHaveURL(/\/in-flight\?family=core$/);
@@ -147,7 +147,7 @@ test('Pull Room follows repository URLs and browser history @action:pull_room.fi
   });
 });
 
-test('Pull requests reads every open pull request out of a paged snapshot, and every family has a toggle @action:pull_room.family_pills', async ({
+test('Pull requests reads every open pull request out of a paged snapshot, and scopes to a family @action:pull_room.family_pills', async ({
   page,
 }, testInfo) => {
   // 509 pull requests, 22 of them open in the repositories that sort last by
@@ -176,14 +176,7 @@ test('Pull requests reads every open pull request out of a paged snapshot, and e
   await expect(page.getByTestId('pull-room-sentence')).toHaveText(
     '22 open · 22 waiting on checks · 0 stopped by a failing check'
   );
-  const pills = page.getByTestId('pull-room-families');
-  await expect(pills.getByRole('button', { name: /^All/ })).toContainText('22');
-  await expect(pills.getByRole('button', { name: /^jankurai/ })).toContainText('8');
-  await expect(pills.getByRole('button', { name: /^jekko/ })).toContainText('7');
-  await expect(pills.getByRole('button', { name: /^redline/ })).toContainText('7');
-  // A family with nothing open keeps its toggle, at 0, and is selectable.
-  await expect(pills.getByRole('button', { name: /^jeryu/ })).toContainText('0');
-  await expect(pills.getByRole('button', { name: /^tooling/ })).toContainText('0');
+  await expect(page.getByTestId('pull-room-families')).toHaveCount(0);
 
   // Every open pull request is on the board, in all three repositories.
   await expect(page.getByTestId(/^pull-card-.+-\d+$/)).toHaveCount(22);
@@ -194,19 +187,16 @@ test('Pull requests reads every open pull request out of a paged snapshot, and e
   ] as const) {
     await expect(page.getByTestId(new RegExp(`^pull-card-${repo}-\\d+$`))).toHaveCount(cards);
   }
-  // What the page could not fetch is stated, not dropped.
-  await expect(page.getByTestId('pull-room-truncated')).toContainText(
-    'showing 100 of 509 pull requests'
-  );
+  // Open work is ordered first, so every open one is here: the cut is not explained.
+  await expect(page.getByTestId('pull-room-truncated')).toHaveCount(0);
 
-  // Selecting a family scopes the page through `?family=`.
-  await pills.getByRole('button', { name: /^tooling/ }).click();
-  await expect(page).toHaveURL(/\/in-flight\?view=board&family=tooling$/);
+  // A family scopes the page through `?family=`: a quiet one reads zero.
+  await page.goto('/in-flight?view=board&family=tooling');
   await expect(page.getByTestId('pull-room-sentence')).toHaveText(
-    '0 open · 0 waiting on checks · 0 stopped by a failing check'
+    '0 open · 0 waiting on checks · 0 stopped by a failing check',
+    { timeout: 15_000 }
   );
-  await pills.getByRole('button', { name: /^jekko/ }).click();
-  await expect(page).toHaveURL(/family=jekko$/);
+  await page.goto('/in-flight?view=board&family=jekko');
   await expect(page.getByTestId('pull-room-sentence')).toHaveText(
     '7 open · 7 waiting on checks · 0 stopped by a failing check'
   );
@@ -214,4 +204,17 @@ test('Pull requests reads every open pull request out of a paged snapshot, and e
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
   });
+});
+
+test('Pull requests fits a phone: the timeline scrolls inside itself, the page does not @action:pull_room.timeline', async ({
+  page,
+}) => {
+  await mockBootstrap(page);
+  await mockPullRoom(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/in-flight');
+  await expect(page.getByTestId('pull-timeline-alice/jeryu-7')).toBeAttached({ timeout: 15_000 });
+  // Two 240px content columns used to push the whole page to 516px.
+  const width = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(width).toBeLessThanOrEqual(390);
 });

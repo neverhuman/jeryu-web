@@ -1,10 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 
 import type { EvidenceState, PullRequestSummary } from '../api/types';
 import { useFamilyScope } from '../components/family/FamilyScopeProvider';
 import { PageHeader, queryFreshness, type FreshnessQuery } from '../components/pageHeader';
-import { pillClass } from '../components/tone/tone';
 import { ScopedEmptyState } from '../components/family/ScopedEmptyState';
 import { ErrorState, LoadingState } from '../components/state';
 import { CONTROL_PLANE_MAX_LIMIT, useControlPlane } from '../hooks/useControlPlane';
@@ -17,25 +15,18 @@ import { useForgeHost } from '../hooks/useForgeHost';
 import { useRepositories } from '../hooks/useRepositories';
 import { useShiftTodos } from '../hooks/useShift';
 import { useRepoFamilies } from './needsYou/AttentionRow';
-import { filterByFamily, blockedHref, urgentInArea } from './needsYou/needsYouModel';
+import { filterByFamily, urgentInArea } from './needsYou/needsYouModel';
 import { useAttentionTodoIds } from './needsYou/useNeedsYou';
-import { attentionByPull, attentionOffRows, pullAttentionKey } from './pullAttentionModel';
+import { attentionByPull } from './pullAttentionModel';
 import { PullRequestListView } from './PullRequestListView';
 import { PullRequestTimeline } from './PullRequestTimeline';
-import {
-  awaitingReleaseByRepo,
-  awaitingReleaseCount,
-  awaitingReleaseWarning,
-} from './pullRepoGroupsModel';
-import { RELEASES_PATH, releaseFamilyPath } from './releaseBoard/links';
+import { awaitingReleaseCount } from './pullRepoGroupsModel';
 import { pullGhostGroups, type GhostGroup } from './pullGhostsModel';
-import { releaseLadder } from './releaseChannelsModel';
+import { releaseLadder, UNKNOWN_LADDER } from './releaseChannelsModel';
 import {
   ACTIVE_STATE_FILTER,
   DEFAULT_PULL_ROOM_FILTERS,
   PULL_ROOM_FILTER_PARAMS,
-  familyLabel,
-  familyPills,
   filterPullRequests,
   filterPullSummaries,
   fromControlPullRequest,
@@ -46,7 +37,6 @@ import {
   scopedCounts,
   summaryCounts,
   timelineRepos,
-  truncatedCollections,
   scopeToFamily,
   type PullRoomFilters,
 } from './pullRoomModel';
@@ -84,7 +74,6 @@ function PullRoomHeader({
   return (
     <PageHeader
       title="In flight"
-      subtitle="Every change between claimed work and release, across every repository."
       className="pull-room__header"
       testId="pull-room-header"
       freshness={queryFreshness(snapshot)}
@@ -168,10 +157,8 @@ export function PullRoomPage(): JSX.Element {
       ),
     [members]
   );
-  // A family pill sets the shell's scope: it replaces the address, so Back
-  // leaves the page rather than undoing a pill. The board toggle is a view
-  // switch and pushes, so Back returns to the view before it.
-  const setFamily = (value: string): void => scope.setFamily(value);
+  // The family is the header's scope. The board toggle is a view switch and
+  // pushes, so Back returns to the view before it.
   const setRepo = (value: string): void => setFilters({ repo: value });
   // The timeline is the page; the lane board stays one click away.
   const board = isBoardView(view.read('view'));
@@ -191,20 +178,6 @@ export function PullRoomPage(): JSX.Element {
     () =>
       snapshot.data?.pullRequests.map((pr) => fromControlPullRequest(pr, forgeHost(pr.repo))) ?? [],
     [snapshot.data, forgeHost]
-  );
-  // Every family the repository list knows gets a toggle, with the server's
-  // own open-pull-request count — including 0, so a quiet family is still a
-  // way in. The snapshot's pull request collection is one page of many and
-  // cannot be counted for this.
-  const pills = useMemo(
-    () =>
-      familyPills(
-        members.map((member) => ({
-          family: member.family ?? null,
-          openPullRequests: member.open_pull_requests,
-        }))
-      ),
-    [members]
   );
   const items = useMemo(
     () => scopeToFamily(everything, family, families),
@@ -245,9 +218,16 @@ export function PullRoomPage(): JSX.Element {
   );
 
   // Where every merged change has got to: dev, canary, stable, production.
-  const channels = useRepoChannels(board ? [] : wanted.repos);
+  // A repository released only by tag is asked for its tag once its History
+  // is opened; until then its merged rows read "release unknown".
+  const [tagRepos, setTagRepos] = useState<ReadonlySet<string>>(() => new Set());
+  const askTag = (repoKey: string): void =>
+    setTagRepos((current) => (current.has(repoKey) ? current : new Set([...current, repoKey])));
+  const channels = useRepoChannels(board ? [] : wanted.repos, 'main', tagRepos);
   const ladderFor = (pr: PullRequestSummary) => {
-    const entry = channels.byRepo.get(`${pr.repo.owner}/${pr.repo.name}`) ?? EMPTY_CHANNELS;
+    const key = `${pr.repo.owner}/${pr.repo.name}`;
+    if (channels.deferred.has(key)) return UNKNOWN_LADDER;
+    const entry = channels.byRepo.get(key) ?? EMPTY_CHANNELS;
     return releaseLadder(pr, entry.baselines, entry.compares);
   };
 
@@ -290,8 +270,8 @@ export function PullRoomPage(): JSX.Element {
           }),
     [board, family, repo, todos.data, attentionTodoIds]
   );
-  // What waits on a person here is marked on its own row; only what no row
-  // below carries is counted above the list, with the way to Needs you.
+  // What waits on a person here is marked on its own row; the rest is on
+  // Needs you, which the nav badge counts.
   const { user } = useAuth();
   // Estimates on the rows; refused for a non-admin, which shows none.
   const flow = useFlow({});
@@ -302,14 +282,6 @@ export function PullRoomPage(): JSX.Element {
     [attention.data, family, repoFamilies]
   );
   const waitingByPull = useMemo(() => attentionByPull(waiting), [waiting]);
-  const waitingOffRows = useMemo(
-    () =>
-      attentionOffRows(
-        waiting,
-        new Set(board ? [] : rows.map((pr) => pullAttentionKey(`${pr.repo.owner}/${pr.repo.name}`, pr.number)))
-      ),
-    [waiting, board, rows]
-  );
 
   if (snapshot.isLoading) {
     return (
@@ -345,10 +317,6 @@ export function PullRoomPage(): JSX.Element {
   const headerCounts = scoped
     ? scopedCounts(items)
     : summaryCounts(snapshot.data.summary);
-  // Anything the page reads that the snapshot cut short is said out loud.
-  const truncated = truncatedCollections(snapshot.data.page, ['pull_requests']);
-  // Merged work that reached no release is a warning, not just a count.
-  const unshipped = board ? null : awaitingReleaseWarning(awaitingReleaseByRepo(rows, ladderFor));
 
   return (
     <div className="page page--full pull-room" data-testid="pull-room-page">
@@ -369,61 +337,6 @@ export function PullRoomPage(): JSX.Element {
           </div>
         }
       />
-
-      {unshipped ? (
-        <p className="pull-room__unshipped" role="status" data-testid="pull-room-unshipped">
-          {unshipped}{' '}
-          <Link to={family ? releaseFamilyPath(family) : RELEASES_PATH}>
-            {family ? `Open the ${family} release board` : 'Open the release boards'}
-          </Link>
-        </p>
-      ) : null}
-
-      {waitingOffRows.length > 0 ? (
-        <p className="pull-room__needs-off" data-testid="pull-room-needs-off">
-          <span className={pillClass('human')}>{waitingOffRows.length}</span>{' '}
-          {board ? 'waiting on you' : 'more waiting on you, not on a row below'} ·{' '}
-          <Link to={blockedHref(family)}>open Blocked</Link>
-        </p>
-      ) : null}
-
-      <nav className="pull-room__families" aria-label="Family" data-testid="pull-room-families">
-        <button
-          type="button"
-          className="pull-room__family"
-          aria-pressed={family === ''}
-          onClick={() => setFamily('')}
-        >
-          All{' '}
-          <span className="pull-room__family-count">
-            {summaryCounts(snapshot.data.summary).open}
-          </span>
-        </button>
-        {pills.map((pill) => (
-          <button
-            key={pill.family}
-            type="button"
-            className="pull-room__family"
-            aria-pressed={family === pill.family}
-            onClick={() => setFamily(pill.family)}
-          >
-            {familyLabel(pill.family)}{' '}
-            <span className="pull-room__family-count">{pill.count}</span>
-          </button>
-        ))}
-        {family && !pills.some((pill) => pill.family === family) ? (
-          <button type="button" className="pull-room__family" aria-pressed="true" onClick={() => setFamily('')}>
-            {family} <span className="pull-room__family-count">0</span>
-          </button>
-        ) : null}
-      </nav>
-
-      {truncated.length > 0 ? (
-        <p className="pull-room__aside" role="status" data-testid="pull-room-truncated">
-          The snapshot answered with part of its lists: {truncated.join('; ')}. Open work
-          is ordered first, so the open ones are all here.
-        </p>
-      ) : null}
 
       <details
         className="pull-room__filter-fold"
@@ -550,6 +463,7 @@ export function PullRoomPage(): JSX.Element {
                 repoKeyFor={repoKeyFor}
                 attention={waitingByPull}
                 flow={flow.data}
+                onHistory={askTag}
               />
             )}
           </>

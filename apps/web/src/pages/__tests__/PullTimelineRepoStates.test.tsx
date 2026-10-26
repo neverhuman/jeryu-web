@@ -219,8 +219,9 @@ describe('the Pull requests timeline', () => {
       'Merged · not yet released',
       'In canary · v8',
       'In prod · v6',
-      'Closed',
     ]);
+    // The closed row lives in History, drawn once History is opened.
+    expect(screen.queryByTestId('pull-timeline-jeryu/jeryu-web-6')).toBeNull();
   });
 
   it('shows the newest row at a state only a release moves, with how many wait behind it', async () => {
@@ -245,13 +246,14 @@ describe('the Pull requests timeline', () => {
     expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-11')).toBeVisible();
     expect(screen.getByTestId('pull-waiting-jeryu/jeryu-web-11')).toHaveTextContent('+ 2 more waiting');
     expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-14')).toBeVisible();
+    // The rows it stands for are not drawn until History is opened.
     for (const number of [12, 10, 13]) {
-      expect(screen.getByTestId(`pull-timeline-jeryu/jeryu-web-${number}`)).not.toBeVisible();
+      expect(screen.queryByTestId(`pull-timeline-jeryu/jeryu-web-${number}`)).toBeNull();
     }
     const history = screen.getByTestId('pull-older-jeryu/jeryu-web');
     expect(history).toHaveTextContent('History (3)');
     await userEvent.click(within(history).getByText('History (3)'));
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-13')).toBeVisible();
+    expect(await screen.findByTestId('pull-timeline-jeryu/jeryu-web-13')).toBeVisible();
   });
 
   it('says prod once: only the newest row an environment runs carries its pill', () => {
@@ -302,10 +304,10 @@ describe('the Pull requests timeline', () => {
 
   it('opens History from the closed count', async () => {
     render([pull(25, 'open'), pull(26, 'closed')], () => ladder(null));
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-26')).not.toBeVisible();
+    expect(screen.queryByTestId('pull-timeline-jeryu/jeryu-web-26')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: '1 closed' }));
     expect(screen.getByTestId('pull-older-jeryu/jeryu-web')).toHaveAttribute('open');
-    expect(screen.getByTestId('pull-timeline-jeryu/jeryu-web-26')).toBeVisible();
+    expect(await screen.findByTestId('pull-timeline-jeryu/jeryu-web-26')).toBeVisible();
   });
 
   it('says a merged row has passed open and mergeable, and names failing checks as of the merge', () => {
@@ -408,9 +410,9 @@ describe('the Pull requests timeline', () => {
 
     // A repository with no pull requests still gets a section for its branch.
     expect(screen.getByTestId('pull-repo-jeryu/jeryu-api')).toHaveTextContent('todo t3');
-    // Queued work is only counted, once, not listed.
+    // Queued work is Work's: neither listed nor counted here.
     expect(screen.queryByTestId('pull-ghost-t4')).not.toBeInTheDocument();
-    expect(screen.getByTestId('pull-shift-queue')).toHaveTextContent('3 in flight · 1 queued');
+    expect(screen.queryByTestId('pull-shift-queue')).toBeNull();
   });
 
   it('keeps shift work that names no repository visible above the sections', () => {

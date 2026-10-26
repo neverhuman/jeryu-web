@@ -312,20 +312,14 @@ test.describe('Family scope, page by page', () => {
     await page.waitForURL('**/work?family=globex');
     await expectScope(page, 'globex');
 
-    // 3. In flight: its own family bar is on the scope it was handed.
+    // 3. In flight: no family bar of its own; it opens on the scope it was
+    //    handed, which the header says.
     await Promise.all([
       page.waitForURL('**/in-flight?family=globex'),
       navTo(NAV_PATH['In flight']).click(),
     ]);
-    const families = page.getByTestId('pull-room-families');
-    await expect(families.getByRole('button', { name: /^globex/ })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-    await expect(families.getByRole('button', { name: /^All/ })).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    );
+    await expect(page.getByTestId('pull-room-families')).toHaveCount(0);
+    await expectScope(page, 'globex');
 
     // 4. Activity: a family pill at the far left of the chip row shows it, and
     //    pressing another pill there is the scope.

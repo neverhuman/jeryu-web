@@ -101,10 +101,11 @@ describe('RepositoryPullRequestsPage', () => {
       expect(screen.getByText('Cart totals')).toBeInTheDocument();
     });
     expect(screen.getByText('Fix Pull Room')).toBeInTheDocument();
-    expect(screen.getByTestId('pull-draft-13')).toBeInTheDocument();
-    expect(screen.getByTestId('pull-draft-13').textContent).toMatch(
-      /^Draft · idle \d+ days?$/
-    );
+    // The draft's status says Draft, and how long it idled, once: no second
+    // "Draft" badge beside it.
+    expect(screen.getByTestId('pull-status-13').textContent).toMatch(/^Draft · idle \d+ days?$/);
+    expect(screen.queryByTestId('pull-draft-13')).toBeNull();
+    expect(screen.getByTestId('pull-timeline-13').textContent).not.toMatch(/Draft.*Draft/);
     expect(screen.getByTestId('pull-timeline-13').textContent).toContain('rc/auto');
 
     // Drafts only, and then the ones offered for review.

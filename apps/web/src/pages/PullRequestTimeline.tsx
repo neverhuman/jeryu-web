@@ -52,8 +52,8 @@ import './PullRoomPage.css';
  * that only a release will move is one row per state — the newest, standing for
  * the rest — and everything it stands for folds into one History at the bottom.
  *
- * Queued todos have no branch yet and belong to the Work page; only the queue's
- * numbers are said here, once, above the sections.
+ * Queued todos have no branch yet and belong to the Work page, which counts
+ * them; this page does not repeat its numbers.
  *
  * A pull request that waits on a person is marked on its own row, red, with
  * what to do — not repeated in a list above the timeline.
@@ -67,6 +67,7 @@ export function PullRequestTimeline({
   repoKeyFor,
   attention = NO_ATTENTION,
   flow,
+  onHistory,
 }: {
   pulls: PullSummaryRow[];
   emptyMessage: string;
@@ -82,6 +83,8 @@ export function PullRequestTimeline({
   attention?: ReadonlyMap<string, AttentionItem[]>;
   /** The flow report the rows' ETAs are read from; none shows no ETA. */
   flow?: FlowReport | undefined;
+  /** A repository's History was opened: the page may now read its releases. */
+  onHistory?: (repo: string) => void;
 }): JSX.Element {
   const view = useViewState();
   const order = parsePullOrder(view.read(PULL_ORDER_PARAM));
@@ -130,21 +133,6 @@ export function PullRequestTimeline({
         ))}
       </div>
 
-      {timeline.shift && (timeline.shift.inFlight > 0 || timeline.shift.queued > 0) ? (
-        <p className="pull-shift-queue" data-testid="pull-shift-queue">
-          Shift queue: {timeline.shift.inFlight} in flight · {timeline.shift.queued} queued{' '}
-          <Link
-            to={
-              timeline.shift.family
-                ? `/work?family=${encodeURIComponent(timeline.shift.family)}`
-                : '/work'
-            }
-          >
-            open Work
-          </Link>
-        </p>
-      ) : null}
-
       {timeline.unassigned.length > 0 ? (
         <section className="pull-repo" data-testid="pull-ghosts-unassigned">
           <h2 className="pull-repo__head">
@@ -167,6 +155,7 @@ export function PullRequestTimeline({
           attention={attention}
           order={order}
           historyFor={historyFor}
+          onHistory={onHistory}
         />
       ))}
     </div>
@@ -182,15 +171,23 @@ function RepoSection({
   attention,
   order,
   historyFor,
+  onHistory,
 }: {
   group: RepoGroup;
   showRepo: boolean;
   attention: ReadonlyMap<string, AttentionItem[]>;
   order: PullOrder;
   historyFor: BaseHistoryLookup;
+  onHistory?: (repo: string) => void;
 }): JSX.Element {
-  // "16 closed" in the heading opens History, where closed work lives.
-  const [historyOpen, setHistoryOpen] = useState(false);
+  // "16 closed" in the heading opens History, where closed work lives. Its
+  // rows are drawn only while it is open, and opening it is what asks for the
+  // repository's releases when they come from a tag.
+  const [historyOpen, setHistoryOpenState] = useState(false);
+  const setHistoryOpen = (open: boolean): void => {
+    setHistoryOpenState(open);
+    if (open) onHistory?.(group.repo);
+  };
   const history = useRef<HTMLDetailsElement>(null);
   const openHistory = (): void => {
     setHistoryOpen(true);
@@ -233,17 +230,19 @@ function RepoSection({
           onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
         >
           <summary>History ({group.older.length})</summary>
-          <ol className="pull-timeline__rows">
-            {group.older.map((row) => (
-              <FlowRowView
-            key={flowKey(row)}
-            row={row}
-            repo={group.repo}
-            showRepo={showRepo}
-            attention={attention}
-          />
-            ))}
-          </ol>
+          {historyOpen ? (
+            <ol className="pull-timeline__rows">
+              {group.older.map((row) => (
+                <FlowRowView
+                  key={flowKey(row)}
+                  row={row}
+                  repo={group.repo}
+                  showRepo={showRepo}
+                  attention={attention}
+                />
+              ))}
+            </ol>
+          ) : null}
         </details>
       ) : null}
     </section>
@@ -518,7 +517,11 @@ function PullRowView({
             data-testid={`pull-status-${id}`}
             title={landed ? landed.title : pullRowHint(row)}
           >
-            {landed ? alreadyLandedStatus(pr.base_ref) : pullRowStatus(row)}
+            {landed
+              ? alreadyLandedStatus(pr.base_ref)
+              : row.state === 'draft'
+                ? draftBadgeLabel(pr.updated_at)
+                : pullRowStatus(row)}
           </span>{' '}
           {row.alsoWaiting > 0 ? (
             <span className="pull-timeline__waiting" data-testid={`pull-waiting-${id}`}>
@@ -526,7 +529,9 @@ function PullRowView({
               + {row.alsoWaiting} more waiting
             </span>
           ) : null}{' '}
-          {pr.draft ? (
+          {/* A draft row's status already says Draft (and how long it idled);
+              the badge is for a draft whose status says something else. */}
+          {pr.draft && row.state !== 'draft' ? (
             <>
               ·{' '}
               <span

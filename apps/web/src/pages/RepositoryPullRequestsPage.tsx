@@ -105,12 +105,8 @@ export function RepositoryPullRequestsPage(props: RepositoryPullRequestsPageProp
   return (
     <div className="page page--full pull-room" data-testid="repo-pulls-page">
       <header className="page__header pull-room__header">
-        <div>
-          <h2 className="page__title">Pull requests</h2>
-          <p className="page__subtitle">
-            {resolved.data.summary.id.owner}/{resolved.data.summary.id.name}
-          </p>
-        </div>
+        {/* The repository's own header, above its tabs, already names it. */}
+        <h2 className="page__title">Pull requests</h2>
         <div className="pull-room__filters" role="group" aria-label="Draft filter">
           {PULL_DRAFT_FILTERS.map((filter) => (
             <button
