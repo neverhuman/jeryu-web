@@ -124,7 +124,7 @@ describe('RepoTable', () => {
     expect(names()).toEqual(['jeryu-web', 'jeryu-core']);
   });
 
-  it('renders each repository role as a labelled icon', () => {
+  it('marks only the portal and tool repositories, with a labelled icon', () => {
     const tool: RepositorySummary = {
       ...REPO,
       id: { ...REPO.id, id: 'repo-uuid-tool', name: 'jeryu-tool' },
@@ -141,15 +141,15 @@ describe('RepoTable', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('img', { name: 'Split member' })).toHaveAttribute(
+    // Split members, nearly every row of a family, carry no mark.
+    expect(screen.getAllByRole('img')).toHaveLength(2);
+    expect(screen.getByRole('img', { name: 'Public portal' })).toHaveAttribute(
       'title',
-      expect.stringMatching(/^Split member: /)
+      expect.stringMatching(/^Public portal: /)
     );
-    // The tool control plane is not a split member.
     expect(
       screen.getByRole('img', { name: 'Tool control plane' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Public portal' })).toBeInTheDocument();
     expect(screen.queryByText('Split member')).not.toBeInTheDocument();
   });
 

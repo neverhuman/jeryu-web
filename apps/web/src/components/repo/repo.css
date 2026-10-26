@@ -169,12 +169,6 @@
   border-color: var(--color-accent-primary);
 }
 
-.repo-role-badge--split_member {
-  background-color: var(--color-bg-2);
-  color: var(--color-fg-secondary);
-  border-color: var(--color-border-subtle);
-}
-
 .repo-role-badge--tool_control_plane {
   background-color: var(--color-gold-bg);
   color: var(--color-gold);

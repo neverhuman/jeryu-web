@@ -1,13 +1,18 @@
-import { Globe, Puzzle, Wrench, type LucideIcon } from 'lucide-react';
+import { Globe, Wrench, type LucideIcon } from 'lucide-react';
 
 import type { RepositorySummary } from '../../api/types';
 
 import './repo.css';
 
-type RepoRole = NonNullable<RepositorySummary['repo_role']>;
+// A split member is what nearly every repository in a family is, so it is
+// not marked: only the repositories that differ get an icon.
+type MarkedRole = Exclude<
+  NonNullable<RepositorySummary['repo_role']>,
+  'split_member'
+>;
 
 const ROLES: Record<
-  RepoRole,
+  MarkedRole,
   { icon: LucideIcon; label: string; hint: string }
 > = {
   public_portal: {
@@ -19,21 +24,16 @@ const ROLES: Record<
     icon: Wrench,
     label: 'Tool control plane',
     hint: 'runs the family tooling; hosted beside the family, not split from it'
-  },
-  split_member: {
-    icon: Puzzle,
-    label: 'Split member',
-    hint: 'one of the repositories split out of the family monorepo'
   }
 };
 
-/** Role icon for a split-family repository; the name and meaning on hover. */
+/** Role icon for a family's portal or tool repository; the name and meaning on hover. */
 export function RepoRoleBadge({
   role
 }: {
   role: RepositorySummary['repo_role'];
 }): JSX.Element | null {
-  if (!role) return null;
+  if (!role || role === 'split_member') return null;
   const { icon: Icon, label, hint } = ROLES[role];
   return (
     <span
