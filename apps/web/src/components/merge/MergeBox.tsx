@@ -46,6 +46,7 @@ import { canChangeDraft } from '../../pages/pullDraftModel';
 import {
   mergeChecklist,
   mergeHeadline,
+  mergeBlockers,
   sayBlockersOnce,
   type ChecklistHrefs,
   type ChecklistRow,
@@ -261,7 +262,6 @@ export function MergeBox({
   const headSha = detail.summary.head_sha;
   const settled = isSettled(detail);
   const rows = mergeChecklist(detail, checks, hrefs, { checksLoading });
-  const headline = mergeHeadline(detail, rows);
   const mergeable = canMergeNow(detail);
   // The Merge button stays on the page when the merge is refused; these are
   // the lines that say why, in the server's own order.
@@ -303,6 +303,13 @@ export function MergeBox({
     gateReasons,
     (row) =>
       (row.key === 'draft' && Boolean(draftControl)) || (row.key === 'approvals' && changesUnsaid)
+  );
+  // The headline counts what the box says needs doing: the lines under
+  // Merge, and the needed rows the checklist kept.
+  const headline = mergeHeadline(
+    detail,
+    rows,
+    settled ? undefined : once.reasons.length + mergeBlockers(once.rows).length
   );
 
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);

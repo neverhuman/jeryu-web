@@ -242,10 +242,12 @@ export function rowForGate(code: string): string {
 /**
  * Say each blocker once. The gate lines under the Merge button are the
  * blockers with their exact step (the failing check's log, the reviewer who
- * asked for changes), so a needed row they already state leaves the
- * checklist, which keeps what is met and what the lines do not say. A needed
- * row that carries its own control (Ready for review) stays, and the line
- * that would repeat it goes instead.
+ * asked for changes), so a row about what they already state leaves the
+ * checklist — whatever that row thought, the gate line is the forge's
+ * current word (a row reading "every required check is green" beside
+ * "waiting for the required check" said two things). The checklist keeps
+ * what the lines do not cover. A row kept on purpose (Ready for review, which
+ * holds its own control) stays, and the line that would repeat it goes.
  */
 export function sayBlockersOnce<R extends { code: string }>(
   rows: readonly ChecklistRow[],
@@ -253,7 +255,7 @@ export function sayBlockersOnce<R extends { code: string }>(
   keepRow: (row: ChecklistRow) => boolean = () => false
 ): { rows: ChecklistRow[]; reasons: R[] } {
   const stated = new Set(reasons.map((reason) => rowForGate(reason.code)));
-  const kept = rows.filter((row) => row.state !== 'needed' || !stated.has(row.key) || keepRow(row));
+  const kept = rows.filter((row) => !stated.has(row.key) || (row.state === 'needed' && keepRow(row)));
   const keptNeeded = new Set(kept.filter((row) => row.state === 'needed').map((row) => row.key));
   return {
     rows: kept,
@@ -272,12 +274,14 @@ export function mergeBlockers(rows: readonly ChecklistRow[]): ChecklistRow[] {
  */
 export function mergeHeadline(
   detail: PullRequestDetail,
-  rows: readonly ChecklistRow[]
+  rows: readonly ChecklistRow[],
+  /** How many blockers the box says, when it says some outside `rows`. */
+  said?: number
 ): string {
   if (isSettled(detail)) {
     return detail.summary.state === 'merged' ? 'Merged' : 'Closed';
   }
-  const count = mergeBlockers(rows).length;
+  const count = said ?? mergeBlockers(rows).length;
   const head = detail.summary.head_sha.slice(0, 7);
   if (count === 0) return `Ready to merge at ${head}`;
   // Named head, always: every row below is about one head, and a reader who

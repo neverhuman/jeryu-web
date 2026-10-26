@@ -207,6 +207,14 @@ describe('saying each blocker once', () => {
     expect(once.reasons).toEqual(reasons);
   });
 
+  it('drops a met row the gate contradicts: the gate line is the current word', () => {
+    // The checks row read green while the gate waited on the required check.
+    const once = sayBlockersOnce([row('checks', 'done'), row('threads', 'done')], [
+      { code: 'passport_blocked_checks' },
+    ]);
+    expect(once.rows.map((r) => r.key)).toEqual(['threads']);
+  });
+
   it('keeps a needed row that holds its own control, and drops the line that repeats it', () => {
     const rows = [row('draft', 'needed'), row('checks', 'needed')];
     const reasons = [{ code: 'passport_blocked_draft' }, { code: 'passport_blocked_checks' }];
