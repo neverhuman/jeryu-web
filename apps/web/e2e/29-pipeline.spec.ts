@@ -415,10 +415,12 @@ test.describe('Pipeline visibility', () => {
     // Each chip says how much is behind it over the band's range, and a chip
     // with nothing behind it is quieter but still a filter.
     const chips = page.getByRole('group', { name: 'Show' });
-    await expect(chips.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
+    await expect(chips.getByRole('button', { name: 'Gates', exact: true })).toHaveAttribute(
       'title',
       /in the last 24h/
     );
+    // All's total is the band's own, said once above it.
+    await expect(chips.getByRole('button', { name: 'All', exact: true }).locator('.activity__chip-count')).toHaveCount(0);
     await expect(chips.locator('.activity__chip-count').first()).toBeVisible();
 
     // Beside the chips: the slots' step beats are out of All, and this is how a
@@ -435,13 +437,13 @@ test.describe('Pipeline visibility', () => {
     await page.goto('/activity');
     await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
 
-    // The 24-hour strip is on the normal page too, under the chart, and its
-    // numbers are the server's totals for the window, not the loaded page.
-    const strip = page.getByTestId('activity-counters');
-    await expect(strip).toContainText('42');
-    await expect(strip).toContainText('$12.34');
-    await expect(strip).not.toContainText('loaded here');
-    await expect(strip.getByRole('link', { name: /Blocked/ })).toHaveAttribute('href', '/needs-you?view=all');
+    // No 24-hour tiles, token panel, legend, line strip or raw API line: the
+    // band and the list are the page.
+    await expect(page.getByTestId('activity-counters')).toHaveCount(0);
+    await expect(page.getByTestId('activity-usage')).toHaveCount(0);
+    await expect(page.getByTestId('activity-legend')).toHaveCount(0);
+    await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
+    await expect(page.getByTestId('activity-api')).toHaveCount(0);
 
     await page.getByTestId('activity-page').screenshot({ path: 'playwright-report/activity.png' });
 
@@ -477,17 +479,13 @@ test.describe('Pipeline visibility', () => {
     await expect(page.getByTestId('activity-event-9')).toHaveCount(0);
 
     await page.goto('/activity?wall=1');
-    const wallStrip = page.getByRole('region', { name: 'Last 24 hours' });
-    await expect(wallStrip).toContainText('Todos finished');
-    // Wall and desk read the one source: the histogram's window totals.
-    await expect(wallStrip).toContainText('42');
-    await expect(wallStrip).not.toContainText('loaded here');
     await expect(page.getByRole('region', { name: 'Activity filters' })).toHaveCount(0);
-    // The wall also carries the clock, and the band and the token panel at the
-    // width of the screen, under the counters.
+    // The wall carries the clock and the band at the width of the screen,
+    // and no 24-hour tiles or token panel.
     await expect(page.getByTestId('activity-wall-clock')).toContainText(/\d\d:\d\d/);
     await expect(page.getByTestId('activity-volume')).toBeVisible();
-    await expect(page.getByTestId('activity-usage')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Last 24 hours' })).toHaveCount(0);
+    await expect(page.getByTestId('activity-usage')).toHaveCount(0);
     // A wall is the screen, not a page in the shell: none of the desk's
     // furniture is left, and the title is at the top of the viewport rather
     // than under a header pinned over it.
@@ -571,10 +569,9 @@ test.describe('Pipeline visibility', () => {
   test('Activity draws its controls once: a late family list and a chip’s note move nothing @action:activity.steady_controls', async ({
     page,
   }) => {
-    // The family list is a second request: it used to arrive after the first
-    // paint, put the pills beside the chips and push the row’s neighbours onto
-    // a new line, moving the feed under them. Hold the answer, measure, let it
-    // land, measure again: the controls must be where they were drawn.
+    // The family list is a second request. Activity draws no family pills of
+    // its own any more (the header is the scope), so a late answer moves
+    // nothing; nor does the note a chip adds.
     await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
     await mockPipelineApi(page);
     let answer = (): void => {};
@@ -599,45 +596,35 @@ test.describe('Pipeline visibility', () => {
     const chips = page.getByRole('group', { name: 'Show' });
     const more = page.locator('.activity__more > summary');
     await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
-    const slot = page.locator('.activity__family-slot');
     const before = {
-      slot: await slot.boundingBox(),
       chips: await chips.boundingBox(),
       more: await more.boundingBox(),
       feed: await page.getByTestId('activity-event-12').boundingBox(),
     };
 
     answer();
-    const strip = page.getByRole('group', { name: 'Filter by family' });
-    await expect(strip.getByRole('button', { name: 'globex' })).toBeVisible();
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('group', { name: 'Filter by family' })).toHaveCount(0);
     expect(await chips.boundingBox()).toMatchObject({ x: before.chips?.x, y: before.chips?.y });
     expect(await more.boundingBox()).toMatchObject({ y: before.more?.y });
     expect(await page.getByTestId('activity-event-12').boundingBox()).toMatchObject({
       y: before.feed?.y,
     });
-    // The pills landed in the box that was held for them, which neither moved
-    // nor changed size to take them.
-    expect(await slot.boundingBox()).toEqual(before.slot);
-    const stripBox = await strip.boundingBox();
-    expect(stripBox).toMatchObject({ x: before.slot?.x, y: before.slot?.y });
 
-    // The note a chip adds is a line of its own under the controls: it moves
-    // no chip and no family pill.
-    const steady = { chips: await chips.boundingBox(), strip: stripBox };
+    // The note a chip adds is a line of its own under the controls.
     await page.getByRole('button', { name: 'Needed a human' }).click();
     const note = page.getByTestId('activity-needs-you');
     await expect(note).toContainText('waiting on a person right now');
-    expect(await chips.boundingBox()).toMatchObject({ x: steady.chips?.x, y: steady.chips?.y });
-    expect(await strip.boundingBox()).toMatchObject({ x: steady.strip?.x, y: steady.strip?.y });
+    expect(await chips.boundingBox()).toMatchObject({ x: before.chips?.x, y: before.chips?.y });
     // Its own line: below the chip row, above More filters.
     const noteBox = await note.boundingBox();
-    expect(noteBox?.y ?? 0).toBeGreaterThanOrEqual((steady.chips?.y ?? 0) + (steady.chips?.height ?? 0));
+    expect(noteBox?.y ?? 0).toBeGreaterThanOrEqual((before.chips?.y ?? 0) + (before.chips?.height ?? 0));
     expect((await more.boundingBox())?.y ?? 0).toBeGreaterThanOrEqual(
       (noteBox?.y ?? 0) + (noteBox?.height ?? 0)
     );
   });
 
-  test('Activity hands over the raw event and the query behind the screen @action:activity.api', async ({
+  test('Activity hands over the raw event, and no raw query line @action:activity.api', async ({
     page,
   }) => {
     // What the clipboard received, kept on the window: the browser's own
@@ -660,20 +647,8 @@ test.describe('Pipeline visibility', () => {
     await page.goto('/activity');
     await expect(page.getByTestId('activity-event-12')).toBeVisible({ timeout: 15_000 });
 
-    // Under the filters: the request this list is one page of.
-    const api = page.getByTestId('activity-api');
-    await expect(api).toContainText('/api/v1/events?limit=100');
-    await expect(api.getByRole('link', { name: 'API' })).toHaveAttribute('href', '/api/v1/events?limit=100');
-    await api.getByTestId('activity-api-copy').click();
-    await expect(api).toContainText('Copied');
-    expect(await copied()).toBe('/api/v1/events?limit=100');
-
-    // A chip is another view, so it is another query, and the line says so.
-    await page.getByRole('button', { name: 'Gates', exact: true }).click();
-    await expect(api.getByRole('link', { name: 'API' })).toHaveAttribute(
-      'href',
-      '/api/v1/events?kind=gate.&limit=100'
-    );
+    // The raw request line is gone from the page: the row's own JSON is the hand-over.
+    await expect(page.getByTestId('activity-api')).toHaveCount(0);
 
     // The row hands over itself, as the API returned it.
     const gate = page.getByTestId('activity-event-10');
@@ -819,59 +794,23 @@ test.describe('Pipeline visibility', () => {
     await expect(overlay).toContainText('Open More filters');
   });
 
-  test('Activity says what the pipeline is spending, live, and names a silent producer @action:activity.usage', async ({
+  test('Activity puts an attempt\'s tokens on its row, and has no token panel @action:activity.usage', async ({
     page,
-    realtime,
   }) => {
     await mockBootstrap(page, { login: 'operator', auth: { role: 'admin' } });
-    let spent = false;
     await mockPipelineApi(page);
-    // The usage read answers more tokens once the socket says a slot reported:
-    // the panel must follow the push, well inside its 10-second poll.
-    await page.route(/\/api\/v1\/usage(\?.*)?$/, (route) => {
-      const body = usageBody();
-      if (spent) {
-        (body.slots as Array<Record<string, unknown>>)[0].input_tokens = 980_000;
-      }
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(body),
-      });
-    });
+    await page.route(/\/api\/v1\/usage(\?.*)?$/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(usageBody()) })
+    );
 
     await page.goto('/activity');
-    const panel = page.getByTestId('activity-usage');
-    await expect(panel).toBeVisible({ timeout: 15_000 });
-    const w1 = page.getByTestId('activity-usage-slot-w1');
-    await expect(w1).toContainText('opus-5');
-    await expect(w1).toContainText('12.4k');
-    await expect(w1).toContainText('$1.42');
-    await expect(w1.getByRole('link', { name: '20260919-0800-aaa' })).toHaveAttribute(
-      'href',
-      /^\/work\/20260919-0800-aaa/
-    );
-    // A producer that reports nothing is said in words, not counted as zero.
-    await expect(page.getByTestId('activity-usage-slot-w3')).toContainText(
-      'no usage reported (todoq too old)'
-    );
-    // Today, beside the slots, and the 24-hour sparkline above them.
-    await expect(page.getByTestId('activity-usage-totals')).toContainText('$18.40');
-    await expect(page.getByTestId('activity-usage-totals')).toContainText('74%');
-    await expect(page.getByTestId('activity-usage-spark')).toHaveAttribute(
-      'aria-label',
-      /Tokens per bucket over last 24 h/
-    );
     // The attempt's own tokens sit beside its cost on the row that finished it.
     const finished = page.getByTestId('activity-event-9');
-    await expect(finished).toContainText('$0.33');
+    await expect(finished).toContainText('$0.33', { timeout: 15_000 });
     await expect(finished).toContainText('258k in · 1.4k out');
-
-    await realtime.waitForOpen();
-    await realtime.hello();
-    spent = true;
-    await realtime.event({ seq: 14, scope: 'pipeline', kind: 'usage.changed', entity: 'usage' });
-    await expect(w1).toContainText('980k', { timeout: 8_000 });
+    // The per-slot panel and its day totals are gone: they showed dashes and
+    // zeros against live data. What the work cost is on Yield.
+    await expect(page.getByTestId('activity-usage')).toHaveCount(0);
   });
 
   test('the live feed is the Activity page, not a strip on every page @action:chrome.activity_dock', async ({

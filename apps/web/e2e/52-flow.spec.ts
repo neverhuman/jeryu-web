@@ -114,7 +114,7 @@ test.describe('Flow', () => {
     await expect(page).toHaveURL(/\/work\/acme-0001$/);
   });
 
-  test('the same strip heads Activity and opens a station on Flow @action:flow.activity_strip', async ({
+  test('the line strip is Flow\'s: Activity and a repository tab do not repeat it @action:flow.activity_strip', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
@@ -125,37 +125,11 @@ test.describe('Flow', () => {
       id: { host: 'jeryu', owner: 'acme', name: 'widgets' },
       default_branch: 'main', visibility: 'private', family: 'acme',
     }]);
-    for (const [route, scope] of [
-      ['/activity', 'flow-activity-strip'],
-      ['/repos/jeryu/acme/widgets/activity', 'flow-repo-activity-strip'],
-    ]) {
+    for (const route of ['/activity', '/repos/jeryu/acme/widgets/activity', '/activity?wall=1']) {
       await page.goto(route);
-      const strip = page.getByTestId('flow-line-strip');
-      await expect(strip).toContainText('Gate holds the most waiting');
-      const stations = ['queue', 'work', 'shift', 'review', 'gate', 'merge', 'pin', 'stage', 'deploy'];
-      await expect(strip.getByRole('link')).toHaveCount(stations.length);
-      for (const station of stations) {
-        await expect(strip.getByTestId(`flow-line-strip-station-${station}`)).toHaveAttribute(
-          'href', `/flow?station=${station}${route.startsWith('/repos') ? '&family=acme' : ''}`
-        );
-      }
-      const stripBox = await strip.boundingBox();
-      const histogramBox = await page.getByTestId('activity-volume').boundingBox();
-      expect(stripBox!.y + stripBox!.height).toBeLessThanOrEqual(histogramBox!.y);
-      const result = await runAxe(page, { include: '.line-strip' });
-      await persistAxeResult(scope, result);
-      expect(blockingViolations(result)).toEqual([]);
-      expect((await persistRenderedEvidence(page, scope)).geometry.width).toBeGreaterThan(0);
-      await strip.getByTestId('flow-line-strip-station-gate').click();
-      await expect(page).toHaveURL(/\/flow\?station=gate/);
-      await expect(page.getByTestId('flow-strip-station-gate')).toHaveAttribute('aria-current', 'true');
+      await expect(page.getByTestId('activity-page')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
     }
-
-    // The wall is the feed itself: no strip on it.
-    await page.goto('/activity?wall=1');
-    await expect(page.getByTestId('activity-page')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
-
   });
 
   test('Activity links each event to its station on Flow @action:flow.activity_links', async ({

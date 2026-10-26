@@ -80,8 +80,9 @@ describe('Activity chip counts', () => {
     mockPipelineApi();
     renderPage();
     await screen.findByTestId('activity-volume');
-    await waitFor(() => expect(badge('All')).toHaveTextContent('21'));
-    expect(badge('Gates')).toHaveTextContent('9');
+    await waitFor(() => expect(badge('Gates')).toHaveTextContent('9'));
+    // All's total is the band's, said once above it: no badge on All.
+    expect(badge('All')).toBeNull();
     expect(badge('Needed a human')).toHaveTextContent('1');
     // No group behind it: no badge, and not drawn as an empty chip either.
     expect(badge('Workers')).toBeNull();
@@ -97,15 +98,12 @@ describe('Activity chip counts', () => {
     const calls = mockPipelineApi();
     renderPage('/activity?range=7d');
     await screen.findByTestId('activity-volume');
-    await waitFor(() => expect(badge('All')).toHaveTextContent('21'));
-    expect(chip('All')).toHaveAttribute('title', '21 in the last 7d');
-    // The chips ask nothing of their own: the only histogram windows fetched
-    // are the band's 7 d and the last-24-hour strip's.
+    await waitFor(() => expect(badge('Gates')).toHaveTextContent('9'));
+    expect(chip('Gates')).toHaveAttribute('title', '9 in the last 7d');
+    // The chips ask nothing of their own: the only histogram window fetched
+    // is the band's 7 d (the last-24-hour tiles are gone).
     const asked = calls.filter((call) => call.pathname === '/api/v1/events/histogram');
-    expect(asked.some((call) => call.search.includes('range=7d'))).toBe(true);
-    expect(new Set(asked.map((call) => call.search))).toEqual(
-      new Set(['?range=7d', '?range=24h'])
-    );
+    expect(new Set(asked.map((call) => call.search))).toEqual(new Set(['?range=7d']));
   });
 
   it('mutes a chip with nothing behind it and still lets it filter', async () => {
@@ -154,7 +152,7 @@ describe('Activity chip counts', () => {
       mockPipelineApi();
       renderPage();
       await screen.findByTestId('activity-volume');
-      await waitFor(() => expect(badge('All')).toHaveTextContent('21'));
+      await waitFor(() => expect(badge('Gates')).toHaveTextContent('9'));
       const chips = screen.getByRole('group', { name: 'Show' });
       expect(chips).toHaveClass('activity__chips--still');
     });

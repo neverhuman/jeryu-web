@@ -134,21 +134,16 @@ describe('the family scope on every family-aware page', () => {
     expect(await screen.findByText('Nothing is blocked.')).toBeInTheDocument();
   });
 
-  it('Activity shows the scoped family on a pill, and its own pills move the scope', async () => {
-    mockPipelineApi();
+  it('Activity reads the scoped family, with no family pills of its own', async () => {
+    const calls = mockPipelineApi();
     renderAt('/activity?family=initech', '/activity', <ActivityPage />);
-
-    const strip = await screen.findByRole('group', { name: 'Filter by family' });
-    expect(within(strip).getByRole('button', { name: 'initech' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    await screen.findByTestId('activity-page');
+    expect(screen.queryByRole('group', { name: 'Filter by family' })).toBeNull();
     // The feed was asked for that family, not for every family.
-    await waitFor(() => expect(screen.getByTestId('activity-page')).toBeInTheDocument());
-
-    fireEvent.click(within(strip).getByRole('button', { name: 'All' }));
     await waitFor(() =>
-      expect(window.sessionStorage.getItem(FAMILY_SCOPE_STORAGE_SLOT)).toBeNull()
+      expect(
+        calls.some((call) => call.pathname === '/api/v1/events' && call.search.includes('family=initech'))
+      ).toBe(true)
     );
   });
 

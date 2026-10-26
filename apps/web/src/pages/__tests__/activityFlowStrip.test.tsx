@@ -1,14 +1,16 @@
-// activityFlowStrip.test.tsx — the delivery line strip above the Activity
-// histogram: where the work is, over when it happened.
+// activityFlowStrip.test.tsx — the delivery line strip that reads its own
+// report (`FlowLineStrip`), and that Activity no longer carries it.
 //
-// It is the same strip the Flow page heads Live mode with, so it says the same
-// things here: the nine stations, the hold in red, the bottleneck named, and a
-// station nothing has reached left blank. A reader the forge will not answer
-// `/api/v1/flow` for is shown no strip at all, and the wall has none.
+// The line is Flow's: Activity used to head its histogram with the same strip,
+// which said Flow's facts a second time. The strip itself still says the nine
+// stations, the hold in red, the bottleneck named, and a station nothing has
+// reached left blank; a reader the forge will not answer `/api/v1/flow` for is
+// shown no strip at all.
 
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { FlowLineStrip } from '../../components/flow/LineStrip';
 import { ActivityPage } from '../activity';
 import { RepositoryActivityPage } from '../RepositoryActivityPage';
 import { FLOW_REPORT } from './flowTestData';
@@ -41,10 +43,10 @@ function mockWithFlow(flow: (req: Recorded) => Response | undefined): Recorded[]
 
 afterEach(() => vi.restoreAllMocks());
 
-describe('Activity line strip', () => {
-  it('heads the page with the line, scoped to the family in the address', async () => {
+describe('the line strip', () => {
+  it('names the stations, scoped to the family it is given', async () => {
     const calls = mockWithFlow(() => json(FLOW_REPORT));
-    renderAt('/activity?family=acme', '/activity', <ActivityPage />);
+    renderAt('/x?family=acme', '/x', <FlowLineStrip family="acme" />);
 
     const strip = await screen.findByTestId('flow-line-strip');
     expect(strip).toHaveTextContent('Gate holds the most waiting');
@@ -57,40 +59,15 @@ describe('Activity line strip', () => {
       within(strip).getByTestId('flow-line-strip-station-review').className
     ).toContain('line-strip__station--human');
     expect(within(strip).getByTestId('flow-line-strip-station-pin')).toHaveTextContent('—');
-    // The strip is above the volume band: where the work is, then when it was.
-    const page = screen.getByTestId('activity-page');
-    const order = Array.from(page.querySelectorAll('[data-testid]')).map((node) =>
-      node.getAttribute('data-testid')
-    );
-    expect(order.indexOf('flow-line-strip')).toBeLessThan(order.indexOf('activity-volume'));
     expect(
       calls.filter((call) => call.pathname === '/api/v1/flow')[0].search
     ).toContain('family=acme');
   });
 
-  it('asks for the family of the repository whose tab it is on', async () => {
-    const calls = mockWithFlow(() => json(FLOW_REPORT));
-    renderAt(
-      '/repos/jeryu/acme/widgets/activity',
-      '/repos/jeryu/:owner/:name/activity',
-      <RepositoryActivityPage fullName="acme/widgets" />
-    );
-    await screen.findByTestId('flow-line-strip');
-    // The feed is one repository's; the line it moves on is its family's.
-    await waitFor(() =>
-      expect(calls.filter((call) => call.pathname === '/api/v1/flow').at(-1)?.search).toContain(
-        'family=acme-split'
-      )
-    );
-    expect(calls.filter((call) => call.pathname === '/api/v1/flow').every(
-      (call) => new URLSearchParams(call.search).get('family') === 'acme-split'
-    )).toBe(true);
-  });
-
   it('shows unexpected failures and lets the reader retry', async () => {
     let unavailable = true;
     mockWithFlow(() => unavailable ? errorResponse(500, 'temporary failure') : json(FLOW_REPORT));
-    renderAt('/activity', '/activity', <ActivityPage />);
+    renderAt('/x', '/x', <FlowLineStrip />);
     expect(await screen.findByText('Could not load the delivery line.')).toBeInTheDocument();
     unavailable = false;
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
@@ -100,15 +77,25 @@ describe('Activity line strip', () => {
 
   it('leaves itself out for a reader who may not read the line', async () => {
     mockWithFlow(() => errorResponse(403, 'admin only'));
-    renderAt('/activity', '/activity', <ActivityPage />);
-    await screen.findByTestId('activity-page');
+    renderAt('/x', '/x', <FlowLineStrip />);
     await waitFor(() => expect(screen.queryByTestId('flow-line-strip')).toBeNull());
   });
 
-  it('is not on the wall: that screen is the feed itself', async () => {
-    mockWithFlow(() => json(FLOW_REPORT));
-    renderAt('/activity?wall=1', '/activity', <ActivityPage />);
+  it('is not on Activity, neither its page nor a repository tab nor the wall', async () => {
+    const calls = mockWithFlow(() => json(FLOW_REPORT));
+    for (const path of ['/activity?family=acme', '/activity?wall=1']) {
+      renderAt(path, '/activity', <ActivityPage />);
+      await screen.findByTestId('activity-page');
+      expect(screen.queryByTestId('flow-line-strip')).toBeNull();
+      cleanup();
+    }
+    renderAt(
+      '/repos/jeryu/acme/widgets/activity',
+      '/repos/jeryu/:owner/:name/activity',
+      <RepositoryActivityPage fullName="acme/widgets" />
+    );
     await screen.findByTestId('activity-page');
-    await waitFor(() => expect(screen.queryByTestId('flow-line-strip')).toBeNull());
+    expect(screen.queryByTestId('flow-line-strip')).toBeNull();
+    expect(calls.some((call) => call.pathname === '/api/v1/flow')).toBe(false);
   });
 });

@@ -379,16 +379,8 @@ describe('ActivityPage', () => {
       'href',
       '/needs-you?view=all&family=jeryu'
     );
-    // The family is a pill at the far left of the chip row, not a select.
-    const strip = screen.getByRole('group', { name: 'Filter by family' });
-    expect(within(strip).getByRole('button', { name: 'jeryu' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-    expect(within(strip).getByRole('button', { name: 'All' })).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    );
+    // The family is the header's control: the page draws no pills of its own.
+    expect(screen.queryByRole('group', { name: 'Filter by family' })).toBeNull();
     // A chip is one click and keeps the family.
     fireEvent.click(screen.getByRole('button', { name: 'Gates' }));
     await waitFor(() =>
@@ -443,31 +435,27 @@ describe('ActivityPage', () => {
     expect(document.querySelector('.activity--wall')).toBeNull();
   });
 
-  it('keeps its own heading, sentence and wall control on /activity', async () => {
+  it('keeps its own heading and wall control on /activity, with no explainer or extra panels', async () => {
     mockPipelineApi();
     renderPage('/activity');
     await screen.findByTestId('activity-event-12');
     expect(screen.getByRole('heading', { level: 1, name: 'Activity' })).toBeInTheDocument();
-    expect(screen.getByText('Every step the pipeline takes, as it happens.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Enter wall mode' })).toBeInTheDocument();
+    // No subtitle, no legend, no raw API line, no token panel, no 24-hour
+    // tiles: the band and the list are the page.
+    expect(screen.queryByText(/^Every step the pipeline takes/)).toBeNull();
+    expect(screen.queryByTestId('activity-legend')).toBeNull();
+    expect(screen.queryByTestId('activity-api')).toBeNull();
+    expect(screen.queryByTestId('activity-usage')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Last 24 hours' })).toBeNull();
   });
 
-  it('names the request the list is one page of and copies a row as the API returns it', async () => {
-    const calls = mockPipelineApi();
+  it('copies a row as the API returns it', async () => {
+    mockPipelineApi();
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     renderPage('/activity?family=jeryu&needs_human=1');
     await screen.findByTestId('activity-event-12');
-
-    // The line under the filters is the request the feed actually made.
-    const api = screen.getByTestId('activity-api');
-    const path = '/api/v1/events?family=jeryu&needs_human=true&limit=100';
-    expect(within(api).getByRole('link', { name: 'API' })).toHaveAttribute('href', path);
-    expect(within(api).getByText(path)).toBeInTheDocument();
-    expect(calls.some((c) => `${c.pathname}${c.search}` === path)).toBe(true);
-    // What is copied is what is shown.
-    fireEvent.click(within(api).getByTestId('activity-api-copy'));
-    expect(writeText).toHaveBeenLastCalledWith(path);
 
     // The row's own JSON is in its detail, not on the quiet line.
     const gate = screen.getByTestId('activity-event-10');
@@ -480,14 +468,6 @@ describe('ActivityPage', () => {
     expect(JSON.parse(copied)).toEqual(EVENTS.find((event) => event.seq === 10));
     expect(await within(gate).findByText('Copied')).toBeInTheDocument();
 
-    // A chip is a different view, so it is a different query, and the line follows it.
-    fireEvent.click(screen.getByRole('button', { name: 'Gates' }));
-    await waitFor(() =>
-      expect(within(screen.getByTestId('activity-api')).getByRole('link', { name: 'API' })).toHaveAttribute(
-        'href',
-        '/api/v1/events?family=jeryu&kind=gate.&limit=100'
-      )
-    );
   });
 
   it('refuses a Kind the server would 422, inline, without touching the feed', async () => {
@@ -522,109 +502,15 @@ describe('ActivityPage', () => {
     );
   });
 
-  it('puts the family pills at the far left of the chip row, and a pill is the scope', async () => {
-    const calls = mockPipelineApi((req) =>
-      req.pathname === '/api/v1/shift/families'
-        ? json({
-            families: [
-              { name: 'jeryu', queue_repo: 'jeryu/jeryu-todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
-              { name: 'globex', queue_repo: 'globex/todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
-            ],
-          })
-        : undefined
-    );
-    renderPage('/activity?family=jeryu');
-    await screen.findByTestId('activity-event-12');
-
-    const strip = await screen.findByRole('group', { name: 'Filter by family' });
-    const slot = strip.parentElement as HTMLElement;
-    const row = slot.parentElement as HTMLElement;
-    const show = within(row).getByRole('group', { name: 'Show' });
-    // Far left: the pills' slot is the row's first child, the chips follow.
-    expect(slot).toHaveClass('activity__family-slot');
-    expect(row.firstElementChild).toBe(slot);
-    expect(strip.compareDocumentPosition(show) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Names only: Activity has no per-family event count to put on a pill.
-    expect(within(strip).getByRole('button', { name: 'globex' }).textContent).toBe('globex');
-
-    fireEvent.click(within(strip).getByRole('button', { name: 'globex' }));
-    await waitFor(() =>
-      expect(calls.some((c) => c.pathname === '/api/v1/events' && c.search.includes('family=globex'))).toBe(true)
-    );
-    expect(within(strip).getByRole('button', { name: 'globex' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-  });
-
-  it('offers a pill for a family only the feed has named', async () => {
-    // The pushes arrive before the family lists catch up with a new family:
-    // the rows on the page can always be narrowed to the family they name.
-    mockPipelineApi((req) =>
-      req.pathname === '/api/v1/events'
-        ? json({
-            events: [
-              pipelineEvent({ seq: 12, kind: 'todo.claimed', family: 'jailgun', summary: 'Claimed' }),
-            ],
-            latest_seq: 12,
-          })
-        : req.pathname === '/api/v1/shift/families'
-          ? json({
-              families: [
-                { name: 'acme-split', queue_repo: 'acme/acme-todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
-              ],
-            })
-          : undefined
-    );
-    renderPage();
-    const strip = await screen.findByRole('group', { name: 'Filter by family' });
-    expect(
-      within(strip)
-        .getAllByRole('button')
-        .map((button) => button.textContent)
-    ).toEqual(['All', 'acme', 'jailgun']);
-  });
-
-  it('holds the family pills’ place and keeps a chip’s note off the control line', async () => {
-    let answerFamilies = (): void => {};
-    const families = new Promise<void>((resolve) => {
-      answerFamilies = () => resolve();
-    });
-    mockPipelineApi((req) =>
-      req.pathname === '/api/v1/shift/families'
-        ? families.then(() =>
-            json({
-              families: [
-                { name: 'jeryu', queue_repo: 'jeryu/jeryu-todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
-                { name: 'globex', queue_repo: 'globex/todo', repos: [], shift_tz: 'UTC', landing: 'shifts' },
-              ],
-            })
-          )
-        : undefined
-    );
+  it('keeps a chip’s note off the control line', async () => {
+    mockPipelineApi();
     renderPage();
     await screen.findByTestId('activity-event-12');
-
-    // Before the family list answers there are no pills, but their slot is
-    // already there, so the chips beside it are not moved when it fills.
     const filters = screen.getByRole('region', { name: 'Activity filters' });
     const row = filters.querySelector<HTMLElement>('.activity__chip-row');
-    const slot = row?.firstElementChild;
-    if (!(row instanceof HTMLElement) || !(slot instanceof HTMLElement)) throw new Error('no family slot');
-    expect(slot).toHaveClass('activity__family-slot');
-    expect(within(slot).queryByRole('group', { name: 'Filter by family' })).toBeNull();
-    expect(screen.getByRole('group', { name: 'Show' }).previousElementSibling).toBe(slot);
-
-    await act(async () => {
-      answerFamilies();
-      await families;
-    });
-    const strip = await screen.findByRole('group', { name: 'Filter by family' });
-    // The names landed in the slot that was waiting for them: same element,
-    // same place in the row.
-    expect(strip.parentElement).toBe(slot);
-    expect(row.firstElementChild).toBe(slot);
-
+    if (!(row instanceof HTMLElement)) throw new Error('no chip row');
+    // The chips lead the row: there is no family slot in front of them.
+    expect(row.firstElementChild).toBe(screen.getByRole('group', { name: 'Show' }));
     // A chip's note is the next line under the controls, not a block beside
     // them that pushes More filters onto a line of its own.
     fireEvent.click(screen.getByRole('button', { name: 'Needed a human' }));
@@ -786,25 +672,6 @@ describe('ActivityPage', () => {
     }
   });
 
-  it("keys the row edges with the rows' own classes, and not on the wall", async () => {
-    mockPipelineApi();
-    renderPage();
-    const legend = await screen.findByTestId('activity-legend');
-    expect(
-      within(legend)
-        .getAllByRole('listitem')
-        .map((key) => key.textContent)
-    ).toEqual(['needs you', 'an agent will pick it up', 'ok']);
-    // Each marker is an activity-row with its tone, so the colour and the
-    // dashes come from the same rules that draw the list.
-    const marker = (tone: string): Element | null =>
-      legend.querySelector(`.activity__marker.activity-row.activity-row--${tone}`);
-    for (const tone of ['human', 'failed', 'ok']) expect(marker(tone)).not.toBeNull();
-    // The paragraph above it is one line now, not the colour explanation.
-    const subtitle = screen.getByText('Every step the pipeline takes, as it happens.');
-    expect(subtitle).toHaveClass('page__subtitle');
-  });
-
   it('leaves the legend off the wall, which has no subtitle either', async () => {
     mockPipelineApi();
     renderPage('/activity?wall=1');
@@ -812,26 +679,14 @@ describe('ActivityPage', () => {
     expect(screen.queryByTestId('activity-legend')).toBeNull();
   });
 
-  it('wall mode swaps the filters for 24-hour counters', async () => {
-    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-19T14:00:00Z') });
-    try {
-      mockPipelineApi();
-      renderPage('/activity?wall=1');
-      const counters = await screen.findByRole('region', { name: 'Last 24 hours' });
-      await screen.findByTestId('activity-event-12');
-      // The numbers travel to their value, so wait for where they land.
-      await waitFor(() =>
-        expect(within(counters).getByText('Todos finished').previousSibling).toHaveTextContent('1')
-      );
-      await waitFor(() =>
-        expect(within(counters).getByText('Spent').previousSibling).toHaveTextContent('$0.54')
-      );
-      expect(screen.queryByRole('region', { name: 'Activity filters' })).toBeNull();
-      expect(screen.getByRole('link', { name: 'Leave wall mode' })).toBeInTheDocument();
-      expect(screen.getByTestId('activity-page')).toHaveClass('activity--wall');
-    } finally {
-      vi.useRealTimers();
-    }
+  it('wall mode swaps the filters for the band, with no 24-hour tiles', async () => {
+    mockPipelineApi();
+    renderPage('/activity?wall=1');
+    await screen.findByTestId('activity-event-12');
+    expect(screen.queryByRole('region', { name: 'Last 24 hours' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Activity filters' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Leave wall mode' })).toBeInTheDocument();
+    expect(screen.getByTestId('activity-page')).toHaveClass('activity--wall');
   });
 
   it('shows empty and "not available" states', async () => {

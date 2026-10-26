@@ -213,33 +213,6 @@
   background-color: var(--color-bg-1);
 }
 
-/* The legend under the subtitle. Each marker is an `.activity-row` so its
-   edge comes from the rules below — the key is drawn by the same CSS as the
-   rows it describes — with the row's box stripped back to that edge. */
-.activity__legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  margin: var(--space-1) 0 0;
-  padding: 0;
-  list-style: none;
-  color: var(--color-fg-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.activity__key {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.activity__marker.activity-row {
-  width: 0;
-  height: 0.9em;
-  padding: 0;
-  border-bottom: 0;
-}
-
 .activity-row {
   border-bottom: 1px solid var(--color-border-subtle);
   border-left: 3px solid transparent;
@@ -377,7 +350,6 @@
   background-color: var(--color-accent-info);
   opacity: 0.6;
 }
-
 
 /* It gives way to the parts around it rather than pushing them: `min-width`
    lets the shrink reach past the words' own width, and `overflow-wrap` lets a
@@ -554,83 +526,6 @@
   font-size: var(--font-size-md);
 }
 
-.activity__counters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-3);
-  position: sticky;
-  top: 0;
-  z-index: var(--z-base);
-  padding-bottom: var(--space-2);
-  background-color: var(--color-bg-0);
-}
-
-.activity__counter {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--color-bg-1);
-  border: 1px solid var(--color-border-subtle);
-}
-
-.activity__counter-value {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-accent-primary);
-  line-height: var(--line-height-tight);
-}
-
-.activity__counter--human .activity__counter-value {
-  color: var(--color-accent-danger);
-}
-
-.activity__counter-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.activity__counter-note {
-  grid-column: 1 / -1;
-}
-
-/* On the normal page the strip is a quiet row under the volume band: the same
-   five numbers, sized to be read in passing rather than from across a room. */
-.activity__counters--compact {
-  position: static;
-  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-  gap: var(--space-2);
-}
-
-.activity__counters--compact .activity__counter {
-  padding: var(--space-2) var(--space-3);
-}
-
-.activity__counters--compact .activity__counter-value {
-  font-size: var(--font-size-xl);
-}
-
-/* The number moves; so does the tile it sits in, once, when it changes. */
-.activity__counter-value {
-  transition: color var(--duration-fast) var(--ease-standard);
-  font-variant-numeric: tabular-nums;
-}
-
-.activity__counter--link {
-  text-decoration: none;
-  color: inherit;
-}
-
-.activity__counter--link:hover {
-  border-color: var(--color-accent-danger);
-}
-
-.activity__counters--still .activity__counter-value {
-  transition: none;
-}
-
 /* Per-PR panel in the review pane ------------------------------------ */
 
 .pull-events {
@@ -674,13 +569,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-}
-
-/* The family pills' place, held from the first paint: their names arrive with
-   the family list, and the chips to their right are drawn where they stay. */
-.activity__family-slot {
-  flex: 0 0 var(--activity-family-slot, 12rem);
-  min-height: 1.5rem;
 }
 
 .activity__chip-row .family-strip {
@@ -801,17 +689,6 @@
   margin: var(--space-2) 0 0;
 }
 
-/* Under the filters: the request this list is one page of. The query can be
-   long, so it scrolls inside its own box instead of widening the page. */
-.activity__api {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-2) 0 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-fg-muted);
-}
-
 .activity__api-link {
   color: var(--color-accent-primary);
   text-decoration: none;
@@ -890,7 +767,6 @@
   font-family: var(--font-mono);
   user-select: all;
 }
-
 
 /* ---- The volume band above the feed ------------------------------------ */
 
@@ -1105,148 +981,6 @@
 
   .activity-volume__seg {
     transition: none;
-  }
-}
-
-/* ---- What the pipeline is spending, under the chart -------------------- */
-
-.activity-usage {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border-subtle);
-  background-color: var(--color-bg-1);
-}
-
-.activity-usage__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.activity-usage__title {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-fg-secondary);
-}
-
-.activity-usage__count {
-  color: var(--color-fg-muted);
-  font-weight: var(--font-weight-normal);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.activity-usage__spark {
-  width: 240px;
-  height: 28px;
-}
-
-.activity-usage__spark-line {
-  fill: none;
-  stroke: var(--color-accent-primary);
-  stroke-width: 1.5;
-  stroke-linejoin: round;
-}
-
-.activity-usage__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-sm);
-}
-
-.activity-usage__table th,
-.activity-usage__table td {
-  padding: var(--space-1) var(--space-2);
-  text-align: left;
-  border-bottom: 1px solid var(--color-border-subtle);
-  white-space: nowrap;
-}
-
-.activity-usage__table thead th {
-  font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-fg-muted);
-  font-weight: var(--font-weight-normal);
-}
-
-.activity-usage__num {
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.activity-usage__family {
-  color: var(--color-fg-muted);
-  font-weight: var(--font-weight-normal);
-}
-
-.activity-usage__silent,
-.activity-usage__quiet {
-  color: var(--color-fg-muted);
-}
-
-.activity-usage__quiet {
-  margin: 0;
-  font-size: var(--font-size-sm);
-}
-
-/* A step of the digits: the span is remounted, so the fade plays again. */
-.activity-usage__digits {
-  display: inline-block;
-  animation: activity-usage-tick 420ms ease-out both;
-}
-
-@keyframes activity-usage-tick {
-  from {
-    opacity: 0.45;
-    transform: translateY(-2px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.activity-usage__totals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin: 0;
-}
-
-.activity-usage__total {
-  display: flex;
-  flex-direction: column;
-}
-
-.activity-usage__total dt {
-  font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-fg-muted);
-}
-
-.activity-usage__total dd {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Values just update: no tween, no fade. */
-.activity-usage--still .activity-usage__digits {
-  animation: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .activity-usage__digits {
-    animation: none;
   }
 }
 
@@ -1497,18 +1231,6 @@
 .activity--wall .activity-volume__title,
 .activity--wall .activity-usage__title {
   font-size: var(--font-size-xl);
-}
-
-.activity--wall .activity-usage__table {
-  font-size: var(--font-size-lg);
-}
-
-.activity--wall .activity-usage__totals dt {
-  font-size: var(--font-size-sm);
-}
-
-.activity--wall .activity-usage__totals dd {
-  font-size: var(--font-size-2xl);
 }
 
 /* The clock sits where the subtitle is on the desk page: the hour and the

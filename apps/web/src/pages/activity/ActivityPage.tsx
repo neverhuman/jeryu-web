@@ -35,16 +35,11 @@ import {
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ActionButton } from '../../components/action/ActionButton';
-import { CopyButton } from '../../components/clipboard/CopyButton';
-import { FamilyStrip } from '../../components/family/FamilyPills';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { usePageTakesScreen } from '../../layout/fullScreen';
-import { useFamilyNames } from '../../components/family/useFamilyNames';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { PipelineQueryState } from '../../components/state';
-import { toneClass, type Tone } from '../../components/tone/tone';
-import type { PipelineEvent, PipelineEventsQuery } from '../../api/types';
 import { formatBadgeCount } from '../../format/number';
 import { activityTailKey, useActivityFeed, type ActivityTailState } from '../../hooks/useActivityFeed';
 import { isPipelineEventPush, useEventsHistogram, usePipelineNudge } from '../../hooks/usePipeline';
@@ -55,7 +50,6 @@ import {
   MORE_FILTER_KEYS,
   activeChip,
   applyChip,
-  eventsApiPath,
   filterFieldError,
   filtersToQuery,
   foldBursts,
@@ -103,11 +97,8 @@ import { useWallIdle, wallClockText, wallDateText } from './wallModel';
 import { BurstRow } from './BurstRow';
 import { StageRunRow } from './StageRunRow';
 import { ActivityHistogram } from './ActivityHistogram';
-import { FlowLineStrip } from '../../components/flow/LineStrip';
 import { ActivitySkeleton } from './ActivitySkeleton';
-import { SummaryStrip } from './SummaryStrip';
 import { EventRow } from './EventRow';
-import { UsagePanel } from './UsagePanel';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { useTickingNow } from '../../hooks/useTickingNow';
@@ -165,16 +156,6 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
   );
   const query = useMemo(() => filtersToQuery(filters), [filters]);
   const feed = useActivityFeed(query);
-  // The line strip above the band is scoped the way the feed is, except that a
-  // repository moves on its family's line: `/api/v1/flow` scopes by family, so
-  // a pinned repository waits for its named family before showing a line.
-  // Missing repository metadata must never broaden this to every family.
-  const stripRepos = useRepositories({}, { enabled: pinned });
-  const stripFamily = pinned
-    ? ((stripRepos.data?.repositories ?? []).find(
-        (summary) => `${summary.id.owner}/${summary.id.name}` === repo
-      )?.family ?? '')
-    : filters.family;
   // Only a frame that can become a row is worth a tail fetch: a release board
   // snapshot or a usage report shares the scope but never reaches this list.
   usePipelineNudge(feed.base.isSuccess, activityTailKey(query), {
@@ -387,14 +368,12 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
       {pinned ? (
         <header className="page__header">
           <h2 className="page__title">Activity</h2>
-          {wall ? null : <RowLegend />}
         </header>
       ) : (
         <PageHeader
           title="Activity"
           testId="activity-header"
           freshness={queryFreshness(feed.base)}
-          subtitle={wall ? undefined : 'Every step the pipeline takes, as it happens.'}
           actions={
             <Link
               className="activity__wall-toggle"
@@ -408,43 +387,25 @@ export function ActivityPage({ repo }: ActivityPageProps = {}): JSX.Element {
           }
         >
           {wall ? <WallClock /> : null}
-          {wall ? null : <RowLegend />}
         </PageHeader>
       )}
-
-      {/* Where the work is on the line, above when it happened: the same strip
-          the Flow page heads its Live mode with, scoped to this page's family
-          (a repository's station counts are its family's line — the flow API
-          scopes by family). A reader who may not read `/api/v1/flow` is shown
-          no strip at all, and the wall has no room for one. */}
-      {wall || (pinned && !stripFamily) ? null : <FlowLineStrip family={stripFamily} />}
 
       {/* The band is a filter on the feed, so it sits above the chips it sets.
           On the wall it has no chips to set and goes under the counters, at the
           width of the screen. */}
       {wall ? null : <ActivityHistogram family={filters.family} repo={repo} />}
 
-      {/* What the pipeline is spending, under the chart: live per working
-          slot, with today's totals. */}
-      {wall ? null : <UsagePanel family={filters.family} />}
-
       {wall ? (
         <>
           <ScopedWallNote />
-          <SummaryStrip family={filters.family} repo={repo} events={all} wall />
-          {/* The five numbers say how much; the band says when it happened, and
-              the panel what it cost. Both leave themselves out on a server that
-              does not answer their path. */}
+          {/* The band says how much happened, and when; it leaves itself out
+              on a server that does not answer its path. */}
           <ActivityHistogram family={filters.family} repo={repo} />
-          <UsagePanel family={filters.family} />
         </>
       ) : (
         <>
-          <SummaryStrip family={filters.family} repo={repo} events={all} />
           <Filters
             filters={filters}
-            query={query}
-            events={all}
             repo={repo}
             moreRef={moreFilters}
             range={parseRange(params)}
@@ -708,32 +669,8 @@ function WallClock(): JSX.Element {
   );
 }
 
-/** What the edge of a row means, drawn by the rows' own CSS so the key cannot
- *  drift from what is on the list: each marker is an `activity-row` carrying
- *  the tone modifier, trimmed to the coloured edge alone. */
-const ROW_KEYS: readonly { tone: Tone; label: string }[] = [
-  { tone: 'human', label: 'needs you' },
-  { tone: 'failed', label: 'an agent will pick it up' },
-  { tone: 'ok', label: 'ok' },
-];
-
-function RowLegend(): JSX.Element {
-  return (
-    <ul className="activity__legend" aria-label="What a row's edge means" data-testid="activity-legend">
-      {ROW_KEYS.map((key) => (
-        <li className="activity__key" key={key.tone}>
-          <span className={`${toneClass('activity-row', key.tone)} activity__marker`} aria-hidden="true" />
-          {key.label}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function Filters({
   filters,
-  query,
-  events,
   repo,
   moreRef,
   range,
@@ -744,10 +681,6 @@ function Filters({
   onWorkerSteps,
 }: {
   filters: ActivityFilters;
-  /** The filters as the server reads them: what the API line says. */
-  query: PipelineEventsQuery;
-  /** The rows the feed has, so a family only they name still gets a pill. */
-  events: readonly PipelineEvent[];
   /** `owner/name` when the repository shell's Activity tab pins the feed. */
   repo?: string;
   /** The page's handle on More filters: `/` opens it and takes the caret to
@@ -787,20 +720,6 @@ function Filters({
     repo: repoNames,
     source: KNOWN_SOURCES,
   };
-  // One pill per family, from the list the header select and Repositories
-  // offer: `acme` and `acme-split` are one family, and the scope is what a
-  // pill sets. A family only this feed has named — a live event from one the
-  // lists have not caught up with — gets a pill too, so what is on the page
-  // can always be narrowed to.
-  const eventFamilies = useMemo(() => events.map((event) => event.family), [events]);
-  const families = useFamilyNames(eventFamilies);
-  const names = families.names;
-  // The pills only exist for a page that can narrow to one family, which the
-  // family list answers a second after the first paint. Hold the strip's place
-  // from the first frame so the chips beside it are drawn once, where they
-  // stay: the slot is kept while the answer is on its way, and after it only
-  // while there are pills to put in it.
-  const familySlot = !pinnedRepo && (families.isPending || names.length > 1 || Boolean(filters.family));
   const current = activeChip(filters);
   const needsYou = useNeedsYou(filters.family);
   const still = usePrefersReducedMotion();
@@ -815,26 +734,13 @@ function Filters({
       ? null
       : chipCounts(histogramBuckets(histogram.data));
   const rangeLabel = HISTOGRAM_RANGES.find((candidate) => candidate.id === range)?.label ?? range;
-  const apiPath = eventsApiPath(query);
   return (
     <section className="activity__filters" aria-label="Activity filters">
       <div className="activity__chip-row">
-        {familySlot ? (
-          // Far left of the chips, as on Blocked and In flight: the page
-          // shows everything and a pill narrows it to one family.
-          <div className="activity__family-slot">
-            {names.length > 1 || filters.family ? (
-              <FamilyStrip
-                counts={names.map((name) => ({ family: name }))}
-                family={filters.family}
-                onPick={(name) => onChange('family', name)}
-              />
-            ) : null}
-          </div>
-        ) : null}
         <div className={`activity__chips${still ? ' activity__chips--still' : ''}`} role="group" aria-label="Show">
           {ACTIVITY_CHIPS.map((chip) => {
-            const count = counts?.[chip.id] ?? null;
+            // All's count is the band's own total, said once above it.
+            const count = chip.id === 'all' ? null : counts?.[chip.id] ?? null;
             return (
               <button
                 key={chip.id}
@@ -920,26 +826,6 @@ function Filters({
           ))}
         </div>
       </details>
-      {/* The same request the list above is one page of: the screen and the API
-          are one thing, and a reader can follow the link to the response or
-          paste the query into a script. */}
-      <p className="activity__api" data-testid="activity-api">
-        <a
-          className="activity__api-link"
-          href={apiPath}
-          target="_blank"
-          rel="noreferrer"
-          title="Open this view as the API answers it"
-        >
-          API
-        </a>
-        <code className="activity__api-path">{apiPath}</code>
-        <CopyButton
-          text={apiPath}
-          label="the API query for this view"
-          testId="activity-api-copy"
-        />
-      </p>
     </section>
   );
 }

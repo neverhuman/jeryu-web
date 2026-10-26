@@ -177,7 +177,7 @@ describe('Activity wall mode', () => {
     vi.restoreAllMocks();
   });
 
-  it('carries the clock, the band and the token panel under the counters', async () => {
+  it('carries the clock and the band above the feed', async () => {
     mockPipelineApi();
     renderPage();
     await screen.findByTestId('activity-event-12');
@@ -189,14 +189,12 @@ describe('Activity wall mode', () => {
     expect(screen.queryByTestId('activity-legend')).not.toBeInTheDocument();
 
     const page = screen.getByTestId('activity-page');
-    const band = screen.getByTestId('activity-volume');
-    const usage = await screen.findByTestId('activity-usage');
-    const counters = screen.getByTestId('activity-counters');
-    // Counters first, then the band, then what it cost, then the feed.
+    const band = await screen.findByTestId('activity-volume');
+    // No 24-hour tiles and no token panel: the band, then the feed.
+    expect(screen.queryByTestId('activity-counters')).toBeNull();
+    expect(screen.queryByTestId('activity-usage')).toBeNull();
     const order = [...page.querySelectorAll('*')];
-    expect(order.indexOf(counters)).toBeLessThan(order.indexOf(band));
-    expect(order.indexOf(band)).toBeLessThan(order.indexOf(usage));
-    expect(order.indexOf(usage)).toBeLessThan(order.indexOf(screen.getByTestId('activity-event-12')));
+    expect(order.indexOf(band)).toBeLessThan(order.indexOf(screen.getByTestId('activity-event-12')));
   });
 
   it('leaves the band and the panel out on a server without their paths', async () => {
