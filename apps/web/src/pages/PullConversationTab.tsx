@@ -12,6 +12,7 @@
 
 import { useCallback, type ReactNode } from 'react';
 
+import { MarkdownSource } from '../components/browser';
 import { MergeBox, ReviewHeads, ReviewList, ThreadList } from '../components/merge';
 import type { MergeBoxProps } from '../components/merge/MergeBox';
 import { ErrorState, LoadingState } from '../components/state';
@@ -64,7 +65,9 @@ export function PullConversationTab({
           aria-label="Description"
           data-testid="pr-description"
         >
-          <p>{description}</p>
+          {/* Written in Markdown, as every forge reads it: headings, lists and
+              code fences, not one paragraph of literal backticks. */}
+          <MarkdownSource markdown={description} />
         </section>
       ) : null}
 

@@ -27,7 +27,6 @@ import { EmptyState, LoadingState } from '../../components/state';
 import { useAuth } from '../../hooks/useAuth';
 import { useForgeHost } from '../../hooks/useForgeHost';
 import { useShiftFamilies, useShiftTodos } from '../../hooks/useShift';
-import { NeedsYouAbout } from '../needsYou';
 import { ShiftError } from './shiftCommon';
 import {
   attemptSummary,
@@ -214,7 +213,6 @@ function TodoView({
         subject={todo.id}
         hrefs={prHref ? { pr: prHref } : {}}
       />
-      <NeedsYouAbout subject={{ todoId: todo.id }} />
       {todo.acceptance ? <TodoCriteria acceptance={todo.acceptance} /> : null}
       {'hypothesis' in todo ? (
         <TodoOutcome
@@ -229,10 +227,13 @@ function TodoView({
           another person. A server that predates assignees sends no `assignee`
           key at all (a newer one sends null), so offer nothing it would refuse. */}
       {viewer && 'assignee' in todo ? <TodoAssignee todo={todo} viewer={viewer} /> : null}
+      {/* A block, not a paragraph: the actions hold a disclosure, and a
+          <details> inside a <p> is invalid HTML that React warns about. Its
+          release is the page's one; no Needs-you row repeats it. */}
       {isAdmin ? (
-        <p className="shift__actions">
+        <div className="shift__actions">
           <TodoActions todo={todo} />
-        </p>
+        </div>
       ) : null}
 
       <dl className="shift-todo-page__facts" aria-label="Facts">

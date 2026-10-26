@@ -91,6 +91,21 @@ export function TodoTrace({ todo, refs }: { todo: ShiftTodo; refs: RepoRefs }): 
   );
 }
 
+/**
+ * The body, without a first line that only repeats the title: todoq files the
+ * title as the body's first line, and the title is already the heading or the
+ * row it opens from.
+ */
+export function bodyWithoutTitle(todo: Pick<ShiftTodo, 'title' | 'body'>): string {
+  const body = todo.body ?? '';
+  const [first, ...rest] = body.split('\n');
+  const same = (a: string): string => a.trim().replace(/[.\s]+$/, '').toLowerCase();
+  if (first !== undefined && same(first) !== '' && same(first) === same(todo.title)) {
+    return rest.join('\n').replace(/^\s*\n/, '');
+  }
+  return body;
+}
+
 export function TodoDetail({
   todo,
   relatedTodos = [],
@@ -106,7 +121,7 @@ export function TodoDetail({
   const worker = latestWorker(todo);
   return (
     <div data-testid={`shift-todo-detail-${todo.id}`}>
-      <pre>{todo.body || '(no body)'}</pre>
+      <pre>{bodyWithoutTitle(todo) || '(no body)'}</pre>
       {todo.reworks?.length ? <p>Rework of {todo.reworks.map((id, i) => <Fragment key={id}>{i ? ', ' : ''}<Link to={todoHref(id)}>{id}</Link></Fragment>)}</p> : null}
       {relatedTodos.some((candidate) => reworkedBy(candidate, todo)) ? <p>Reworked by {relatedTodos.filter((candidate) => reworkedBy(candidate, todo)).map((candidate, i) => <Fragment key={`${candidate.family}/${candidate.id}`}>{i ? ', ' : ''}<Link to={todoHref(candidate.id, candidate.family)}>{candidate.id}</Link></Fragment>)}</p> : null}
       {showNote && todo.note ? <p><strong>Note:</strong> {todo.note}</p> : null}

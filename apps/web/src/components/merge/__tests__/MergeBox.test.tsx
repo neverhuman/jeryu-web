@@ -80,14 +80,19 @@ describe('MergeBox', () => {
     );
     expect(blockedStatements()).toHaveLength(1);
 
+    // Each blocker is said once: the approvals the gate line under Merge
+    // names leave the checklist, which keeps the rest.
     const checklist = screen.getByTestId('pr-merge-checklist');
-    expect(within(checklist).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(checklist).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.queryByTestId('pr-merge-row-approvals')).toBeNull();
     expect(
-      within(screen.getByTestId('pr-merge-row-approvals')).getByRole('link')
-    ).toHaveAttribute('href', HREFS.commits);
+      screen.getByTestId('pr-merge-gate').querySelector('[data-testid="pr-merge-reason-passport_blocked_approvals"]')
+    ).not.toBeNull();
     expect(
       within(screen.getByTestId('pr-merge-row-checks')).getByRole('link')
     ).toHaveAttribute('href', HREFS.checks);
+    // The approval count is not a line of its own beside them.
+    expect(screen.queryByText(/^0 of 1 approvals?$/)).toBeNull();
   });
 
   it('carries the full head SHA into onApprove', async () => {

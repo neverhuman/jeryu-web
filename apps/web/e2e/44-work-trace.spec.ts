@@ -72,10 +72,9 @@ test.describe('the work trace', () => {
       'pending'
     );
 
-    // The Needs-you row about this todo is here, with its next step, not only on /needs-you.
-    const here = page.getByTestId('needs-you-about');
-    await expect(here).toContainText('Cut the core tag');
-    await expect(here).toContainText('Cut the tag in jeryu-core');
+    // What waits on a person is the page's own actions and its stuck note:
+    // no Needs-you row repeats the title and the release beside them.
+    await expect(page.getByTestId('needs-you-about')).toHaveCount(0);
   });
 
   test('a PR page says which todos it carries, and where the change stands @action:pr.carries_todos', async ({

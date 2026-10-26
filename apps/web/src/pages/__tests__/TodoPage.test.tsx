@@ -311,6 +311,44 @@ describe('TodoPage', () => {
     expect(within(trail).getAllByRole('link')).toHaveLength(2);
   });
 
+  it('says the title once, offers Release once, and nests no disclosure in a paragraph', async () => {
+    role = 'admin';
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    serveTodos([
+      todo({
+        id: '20260919-1400-once',
+        title: 'Cut the core tag',
+        body: 'Cut the core tag.\n\nWhy: the release waits on it.',
+        status: 'blocked',
+        note: 'tag split.7 does not exist',
+      }),
+    ]);
+    renderTodo('/work/20260919-1400-once');
+    expect(await screen.findByRole('heading', { name: 'Cut the core tag' })).toBeInTheDocument();
+    // The body's first line only repeated the title; the rest is shown.
+    expect(screen.getAllByText(/Cut the core tag/)).toHaveLength(1);
+    expect(screen.getByText(/Why: the release waits on it\./)).toBeInTheDocument();
+    // The page's own Release is the one release; no Needs-you row repeats it.
+    expect(screen.getAllByRole('button', { name: /^Release/ })).toHaveLength(1);
+    expect(screen.queryByTestId('needs-you-about')).toBeNull();
+    // The actions sit in a block: a <details> inside a <p> made React warn.
+    const actions = screen.getByRole('button', { name: 'Release 20260919-1400-once' }).closest('.shift__actions');
+    expect(actions?.parentElement?.tagName).not.toBe('P');
+    expect(actions?.closest('p')).toBeNull();
+    expect(errors.mock.calls.some((call) => String(call[0]).includes('validateDOMNesting') || String(call[0]).includes('cannot be a descendant'))).toBe(false);
+  });
+
+  it('shows no empty hypothesis section, and offers to add one to whoever may', async () => {
+    role = 'admin';
+    serveTodos([todo({ id: '20260919-1401-hyp', hypothesis: '', check_after: null, outcome: 'not_checked', outcome_note: '' })]);
+    renderTodo('/work/20260919-1401-hyp');
+    expect(await screen.findByTestId('todo-outcome-add')).toBeInTheDocument();
+    expect(screen.queryByText('No hypothesis recorded')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Hypothesis and outcome' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a hypothesis' }));
+    expect(screen.getByLabelText('Hypothesis')).toBeInTheDocument();
+  });
+
   it("leads an owner's own task with Mark done, and never offers to release it", async () => {
     role = 'admin';
     serveTodos([

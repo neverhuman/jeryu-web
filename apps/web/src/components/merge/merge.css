@@ -33,11 +33,10 @@
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   font-size: var(--font-size-sm);
-  white-space: pre-wrap;
 }
 
-.pr-conversation__description p {
-  margin: 0;
+.pr-conversation__description .markdown-body > *:last-child {
+  margin-bottom: 0;
 }
 
 /* ─── Files tab: a resizable tree beside the diff ─────────────────── */

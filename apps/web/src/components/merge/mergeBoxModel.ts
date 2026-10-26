@@ -220,13 +220,46 @@ function gateRows(detail: PullRequestDetail): ChecklistRow[] {
     });
 }
 
-/** The Passport gates the four standing rows already say. */
-const COVERED_GATES = new Set([
-  'passport_blocked_approvals',
-  'passport_blocked_checks',
-  'passport_blocked_threads',
-  'passport_blocked_draft',
+/**
+ * The Passport gates the four standing rows already say, and the row that
+ * says each. Changes requested is the approvals row's ("1 asking for
+ * changes"), so it is not a fifth row of its own.
+ */
+const ROW_FOR_GATE: ReadonlyMap<string, string> = new Map([
+  ['passport_blocked_approvals', 'approvals'],
+  ['passport_blocked_changes_requested', 'approvals'],
+  ['passport_blocked_checks', 'checks'],
+  ['passport_blocked_threads', 'threads'],
+  ['passport_blocked_draft', 'draft'],
 ]);
+const COVERED_GATES = new Set(ROW_FOR_GATE.keys());
+
+/** The checklist row a merge-gate line is about: a standing row, else its own. */
+export function rowForGate(code: string): string {
+  return ROW_FOR_GATE.get(code) ?? code;
+}
+
+/**
+ * Say each blocker once. The gate lines under the Merge button are the
+ * blockers with their exact step (the failing check's log, the reviewer who
+ * asked for changes), so a needed row they already state leaves the
+ * checklist, which keeps what is met and what the lines do not say. A needed
+ * row that carries its own control (Ready for review) stays, and the line
+ * that would repeat it goes instead.
+ */
+export function sayBlockersOnce<R extends { code: string }>(
+  rows: readonly ChecklistRow[],
+  reasons: readonly R[],
+  keepRow: (row: ChecklistRow) => boolean = () => false
+): { rows: ChecklistRow[]; reasons: R[] } {
+  const stated = new Set(reasons.map((reason) => rowForGate(reason.code)));
+  const kept = rows.filter((row) => row.state !== 'needed' || !stated.has(row.key) || keepRow(row));
+  const keptNeeded = new Set(kept.filter((row) => row.state === 'needed').map((row) => row.key));
+  return {
+    rows: kept,
+    reasons: reasons.filter((reason) => !keptNeeded.has(rowForGate(reason.code))),
+  };
+}
 
 /** The rows somebody still has to do something about. */
 export function mergeBlockers(rows: readonly ChecklistRow[]): ChecklistRow[] {

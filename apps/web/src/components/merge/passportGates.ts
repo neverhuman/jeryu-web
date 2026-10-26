@@ -60,6 +60,10 @@ const GATE_EXPLANATIONS: Record<
     title: 'Draft pull request',
     hint: 'A draft is not offered for merging yet. Marking it ready for review clears this gate; the author or an admin can do it.',
   },
+  passport_blocked_changes_requested: {
+    title: 'Changes requested',
+    hint: 'A reviewer asked for changes on this head: push a fix, or ask them to review again.',
+  },
   passport_blocked_secret_scan: {
     title: 'Secret scan finding',
     hint: 'A secret-scanning finding is open against this pull request.',
@@ -76,5 +80,14 @@ export function gateExplanation(
 ): { title: string; hint: string } {
   const known = GATE_EXPLANATIONS[blocker.code];
   if (known) return known;
-  return { title: blocker.code, hint: blocker.message };
+  return { title: gateTitle(blocker.code), hint: blocker.message };
+}
+
+/**
+ * A gate this client has no words for, as a title a reader can read:
+ * `passport_blocked_new_rule` becomes "New rule", never the raw code.
+ */
+export function gateTitle(code: string): string {
+  const words = code.replace(/^passport_blocked_/, '').replace(/[_.]+/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : 'Merge gate';
 }

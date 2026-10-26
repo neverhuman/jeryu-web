@@ -46,6 +46,7 @@ import { canChangeDraft } from '../../pages/pullDraftModel';
 import {
   mergeChecklist,
   mergeHeadline,
+  sayBlockersOnce,
   type ChecklistHrefs,
   type ChecklistRow,
 } from './mergeBoxModel';
@@ -289,6 +290,20 @@ export function MergeBox({
       viewerLogin ? { login: viewerLogin, role: viewerRole ?? 'user' } : null
     );
   const stateAction = pullStateAction(detail, viewer);
+  // Each blocker is said once: the headline counts them, the gate lines say
+  // them with their step, and the checklist keeps what is met (and the one
+  // needed row that holds its own control).
+  // The approvals row also counts the reviews asking for changes; when no
+  // gate line names that request, the row is the one place that says it.
+  const changesUnsaid =
+    review.changes_requested > 0 &&
+    !gateReasons.some((reason) => reason.code === 'passport_blocked_changes_requested');
+  const once = sayBlockersOnce(
+    rows,
+    gateReasons,
+    (row) =>
+      (row.key === 'draft' && Boolean(draftControl)) || (row.key === 'approvals' && changesUnsaid)
+  );
 
   const [requestChangesOpen, setRequestChangesOpen] = useState(false);
   const [requestChangesBody, setRequestChangesBody] = useState('');
@@ -424,7 +439,7 @@ export function MergeBox({
       </h2>
 
       <ul className="merge-box__checklist" data-testid="pr-merge-checklist">
-        {rows.map((row) => (
+        {once.rows.map((row) => (
           <ChecklistItem
             key={row.key}
             row={row}
@@ -447,14 +462,15 @@ export function MergeBox({
         ))}
       </ul>
 
-      <p className="merge-box__posture">
-        <span className="merge-box__approvals">{approvalsLabel(review)}</span>
-        {reviewState ? (
+      {/* The approval count is the checklist's or a gate line's to say;
+          here only the viewer's own review. */}
+      {reviewState ? (
+        <p className="merge-box__posture">
           <span className="merge-box__user-state">
-            {' '}· your review: <strong>{reviewState}</strong>
+            your review: <strong>{reviewState}</strong>
           </span>
-        ) : null}
-      </p>
+        </p>
+      ) : null}
       {attribution ? (
         <p className="merge-box__attribution" data-testid="pr-approval-attribution">
           {attribution}
@@ -507,9 +523,9 @@ export function MergeBox({
         ) : null}
       </div>
 
-      {gateReasons.length > 0 ? (
+      {once.reasons.length > 0 ? (
         <ol className="merge-box__gate" data-testid="pr-merge-gate">
-          {gateReasons.map((reason, index) => (
+          {once.reasons.map((reason, index) => (
             <GateReasonItem
               key={reason.code}
               reason={reason}

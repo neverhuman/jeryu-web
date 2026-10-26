@@ -97,9 +97,9 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     await request.click();
     await page.getByLabel('Requested changes').fill('Please add a regression test.');
     await page.getByRole('button', { name: 'Submit' }).click();
-    await expect(page.getByTestId('pr-merge-row-approvals')).toContainText(
-      '1 asking for changes'
-    );
+    // The request is said once: the gate line under Merge names it (the
+    // approvals row it would repeat leaves the checklist).
+    await expect(page.getByTestId('pr-merge-box')).toContainText(/1 asking for changes|Changes requested/);
     expect(reviews).toEqual([
       {
         verdict: 'request_changes',
@@ -234,8 +234,8 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
 
     // Success: the merge box reflects the new approval posture and NO recovery
     // banner appears (the banner only renders on a 409 drift).
-    await expect(page.locator('.merge-box__approvals')).toHaveText(
-      /1 of 1 approvals/,
+    await expect(page.getByTestId('pr-merge-row-approvals')).toContainText(
+      /1 of 1 approvals?/,
       { timeout: 10_000 }
     );
     await expect(page.locator('.pr-cockpit__recovery')).toHaveCount(0);
@@ -476,8 +476,8 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
     );
     // The refusal is not head drift, so no recovery banner, and no approval.
     await expect(page.locator('.pr-cockpit__recovery')).toHaveCount(0);
-    await expect(page.locator('.merge-box__approvals')).toHaveText(
-      /0 of 1 approvals/
-    );
+    // Still no approval: the approvals are still a blocker, said once.
+    await expect(page.getByTestId('pr-merge-headline')).toContainText(/^Blocked at/);
+    await expect(page.getByTestId('pr-merge-row-approvals')).toHaveCount(0);
   });
 });

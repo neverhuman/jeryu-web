@@ -42,6 +42,23 @@ export function TodoOutcome({
     setNote(todo.outcome_note ?? '');
     setEditing(true);
   };
+  // Nothing recorded: no empty section of "No hypothesis recorded", "No date
+  // recorded" and "not checked". Whoever may record one is offered that one
+  // act; anyone else sees nothing.
+  const recorded =
+    Boolean(todo.hypothesis) ||
+    (todo.check_after !== null && todo.check_after !== undefined && todo.check_after !== '') ||
+    (todo.outcome ?? 'not_checked') !== 'not_checked' ||
+    Boolean(todo.outcome_note);
+  if (!recorded && !editing) {
+    return canEdit ? (
+      <p className="shift__section todo-outcome" data-testid="todo-outcome-add">
+        <ActionButton onClick={edit}>Add a hypothesis</ActionButton>
+      </p>
+    ) : (
+      <></>
+    );
+  }
   return (
     <section className="shift__section todo-outcome" aria-label="Hypothesis and outcome">
       <h2>Hypothesis and outcome</h2>

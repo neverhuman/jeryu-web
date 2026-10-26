@@ -1,5 +1,6 @@
 // PullRequestWork.tsx — the Work section of the PR page: where this change
-// stands, which todos it carries, and what waits on a person here.
+// stands and which todos it carries. What waits on a person is the merge box's
+// to say, once, not a Needs-you row repeated under it.
 //
 // A shift PR is the review end of the queue: one commit per todo, each with a
 // `Todo:` trailer. The rail is the same twelve-stage work trace a todo's own
@@ -17,7 +18,6 @@ import { useRepoMergeQueue } from '../hooks/useMergeQueue';
 import { EMPTY_CHANNELS, useRepoChannels } from '../hooks/useRepoChannels';
 import { useFlow } from '../hooks/useFlow';
 import { useShiftTodos } from '../hooks/useShift';
-import { NeedsYouAbout } from './needsYou';
 import { carriedTodoIds, type PullCommit } from './pullCommitsModel';
 import { WorkTrace } from './shift/WorkTrace';
 import { todoHref } from './shift/workPaths';
@@ -109,10 +109,6 @@ export function PullRequestWork({
           })}
         </ul>
       )}
-      <NeedsYouAbout
-        subject={{ repo: repoFullName, pr: summary.number }}
-        testId="needs-you-about-pr"
-      />
     </section>
   );
 }

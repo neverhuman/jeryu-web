@@ -213,18 +213,11 @@ test('the merge box states the verdict once and lists what is waiting @action:pr
     /^Blocked at [0-9a-f]{7}: 2 things need doing$/
   );
 
-  // Exactly two rows are waiting on somebody, and each links to its tab.
-  const blockers = box.locator('[data-state="needed"]');
-  await expect(blockers).toHaveCount(2);
-  await expect(
-    page.getByTestId('pr-merge-row-approvals').getByRole('link')
-  ).toHaveAttribute('href', `${BASE}/commits`);
-  await expect(
-    page.getByTestId('pr-merge-row-checks').getByRole('link')
-  ).toHaveAttribute('href', `${BASE}/checks`);
-  await expect(page.getByTestId('pr-merge-row-checks')).toContainText(
-    '1 required check failing'
-  );
+  // Each of the two blockers is said once, by its line under Merge; the
+  // checklist keeps what is met and does not repeat them.
+  await expect(box.locator('[data-state="needed"]')).toHaveCount(0);
+  await expect(page.getByTestId('pr-merge-row-approvals')).toHaveCount(0);
+  await expect(page.getByTestId('pr-merge-row-checks')).toHaveCount(0);
 
   // BLOCKED was on the page four times; it is one sentence now.
   expect(await blockedStatements(page)).toEqual([
@@ -241,10 +234,12 @@ test('the merge box states the verdict once and lists what is waiting @action:pr
   await expect(page.getByRole('button', { name: 'Merge', exact: true })).toBeDisabled();
   await expect(page.getByTestId('pr-merge-gate').locator('li')).toHaveCount(2);
 
-  // The description and the pull request's threads are on the same page.
+  // The description and the pull request's threads are on the same page,
+  // and the description reads as the Markdown it is written in.
   await expect(page.getByTestId('pr-description')).toContainText(
     'answered 401 with an empty body'
   );
+  await expect(page.getByTestId('pr-description').locator('.markdown-body')).toHaveCount(1);
 });
 
 test('a thread shows its body and opens the file it is anchored to @action:pr.thread_body', async ({

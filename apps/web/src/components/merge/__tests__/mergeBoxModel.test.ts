@@ -11,7 +11,10 @@ import {
   mergeBlockers,
   mergeChecklist,
   mergeHeadline,
+  rowForGate,
+  sayBlockersOnce,
 } from '../mergeBoxModel';
+import { gateExplanation, gateTitle } from '../passportGates';
 import {
   pullChecks,
   pullDetail,
@@ -179,5 +182,52 @@ describe('failingRequiredChecks', () => {
     expect(failingRequiredChecks(pullChecks({ requiredFailing: true }))).toBe(1);
     expect(failingRequiredChecks(pullChecks())).toBe(0);
     expect(failingRequiredChecks(null)).toBe(0);
+  });
+});
+
+describe('saying each blocker once', () => {
+  const row = (key: string, state: 'done' | 'needed' | 'unknown') => ({
+    key,
+    label: key,
+    hint: '',
+    state,
+    href: null,
+  });
+
+  it('lets the gate line say a blocker, and keeps what is met', () => {
+    const rows = [row('approvals', 'needed'), row('checks', 'needed'), row('threads', 'done')];
+    const reasons = [
+      { code: 'passport_blocked_checks' },
+      { code: 'passport_blocked_changes_requested' },
+    ];
+    const once = sayBlockersOnce(rows, reasons);
+    // Checks and the approvals row (changes requested is its to say) are the
+    // gate lines'; the met row stays.
+    expect(once.rows.map((r) => r.key)).toEqual(['threads']);
+    expect(once.reasons).toEqual(reasons);
+  });
+
+  it('keeps a needed row that holds its own control, and drops the line that repeats it', () => {
+    const rows = [row('draft', 'needed'), row('checks', 'needed')];
+    const reasons = [{ code: 'passport_blocked_draft' }, { code: 'passport_blocked_checks' }];
+    const once = sayBlockersOnce(rows, reasons, (r) => r.key === 'draft');
+    expect(once.rows.map((r) => r.key)).toEqual(['draft']);
+    expect(once.reasons.map((r) => r.code)).toEqual(['passport_blocked_checks']);
+  });
+
+  it('maps a gate the standing rows do not cover to its own row', () => {
+    expect(rowForGate('passport_blocked_changes_requested')).toBe('approvals');
+    expect(rowForGate('passport_blocked_codeowners')).toBe('passport_blocked_codeowners');
+  });
+
+  it('never shows a raw gate code as a label', () => {
+    expect(gateExplanation({ code: 'passport_blocked_changes_requested', message: 'x' }).title).toBe(
+      'Changes requested'
+    );
+    expect(gateTitle('passport_blocked_new_rule')).toBe('New rule');
+    expect(gateExplanation({ code: 'passport_blocked_new_rule', message: 'A new rule.' })).toEqual({
+      title: 'New rule',
+      hint: 'A new rule.',
+    });
   });
 });
