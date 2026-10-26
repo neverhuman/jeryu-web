@@ -10,7 +10,7 @@
 //
 // Invented families only (acme, globex, initech): jeryu is public.
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AttentionItem, AttentionResponse } from '../../api/types';
@@ -18,7 +18,7 @@ import { LeftNav, PRIMARY_NAV, SYSTEM_NAV } from '../../layout/LeftNav';
 import { ActivityPage } from '../activity';
 import { FleetPage } from '../FleetPage';
 import { NeedsYouPage } from '../needsYou';
-import { AREA_LABEL, type AttentionArea } from '../needsYou/needsYouModel';
+import type { AttentionArea } from '../needsYou/needsYouModel';
 import { PullRoomPage } from '../PullRoomPage';
 import { ReleasesPage } from '../ReleasesPage';
 import { ShiftQueuePage } from '../shift/ShiftQueuePage';
@@ -263,7 +263,6 @@ describe('every needs-you count', () => {
       'work',
     ]);
     for (const { area, to } of BADGES) {
-      const item = ONE_PER_AREA[area];
       mockAttention(attention(Object.values(ONE_PER_AREA)));
       renderAt(to, to, <LeftNav />);
       expect(await screen.findByTestId(`nav-badge-${area}`)).toHaveTextContent('1');
@@ -283,16 +282,10 @@ describe('every needs-you count', () => {
         // Needs you, so it is not repeated in a strip here.
         await screen.findByTestId(area === 'releases' ? 'releases-page' : 'fleet-page');
         expect(screen.queryByTestId(`needs-you-here-${area}`)).toBeNull();
-      } else if (area === 'work') {
+      } else {
         // Work counts its share in one chip that links to the rows.
         expect(await screen.findByTestId('shift-needs-human')).toHaveTextContent('1 in Work');
         expect(screen.queryByTestId('needs-you-here-work')).toBeNull();
-      } else {
-        const strip = await screen.findByTestId(`needs-you-here-${area}`);
-        expect(within(strip).getByText(item.title)).toBeInTheDocument();
-        expect(strip).toHaveAttribute('aria-label', `1 blocked in ${AREA_LABEL[area]}`);
-        // Only that area's row: another page's row is not repeated here.
-        expect(within(strip).getAllByRole('listitem')).toHaveLength(1);
       }
       vi.restoreAllMocks();
       document.body.replaceChildren();

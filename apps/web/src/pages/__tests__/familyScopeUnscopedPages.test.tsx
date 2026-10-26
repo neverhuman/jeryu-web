@@ -25,8 +25,6 @@ import { errorResponse, json, renderAt } from './shiftPageHelpers';
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: { login: 'operator', role: 'admin' } }),
 }));
-// The Runners page's own "Waiting on you" strip has its own tests.
-vi.mock('../needsYou/NeedsYouHere', () => ({ NeedsYouHere: () => null }));
 
 /** Two families, one repository each, as `GET /api/v1/repos` reports them. */
 const REPOS = {

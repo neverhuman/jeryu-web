@@ -11,12 +11,7 @@ export {
   portalRank,
 } from './familyRollup';
 export type { FamilyRollup } from './familyRollup';
-export {
-  familyMemberHref,
-  familyRailTier,
-  neighbourMember,
-  sortFamilyMembers,
-} from './repoFamilyRailModel';
+export { sortFamilyMembers } from './repoFamilyRailModel';
 export { RepoHealthPill } from './RepoHealthPill';
 export type { RepoHealthPillProps } from './RepoHealthPill';
 export {

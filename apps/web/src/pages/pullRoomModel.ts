@@ -1,6 +1,5 @@
 import { canonicalFamily, sameFamily } from '../components/family/familyScope';
 import type {
-  ControlPlanePageReport,
   ControlPlaneSummary,
   ControlPullRequest,
   EvidenceState,
@@ -391,37 +390,6 @@ export function scopeToFamily(
     : items;
 }
 
-export interface FamilyPill {
-  family: string;
-  count: number;
-}
-
-/** What a pill needs of a repository: its family and its open pull requests. */
-export interface RepoFamilyCount {
-  family: string | null;
-  openPullRequests: number;
-}
-
-/**
- * One pill per family in the repository list, with the open pull requests its
- * repositories hold, alphabetical with "other" last. A family with nothing
- * open keeps its pill at 0: the bar is the way into a family, so leaving one
- * out would hide it. The counts are the server's own per-repository numbers,
- * not a count of whatever rows this page loaded.
- */
-export function familyPills(repos: readonly RepoFamilyCount[]): FamilyPill[] {
-  const counts = new Map<string, number>();
-  for (const repo of repos) {
-    const family = repo.family || OTHER_FAMILY;
-    counts.set(family, (counts.get(family) ?? 0) + repo.openPullRequests);
-  }
-  return Array.from(counts, ([family, count]) => ({ family, count })).sort((a, b) => {
-    if (a.family === OTHER_FAMILY) return 1;
-    if (b.family === OTHER_FAMILY) return -1;
-    return a.family.localeCompare(b.family);
-  });
-}
-
 /**
  * The header counts, from the summary the server computes over every pull
  * request it knows. The snapshot collections arrive one page at a time, so
@@ -438,30 +406,6 @@ export function summaryCounts(summary: ControlPlaneSummary): {
     waiting: summary.waitingCheckPrCount ?? 0,
     blocked: summary.failingCheckPrCount ?? 0,
   };
-}
-
-/** How a truncated collection is named on the page. */
-const COLLECTION_WORDS: Record<string, string> = {
-  pull_requests: 'pull requests',
-  repos: 'repositories',
-  check_runs: 'check runs',
-};
-
-/**
- * "showing 100 of 509 pull requests" for every collection the page reads that
- * the response cut short, so a missing row is stated rather than dropped.
- */
-export function truncatedCollections(
-  page: ControlPlanePageReport | undefined,
-  reads: readonly string[]
-): string[] {
-  if (!page) return [];
-  return reads.flatMap((name) => {
-    const info = page.collections?.[name];
-    if (!info?.has_more) return [];
-    const rows = Math.min(info.limit, Math.max(0, info.total - (info.page - 1) * info.limit));
-    return [`showing ${rows} of ${info.total} ${COLLECTION_WORDS[name] ?? name}`];
-  });
 }
 
 /** The most repos the timeline loads at once; the rest are named, not fetched. */

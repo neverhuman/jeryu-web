@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { attentionByPull, attentionOffRows, pullAttentionKey } from '../pullAttentionModel';
+import { attentionByPull, pullAttentionKey } from '../pullAttentionModel';
 import { attentionItem } from './pipelineTestData';
 
 describe('pull request attention', () => {
@@ -13,13 +13,5 @@ describe('pull request attention', () => {
     const byPull = attentionByPull([checks, review, other, reviewer]);
     expect([...byPull.keys()]).toEqual(['acme/widgets#3', 'globex/site#3']);
     expect(byPull.get(pullAttentionKey('acme/widgets', 3))?.map((item) => item.id)).toEqual(['a', 'b']);
-  });
-
-  it('keeps what no shown row carries: no pull request, or one not on the page', () => {
-    const shown = new Set([pullAttentionKey('acme/widgets', 3)]);
-    expect(attentionOffRows([checks, review, other, reviewer], shown).map((item) => item.id)).toEqual([
-      'c',
-      'd',
-    ]);
   });
 });

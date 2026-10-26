@@ -13,7 +13,6 @@ import {
   cardFacts,
   familyLabel,
   familyOfRepo,
-  familyPills,
   filterPullSummaries,
   isBoardView,
   OTHER_FAMILY,
@@ -27,7 +26,6 @@ import {
   pullRequestPath,
   scopedCounts,
   summaryCounts,
-  truncatedCollections,
   visibleLanes,
 } from '../pullRoomModel';
 
@@ -146,7 +144,7 @@ describe('pullRoomModel', () => {
     expect(familyOfRepo('nobody/knows', families)).toBe(OTHER_FAMILY);
   });
 
-  it('makes a pill for every family in the repository list, 0 included, "other" last', () => {
+  it('scopes the rows to one family, "other" for a repository with none', () => {
     const families = new Map<string, string | null>([
       ['a/web', 'zeta'],
       ['a/api', 'alpha'],
@@ -159,22 +157,6 @@ describe('pullRoomModel', () => {
       controlItem(pr({ repo: 'a/misc', number: 4 })),
       controlItem(pr({ repo: 'a/api', number: 5, state: 'merged' })),
     ];
-    // The pills come from the repository list, not from the pull requests this
-    // page loaded: a family whose repos have nothing open is still selectable.
-    expect(
-      familyPills([
-        { family: 'zeta', openPullRequests: 2 },
-        { family: 'alpha', openPullRequests: 1 },
-        { family: 'alpha', openPullRequests: 0 },
-        { family: 'quiet', openPullRequests: 0 },
-        { family: null, openPullRequests: 1 },
-      ])
-    ).toEqual([
-      { family: 'alpha', count: 1 },
-      { family: 'quiet', count: 0 },
-      { family: 'zeta', count: 2 },
-      { family: 'other', count: 1 },
-    ]);
     expect(scopeToFamily(items, 'zeta', families).map((item) => item.number)).toEqual([1, 2]);
     expect(scopeToFamily(items, 'other', families).map((item) => item.number)).toEqual([4]);
     expect(scopeToFamily(items, '', families)).toHaveLength(5);
@@ -193,35 +175,6 @@ describe('pullRoomModel', () => {
       waiting: 0,
       blocked: 0,
     });
-  });
-
-  it('says which collections the snapshot cut short, and stays quiet otherwise', () => {
-    const page = {
-      limit: 100,
-      page: 1,
-      collections: {
-        pull_requests: { limit: 100, page: 1, total: 509, has_more: true },
-        repos: { limit: 100, page: 1, total: 99, has_more: false },
-      },
-    };
-    expect(truncatedCollections(page, ['pull_requests', 'repos'])).toEqual([
-      'showing 100 of 509 pull requests',
-    ]);
-    expect(truncatedCollections(page, ['repos'])).toEqual([]);
-    expect(truncatedCollections(undefined, ['pull_requests'])).toEqual([]);
-    // The last page of a cut collection reports the rows it actually carries.
-    expect(
-      truncatedCollections(
-        {
-          limit: 100,
-          page: 5,
-          collections: {
-            pull_requests: { limit: 100, page: 5, total: 509, has_more: true },
-          },
-        },
-        ['pull_requests']
-      )
-    ).toEqual(['showing 100 of 509 pull requests']);
   });
 
   it('asks only the repos the snapshot names, and caps how many', () => {

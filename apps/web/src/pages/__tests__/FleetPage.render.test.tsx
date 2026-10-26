@@ -11,10 +11,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { FleetPage } from '../FleetPage';
-// The page's "Waiting on you" strip is Needs you's own list, with its own query
-// and tests (needsYouAreas); these runner tests leave it out.
-vi.mock('../needsYou/NeedsYouHere', () => ({ NeedsYouHere: () => null }));
-
 import { BOOTSTRAP_QUERY_KEY } from '../../hooks/useBootstrap';
 import { CONTROL_PLANE_RUNNERS_QUERY_KEY } from '../../hooks/useControlPlaneRunners';
 import { useRealtimeStore } from '../../stores/realtimeStore';

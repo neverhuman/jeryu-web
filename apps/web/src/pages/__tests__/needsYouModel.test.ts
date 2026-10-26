@@ -15,11 +15,9 @@ import {
   groupSubjects,
   kindRank,
   subjectKey,
-  filterByRepos,
   areaBadgeCount,
   attentionArea,
   attentionBadgeCount,
-  attentionAbout,
   attentionContext,
   rowTitle,
   splitStaleStranded,
@@ -498,21 +496,6 @@ describe('needsYouModel', () => {
     expect(attentionBadge(ATTENTION).count).toBe(attentionBadgeCount(ATTENTION));
   });
 
-  it('keeps a scope to its own repositories, and the forge-wide rows with it', () => {
-    const items = [
-      attentionItem({ id: 'web', kind: 'release_staged', repo: 'acme/acme-web' }),
-      attentionItem({ id: 'api', kind: 'release_staged', repo: 'acme/acme-api' }),
-      attentionItem({ id: 'forge', kind: 'release_staged' }),
-    ];
-    // Two repositories with a release staged are two rows: neither hides the
-    // other, and a scope of one of them shows one of them.
-    expect(filterByRepos(items, ['acme/acme-web']).map((item) => item.id)).toEqual(['web', 'forge']);
-    expect(filterByRepos(items, ['acme/acme-web', 'acme/acme-api'])).toHaveLength(3);
-    expect(filterByRepos(items, ['globex/globex-web']).map((item) => item.id)).toEqual(['forge']);
-    expect(filterByRepos(items, [])).toHaveLength(3);
-    expect(filterByRepos(items, null)).toHaveLength(3);
-  });
-
   it('files each kind under the page where its cause lives', () => {
     expect(attentionArea('todo_blocked')).toBe('work');
     expect(attentionArea('shift_without_pr')).toBe('work');
@@ -589,51 +572,3 @@ describe('acknowledgeTarget', () => {
   });
 });
 
-describe('attentionAbout', () => {
-  const rows = {
-    schema_version: 1,
-    generated_at: '2026-09-19T09:00:00Z',
-    counts: { critical: 0, action: 3, watch: 1 },
-    items: [
-      attentionItem({ id: 'blocked', kind: 'todo_blocked', todo_id: '20260919-1' }),
-      attentionItem({ id: 'queue', kind: 'queue_failed', repo: 'acme/web', pr: 7 }),
-      attentionItem({ id: 'other-pr', kind: 'pr_checks_failing', repo: 'globex/api', pr: 7 }),
-      attentionItem({ id: 'calm', kind: 'todo_stuck_claim', severity: 'watch', todo_id: '20260919-1' }),
-    ],
-  };
-
-  it('finds the rows about one todo, and leaves the calm ones out', () => {
-    expect(attentionAbout(rows, { todoId: '20260919-1' }).map((s) => s.primary.id)).toEqual([
-      'blocked',
-    ]);
-  });
-
-  it('finds the rows about one pull request, not another repo at the same number', () => {
-    expect(attentionAbout(rows, { repo: 'acme/web', pr: 7 }).map((s) => s.primary.id)).toEqual([
-      'queue',
-    ]);
-    expect(attentionAbout(rows, { repo: 'web', pr: '7' }).map((s) => s.primary.id)).toEqual([
-      'queue',
-    ]);
-    expect(attentionAbout(rows, { repo: 'acme/web', pr: 8 })).toEqual([]);
-  });
-
-  it('is one row for a pull request that raised several items at once', () => {
-    const both = {
-      ...rows,
-      items: [
-        attentionItem({ id: 'queue', kind: 'queue_failed', repo: 'acme/web', pr: 7 }),
-        attentionItem({ id: 'hold', kind: 'reviewer_stuck', repo: 'acme/web', pr: 7 }),
-      ],
-    };
-    const [subject, ...rest] = attentionAbout(both, { repo: 'acme/web', pr: 7 });
-    expect(rest).toEqual([]);
-    expect(subject.primary.id).toBe('hold');
-    expect(subject.also.map((i) => i.id)).toEqual(['queue']);
-  });
-
-  it('matches nothing when the subject names neither a todo nor a pull request', () => {
-    expect(attentionAbout(rows, { repo: 'acme/web' })).toEqual([]);
-    expect(attentionAbout(undefined, { todoId: '20260919-1' })).toEqual([]);
-  });
-});

@@ -19,10 +19,3 @@ export function attentionByPull(items: AttentionItem[]): Map<string, AttentionIt
   }
   return byPull;
 }
-
-/** Items no shown row carries: they have no pull request, or theirs is not on the page. */
-export function attentionOffRows(items: AttentionItem[], shown: ReadonlySet<string>): AttentionItem[] {
-  return items.filter(
-    (item) => !item.repo || item.pr === null || !shown.has(pullAttentionKey(item.repo, item.pr))
-  );
-}

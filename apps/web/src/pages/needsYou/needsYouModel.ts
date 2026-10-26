@@ -634,19 +634,6 @@ export function filterByFamily<T extends Pick<AttentionItem, 'family' | 'repo'>>
 }
 
 /**
- * Keep the items a scope is about: those naming one of `repos`, and those
- * naming no repository at all, which are the forge's own and belong to every
- * scope. An absent or empty list keeps everything.
- */
-export function filterByRepos<T extends Pick<AttentionItem, 'repo'>>(
-  items: T[],
-  repos?: readonly string[] | null
-): T[] {
-  if (!repos || repos.length === 0) return items;
-  return items.filter((item) => !item.repo || repos.includes(item.repo));
-}
-
-/**
  * The page where a row's cause lives, so each page can show its own share of
  * "Needs you": todos and shifts on Work, pull requests and their queue on In
  * flight, staging, deploys and pins on Releases, gate runners and workers
@@ -746,50 +733,6 @@ export function areaBadge(
   scope?: AttentionScope
 ): BadgeCount {
   return scopedCount(urgentInArea(data, area), scope);
-}
-
-/**
- * What a page's own Needs-you strip is about: one todo, or one repository's
- * pull request. This is the question a page asks; `AttentionSubject` is the
- * answer — one row with every item that one cause raised.
- */
-export interface AboutSubject {
-  todoId?: string | null;
-  repo?: string | null;
-  pr?: number | string | null;
-}
-
-/**
- * The rows waiting on a person about one subject, so a todo page or a pull
- * request page can show its own row in place rather than sending the reader to
- * Needs you to find out that something waits on them here. A subject with
- * nothing to match on matches nothing: a page never shows the whole list.
- *
- * Grouped per subject like every other surface, so a pull request whose
- * review hold also failed its queue entry reads as one row here too.
- */
-export function attentionAbout(
-  data: AttentionResponse | undefined,
-  about: AboutSubject
-): AttentionSubject[] {
-  const todoId = (about.todoId ?? '').trim();
-  const pr = about.pr === null || about.pr === undefined ? '' : String(about.pr).trim();
-  const repo = (about.repo ?? '').trim();
-  if (!todoId && !pr) return [];
-  return attentionSubjects(
-    urgentAttention(data).filter((item) => {
-      if (todoId && item.todo_id === todoId) return true;
-      if (!pr || String(item.pr ?? '') !== pr) return false;
-      return !repo || !item.repo || sameAttentionRepo(item.repo, repo);
-    })
-  );
-}
-
-/** A row may name `owner/name` where the page knows only `name`, or the reverse. */
-function sameAttentionRepo(named: string, wanted: string): boolean {
-  if (named === wanted) return true;
-  const bare = (repo: string): string => repo.split('/').pop() ?? repo;
-  return bare(named) === bare(wanted);
 }
 
 /** A link to Needs you, kept on one family when the caller is on one. */

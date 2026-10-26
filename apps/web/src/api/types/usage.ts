@@ -1,9 +1,10 @@
-// usage.ts — hand-written wire types for the token-usage read
-// (`GET /api/v1/usage`, admin-only), the panel at the top of Activity.
+// usage.ts — hand-written wire types for token usage: the counts a finished
+// attempt carries in `detail.usage`, and the token-usage read
+// (`GET /api/v1/usage`, admin-only), which no page reads now.
 //
 // JSON is snake_case like the Shift and pipeline APIs. Every count is optional:
 // a producer (todoq) that predates usage reporting sends a slot with no
-// numbers at all, and the panel says so rather than drawing zeros. A server
+// numbers at all, and a row says so rather than drawing zeros. A server
 // that predates the route answers with a 404 or the SPA shell, which
 // `isPipelineUnavailable` already recognises.
 
