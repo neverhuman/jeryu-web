@@ -591,9 +591,10 @@ export function PullRequestPage(props: PullRequestPageProps = {}): JSX.Element {
             base={base}
             description={data.description}
             reviews={data.reviews ?? []}
+            commits={commits.data}
             threads={threads}
             repoFullName={fullName}
-            prNumber={prNumber}
+            prNumber={prNumber ?? ''}
             work={
               <PullRequestWork
                 summary={summary}

@@ -57,61 +57,78 @@ export function ThreadList({
         </p>
       ) : (
         <ul className="thread-list__items">
-          {sorted.map((thread) => {
-            const Icon = thread.resolved ? MessageSquareOff : MessageSquare;
-            const href = anchorHref?.(thread) ?? null;
-            const anchor = thread.file_path
-              ? `${thread.file_path}${thread.line ? `:${thread.line}` : ''}`
-              : null;
-            return (
-              <li
-                key={thread.id}
-                className={`thread-list__item ${
-                  thread.resolved ? 'thread-list__item--resolved' : ''
-                }`.trim()}
-                data-testid="pr-thread"
-                data-resolved={thread.resolved ? 'true' : 'false'}
-              >
-                <header className="thread-list__item-header">
-                  <Icon aria-hidden="true" size={12} className="thread-list__icon" />
-                  {anchor ? (
-                    href ? (
-                      <Link className="thread-list__path" to={href}>
-                        {anchor}
-                      </Link>
-                    ) : (
-                      <code className="thread-list__path">{anchor}</code>
-                    )
-                  ) : (
-                    <span className="thread-list__general">
-                      On the pull request
-                    </span>
-                  )}
-                  <span className="thread-list__state">
-                    {thread.resolved ? 'resolved' : 'unresolved'}
-                  </span>
-                </header>
-                <ol className="thread-list__comments">
-                  {thread.comments.map((comment) => (
-                    <li key={comment.id} className="thread-list__comment">
-                      <span className="thread-list__comment-meta">
-                        <strong>{comment.author}</strong>
-                        <When at={comment.created_at} />
-                      </span>
-                      <p
-                        className="thread-list__comment-body"
-                        data-testid="pr-thread-body"
-                      >
-                        {comment.body_markdown}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              </li>
-            );
-          })}
+          {sorted.map((thread) => (
+            <ThreadCard key={thread.id} thread={thread} href={anchorHref?.(thread) ?? null} />
+          ))}
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * One thread: where it is anchored (a link into the Files tab when `href` is
+ * given), whether it is resolved, and every comment, oldest first.
+ */
+export function ThreadCard({
+  thread,
+  href,
+  as: Tag = 'li',
+  id,
+}: {
+  thread: ReviewThread;
+  href: string | null;
+  as?: 'li' | 'div';
+  id?: string;
+}): JSX.Element {
+  const Icon = thread.resolved ? MessageSquareOff : MessageSquare;
+  const anchor = thread.file_path
+    ? `${thread.file_path}${thread.line ? `:${thread.line}` : ''}`
+    : null;
+  return (
+    <Tag
+      id={id}
+      className={`thread-list__item ${
+        thread.resolved ? 'thread-list__item--resolved' : ''
+      }`.trim()}
+      data-testid="pr-thread"
+      data-resolved={thread.resolved ? 'true' : 'false'}
+    >
+      <header className="thread-list__item-header">
+        <Icon aria-hidden="true" size={12} className="thread-list__icon" />
+        {anchor ? (
+          href ? (
+            <Link className="thread-list__path" to={href}>
+              {anchor}
+            </Link>
+          ) : (
+            <code className="thread-list__path">{anchor}</code>
+          )
+        ) : (
+          <span className="thread-list__general">
+            On the pull request
+          </span>
+        )}
+        <span className="thread-list__state">
+          {thread.resolved ? 'resolved' : 'unresolved'}
+        </span>
+      </header>
+      <ol className="thread-list__comments">
+        {thread.comments.map((comment) => (
+          <li key={comment.id} className="thread-list__comment">
+            <span className="thread-list__comment-meta">
+              <strong>{comment.author}</strong>
+              <When at={comment.created_at} />
+            </span>
+            <p
+              className="thread-list__comment-body"
+              data-testid="pr-thread-body"
+            >
+              {comment.body_markdown}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </Tag>
   );
 }

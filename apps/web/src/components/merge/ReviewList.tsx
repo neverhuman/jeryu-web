@@ -38,16 +38,8 @@ export interface ReviewListProps {
 }
 
 export function ReviewList({ reviews, fileHref }: ReviewListProps): JSX.Element | null {
-  const { hash } = useLocation();
   const sorted = useMemo(() => sortReviews(reviews), [reviews]);
-  const opened = useMemo(() => openReviewIds(reviews, hash), [reviews, hash]);
-  const target = useMemo(() => targetReviewId(reviews, hash), [reviews, hash]);
-
-  useEffect(() => {
-    if (!target) return;
-    const element = document.getElementById(reviewAnchor(target));
-    element?.scrollIntoView?.({ block: 'start' });
-  }, [target]);
+  const { opened, target } = useReviewAnchors(reviews);
 
   if (sorted.length === 0) return null;
 
@@ -61,45 +53,83 @@ export function ReviewList({ reviews, fileHref }: ReviewListProps): JSX.Element 
     >
       <h2 className="review-list__title">Reviews</h2>
       <ul className="review-list__items">
-        {sorted.map((review) => {
-          const asking = isChangesRequestedState(review.state);
-          const body = repairTablePipes((review.body_markdown ?? '').trim());
-          const notes = [
-            review.stale ? 'on an earlier head' : null,
-            review.effective ? null : 'no longer counts',
-          ].filter(Boolean);
-          return (
-            <li
-              key={review.id}
-              id={reviewAnchor(review.id)}
-              className={`review-list__item${asking ? ' review-list__item--changes' : ''}`}
-              data-testid={`pr-review-${review.id}`}
-              data-target={review.id === target ? 'true' : undefined}
-            >
-              <details open={opened.has(review.id)}>
-                <summary className="review-list__summary">
-                  <strong>{review.author}</strong>
-                  <span className="review-list__state">{reviewStateLabel(review.state)}</span>
-                  <When at={review.submitted_at} />
-                  {notes.length > 0 ? (
-                    <span className="review-list__note">{notes.join(', ')}</span>
-                  ) : null}
-                </summary>
-                {body ? (
-                  <MarkdownSource
-                    markdown={body}
-                    components={REVIEW_MARKDOWN}
-                    className="review-list__body"
-                  />
-                ) : (
-                  <p className="review-list__empty">No comment with this review.</p>
-                )}
-              </details>
-            </li>
-          );
-        })}
+        {sorted.map((review) => (
+          <ReviewEntry
+            key={review.id}
+            review={review}
+            open={opened.has(review.id)}
+            target={review.id === target}
+          />
+        ))}
       </ul>
     </section>
     </FindingHrefContext.Provider>
+  );
+}
+
+/**
+ * Which reviews start open, and which one the address points at (scrolled to
+ * once it is drawn): the review asking for changes, or `#review-<id>`.
+ */
+export function useReviewAnchors(reviews: readonly PullRequestReview[]): {
+  opened: Set<string>;
+  target: string | null;
+} {
+  const { hash } = useLocation();
+  const opened = useMemo(() => openReviewIds(reviews, hash), [reviews, hash]);
+  const target = useMemo(() => targetReviewId(reviews, hash), [reviews, hash]);
+
+  useEffect(() => {
+    if (!target) return;
+    const element = document.getElementById(reviewAnchor(target));
+    element?.scrollIntoView?.({ block: 'start' });
+  }, [target]);
+
+  return { opened, target };
+}
+
+/** One review: who, the verdict, when, and its body under a disclosure. */
+export function ReviewEntry({
+  review,
+  open,
+  target,
+}: {
+  review: PullRequestReview;
+  open: boolean;
+  target: boolean;
+}): JSX.Element {
+  const asking = isChangesRequestedState(review.state);
+  const body = repairTablePipes((review.body_markdown ?? '').trim());
+  const notes = [
+    review.stale ? 'on an earlier head' : null,
+    review.effective ? null : 'no longer counts',
+  ].filter(Boolean);
+  return (
+    <li
+      id={reviewAnchor(review.id)}
+      className={`review-list__item${asking ? ' review-list__item--changes' : ''}`}
+      data-testid={`pr-review-${review.id}`}
+      data-target={target ? 'true' : undefined}
+    >
+      <details open={open}>
+        <summary className="review-list__summary">
+          <strong>{review.author}</strong>
+          <span className="review-list__state">{reviewStateLabel(review.state)}</span>
+          <When at={review.submitted_at} />
+          {notes.length > 0 ? (
+            <span className="review-list__note">{notes.join(', ')}</span>
+          ) : null}
+        </summary>
+        {body ? (
+          <MarkdownSource
+            markdown={body}
+            components={REVIEW_MARKDOWN}
+            className="review-list__body"
+          />
+        ) : (
+          <p className="review-list__empty">No comment with this review.</p>
+        )}
+      </details>
+    </li>
   );
 }

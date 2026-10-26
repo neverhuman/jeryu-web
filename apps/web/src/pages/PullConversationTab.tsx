@@ -1,24 +1,27 @@
-// PullConversationTab.tsx — the front page of a pull request: what it says it
-// does, where the merge stands, the threads, and the pipeline's record of it.
+// PullConversationTab.tsx — the front page of a pull request: what happened,
+// in order, and where the merge stands now.
 //
-// One column, in reading order: the description, where the review stands on
-// each head the pull request has had, the reviews with what each
-// reviewer wrote, the one merge box (which carries the merge queue's own act
-// when the queue is the way to land this change), the review
-// threads (each linking into the Files tab), where the change stands on the
-// work trace, then the pipeline timeline. The
-// Files, Checks and Commits of the pull request are tabs of their own, so
-// nothing here is below the fold of a nested scroller.
+// Two parts. The timeline (`PullConversationTimeline`) is the story, oldest
+// first: the description, each push, the reviews, the threads and the
+// pipeline's runs in the order they happened, so "the gate failed, then the
+// reviewer held it, then a fix was pushed" reads top to bottom instead of being
+// pieced together from five lists. The status panel says where things stand
+// right now: the review on each head, the one merge box (with what blocks the
+// merge and who can clear it) and the work trace. On a wide screen the panel is
+// a column on the right that stays in view while the story scrolls; on a narrow
+// one it comes first, above the story.
+//
+// The Files, Checks and Commits of the pull request are tabs of their own.
 
 import { useCallback, type ReactNode } from 'react';
 
-import { MarkdownSource } from '../components/browser';
-import { MergeBox, ReviewHeads, ReviewList, ThreadList } from '../components/merge';
+import { MergeBox, ReviewHeads } from '../components/merge';
 import type { MergeBoxProps } from '../components/merge/MergeBox';
-import { ErrorState, LoadingState } from '../components/state';
+import { ErrorState } from '../components/state';
 import type { PullRequestReview, ReviewThread } from '../api/types';
 import type { usePrThreads } from '../hooks/usePrThreads';
-import { PullPipelineEvents } from './activity/PullPipelineEvents';
+import { PullConversationTimeline } from './PullConversationTimeline';
+import type { PullCommit } from './pullCommitsModel';
 import { pullFileHref } from './pullTabsModel';
 
 export interface PullConversationTabProps {
@@ -27,72 +30,71 @@ export interface PullConversationTabProps {
   threads: ReturnType<typeof usePrThreads>;
   /** The pull request's own description, as the forge reports it. */
   description?: string | null;
-  /** The review rows, newest first on the page; each body is read here. */
+  /** The review rows; each lands in the timeline when it was submitted. */
   reviews?: readonly PullRequestReview[];
+  /** The commits, oldest first: each is a divider in the timeline. */
+  commits?: readonly PullCommit[];
   /** The pull request's base path, for the links out of a thread or a finding. */
   base: string;
-  /** `owner/name` and the number, for the pipeline timeline. */
-  repoFullName?: string | null;
-  prNumber?: string | null;
+  /** `owner/name` and the number, for the pipeline's runs. */
+  repoFullName: string;
+  prNumber: string;
   /** Where the change stands on the work trace, and the todos it carries. */
   work?: ReactNode;
 }
+
+const NO_THREADS: ReviewThread[] = [];
+const NO_COMMITS: PullCommit[] = [];
 
 export function PullConversationTab({
   merge,
   threads,
   description,
   reviews = [],
+  commits = NO_COMMITS,
   base,
   repoFullName,
   prNumber,
   work,
 }: PullConversationTabProps): JSX.Element {
-  const anchorHref = (thread: ReviewThread): string | null =>
-    thread.file_path ? pullFileHref(base, thread.file_path, thread.line) : null;
+  const threadHref = useCallback(
+    (thread: ReviewThread): string | null =>
+      thread.file_path ? pullFileHref(base, thread.file_path, thread.line) : null,
+    [base]
+  );
   // A review finding opens its file in the unified diff, whatever mode was last used.
   const findingHref = useCallback(
     (location: { path: string; line: number | null }) =>
       pullFileHref(base, location.path, location.line, 'unified'),
     [base]
   );
+  const summary = merge.detail.summary;
 
   return (
     <div className="pr-conversation" data-testid="pr-conversation-tab">
-      {description ? (
-        <section
-          className="pr-conversation__description"
-          aria-label="Description"
-          data-testid="pr-description"
-        >
-          {/* Written in Markdown, as every forge reads it: headings, lists and
-              code fences, not one paragraph of literal backticks. */}
-          <MarkdownSource markdown={description} />
-        </section>
-      ) : null}
+      <aside className="pr-conversation__status" aria-label="Where the merge stands">
+        <ReviewHeads detail={merge.detail} conversationHref={base} />
+        <MergeBox {...merge} />
+        {work}
+      </aside>
 
-      <ReviewHeads detail={merge.detail} conversationHref={base} />
-
-      <ReviewList reviews={reviews} fileHref={findingHref} />
-
-      <MergeBox {...merge} />
-
-      {threads.isPending ? (
-        <LoadingState title="Loading the threads…" variant="skeleton" rows={3} />
-      ) : threads.error ? (
-        <ErrorState title="Could not load the review threads" error={threads.error} />
-      ) : (
-        <ThreadList
-          threads={threads.data?.threads ?? []}
-          anchorHref={anchorHref}
+      <div className="pr-conversation__story">
+        {threads.error ? (
+          <ErrorState title="Could not load the review threads" error={threads.error} />
+        ) : null}
+        <PullConversationTimeline
+          author={summary.author}
+          description={description ?? null}
+          headSha={summary.head_sha}
+          commits={commits}
+          reviews={reviews}
+          threads={threads.data?.threads ?? NO_THREADS}
+          repoFullName={repoFullName}
+          prNumber={prNumber}
+          threadHref={threadHref}
+          findingHref={findingHref}
         />
-      )}
-
-      {work}
-
-      {repoFullName && prNumber ? (
-        <PullPipelineEvents repo={repoFullName} pr={prNumber} />
-      ) : null}
+      </div>
     </div>
   );
 }

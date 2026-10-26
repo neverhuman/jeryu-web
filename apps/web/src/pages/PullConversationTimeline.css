@@ -1,0 +1,261 @@
+/* PullConversationTimeline.css — the pull request as one story, oldest first.
+ *
+ * Rows carry their own padding instead of a list gap, so a gutter lane drawn in
+ * one row meets the lane in the next with no break.
+ */
+
+.pr-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pr-timeline__more {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.pr-timeline__list {
+  --pr-timeline-lane-width: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pr-timeline__row {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.pr-timeline__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-1) 0;
+}
+
+.pr-timeline__row--opened .pr-timeline__body,
+.pr-timeline__row--review .pr-timeline__body,
+.pr-timeline__row--thread .pr-timeline__body {
+  padding: var(--space-2) 0;
+}
+
+/* ─── Gutter: one lane per run that spans other rows ─────────────── */
+
+.pr-timeline__gutter {
+  display: flex;
+  flex: 0 0 auto;
+  width: calc(var(--pr-timeline-lanes, 0) * var(--pr-timeline-lane-width));
+  margin-right: var(--space-2);
+}
+
+.pr-timeline__lane {
+  position: relative;
+  width: var(--pr-timeline-lane-width);
+}
+
+.pr-timeline__lane::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background-color: var(--color-accent-info);
+  opacity: 0.6;
+}
+
+.pr-timeline__lane--none::before {
+  display: none;
+}
+
+.pr-timeline__lane--through::before {
+  top: 0;
+  bottom: 0;
+}
+
+/* A start or an end is drawn to the middle of its row's first line, with a dot. */
+.pr-timeline__lane--start::before {
+  top: 0.9rem;
+  bottom: 0;
+}
+
+.pr-timeline__lane--end::before {
+  top: 0;
+  height: 0.9rem;
+}
+
+.pr-timeline__lane--start::after,
+.pr-timeline__lane--end::after {
+  content: '';
+  position: absolute;
+  top: calc(0.9rem - 3px);
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-info);
+}
+
+/* Still going: the lane runs off the bottom of the list. */
+.pr-timeline__lane--open::before {
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(var(--color-accent-info), transparent);
+}
+
+/* ─── Rows ───────────────────────────────────────────────────────── */
+
+.pr-timeline__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.8;
+  min-width: 0;
+}
+
+.pr-timeline__line > strong {
+  font-weight: var(--font-weight-semibold);
+}
+
+.pr-timeline__summary {
+  flex: 1 1 16rem;
+  min-width: 0;
+  color: var(--color-fg-secondary);
+  overflow-wrap: anywhere;
+}
+
+.pr-timeline__muted {
+  color: var(--color-fg-muted);
+}
+
+.pr-timeline__clock {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.pr-timeline__pill {
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+}
+
+.pr-timeline__pill--human {
+  border-color: var(--color-accent-danger);
+  color: var(--color-accent-danger);
+}
+
+.pr-timeline__day {
+  margin: var(--space-3) 0 0;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg-muted);
+}
+
+.pr-timeline__opened {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A push is the divider everything under it happened on. */
+.pr-timeline__commit {
+  padding: var(--space-1) var(--space-2);
+  border-left: 2px solid var(--color-border-strong);
+  background-color: var(--color-bg-1);
+}
+
+.pr-timeline__subject {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pr-timeline__card {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pr-timeline__icon--ok {
+  color: var(--color-accent-success);
+}
+
+.pr-timeline__icon--failed {
+  color: var(--color-accent-danger);
+}
+
+.pr-timeline__icon--warn {
+  color: var(--color-accent-warning);
+}
+
+.pr-timeline__icon--quiet {
+  color: var(--color-fg-muted);
+}
+
+.pr-timeline__spinner {
+  color: var(--color-accent-info);
+  animation: pr-timeline-spin 1.2s linear infinite;
+}
+
+@keyframes pr-timeline-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-timeline__spinner {
+    animation: none;
+  }
+}
+
+.pr-timeline__fold > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.pr-timeline__fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pr-timeline__fold-list {
+  margin: 0 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+.pr-timeline__fold-list > li {
+  padding-left: var(--space-2);
+}
+
+.pr-timeline__detail {
+  margin: 0 0 0 var(--space-5);
+  font-size: var(--font-size-xs);
+}
+
+.pr-timeline__detail > summary {
+  cursor: pointer;
+  color: var(--color-fg-muted);
+}
+
+.pr-timeline__detail pre {
+  max-height: 16rem;
+  overflow: auto;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2);
+  background-color: var(--color-bg-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

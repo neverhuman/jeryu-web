@@ -58,7 +58,7 @@ function approveButton(page: import('@playwright/test').Page) {
 }
 
 test.describe('Approve at exact SHA (W-T-14)', () => {
-  test('Request changes posts a review pinned to the head SHA; the Pipeline panel shows the gate log @action:pr.request_changes @action:pr.pipeline_events', async ({
+  test('Request changes posts a review pinned to the head SHA; the timeline shows the gate log @action:pr.request_changes @action:pr.pipeline_events', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
@@ -110,15 +110,13 @@ test.describe('Approve at exact SHA (W-T-14)', () => {
       },
     ]);
 
-    // The pipeline's record of this PR, with the failed gate's log one click away.
-    const panel = page.getByTestId('pull-pipeline-events');
-    await expect(panel).toContainText('Gate failed on neverhuman/jeryu#99');
-    await panel.getByRole('button', { name: 'Log for event 10' }).click();
-    await expect(panel.getByLabel('Log tail of event 10')).toContainText('gate: FAILED');
-    await expect(panel.getByRole('link', { name: 'All activity' })).toHaveAttribute(
-      'href',
-      '/activity?repo=neverhuman%2Fjeryu&pr=99'
-    );
+    // The pipeline's record of this PR sits in the timeline, in the order it
+    // happened, with the failed gate's log one click away.
+    const timeline = page.getByTestId('pr-timeline');
+    const gate = timeline.locator('.pr-timeline__row', { hasText: 'Gate failed' }).first();
+    await expect(gate).toBeVisible();
+    await gate.getByText('Log tail').click();
+    await expect(gate.locator('pre')).toContainText('gate: FAILED');
   });
 
   test('clicking Approve on the cockpit succeeds and shows no recovery banner @action:pr.approve_success', async ({

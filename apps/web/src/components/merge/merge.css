@@ -1,9 +1,9 @@
 /* merge.css — styles for the pull request page (W-FE-11).
  *
  * Only design tokens are used; no raw colours / spacing. The page is one
- * header, one tab bar and one full-width body: the Conversation reads down a
- * single column, and the Files tab is the only two-column surface left (a
- * resizable tree beside the diff).
+ * header, one tab bar and one full-width body: the Conversation is the timeline
+ * with the status panel beside it, and the Files tab is a resizable tree beside
+ * the diff.
  */
 
 /* ─── Page body ───────────────────────────────────────────────────── */
@@ -19,12 +19,44 @@
   box-shadow: var(--shadow-1);
 }
 
+/* The story on the left, where things stand on the right. On a narrow screen
+   the status comes first, so the verdict is the first thing read. */
 .pr-conversation {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  /* A column of prose, not a column stretched across a 1440px display. */
-  max-width: 68rem;
+  max-width: 96rem;
+}
+
+.pr-conversation__status,
+.pr-conversation__story {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .pr-conversation {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 28rem);
+    grid-template-areas: 'story status';
+    align-items: start;
+    gap: var(--space-5);
+  }
+
+  .pr-conversation__story {
+    grid-area: story;
+  }
+
+  /* It stays in view while the story scrolls, and scrolls itself when taller. */
+  .pr-conversation__status {
+    grid-area: status;
+    position: sticky;
+    top: var(--space-4);
+    max-height: calc(100vh - 2 * var(--space-4));
+    overflow-y: auto;
+  }
 }
 
 .pr-conversation__description {
