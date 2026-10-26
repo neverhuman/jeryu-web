@@ -2,12 +2,20 @@
 //
 // Invented work only (family acme, repository acme/widgets): jeryu is public.
 // The shape is `jeryu.flow/v1` as jeryu-deploy's `docs/flow.md` states it:
-// nine stations in route order, a bottleneck at Gate, loops back to Work from
-// Gate and Review, a hold at Review, a station nothing has reached (Pin) whose
-// numbers are absent rather than zero, and the oldest lots per station.
+// nine stations in route order, a bottleneck at Gate, a hold at Review, a
+// station nothing has reached (Pin) whose numbers are absent rather than zero,
+// and the oldest lots per station. Ages are read against the clock of the run,
+// so the lots' `since` is set back from now: two of Gate's lots are stale.
 
-import { flowHistory, FLOW_LAYOUT } from './flowHistory';
 import type { Page, Route } from '@playwright/test';
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** An instant `ms` before now, as the server spells it. */
+export function ago(ms: number): string {
+  return new Date(Date.now() - ms).toISOString();
+}
 
 export type Over = Record<string, unknown>;
 
@@ -36,49 +44,13 @@ export function lot(lotId: string, at: string, state: string, over: Over = {}): 
     lot_id: lotId,
     station: at,
     state,
-    since: '2026-10-14T10:00:00.000Z',
+    since: ago(2 * HOUR_MS),
     eta_s: { p50: 1800, p90: 5400 },
     eta_partial: false,
     eta_unknown_stations: [],
     slowest_ahead: 'gate',
     href: `/work/${lotId}`,
     ...over,
-  };
-}
-
-/** The configured topology of the invented family: one product (the default a
- *  family that declares none gets), three configured repositories, the pin
- *  chain the integration repository's lock records, and a repository with no
- *  current work. */
-function topology(): Over {
-  const work = (over: Over = {}) => ({
-    active_lots: 0, changes: 0, pull_requests: 0, pin_pull_requests: 0, release_artifacts: 0, ...over,
-  });
-  const route = (approvals: number | null, checks: string[] | null, kind: string) => ({
-    kind, source: kind === 'unknown' ? 'unreadable' : 'branch_protection', approvals, required_checks: checks,
-  });
-  const node = (repo: string, over: Over = {}) => ({
-    repo, role: 'source', shared: false, pins_into: [], pin_source: 'none',
-    route: route(1, ['widgets/required'], 'automated'), active_lots: 0, no_current_work: true, ...over,
-  });
-  return {
-    families: [{ family: 'acme', products: 1, repos: 3, work: work({ active_lots: 5, changes: 2, pull_requests: 2, pin_pull_requests: 1 }) }],
-    products: [
-      {
-        id: 'acme', label: 'acme', family: 'acme', source: 'family_default',
-        integration: 'acme/widgets-deploy',
-        release: { repo: 'acme/widgets-deploy', source: 'integration_repo', stations: ['stage', 'deploy'] },
-        work: work({ active_lots: 5, changes: 2, pull_requests: 2, pin_pull_requests: 1 }),
-        repos: [
-          node('acme/widgets', { pins_into: ['acme/widgets-deploy'], pin_source: 'pin_lock', active_lots: 4, no_current_work: false }),
-          node('acme/widgets-deploy', { role: 'integration', route: route(0, [], 'no_gate'), active_lots: 1, no_current_work: false }),
-          node('acme/widgets-core', { pins_into: ['acme/widgets-deploy'], pin_source: 'pin_lock', route: route(2, [], 'human_only') }),
-        ],
-      },
-    ],
-    unscoped_active_lots: 0,
-    unknown: [],
-    families_truncated: false,
   };
 }
 
@@ -98,13 +70,7 @@ function repositoryWip(): Over[] {
 
 function flowBody(params: URLSearchParams, extraLots: Over[] = []): Over {
   return {
-    topology: topology(),
     repository_wip: repositoryWip(),
-    closures: [
-      { lot_id: 'acme/widgets#41', repo: 'acme/widgets', station: 'gate', href: '/acme/widgets/pull/41', title: 'Unexplained closure', kind: 'pull_request', disposition: 'needs_disposition', explanation: 'Original attempt closed.', replacement: null, needs_attention: true },
-      { lot_id: 'acme/widgets#40', repo: 'acme/widgets', station: 'review', href: '/acme/widgets/pull/40', title: 'Replaced attempt', kind: 'pull_request', disposition: 'replacement_recorded', explanation: 'Superseded-by: #42', replacement: { href: '/acme/widgets/pull/42', label: 'acme/widgets#42', state: 'open' }, needs_attention: false },
-    ],
-    lifecycle_problems: [],
     schema_version: 'jeryu.flow/v1',
     generated_at: '2026-10-14T12:00:00.000Z',
     family: params.get('family'),
@@ -126,8 +92,8 @@ function flowBody(params: URLSearchParams, extraLots: Over[] = []): Over {
         rework: [{ to: 'work', count: 2, rate: 0.1 }],
       }),
       station('gate', 'Gate', 5, {
-        wip: { waiting: 3, active: 2, held: 0 },
-        oldest_wait_s: 4200,
+        wip: { waiting: 4, active: 2, held: 0 },
+        oldest_wait_s: 20 * 86_400,
         queue_s: { p50: 900, p90: 1800 },
         process_s: { p50: 400, p90: 640 },
         throughput_per_hour: 4.2,
@@ -155,23 +121,41 @@ function flowBody(params: URLSearchParams, extraLots: Over[] = []): Over {
       }),
       station('deploy', 'Deploy', 9),
     ],
-    line: { cycle_s: { p50: 86_400, p90: 180_000 }, x_factor: { p50: 4.2, p90: 11.5 }, wip: 13, finished: 24 },
+    line: { cycle_s: { p50: 86_400, p90: 180_000 }, x_factor: { p50: 4.2, p90: 11.5 }, wip: 14, finished: 24 },
     lots: [
-      lot('acme-0001', 'gate', 'waiting', { since: '2026-10-14T09:00:00.000Z' }),
-      lot('acme-0002', 'gate', 'active', { since: '2026-10-14T11:00:00.000Z' }),
+      lot('acme-0001', 'gate', 'waiting', { since: ago(3 * HOUR_MS) }),
+      lot('acme-0002', 'gate', 'active', { since: ago(HOUR_MS) }),
       lot('acme/widgets#42', 'gate', 'waiting', {
-        since: '2026-10-14T10:30:00.000Z',
+        since: ago(2 * HOUR_MS),
         eta_s: { p50: 2400, p90: 7200 },
         eta_partial: true,
         eta_unknown_stations: ['pin'],
         href: '/acme/widgets/pull/42',
       }),
+      // Two claims nobody has moved for weeks: stale, folded away.
+      lot('acme-0009', 'gate', 'active', { since: ago(20 * DAY_MS) }),
+      lot('acme-0008', 'gate', 'waiting', { since: ago(16 * DAY_MS) }),
       lot('acme-0003', 'review', 'held', {
-        since: '2026-10-13T08:00:00.000Z',
+        since: ago(DAY_MS),
         eta_s: null,
         slowest_ahead: null,
       }),
-      lot('acme-0004', 'queue', 'waiting', { since: '2026-10-14T11:30:00.000Z' }),
+      lot('acme/widgets#43', 'review', 'held', {
+        since: ago(5 * HOUR_MS),
+        eta_s: null,
+        slowest_ahead: null,
+        href: '/acme/widgets/pull/43',
+        pr_href: '/acme/widgets/pull/43',
+        hold: {
+          reason: 'review_hold',
+          by: 'acme-reviewer',
+          since: ago(4 * HOUR_MS),
+          age_s: 4 * 3600,
+          nobody_acting: true,
+          review_href: '/acme/widgets/pull/43#changes-requested',
+        },
+      }),
+      lot('acme-0004', 'queue', 'waiting', { since: ago(HOUR_MS / 2) }),
       ...extraLots,
     ],
   };
@@ -186,11 +170,6 @@ export async function mockFlowApi(page: Page, extraLots: Over[] = []): Promise<F
   const log: FlowLog = { queries: [] };
   await page.route('**/api/v1/flow**', async (route: Route) => {
     const params = new URL(route.request().url()).searchParams;
-    const path = new URL(route.request().url()).pathname;
-    if (path.endsWith('/history') || path.endsWith('/layout')) {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/history') ? flowHistory(params) : FLOW_LAYOUT) });
-      return;
-    }
     log.queries.push(params);
     await route.fulfill({
       status: 200,

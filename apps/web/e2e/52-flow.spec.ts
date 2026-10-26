@@ -1,8 +1,9 @@
-// 52-flow.spec.ts — the Flow page's Live mode on `GET /api/v1/flow` mocked at
-// the browser boundary: the stations and the bottleneck, the rework loops, a
-// station's lots and the trace behind one, the window and station in the
-// address, the strip above the Activity feed, a phone in the dark theme, the
-// nav entry and chord, and what an older server and a non-admin see.
+// 52-flow.spec.ts — the Flow page on `GET /api/v1/flow` mocked at the browser
+// boundary: one number per station with the bottleneck marked, the picked
+// station's work in progress oldest first with the stale part folded away, the
+// station in the address and Back, the strip above the Activity feed, a phone
+// in the dark theme, the nav entry and chord, and what an older server and a
+// non-admin see.
 
 import { expect, test, type Page } from './fixtures/test';
 
@@ -42,7 +43,7 @@ async function sidewaysOverflow(page: Page): Promise<number> {
 }
 
 test.describe('Flow', () => {
-  test('lays the line out, names the bottleneck and draws the rework loops @action:flow.live', async ({
+  test('one number per station, the bottleneck marked and opened by default @action:flow.live', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
@@ -50,30 +51,19 @@ test.describe('Flow', () => {
 
     await page.goto('/flow');
     await expect(page.getByTestId('flow-page')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByTestId('flow-card-gate')).toContainText('3 waiting');
-    // The contributing repository and the integration repository each have
-    // their own decision: the pin opens a second pull request.
-    await expect(page.getByText('◇ Current revision satisfies configured merge requirements?')).toHaveCount(2);
-    await expect(page.getByText('Yes → ⏸ awaiting activation authorization')).toBeVisible();
-    await expect(page.getByTestId('flow-line-strip')).toContainText('Gate holds the most waiting');
-    for (const id of ['pin', 'stage', 'deploy']) await expect(page.getByTestId(`flow-card-${id}`)).toBeVisible();
-    // The default view is the family's product journey: every configured
-    // repository, including one with no current work, converging on the chain
-    // the configuration records.
-    await expect(page.getByTestId('flow-family-acme')).toContainText('3 configured repositories');
-    await expect(page.getByTestId('flow-repo-acme/widgets-core')).toContainText('configured · no current work');
-    await expect(page.getByTestId('flow-converge-acme')).toContainText('converge in acme/widgets-deploy');
-    await expect(page.getByTestId('flow-card-consumer-gate')).toContainText('1 waiting');
-    await expect(page.getByText('Route configuration unavailable')).toHaveCount(0);
-
-    await page.getByTestId('flow-line-strip-station-gate').click();
-    await expect(page.getByTestId('flow-daily-chart')).toBeVisible();
-    await page.getByRole('button', { name: '2026-10-13: Returned for fixes 1' }).click();
-    await expect(page.getByText('Repair the queue')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Runner gate-b' })).toHaveAttribute('href', '/runners?runners=gate-b');
-    const evidence = page.getByText('Repair the queue').locator('..');
-    await evidence.getByRole('button', { name: 'Inspect journey' }).click();
-    await expect(page.getByTestId('flow-item-journey')).toContainText('acme/widgets#41');
+    const strip = page.getByTestId('flow-strip');
+    await expect(strip.getByRole('link')).toHaveCount(9);
+    await expect(page.getByTestId('flow-strip-station-gate')).toContainText('6');
+    await expect(page.getByTestId('flow-strip-station-gate')).toContainText('Bottleneck');
+    await expect(page.getByTestId('flow-strip-station-gate')).toHaveAttribute('aria-current', 'true');
+    // Nothing has reached Pin: no number, never a zero.
+    await expect(page.getByTestId('flow-strip-station-pin')).toContainText('—');
+    // The server lists fewer than it counts, and the page says so.
+    await expect(page.getByTestId('flow-coverage')).toHaveText('8 of 14 in progress listed');
+    await expect(page.getByTestId('flow-station')).toContainText('Gate · 6 in progress · 5 of 6 listed');
+    // The removed views stay removed.
+    await expect(page.getByText('Configuration and evidence not available')).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Window' })).toHaveCount(0);
 
     const result = await runAxe(page, { disableRules: ['color-contrast'] });
     await persistAxeResult('flow-live', result);
@@ -82,44 +72,44 @@ test.describe('Flow', () => {
     expect(blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`)).toEqual([]);
   });
 
-  test('a station lists its lots oldest first, and a lot opens its own page @action:flow.station_lots', async ({
+  test('a station lists its work oldest first, folds the stale part, and keeps the pick in the address @action:flow.station_lots', async ({
     page,
   }) => {
     await mockBootstrap(page, { auth: { role: 'admin' } });
-    const log = await mockFlowApi(page);
+    await mockFlowApi(page);
 
-    await page.goto('/flow?days=7');
+    await page.goto('/flow?days=7&mode=layout');
     await expect(page.getByTestId('flow-body')).toBeVisible({ timeout: 15_000 });
-    expect(log.queries[0]?.get('days')).toBe('7');
-
-    await page.getByTestId('flow-card-gate').click();
-    await expect(page).toHaveURL(/[?&]station=gate\b/);
-    const lots = page.getByTestId('flow-lots');
-    await expect(lots).toContainText('At Gate, oldest first');
-    const ids = await lots.locator('.flow-lots__link').evaluateAll((nodes) =>
-      nodes.map((node) => node.textContent)
-    );
+    const current = page.getByTestId('flow-current');
+    const ids = await current.locator('.flow-items__id').evaluateAll((nodes) => nodes.map((node) => node.textContent));
     expect(ids).toEqual(['acme-0001', 'acme/widgets#42', 'acme-0002']);
+    // The two old claims are one line until it is opened.
+    await expect(page.getByTestId('flow-stale')).toHaveCount(0);
+    const toggle = page.getByTestId('flow-stale-toggle');
+    await expect(toggle).toHaveText('2 stale · older than 14 days');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const stale = await page.getByTestId('flow-stale').locator('.flow-items__id').evaluateAll((nodes) => nodes.map((node) => node.textContent));
+    expect(stale).toEqual(['acme-0009', 'acme-0008']);
 
-
-    // A held lot has no estimate: its next step is a person.
-    await page.getByTestId('flow-card-review').click();
-    await expect(page.getByTestId('flow-lots')).toContainText('held — awaiting an explicit release decision');
-
-    // The window stays a filter: the station picked stays picked.
-    await page.getByRole('group', { name: 'Window' }).getByRole('button', { name: '90 d' }).click();
-    await expect(page).toHaveURL(/[?&]days=90\b/);
+    // Picking a station is a new address; Back returns to the one before.
+    await page.getByTestId('flow-strip-station-review').click();
     await expect(page).toHaveURL(/[?&]station=review\b/);
-    await expect.poll(() => log.queries.at(-1)?.get('days')).toBe('90');
+    await expect(page).not.toHaveURL(/days=|mode=/);
+    const held = page.getByTestId('flow-item-acme/widgets#43');
+    await expect(held).toContainText('review held it');
+    await expect(held).toContainText('nobody acting');
+    await expect(held.getByRole('link', { name: 'Review' })).toHaveAttribute('href', '/acme/widgets/pull/43#changes-requested');
+    await expect(page.getByTestId('flow-item-acme-0003')).toContainText('no reason recorded');
+    await page.goBack();
+    await expect(page.getByTestId('flow-station')).toHaveAttribute('data-station', 'gate');
 
-    // The lot opens the work itself, which is where its trace is.
-    await page.getByTestId('flow-card-gate').click();
-    await expect(lots).toContainText('At Gate, oldest first');
-    await expect(lots.locator('[data-list-row]').first()).toContainText('acme-0001');
+    // The keys walk the rows, and Enter opens the work.
+    await page.getByTestId('flow-strip-station-gate').click();
+    const first = current.locator('[data-list-row]').first();
+    await expect(first).toContainText('acme-0001');
     await page.keyboard.press('j');
-    await expect(lots.locator('[data-list-row]').first()).toBeFocused();
-    await page.keyboard.press('k');
-    await expect(lots.locator('[data-list-row]').first()).toBeFocused();
+    await expect(first).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/work\/acme-0001$/);
   });
@@ -158,8 +148,7 @@ test.describe('Flow', () => {
       expect((await persistRenderedEvidence(page, scope)).geometry.width).toBeGreaterThan(0);
       await strip.getByTestId('flow-line-strip-station-gate').click();
       await expect(page).toHaveURL(/\/flow\?station=gate/);
-      await expect(page.getByTestId('flow-lots')).toContainText('At Gate, oldest first');
-      await expect(page.getByTestId('flow-line-strip-station-gate')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('flow-strip-station-gate')).toHaveAttribute('aria-current', 'true');
     }
 
     // The wall is the feed itself: no strip on it.
@@ -167,44 +156,6 @@ test.describe('Flow', () => {
     await expect(page.getByTestId('activity-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId('flow-line-strip')).toHaveCount(0);
 
-  });
-
-  test('Layout mode shows each station\'s runners and flags a station short of tools @action:flow.layout', async ({
-    page,
-  }) => {
-    await mockBootstrap(page, { auth: { role: 'admin' } });
-    await mockFlowApi(page);
-
-    await page.goto('/flow');
-    await expect(page.getByTestId('flow-body')).toBeVisible({ timeout: 15_000 });
-    await page.getByTestId('flow-mode-layout').click();
-    await expect(page).toHaveURL(/[?&]mode=layout\b/);
-
-    const gate = page.getByTestId('flow-layout-card-gate');
-    await expect(gate).toHaveAttribute('data-tone', 'human');
-    await expect(page.getByTestId('flow-layout-capacity-gate')).toContainText('2 of 4 expected reporting');
-    const busy = gate.getByTestId('flow-layout-tool-gate-b');
-    await expect(busy).toContainText('node-b');
-    await expect(busy).toContainText('online · busy');
-    await expect(busy).toContainText('2.0.9 (1234567)');
-    await expect(gate.getByTestId('flow-layout-tool-gate-c')).toContainText('offline · idle');
-    await expect(busy.getByRole('link', { name: 'gate-b' })).toHaveAttribute('href', '/runners?runners=gate-b');
-    // Nothing reports for Merge: a red card that says so.
-    const merge = page.getByTestId('flow-layout-card-merge');
-    await expect(merge).toHaveAttribute('data-tone', 'human');
-    await expect(merge).toContainText('No tool is reporting for this station.');
-    await expect(page.getByTestId('flow-layout-card-review')).toHaveAttribute('data-tone', 'ok');
-    await expect(page.getByTestId('flow-layout-summary')).toContainText('Gate, Merge');
-
-    const result = await runAxe(page, { disableRules: ['color-contrast'] });
-    await persistAxeResult('flow-layout', result);
-    const rendered = await persistRenderedEvidence(page, 'flow-layout');
-    expect(rendered.geometry.width, 'the Flow Layout rendered with width').toBeGreaterThan(0);
-    expect(blockingViolations(result).map((v) => `${v.impact ?? '?'} ${v.id}`)).toEqual([]);
-
-    await page.getByTestId('flow-mode-live').click();
-    await expect(page.getByTestId('flow-body')).toBeVisible();
-    await expect(page).not.toHaveURL(/mode=layout/);
   });
 
   test('Activity links each event to its station on Flow @action:flow.activity_links', async ({
@@ -247,7 +198,7 @@ test.describe('Flow', () => {
     expect(rendered.geometry.width, 'the In flight timeline rendered with ETAs').toBeGreaterThan(0);
   });
 
-  test('phone dark mode stacks the line with no sideways scroll @action:flow.phone_dark', async ({
+  test('phone dark mode wraps the strip with no sideways scroll @action:flow.phone_dark', async ({
     page,
   }) => {
     await page.setViewportSize(PHONE);
@@ -259,14 +210,14 @@ test.describe('Flow', () => {
     await expect(page.getByTestId('flow-page')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     expect(await sidewaysOverflow(page), 'no sideways scroll at 390px').toBeLessThanOrEqual(0);
-    // The cards become a vertical list, and every label is still HTML text.
-    const labels = page.getByTestId('flow-stations').locator('.flow-card__label');
+    // The strip wraps three to a row, and every label is still HTML text.
+    const labels = page.getByTestId('flow-strip').locator('.flow-strip__label');
     await expect(labels.first()).toBeVisible();
     const labelPx = await labels.first().evaluate((el) => el.getBoundingClientRect().height);
     expect(labelPx, 'station labels stay legible at 390px').toBeGreaterThanOrEqual(12);
-    const columns = await page.locator('.flow-map__intake').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length);
-    expect(columns, 'one intake station per row on a phone').toBe(1);
-    await expect(page.getByTestId('flow-lots')).toContainText('At Gate, oldest first');
+    const columns = await page.locator('.flow-strip__stations').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+    expect(columns, 'three stations per row on a phone').toBe(3);
+    await expect(page.getByTestId('flow-station')).toContainText('Gate · 6 in progress');
 
     const result = await runAxe(page, { disableRules: ['color-contrast'] });
     await persistAxeResult('flow-phone-dark', result);
@@ -305,24 +256,3 @@ test.describe('Flow', () => {
   });
 });
 
-
-test('closed work stays discoverable with replacement status and history @action:flow.closures', async ({ page }) => {
-  await mockBootstrap(page, { auth: { role: 'admin' } });
-  await mockFlowApi(page);
-  await page.goto('/flow');
-  const panel = page.getByTestId('flow-closures');
-  await expect(panel).toContainText('2 items · 1 need attention');
-  await panel.getByText('Inspect closed work', { exact: true }).click();
-  await expect(panel.getByText('Original attempt closed.')).toBeHidden();
-  await panel.getByText('Recorded explanation', { exact: true }).click();
-  await expect(panel.getByText('Original attempt closed.')).toBeVisible();
-  await panel.getByLabel('Disposition').selectOption('replacement_recorded');
-  await expect(panel.getByRole('link', { name: 'acme/widgets#42', exact: true })).toHaveAttribute('href', '/acme/widgets/pull/42');
-  expect(blockingViolations(await runAxe(page)).map(v => v.id)).toEqual([]);
-  await panel.getByRole('button', { name: 'Inspect history' }).click();
-  await expect(page).toHaveURL(/lot=acme%2Fwidgets%2340/);
-  await expect(page.getByTestId('flow-item-journey')).toContainText('acme/widgets#40');
-  await panel.getByLabel('Disposition').selectOption('attention');
-  await panel.getByLabel('Only review').check();
-  await expect(panel).toContainText('No closed work matches these filters.');
-});

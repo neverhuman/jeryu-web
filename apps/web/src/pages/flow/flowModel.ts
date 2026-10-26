@@ -1,204 +1,190 @@
 // flowModel.ts — everything the Flow page decides, kept pure so it is tested
-// without a browser: the controls read from the address, a station card's
-// numbers in words, the rework arcs under the line, and the lots at one
-// station with their estimates.
+// without a browser: which station the address picks, one number per station,
+// and the work in progress at one station, oldest first, with the stale part
+// set apart.
 //
-// The page never fills a gap in: a metric the ledger cannot support says so
-// ("not enough data", "nothing here yet") and a station that has never been
-// reached keeps its place on the line with no numbers at all.
+// Flow answers one question: where is the work in progress stuck right now.
+// The page never fills a gap in: a station nothing has reached has no number,
+// and when the server lists fewer items than it counts, the page says how many
+// of how many it lists.
 
 import type { FlowLot, FlowReport, FlowStation } from '../../api/types';
-import type { Tone } from '../../components/tone/tone';
-import { stationTone, stationUnknown } from '../../components/flow/lineStripModel';
-import { durationWords, spanWords } from '../../format/duration';
+import { stationTotal, stationUnknown } from '../../components/flow/lineStripModel';
+import { spanWords } from '../../format/duration';
 
 export const FLOW_PATH = '/flow';
-
-/** The windows a reader can pick, in days; the server answers these three. */
-export const FLOW_WINDOWS: readonly number[] = [7, 28, 90];
-export const DEFAULT_WINDOW_DAYS = 28;
-
-export const WINDOW_PARAM = 'days';
-export const MODE_PARAM = 'mode';
 export const STATION_PARAM = 'station';
 
-/** The page's two modes. Layout is the runners serving each station. */
-export type FlowMode = 'live' | 'layout';
-export const DEFAULT_MODE: FlowMode = 'live';
-export const FLOW_MODES: readonly FlowMode[] = ['live', 'layout'];
+/** An item that has sat at its station longer than this is stale. */
+export const STALE_AFTER_DAYS = 14;
+const STALE_AFTER_S = STALE_AFTER_DAYS * 24 * 60 * 60;
 
-/** The window the address asks for; anything else is the default. */
-export function parseWindow(params: URLSearchParams): number {
-  const raw = Number(params.get(WINDOW_PARAM));
-  return FLOW_WINDOWS.includes(raw) ? raw : DEFAULT_WINDOW_DAYS;
-}
+/** A list renders this many rows until the reader asks for all of them. */
+export const LIST_CAP = 50;
 
-export function parseMode(params: URLSearchParams): FlowMode {
-  return params.get(MODE_PARAM) === 'layout' ? 'layout' : DEFAULT_MODE;
-}
-
-/** The station whose lots are listed, or null when none is picked. */
-export function parseStation(params: URLSearchParams, report?: FlowReport): string | null {
-  const raw = params.get(STATION_PARAM);
-  if (!raw) return null;
-  if (!report) return raw;
-  return report.stations.some((station) => station.id === raw) ? raw : null;
-}
-
-/** Seconds in words, or `—` for a number the window cannot define. */
-export function secondsWords(value: number | null | undefined): string {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
-  return spanWords(value);
-}
-
-/** A share as whole percent; `—` when there is none. */
-export function shareWords(value: number | null | undefined): string {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
-  return `${Math.round(value * 100)}%`;
-}
-
-/** Lots an hour, said the way a reader would: per hour, or per day when slow. */
-export function throughputWords(perHour: number | null | undefined): string {
-  if (typeof perHour !== 'number' || !Number.isFinite(perHour)) return '—';
-  if (perHour === 0) return 'none left';
-  if (perHour < 1) return `${(perHour * 24).toFixed(1)}/day`;
-  return `${perHour.toFixed(1)}/h`;
-}
-
-/** The tools in use against the tools serving a station. */
-export function capacityWords(station: FlowStation): string {
-  const capacity = station.capacity;
-  if (!capacity) return 'capacity unknown';
-  const reporting = capacity.reporting ?? capacity.tools?.length ?? null;
-  if (typeof reporting !== 'number') return 'capacity unknown';
-  const busy = typeof capacity.busy === 'number' ? capacity.busy : null;
-  const expected = typeof capacity.expected === 'number' ? ` of ${capacity.expected} expected` : '';
-  return `${busy ?? '—'}/${reporting} busy${expected}`;
-}
-
-/** Why a station has no numbers, in the reader's words. */
-export function unknownWords(station: FlowStation): string | null {
-  const reasons: Record<string, string> = {
-    no_events: 'nothing has reached this station yet',
-    too_few_samples: 'not enough data',
-    no_heartbeat: 'no heartbeat yet',
-  };
-  const whole = station.unknown.find((unknown) => unknown.metric === 'all');
-  if (whole) return reasons[whole.reason] ?? whole.reason;
-  const named = station.unknown.filter((unknown) => unknown.metric !== 'capacity');
-  if (named.length === 0) return null;
-  const metrics = named.map((unknown) => METRIC_WORDS[unknown.metric] ?? unknown.metric);
-  const reason = reasons[named[0].reason] ?? named[0].reason;
-  return `${metrics.join(', ')}: ${reason}`;
-}
-
-const METRIC_WORDS: Record<string, string> = {
-  queue_s: 'queue time',
-  process_s: 'process time',
-  first_pass_rate: 'first pass',
-  capacity: 'capacity',
-};
-
-export interface StationCard {
-  station: FlowStation;
-  tone: Tone;
-  /** True when nothing has ever reached the station. */
-  unknown: boolean;
-  /** Queue p50 and process p50 as shares of the slowest station's visit. */
-  bars: { queue: number; process: number };
-  oldest: string;
-  queue: string;
-  process: string;
-  throughput: string;
-  capacity: string;
-  note: string | null;
-}
-
-/** One card per station, in route order, with their bars on a shared scale. */
-export function stationCards(report: FlowReport): StationCard[] {
-  const stations = [...report.stations].sort((a, b) => a.order - b.order);
-  const widest = Math.max(
-    1,
-    ...stations.map((station) => (station.queue_s?.p50 ?? 0) + (station.process_s?.p50 ?? 0))
-  );
-  return stations.map((station) => ({
-    station,
-    tone: stationTone(station),
-    unknown: stationUnknown(station),
-    bars: {
-      queue: ((station.queue_s?.p50 ?? 0) / widest) * 100,
-      process: ((station.process_s?.p50 ?? 0) / widest) * 100,
-    },
-    oldest: secondsWords(station.oldest_wait_s),
-    queue: station.queue_s ? durationWords(station.queue_s.p50) : '—',
-    process: station.process_s ? durationWords(station.process_s.p50) : '—',
-    throughput: throughputWords(station.throughput_per_hour),
-    capacity: capacityWords(station),
-    note: unknownWords(station),
-  }));
-}
-
-export interface ReworkArc {
+/** One station on the strip: its number in progress and its oldest wait. */
+export interface StationSummary {
   id: string;
-  from: string;
-  to: string;
-  count: number;
-  /** The SVG path of the loop back along the line. */
-  path: string;
-  /** The stroke width, thicker for more lots. */
-  width: number;
-  /** Where the count sits, at the top of the arc. */
-  label: { x: number; y: number };
-  title: string;
+  label: string;
+  /** Active, waiting and held together; null when nothing has reached it. */
+  total: number | null;
+  /** The items of this station the report lists. */
+  listed: number;
+  bottleneck: boolean;
+  oldestS: number | null;
+  /** The oldest wait against the stale cutoff, 0 to 1. */
+  ageShare: number;
+  /** The oldest wait is past the stale cutoff. */
+  stale: boolean;
 }
 
-export interface ArcGeometry {
-  width: number;
-  height: number;
-  arcs: ReworkArc[];
+function ordered(report: FlowReport): FlowStation[] {
+  return [...report.stations].sort((a, b) => a.order - b.order);
+}
+
+/** The nine stations in route order, one number each. */
+export function stationSummaries(report: FlowReport): StationSummary[] {
+  return ordered(report).map((station) => {
+    const oldest = typeof station.oldest_wait_s === 'number' ? station.oldest_wait_s : null;
+    return {
+      id: station.id,
+      label: station.label,
+      total: stationUnknown(station) ? null : stationTotal(station),
+      listed: report.lots.filter((lot) => lot.station === station.id).length,
+      bottleneck: station.bottleneck,
+      oldestS: oldest,
+      ageShare: oldest === null ? 0 : Math.min(1, oldest / STALE_AFTER_S),
+      stale: oldest !== null && oldest > STALE_AFTER_S,
+    };
+  });
 }
 
 /**
- * The rework loops as arcs under the line: one per station pair, from the
- * station that sent the work back to the station it went back to, thicker for
- * more lots. A loop whose target is not on the line is left out rather than
- * drawn to nowhere.
+ * The station the page opens on: the bottleneck the server names, unless it
+ * has nothing in progress, then the station with the most in progress.
  */
-export function reworkArcs(
-  report: FlowReport,
-  options: { width: number; height: number } = { width: 900, height: 64 }
-): ArcGeometry {
-  const stations = [...report.stations].sort((a, b) => a.order - b.order);
-  const centre = (id: string): number | null => {
-    const index = stations.findIndex((station) => station.id === id);
-    return index < 0 ? null : ((index + 0.5) / stations.length) * options.width;
-  };
-  const counts = stations.flatMap((station) =>
-    station.rework.map((rework) => ({ from: station.id, ...rework }))
+export function defaultStation(report: FlowReport): string | null {
+  const stations = stationSummaries(report);
+  const named = stations.find((station) => station.bottleneck);
+  if (named && (named.total ?? 0) > 0) return named.id;
+  const busiest = stations.reduce<StationSummary | null>(
+    (best, station) => ((station.total ?? 0) > (best?.total ?? 0) ? station : best),
+    null
   );
-  const busiest = Math.max(1, ...counts.map((rework) => rework.count));
-  const arcs: ReworkArc[] = [];
-  for (const rework of counts) {
-    const from = centre(rework.from);
-    const to = centre(rework.to);
-    if (from === null || to === null || rework.count <= 0) continue;
-    const fromLabel = stations.find((station) => station.id === rework.from)?.label ?? rework.from;
-    const toLabel = stations.find((station) => station.id === rework.to)?.label ?? rework.to;
-    // Deeper for a longer loop, so two loops over the same stretch are apart.
-    const span = Math.abs(from - to) / options.width;
-    const depth = Math.min(options.height - 6, 14 + span * (options.height - 20));
-    arcs.push({
-      id: `${rework.from}-${rework.to}`,
-      from: rework.from,
-      to: rework.to,
-      count: rework.count,
-      path: `M ${from.toFixed(1)} 2 C ${from.toFixed(1)} ${depth.toFixed(1)}, ${to.toFixed(1)} ${depth.toFixed(1)}, ${to.toFixed(1)} 2`,
-      width: 1 + (rework.count / busiest) * 5,
-      label: { x: (from + to) / 2, y: Math.min(options.height - 2, depth * 0.78 + 4) },
-      title: `${rework.count} ${rework.count === 1 ? 'lot' : 'lots'} sent back from ${fromLabel} to ${toLabel} (${shareWords(rework.rate)} of what left)`,
-    });
-  }
-  return { width: options.width, height: options.height, arcs };
+  return busiest?.id ?? named?.id ?? stations[0]?.id ?? null;
+}
+
+/** The station the address picks, or the default when it picks none it knows. */
+export function selectedStation(params: URLSearchParams, report: FlowReport): string | null {
+  const raw = params.get(STATION_PARAM);
+  if (raw && report.stations.some((station) => station.id === raw)) return raw;
+  return defaultStation(report);
+}
+
+/** The address that picks `station`, keeping the rest of the address. */
+export function stationSearch(params: URLSearchParams, station: string): string {
+  const next = new URLSearchParams(params);
+  next.set(STATION_PARAM, station);
+  // The old controls are gone; their parameters pick nothing now.
+  for (const key of ['days', 'mode', 'repo', 'day', 'state', 'offset', 'lot']) next.delete(key);
+  return `?${next.toString()}`;
+}
+
+/** One item in progress at a station, in the words a row shows. */
+export interface WipItem {
+  key: string;
+  id: string;
+  href: string | null;
+  prHref: string | null;
+  reviewHref: string | null;
+  repo: string | null;
+  state: string;
+  /** Seconds at this station, read against one instant for the whole list. */
+  waitedS: number | null;
+  stale: boolean;
+  /** Why it is held, in words; null when it is not held. */
+  hold: string | null;
+  holdBy: string | null;
+  holdAgeS: number | null;
+  nobodyActing: boolean;
+}
+
+/** The repository of a pull request item (`owner/repo#n`); a todo has none. */
+export function itemRepo(lot: FlowLot): string | null {
+  const hash = lot.lot_id.lastIndexOf('#');
+  return hash > 0 && lot.lot_id.slice(0, hash).includes('/') ? lot.lot_id.slice(0, hash) : null;
+}
+
+function waitedSeconds(lot: FlowLot, now: Date): number | null {
+  const since = Date.parse(lot.since);
+  if (!Number.isFinite(since)) return null;
+  return Math.max(0, (now.getTime() - since) / 1000);
+}
+
+function wipItem(lot: FlowLot, now: Date): WipItem {
+  const waited = waitedSeconds(lot, now);
+  const held = lot.state === 'held';
+  return {
+    key: `${lot.station}-${lot.lot_id}`,
+    id: lot.lot_id,
+    href: safeFlowHref(lot.href),
+    prHref: safeFlowHref(lot.pr_href ?? null),
+    reviewHref: safeFlowHref(lot.hold?.review_href ?? null),
+    repo: itemRepo(lot),
+    state: lot.state,
+    waitedS: waited,
+    // The report carries no per-item worker evidence, so an "active" claim
+    // with no live worker cannot be told apart: age alone decides stale.
+    stale: waited !== null && waited > STALE_AFTER_S,
+    hold: lot.hold ? holdReasonWords(lot.hold.reason) : held ? 'no reason recorded' : null,
+    holdBy: lot.hold?.by ?? null,
+    holdAgeS: lot.hold?.age_s ?? null,
+    nobodyActing: lot.hold?.nobody_acting ?? false,
+  };
+}
+
+/** The repositories with work in progress at one station, most first. */
+export interface RepoCount {
+  repo: string;
+  total: number;
+}
+
+export interface StationWip {
+  /** In progress for at most the stale cutoff, oldest first. */
+  current: WipItem[];
+  /** Past the stale cutoff, oldest first. */
+  stale: WipItem[];
+  listed: number;
+  /** What the station counts in progress; null when nothing has reached it. */
+  total: number | null;
+  repos: RepoCount[];
+}
+
+/** The work in progress at one station, oldest first, the stale part apart. */
+export function stationWip(report: FlowReport, station: string, now: Date): StationWip {
+  const items = lotsAt(report, station).map((lot) => wipItem(lot, now));
+  const found = report.stations.find((candidate) => candidate.id === station);
+  const repos = (report.repository_wip ?? [])
+    .filter((row) => row.station === station)
+    .map((row) => ({ repo: row.repo, total: row.waiting + row.active + row.held }))
+    .filter((row) => row.total > 0)
+    .sort((a, b) => b.total - a.total || a.repo.localeCompare(b.repo));
+  return {
+    current: items.filter((item) => !item.stale),
+    stale: items.filter((item) => item.stale),
+    listed: items.length,
+    total: found && !stationUnknown(found) ? stationTotal(found) : null,
+    repos,
+  };
+}
+
+/**
+ * The items the report lists against what the line counts in progress. The
+ * line counts each item once; an item can visit two stations at a time, so the
+ * stations' numbers can add up to more.
+ */
+export function lineCoverage(report: FlowReport): { listed: number; total: number } {
+  return { listed: report.lots.length, total: report.line.wip };
 }
 
 /** The lots at one station, oldest first. */
@@ -207,6 +193,11 @@ export function lotsAt(report: FlowReport, station: string): FlowLot[] {
     .filter((lot) => lot.station === station)
     .slice()
     .sort((a, b) => a.since.localeCompare(b.since));
+}
+
+/** Seconds in words, or `—` when there is no number. */
+export function ageWords(seconds: number | null): string {
+  return seconds === null ? '—' : spanWords(seconds);
 }
 
 const HOLD_REASONS: Record<string, string> = {
@@ -232,24 +223,7 @@ export function etaWords(lot: FlowLot): string {
   return `${base}, not counting ${missing || 'some stations'}`;
 }
 
-/** How long a lot has been where it is. */
-export function waitingWords(lot: FlowLot, now: Date): string {
-  const since = Date.parse(lot.since);
-  if (!Number.isFinite(since)) return '—';
-  return spanWords(Math.max(0, (now.getTime() - since) / 1000));
-}
-
-/** The one station holding the most waiting, or null. */
-export function bottleneck(report: FlowReport): FlowStation | null {
-  return report.stations.find((station) => station.bottleneck) ?? null;
-}
-
+/** An app path the page may link to; anything else is no link. */
 export function safeFlowHref(value: string | null): string | null {
-  return value?.startsWith('/') && !value.startsWith('//') && !/[\\\u0000-\u0020]/.test(value) ? value : null;
-}
-
-export function safeFlowLogHref(value: string | null): string | null {
-  if (safeFlowHref(value)) return value;
-  if (!value || /[\\\u0000-\u0020]/.test(value)) return null;
-  try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? value : null; } catch { return null; }
+  return value?.startsWith('/') && !value.startsWith('//') && !/[\\\u0000- ]/.test(value) ? value : null;
 }

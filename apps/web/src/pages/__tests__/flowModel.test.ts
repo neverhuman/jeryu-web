@@ -1,146 +1,123 @@
-// flowModel.test.ts — what the Flow page decides, without a browser: the
-// address, a card's words, the rework arcs and one station's lots.
+// flowModel.test.ts — what the Flow page decides, without a browser: one
+// number per station, which station the address picks, the work in progress at
+// a station oldest first with the stale part apart, the listed-of-counted
+// totals, and which links the page will follow.
 
 import { describe, expect, it } from 'vitest';
 
+import type { FlowReport } from '../../api/types';
 import {
-  DEFAULT_WINDOW_DAYS,
-  bottleneck,
-  capacityWords,
+  defaultStation,
   etaWords,
+  holdReasonWords,
+  itemRepo,
+  lineCoverage,
   lotsAt,
-  parseMode,
-  parseStation,
-  parseWindow,
-  reworkArcs,
-  secondsWords,
-  shareWords,
-  stationCards,
-  throughputWords,
-  unknownWords,
-  waitingWords,
+  safeFlowHref,
+  selectedStation,
+  STALE_AFTER_DAYS,
+  stationSearch,
+  stationSummaries,
+  stationWip,
 } from '../flow/flowModel';
 import { FLOW_REPORT } from './flowTestData';
 
-const params = (search: string): URLSearchParams => new URLSearchParams(search);
+const NOW = new Date('2026-10-14T12:00:00.000Z');
 
 describe('flowModel', () => {
-  it('reads the window, the mode and the station from the address', () => {
-    expect(parseWindow(params('days=7'))).toBe(7);
-    expect(parseWindow(params('days=90'))).toBe(90);
-    // A window the server does not answer for is the default, not a refusal.
-    expect(parseWindow(params('days=5'))).toBe(DEFAULT_WINDOW_DAYS);
-    expect(parseWindow(params(''))).toBe(DEFAULT_WINDOW_DAYS);
-    expect(parseMode(params('mode=layout'))).toBe('layout');
-    expect(parseMode(params('mode=nonsense'))).toBe('live');
-    expect(parseStation(params('station=gate'), FLOW_REPORT)).toBe('gate');
-    // A station this line does not have is no station at all.
-    expect(parseStation(params('station=intake'), FLOW_REPORT)).toBeNull();
-    expect(parseStation(params(''), FLOW_REPORT)).toBeNull();
-  });
-
-  it('says a number the ledger cannot support instead of a zero', () => {
-    expect(secondsWords(null)).toBe('—');
-    expect(secondsWords(1800)).toBe('30m');
-    expect(shareWords(null)).toBe('—');
-    expect(shareWords(0.19)).toBe('19%');
-    expect(throughputWords(null)).toBe('—');
-    expect(throughputWords(0)).toBe('none left');
-    expect(throughputWords(0.2)).toBe('4.8/day');
-    expect(throughputWords(4.2)).toBe('4.2/h');
-    // Capacity waits on the heartbeat half of Flow.
-    expect(capacityWords(FLOW_REPORT.stations[0])).toBe('capacity unknown');
-    expect(
-      capacityWords({
-        ...FLOW_REPORT.stations[0],
-        capacity: { tools: ['build-1/slot0', 'build-1/slot1'], reporting: 2, busy: 2, expected: 4 },
-      })
-    ).toBe('2/2 busy of 4 expected');
-  });
-
-  it('names why a station has no numbers', () => {
-    const station = (id: string) => FLOW_REPORT.stations.find((s) => s.id === id)!;
-    expect(unknownWords(station('pin'))).toBe('nothing has reached this station yet');
-    expect(unknownWords(station('stage'))).toBe('queue time: not enough data');
-    // Capacity alone is not a note on the Live page: Layout answers it.
-    expect(unknownWords(station('queue'))).toBeNull();
-  });
-
-  it('cards the stations in route order, bars on one shared scale', () => {
-    const cards = stationCards(FLOW_REPORT);
-    expect(cards.map((card) => card.station.id)).toEqual([
-      'queue',
-      'work',
-      'shift',
-      'review',
-      'gate',
-      'merge',
-      'pin',
-      'stage',
-      'deploy',
+  it('gives each station one number in progress and its oldest wait against the stale cutoff', () => {
+    const stations = stationSummaries(FLOW_REPORT);
+    expect(stations.map((station) => station.id)).toEqual([
+      'queue', 'work', 'shift', 'review', 'gate', 'merge', 'pin', 'stage', 'deploy',
     ]);
-    const gate = cards.find((card) => card.station.id === 'gate')!;
-    expect(gate.tone).toBe('warn'); // a lot has waited past Gate's own p90
-    expect(gate.queue).toBe('15m');
-    expect(gate.process).toBe('6m 40s');
-    expect(gate.throughput).toBe('4.2/h');
-    // Work's visit is the longest on the line, so its bars fill the scale.
-    const work = cards.find((card) => card.station.id === 'work')!;
-    expect(Math.round(work.bars.queue + work.bars.process)).toBe(100);
-    // Red is a hold: Review has one, so it carries the human tone.
-    expect(cards.find((card) => card.station.id === 'review')!.tone).toBe('human');
-    // A station nothing has reached has no numbers at all.
-    const pin = cards.find((card) => card.station.id === 'pin')!;
-    expect(pin.unknown).toBe(true);
-    expect(pin.tone).toBe('unknown');
-    expect(pin.queue).toBe('—');
+    const gate = stations.find((station) => station.id === 'gate')!;
+    expect(gate).toMatchObject({ total: 5, listed: 3, bottleneck: true, oldestS: 4200, stale: false });
+    expect(gate.ageShare).toBeCloseTo(4200 / (STALE_AFTER_DAYS * 86_400));
+    // Never reached: no number at all.
+    expect(stations.find((station) => station.id === 'pin')?.total).toBeNull();
+    const stale = stationSummaries({
+      ...FLOW_REPORT,
+      stations: FLOW_REPORT.stations.map((station) =>
+        station.id === 'work' ? { ...station, oldest_wait_s: 30 * 86_400 } : station
+      ),
+    }).find((station) => station.id === 'work')!;
+    expect(stale).toMatchObject({ stale: true, ageShare: 1 });
   });
 
-  it('draws one arc per rework loop, thicker for more lots', () => {
-    const geometry = reworkArcs(FLOW_REPORT, { width: 900, height: 64 });
-    expect(geometry.arcs.map((arc) => arc.id)).toEqual(['review-work', 'gate-work']);
-    const [review, gate] = geometry.arcs;
-    expect(gate.count).toBe(9);
-    expect(gate.width).toBeGreaterThan(review.width);
-    expect(gate.title).toBe('9 lots sent back from Gate to Work (19% of what left)');
-    expect(review.title).toBe('2 lots sent back from Review to Work (10% of what left)');
-    // The arc runs back along the line: it starts at Gate and ends at Work.
-    expect(gate.path.startsWith('M 450.0')).toBe(true);
-    expect(gate.path.endsWith('150.0 2')).toBe(true);
+  it('opens on the bottleneck, else the busiest station, and keeps a known pick', () => {
+    expect(defaultStation(FLOW_REPORT)).toBe('gate');
+    const emptyBottleneck: FlowReport = {
+      ...FLOW_REPORT,
+      stations: FLOW_REPORT.stations.map((station) => ({ ...station, bottleneck: station.id === 'deploy' })),
+    };
+    expect(defaultStation(emptyBottleneck)).toBe('gate');
+    expect(selectedStation(new URLSearchParams('station=review'), FLOW_REPORT)).toBe('review');
+    expect(selectedStation(new URLSearchParams('station=nowhere'), FLOW_REPORT)).toBe('gate');
   });
 
-  it('lists a station lots oldest first, with what is left and what is not counted', () => {
-    const lots = lotsAt(FLOW_REPORT, 'gate');
-    expect(lots.map((lot) => lot.lot_id)).toEqual([
-      'acme-0001',
-      'acme/widgets#42',
-      'acme-0002',
+  it('builds a pick address that keeps the family and drops the old controls', () => {
+    const params = new URLSearchParams('family=acme&days=90&mode=layout&repo=acme/widgets&lot=x');
+    expect(stationSearch(params, 'review')).toBe('?family=acme&station=review');
+  });
+
+  it('lists a station oldest first and sets the stale part apart', () => {
+    const report: FlowReport = {
+      ...FLOW_REPORT,
+      lots: [
+        ...FLOW_REPORT.lots,
+        { ...FLOW_REPORT.lots[0], lot_id: 'acme-old', since: '2026-09-01T00:00:00.000Z' },
+      ],
+      repository_wip: [
+        { repo: 'acme/b', station: 'gate', waiting: 1, active: 0, held: 0 },
+        { repo: 'acme/a', station: 'gate', waiting: 1, active: 0, held: 0 },
+        { repo: 'acme/c', station: 'gate', waiting: 0, active: 0, held: 0 },
+        { repo: 'acme/a', station: 'review', waiting: 4, active: 0, held: 0 },
+      ],
+    };
+    const wip = stationWip(report, 'gate', NOW);
+    expect(wip.current.map((item) => item.id)).toEqual(['acme-0001', 'acme/widgets#42', 'acme-0002']);
+    expect(wip.stale.map((item) => item.id)).toEqual(['acme-old']);
+    expect(wip).toMatchObject({ listed: 4, total: 5 });
+    // Ties go by name; a repository with nothing here is left out.
+    expect(wip.repos).toEqual([
+      { repo: 'acme/a', total: 1 },
+      { repo: 'acme/b', total: 1 },
     ]);
-    expect(etaWords(lots[0])).toBe('30m left (p90 1h 30m)');
-    expect(etaWords(lots[1])).toBe('40m left (p90 2h), not counting pin');
-    const held = lotsAt(FLOW_REPORT, 'review')[0];
-    expect(etaWords(held)).toBe('held — a person is the next step');
-    expect(waitingWords(lots[0], new Date('2026-10-14T12:00:00.000Z'))).toBe('3h');
+    expect(wip.current[0]?.waitedS).toBe(3 * 3600);
   });
 
-  it('names the station that holds the most waiting', () => {
-    expect(bottleneck(FLOW_REPORT)?.label).toBe('Gate');
-    expect(
-      bottleneck({
-        ...FLOW_REPORT,
-        stations: FLOW_REPORT.stations.map((station) => ({ ...station, bottleneck: false })),
-      })
-    ).toBeNull();
+  it('words a hold, and says so when a held item carries no hold record', () => {
+    const review = stationWip(FLOW_REPORT, 'review', NOW).current;
+    expect(review.map((item) => item.hold)).toEqual(['no reason recorded', 'review held it']);
+    expect(review[1]).toMatchObject({ holdBy: 'acme-reviewer', holdAgeS: 19_800, nobodyActing: true });
+    expect(holdReasonWords('gate_red')).toBe('required check is red');
+    expect(holdReasonWords('something_new')).toBe('something_new');
+  });
+
+  it('reads the repository from a pull request id only', () => {
+    const [todo, pull] = lotsAt(FLOW_REPORT, 'gate');
+    expect(itemRepo(todo!)).toBeNull();
+    expect(itemRepo(pull!)).toBe('acme/widgets');
+    expect(itemRepo({ ...todo!, lot_id: 'widgets#3' })).toBeNull();
+  });
+
+  it('counts what the line lists against what it counts in progress', () => {
+    expect(lineCoverage(FLOW_REPORT)).toEqual({ listed: 6, total: 13 });
+  });
+
+  it('keeps the estimate words other pages read', () => {
+    const [first, partial] = lotsAt(FLOW_REPORT, 'gate');
+    expect(etaWords(first!)).toBe('30m left (p90 1h 30m)');
+    expect(etaWords(partial!)).toBe('40m left (p90 2h), not counting pin');
+    expect(etaWords(lotsAt(FLOW_REPORT, 'review')[0]!)).toBe('held — a person is the next step');
   });
 });
 
-describe('Flow evidence links', () => {
-  it('refuses executable and authority-changing navigation', async () => {
-    const { safeFlowHref, safeFlowLogHref } = await import('../flow/flowModel');
+describe('Flow links', () => {
+  it('refuses executable and authority-changing navigation', () => {
     expect(safeFlowHref('/work/item')).toBe('/work/item');
-    for (const href of ['//evil.example', '/\\evil.example', 'javascript:alert(1)', '/work/\nitem']) expect(safeFlowHref(href)).toBeNull();
-    expect(safeFlowLogHref('https://forge.example/log/1')).toBe('https://forge.example/log/1');
-    expect(safeFlowLogHref('javascript:alert(1)')).toBeNull();
-    expect(safeFlowLogHref('https://secret@forge.example/log')).toBeNull();
+    for (const href of ['//evil.example', '/\\evil.example', 'javascript:alert(1)', '/work/\nitem']) {
+      expect(safeFlowHref(href)).toBeNull();
+    }
   });
 });
