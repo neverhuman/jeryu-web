@@ -132,30 +132,27 @@ test('a stage opens into its targets, what promoting ships and the command @acti
   await expect(detail.getByRole('heading')).toHaveCount(0);
 
   // A board with fixed columns lines every lane up under one header; a column a
-  // lane skips says "not used", and each tool is its own row.
+  // lane skips is left empty, and each tool is its own row.
   await page.getByRole('link', { name: 'globex', exact: true }).click();
   await expect(page.getByTestId('release-board-columns')).toHaveText(/main\s*dev\s*stage\s*prod/i);
-  await expect(page.getByTestId('release-board-slot-gate-runner-dev')).toHaveText(/not used/);
+  await expect(page.getByTestId('release-board-slot-gate-runner-dev').locator('.release-board__cell')).toHaveCount(0);
+  await expect(page.getByText('not used')).toHaveCount(0);
   await expect(page.getByRole('group', { name: 'Tools' }).getByRole('heading', { level: 3 })).toHaveText([
     'Gate runner',
     'Reviewer',
     'Scorer',
   ]);
 
-  // A never-deployed stage is dashed and says so.
-  const idle = page.getByTestId('release-board-stage-forge-server-dev');
-  await expect(idle).toHaveClass(/release-board__cell--never-deployed/);
-  await idle.click();
-  await expect(page.getByTestId('release-board-detail-forge-server')).toContainText(
-    'Declared but never deployed to'
-  );
+  // A stage nothing was ever deployed to is not drawn: its column is empty.
+  await expect(page.getByTestId('release-board-stage-forge-server-dev')).toHaveCount(0);
+  await expect(page.getByTestId('release-board-slot-forge-server-dev').locator('.release-board__cell')).toHaveCount(0);
 });
 
 test('stage selection preserves scroll while updating the URL @action:releases.board.stage-detail', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
   await openBoard(page, '/releases/family/globex');
   const main = page.getByTestId('release-board-stage-forge-server-main');
-  const dev = page.getByTestId('release-board-stage-forge-server-dev');
+  const dev = page.getByTestId('release-board-stage-forge-server-production');
   await main.scrollIntoViewIfNeeded();
   const depth = await page.evaluate(() => window.scrollY);
   expect(depth).toBeGreaterThan(0);
@@ -168,7 +165,7 @@ test('stage selection preserves scroll while updating the URL @action:releases.b
   await dev.click();
   await expect(dev).toHaveAttribute('aria-expanded', 'true');
   await expect(main).toHaveAttribute('aria-expanded', 'false');
-  await expect(page).toHaveURL(/stage=forge-server%3Adev$/);
+  await expect(page).toHaveURL(/stage=forge-server%3Aproduction$/);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
 
   await dev.click();
@@ -178,7 +175,7 @@ test('stage selection preserves scroll while updating the URL @action:releases.b
 
   await page.goBack();
   await expect(dev).toHaveAttribute('aria-expanded', 'true');
-  await expect(page).toHaveURL(/stage=forge-server%3Adev$/);
+  await expect(page).toHaveURL(/stage=forge-server%3Aproduction$/);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
 });
 

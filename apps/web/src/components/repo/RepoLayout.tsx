@@ -1,6 +1,7 @@
 // RepoLayout.tsx — the shell every repository page is drawn inside.
 //
-// One header naming the repository (its health, score, role, visibility) and
+// One header naming the repository (its health and score, plus archived or a
+// visibility other than public when that is so: three facts at most) and
 // one tab bar across the top, so Code, Pull requests, Automation, Agents,
 // Activity and Settings are one click apart from wherever the reader is. The
 // repository used to be navigated from a block at the bottom of the global left
@@ -10,25 +11,19 @@
 // the current one carrying `aria-current="page"`, arrow keys moving between
 // them. The pull request page is navigated by the same component.
 //
-// Left of the content, a repository that belongs to a family carries that
-// family's rail (RepoFamilyRail): the family is context, not a page of its
-// own. A repository in no family says so in one muted chip and takes the
-// whole width.
+// The content takes the whole width. The family is the header's family
+// control and the Repositories list, not a rail repeated on every repository
+// page; the default branch is the branch picker's, the role and the mirror
+// are Settings' to say.
 
 import { AlertTriangle } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { JankuraiScoreBadge } from './JankuraiScoreBadge';
-import {
-  FamilyRailControl,
-  RepoFamilyRail,
-  useFamilyRail,
-} from './RepoFamilyRail';
 import { RepoDescription } from './RepoDescription';
 import { RepoArchivedBadge } from './RepoArchivedBadge';
 import { RepoHealthPill } from './RepoHealthPill';
-import { RepoRoleBadge } from './RepoRoleBadge';
 import { TabBar } from './TabBar';
 import { PageHeader, queryFreshness } from '../pageHeader';
 import { PermissionDeniedState } from '../state';
@@ -41,7 +36,6 @@ import { useRefs } from '../../hooks/useRefs';
 import { useResolveRepo } from '../../hooks/useResolveRepo';
 import { QUALITY_GATE_PATH } from '../../pages/qualityGate/qualityGateModel';
 import { healthOpensChecks, repoFrontPath, repoShellCrumbs } from '../../pages/repoBrowserModel';
-import { firstMirror, mirrorTone } from '../../pages/repositoryMirrorModel';
 import { ClonePopover } from '../../pages/repositoryOverviewParts';
 import {
   RepoHealthChecks,
@@ -81,7 +75,6 @@ export function RepoLayout({
   const mayOpenSettings = canSeeRepoSettings(user?.role, permissions);
   // The header's health chip stands for failing checks; pressing it lists them.
   const [checksOpen, setChecksOpen] = useState(false);
-  const rail = useFamilyRail(summary?.family, repoId, tab);
 
   const base = repoFrontPath(provider, fullName);
   const automation = useRepoAutomation(repoId);
@@ -93,7 +86,6 @@ export function RepoLayout({
   const activeAgents = presence.data
     ? livePresenceCount(presence.data.items)
     : (summary?.active_agents ?? null);
-  const mirror = firstMirror(automation.data?.mirrors);
   const defaultBranch = summary?.default_branch ?? '';
   const defaultBranchSha =
     refs.data?.find((ref) => ref.kind === 'branch' && ref.name === defaultBranch)?.sha ?? null;
@@ -121,7 +113,6 @@ export function RepoLayout({
         actions={
           summary ? (
             <>
-              {rail ? <FamilyRailControl rail={rail} /> : null}
               <ClonePopover
                 httpUrl={summary.clone_http_url}
                 sshUrl={summary.clone_ssh_url}
@@ -155,32 +146,12 @@ export function RepoLayout({
                   scoredAt={summary.jankurai_scored_at}
                 />
               </Link>
-              <RepoRoleBadge role={summary.repo_role} />
-              <RepoArchivedBadge archived={summary.archived} />
-              <MirrorBadge href={`${base}/settings/mirror#mirror`} tone={mirrorTone(mirror)} />
-              {summary.family ? (
-                <Link
-                  to={`/repos/family/${encodeURIComponent(summary.family)}`}
-                  className="page__pill page__pill--muted repo-shell__family-chip"
-                  data-testid="repo-header-family"
-                >
-                  family {summary.family}
-                </Link>
-              ) : (
-                <span
-                  className="page__pill page__pill--muted"
-                  data-testid="repo-no-family"
-                  title="The forge puts this repository in no family"
-                >
-                  no family
+              {summary.archived ? (
+                <RepoArchivedBadge archived={summary.archived} />
+              ) : summary.visibility !== 'public' ? (
+                <span className="page__pill" data-testid="repo-header-visibility">
+                  {summary.visibility}
                 </span>
-              )}
-              <span className="page__pill" data-testid="repo-header-default-branch">
-                default branch {summary.default_branch}
-              </span>
-              <span className="page__pill">{summary.visibility}</span>
-              {summary.language ? (
-                <span className="page__pill">{summary.language}</span>
               ) : null}
             </>
           ) : null
@@ -200,13 +171,7 @@ export function RepoLayout({
         />
       </PageHeader>
 
-      <div
-        className={`repo-shell__body${
-          rail && rail.open ? ' repo-shell__body--with-rail' : ''
-        }`}
-      >
-        {/* Hidden, not unmounted: the family is read once per repository page. */}
-        {rail ? <RepoFamilyRail rail={rail} /> : null}
+      <div className="repo-shell__body">
         <div className="repo-shell__content">
           {tab === 'settings' && !mayOpenSettings ? (
             <PermissionDeniedState
@@ -282,25 +247,5 @@ function RepoTabs({
       testId="repo-tabs"
       idPrefix="repo-tab"
     />
-  );
-}
-
-function MirrorBadge({
-  href,
-  tone,
-}: {
-  href: string;
-  tone: ReturnType<typeof mirrorTone>;
-}): JSX.Element | null {
-  if (tone === 'unknown') return null;
-  return (
-    <Link
-      to={href}
-      className={`repo-mirror-link repo-mirror-link--${tone}`}
-      data-testid="repo-header-mirror-badge"
-      title="Open mirror settings"
-    >
-      GitHub ↗
-    </Link>
   );
 }

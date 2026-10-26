@@ -1,10 +1,11 @@
 // BoardLanes.tsx — one lane per deliverable. When the board declares its
 // columns (main, dev, stage, prod…) every lane sits on the same grid under one
-// header row: a cell per column, holding the lane's stages there or a dashed
-// "not used". Without columns a lane is a free track of stage cells (→ when a
-// stage follows the previous one, ‖ when it runs beside it). Either way a
-// never-deployed stage is dashed, lanes sharing a group sit under its name,
-// and pressing a cell opens its detail under the lane.
+// header row: a cell per column, holding the lane's stages there, or nothing
+// at all where the lane has no stage. Without columns a lane is a free track
+// of stage cells (→ when a stage follows the previous one, ‖ when it runs
+// beside it). Either way a stage nothing was ever deployed to is not drawn —
+// an empty column says it — lanes sharing a group sit under its name, and
+// pressing a cell opens its detail under the lane.
 //
 // Delta first: a cell leads with how far the stage is from the lane's source
 // ("30 behind main"), and the line under the lane head gives each step's gap
@@ -45,8 +46,8 @@ import {
   knownByText,
   laneGroups,
   laneLayout,
+  neverDeployed,
   noPromoteText,
-  NOT_USED_TEXT,
   openStageId,
   pillClass,
   promoteActionText,
@@ -57,6 +58,7 @@ import {
   stageOverlay,
   stageSkewed,
   stageTargets,
+  stageUnknown,
   stateTone,
   stepDeltas,
   stepDeltaText,
@@ -200,7 +202,7 @@ function LaneView({
         />
       ) : (
         <ol className="release-board__track" aria-label={`${lane.name} stages, in order`}>
-          {lane.stages.map((stage, index) => {
+          {lane.stages.filter((stage) => !neverDeployed(stage)).map((stage, index) => {
             const connector = stageConnector(stage, index);
             return (
               <li key={stage.id} className="release-board__step">
@@ -282,20 +284,16 @@ function ColumnTrack({
             <span className="release-board__slot-name" aria-hidden="true">
               {column.name}
             </span>
-            {stages.length > 0 ? (
-              stages.map(renderCell)
-            ) : (
-              <span className="release-board__cell release-board__cell--not-used">
-                {NOT_USED_TEXT}
-              </span>
-            )}
+            {/* A column the lane does not use, or one it declares but never
+                deployed to, is left empty: the header row names the column. */}
+            {stages.filter((stage) => !neverDeployed(stage)).map(renderCell)}
           </li>
         ))}
       </ol>
       {layout.unplaced.length > 0 ? (
         <div className="release-board__unplaced" aria-label={`${lane.name}, other stages`}>
           <span className="release-board__muted">other stages</span>
-          {layout.unplaced.map(renderCell)}
+          {layout.unplaced.filter((stage) => !neverDeployed(stage)).map(renderCell)}
         </div>
       ) : null}
     </>
@@ -324,6 +322,8 @@ function StageCell({
   // status when that is what the cell leads with, and on the targets line.
   const skewed = stageSkewed(stage);
   const skewInDelta = skewed && delta.text === stage.status;
+  // Nothing is known about what runs here: the version says "unknown" once.
+  const unknown = !overlay && stageUnknown(stage);
   return (
     <button
       type="button"
@@ -335,7 +335,7 @@ function StageCell({
     >
       <span className="release-board__stage-name">{stage.name}</span>
       <span className="release-board__version">{version}</span>
-      <span>
+      {unknown ? null : <span>
         <span
           className={skewInDelta ? `${tonePillClass('human')} release-board__skew` : pillClass(delta.state)}
           data-testid="release-board-delta"
@@ -344,7 +344,7 @@ function StageCell({
           {skewInDelta ? <AlertTriangle aria-hidden="true" size={12} /> : null}
           {delta.text}
         </span>
-      </span>
+      </span>}
       {targets ? (
         <span
           className={`release-board__targets release-board__targets--${skewed && targets.differ > 0 ? 'human' : stateTone(targets.state)}`}

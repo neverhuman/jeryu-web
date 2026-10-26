@@ -45,6 +45,7 @@ import {
   stageDelta,
   stageSkewed,
   stageTargets,
+  stageUnknown,
   stepDeltas,
   stepDeltaText,
 } from '../releaseBoard/model';
@@ -422,5 +423,17 @@ describe('delta first, then the targets', () => {
       'stage>prod:30 changes',
     ]);
     expect(stepDeltas(ACME_BOARD.lanes[0])).toEqual([]);
+  });
+});
+
+describe('stageUnknown', () => {
+  it('is true only for a stage that says nothing about what it runs', () => {
+    const known = stage('cloud-app', 'prod');
+    expect(stageUnknown(known)).toBe(false);
+    const lost: BoardStage = { ...known, version: null, status: 'not found', state: 'none', missing: undefined };
+    expect(stageUnknown(lost)).toBe(true);
+    // A version, or the lane's own source, is something to say.
+    expect(stageUnknown({ ...lost, version: 'pr-gate 3.5.0' })).toBe(false);
+    expect(stageUnknown({ ...lost, status: 'source' })).toBe(false);
   });
 });

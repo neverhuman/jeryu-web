@@ -99,16 +99,15 @@ describe('RepoLayout (the repository shell)', () => {
     expect(screen.getByText('the page')).toBeInTheDocument();
   });
 
-  it('shows repository facts, clone URLs, and a score link for the default branch head', async () => {
+  it('shows at most three facts, clone URLs, and a score link for the default branch head', async () => {
     renderAt('code');
-    expect(await screen.findByTestId('repo-header-family')).toHaveAttribute(
-      'href',
-      '/repos/family/acme'
-    );
-    expect(screen.getByTestId('repo-header-default-branch')).toHaveTextContent(
-      'default branch main'
-    );
-    expect(screen.getByText('private')).toBeInTheDocument();
+    // A private repository says so; the family, default branch, role and
+    // mirror are said elsewhere (header control, branch picker, Settings).
+    expect(await screen.findByTestId('repo-header-visibility')).toHaveTextContent('private');
+    expect(screen.queryByTestId('repo-header-family')).toBeNull();
+    expect(screen.queryByTestId('repo-header-default-branch')).toBeNull();
+    expect(screen.queryByTestId('repo-header-mirror-badge')).toBeNull();
+    expect(screen.queryByTestId('repo-family-rail')).toBeNull();
 
     await waitFor(() =>
       expect(screen.getByTestId('repo-overview-score')).toHaveAttribute(
@@ -151,22 +150,6 @@ describe('RepoLayout (the repository shell)', () => {
     renderAt('code');
     await screen.findByTestId('repo-tab-automation');
     await waitFor(() => expect(screen.queryByTestId('repo-tab-automation-warning')).toBeNull());
-  });
-
-  it('links the mirror badge to the Settings mirror anchor', async () => {
-    mirrors = [
-      {
-        target: 'https://github.example/acme/widget-api',
-        direction: 'push',
-        refs: ['refs/heads/main'],
-        state: 'in_sync',
-        behind: false,
-      },
-    ];
-    renderAt('code');
-    const badge = await screen.findByTestId('repo-header-mirror-badge');
-    expect(badge).toHaveTextContent('GitHub ↗');
-    expect(badge).toHaveAttribute('href', `${BASE}/settings/mirror#mirror`);
   });
 
   it('moves between tabs with the arrow keys, one tab stop for the bar', async () => {

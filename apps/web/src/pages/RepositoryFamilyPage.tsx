@@ -4,8 +4,7 @@
 // preview, with no pull requests, no tabs and no settings, and a ref and an
 // open file that lived in component state so no link could carry them. The
 // family is the context of the repository being read, not a second place to
-// read it from, so it is a rail inside the one repository shell
-// (components/repo/RepoFamilyRail) and this address lands on a member:
+// read it from, so this address lands on a member:
 //
 //   /repos/family/<key>            → the repository the family publishes from
 //   /repos/family/<key>?repo=<name> → that member's front page
@@ -50,7 +49,7 @@ export function RepositoryFamilyPage(): JSX.Element {
 
   // The named member, else the one the family publishes from: `sortFamilyRepos`
   // puts it first. A `?repo=` naming nothing in the family still opens the
-  // family rather than a 404 — the rail is right there to correct the aim.
+  // family rather than a 404.
   const target = (wanted && repos.find((repo) => repo.id.name === wanted)) || repos[0];
   if (target) return <Navigate to={repoUrl(target.id)} replace />;
 

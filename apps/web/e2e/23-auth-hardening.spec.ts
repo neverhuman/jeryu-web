@@ -131,13 +131,11 @@ test.describe('Auth hardening browser proof', () => {
     await page.getByLabel('Password').fill(loginFormCredential);
     await page.getByRole('button', { name: 'Login' }).click();
 
-    // The family address is a doorway: it lands on a member, and the family
-    // is the rail beside it.
+    // The family address is a doorway: it lands on a member.
     await expect(page).toHaveURL(/\/repos\/forge\.example\/acme\/acme-core$/, {
       timeout: 10_000,
     });
-    await expect(page.getByTestId('repo-family-rail')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('repo-family-member-acme-web')).toBeVisible();
+    await expect(page.getByTestId('repo-shell-title')).toHaveText('acme-core', { timeout: 10_000 });
   });
 
   test('closed sign-up sends a visitor to the waitlist and never posts a sign-up @action:auth.signup_waitlist', async ({ page }) => {

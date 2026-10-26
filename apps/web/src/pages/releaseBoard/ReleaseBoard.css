@@ -208,12 +208,6 @@
   border-top-color: var(--color-accent-danger);
 }
 
-.release-board__cell--never-deployed {
-  border-style: dashed;
-  border-top-style: solid;
-  color: var(--color-fg-secondary);
-}
-
 .release-board__cell--open {
   border-color: var(--color-accent-primary);
   background-color: var(--color-accent-primary-bg);
@@ -508,19 +502,6 @@
 
 .release-board__slot-name {
   display: none;
-}
-
-.release-board__cell--not-used {
-  justify-content: center;
-  border-style: dashed;
-  border-top-width: 1px;
-  background-color: transparent;
-  color: var(--color-fg-muted);
-  cursor: default;
-}
-
-.release-board__cell--not-used:hover {
-  background-color: transparent;
 }
 
 .release-board__unplaced {

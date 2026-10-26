@@ -157,8 +157,8 @@ test.describe('Code browser (W-T-12)', () => {
     await expect(page.getByText('Blob toolbar proof.')).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByRole('tab', { name: 'Raw' }).click();
-    await expect(page.getByRole('tab', { name: 'Raw' })).toHaveAttribute(
+    await page.getByRole('tab', { name: 'Source' }).click();
+    await expect(page.getByRole('tab', { name: 'Source' })).toHaveAttribute(
       'aria-selected',
       'true'
     );

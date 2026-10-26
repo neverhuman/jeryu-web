@@ -208,32 +208,11 @@ test('a server without the presence route shows the runs alone, with no banner @
   await expect(page.getByTestId('agents-presence-error')).toHaveCount(0);
   await expect(page.getByTestId('agents-runs-error')).toHaveCount(0);
   // The family rail draws no agents section either.
-  await expect(page.getByTestId('repo-family-rail')).toBeVisible();
   await expect(page.getByTestId('family-agents')).toHaveCount(0);
 
   // The terminal flow is the one it always was.
   await page.getByTestId('agent-row-run-2').click();
   await expect(page.getByTestId('agent-terminal').first()).toHaveAttribute('data-run-id', 'run-2');
-});
-
-test('the family rail lists the family active agents @action:agents.family_presence', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await seed(page, PRESENCE);
-
-  const shell = new AppShellPage(page);
-  await shell.goto(REPO_PATH);
-  await shell.assertShellLoaded();
-
-  const agents = page.getByTestId('family-agents');
-  await expect(agents).toBeVisible();
-  await expect(page.getByTestId('family-agents-count')).toHaveText('3');
-  await expect(page.getByTestId('family-agent-external:cli:grace-1')).toContainText('family acme');
-  await expect(page.getByTestId('family-agent-collision-external:cli:ada-1')).toBeVisible();
-
-  await page.getByTestId('family-agent-external:cli:ada-2').getByRole('link').click();
-  await expect(page).toHaveURL(/\/repos\/forge\/acme\/gears\/agents$/);
 });
 
 test('the presence list reads at phone width @action:agents.presence_phone', async ({ page }) => {

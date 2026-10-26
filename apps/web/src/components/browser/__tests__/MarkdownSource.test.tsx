@@ -80,4 +80,17 @@ describe('MarkdownSource', () => {
     );
     expect(resolveMarkdownHref('docs/a.md')).toBe('docs/a.md');
   });
+
+  it('lets a code block scroll inside itself, by keyboard too', () => {
+    const tree = '```\napps/web/src/pages/a-very-long-directory-name/and-a-longer-file-name.tsx  -- what it holds\n```\n';
+    const { container } = render(
+      <MemoryRouter>
+        <MarkdownSource markdown={tree} linkBase="/repos/jeryu/root/r/blob/main/" />
+      </MemoryRouter>
+    );
+    // An ASCII tree widened the page to 1769px; the block now scrolls, and a
+    // block that scrolls takes focus.
+    expect(container.querySelector('.markdown-body pre')).toHaveAttribute('tabindex', '0');
+  });
 });
+

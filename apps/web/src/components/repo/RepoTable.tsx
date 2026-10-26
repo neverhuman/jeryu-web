@@ -330,7 +330,7 @@ export function RepoTable({
           <span
             title={`jankurai/proof audit of the default branch; ${JANKURAI_GOOD_THRESHOLD} is the floor, below it needs work`}
           >
-            Score <span className="text-muted">(floor {JANKURAI_GOOD_THRESHOLD})</span>
+            Score
           </span>
         ),
         // Unscored repos sort below every real score (worst-first when
@@ -356,7 +356,9 @@ export function RepoTable({
       },
       {
         id: 'open_prs',
-        header: 'Open pull requests',
+        // Short, so the last columns fit a desk-width table without scrolling;
+        // the cell's own label says "open pull requests" in full.
+        header: () => <span title="Open pull requests">Open</span>,
         accessorFn: (row) => row.open_pull_requests,
         cell: ({ row }: RepoCell) => (
           <Link

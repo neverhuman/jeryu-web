@@ -132,11 +132,6 @@ export function ReleasesPage(): JSX.Element {
         parent={boardFamily ? 'nav.releases' : undefined}
         crumbs={boardFamily ? [{ label: boardFamily }] : undefined}
         freshness={freshness}
-        subtitle={
-          perRepository
-            ? 'What every environment runs, and what is holding the next release.'
-            : 'What each family ships, stage by stage, and how much of its work has reached customers.'
-        }
       >
         <nav className="releases__views" aria-label="Releases view">
           <Link

@@ -127,7 +127,7 @@ test('every repository page carries the same header and tab bar @action:repo.she
     await shell.goto(`${BASE}${sub.tail}`);
     await expect(page.getByTestId(sub.testId)).toBeVisible({ timeout: 15_000 });
 
-    // The same header, on all six: the repository, its visibility, its family.
+    // The same header, on all six: the repository, its health and its score.
     await expect(page.getByTestId('repo-shell-title')).toHaveText('widget-api');
     const mirror = page.getByTestId('repo-shell-header').getByRole('link', {
       name: '(GitHub mirror: acme-oss/widget-api) (opens in a new window)', exact: true,
@@ -136,11 +136,11 @@ test('every repository page carries the same header and tab bar @action:repo.she
     await expect(mirror).toHaveAttribute('target', '_blank');
     await expect(mirror).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(mirror.locator('svg')).toBeVisible();
-    await expect(page.getByTestId('repo-header-family')).toHaveAttribute(
-      'href',
-      '/repos/family/acme'
-    );
-    await expect(page.getByTestId('repo-header-default-branch')).toHaveText('default branch main');
+    // Three facts at most: no family chip (the header control says it), no
+    // default-branch chip (the branch picker says it), no family rail.
+    await expect(page.getByTestId('repo-header-family')).toHaveCount(0);
+    await expect(page.getByTestId('repo-header-default-branch')).toHaveCount(0);
+    await expect(page.getByTestId('repo-family-rail')).toHaveCount(0);
     await expect(page.getByTestId('repo-overview-score')).toHaveAttribute(
       'href',
       /\/quality-gate\/heads\/acme\/widget-api\//

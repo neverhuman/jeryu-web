@@ -116,7 +116,6 @@ export function RepositoriesPage({
     <div className="page page--wide" data-testid="repositories-page">
       <PageHeader
         title="Repositories"
-        subtitle="Browse, search, and create repositories across all hosts."
         testId="repositories-header"
         freshness={queryFreshness(list)}
         actions={
@@ -142,11 +141,13 @@ export function RepositoriesPage({
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               aria-label="Search repositories"
+              placeholder="Search repositories"
             />
           </div>
 
-          {/* The forges the server names, never a guess at which ones exist. */}
-          {facets && facets.hosts.length > 0 ? (
+          {/* The forges the server names, never a guess at which ones exist;
+              with only one there is nothing to choose. */}
+          {facets && facets.hosts.length > 1 ? (
             <FilterChips
               label="Host"
               value={filter.host}

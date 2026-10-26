@@ -96,6 +96,11 @@ describe('ReleasesPage — family release board', () => {
         const section = screen.getByTestId(`release-board-lane-${lane.id}`);
         expect(within(section).getByRole('heading', { level: 3, name: lane.name })).toBeInTheDocument();
         for (const stage of lane.stages) {
+          // A stage nothing was ever deployed to is not drawn.
+          if (stage.never_deployed === true) {
+            expect(within(section).queryByTestId(`release-board-stage-${lane.id}-${stage.id}`)).toBeNull();
+            continue;
+          }
           const cell = within(section).getByTestId(`release-board-stage-${lane.id}-${stage.id}`);
           expect(cell).toHaveAttribute('aria-expanded', 'false');
           expect(cell).toHaveTextContent(stage.status);
@@ -276,29 +281,26 @@ describe('ReleasesPage — family release board', () => {
   it('keeps one open cell per lane in the URL', async () => {
     serveBoards();
     open('/releases/family/globex');
-    fireEvent.click(await screen.findByTestId('release-board-stage-forge-server-dev'));
+    fireEvent.click(await screen.findByTestId('release-board-stage-forge-server-production'));
     fireEvent.click(screen.getByTestId('release-board-stage-web-ui-pinned'));
     expect(screen.getByTestId('location')).toHaveTextContent(
-      'stage=forge-server%3Adev%2Cweb-ui%3Apinned'
+      'stage=forge-server%3Aproduction%2Cweb-ui%3Apinned'
     );
     expect(screen.getByTestId('release-board-detail-forge-server')).not.toBeEmptyDOMElement();
     expect(screen.getByTestId('release-board-detail-web-ui')).not.toBeEmptyDOMElement();
 
     // Closing one lane's cell leaves the other lane's alone.
-    fireEvent.click(screen.getByTestId('release-board-stage-forge-server-dev'));
+    fireEvent.click(screen.getByTestId('release-board-stage-forge-server-production'));
     expect(screen.getByTestId('location')).toHaveTextContent('stage=web-ui%3Apinned');
     expect(screen.getByTestId('release-board-detail-forge-server')).toBeEmptyDOMElement();
   });
 
-  it('draws a never-deployed stage the way the design does', async () => {
+  it('leaves a never-deployed stage out: its column is empty', async () => {
     serveBoards();
     open('/releases?family=globex');
-    const idle = await screen.findByTestId('release-board-stage-forge-server-dev');
-    expect(idle).toHaveClass('release-board__cell--never-deployed');
-    fireEvent.click(idle);
-    expect(screen.getByTestId('release-board-detail-forge-server')).toHaveTextContent(
-      'Declared but never deployed to'
-    );
+    const slot = await screen.findByTestId('release-board-slot-forge-server-dev');
+    expect(screen.queryByTestId('release-board-stage-forge-server-dev')).toBeNull();
+    expect(slot.querySelector('.release-board__cell')).toBeNull();
     // globex production ships nothing: it already runs main.
     fireEvent.click(screen.getByTestId('release-board-stage-forge-server-production'));
     expect(screen.getByTestId('release-board-detail-forge-server')).toHaveTextContent(
@@ -311,21 +313,21 @@ describe('ReleasesPage — family release board', () => {
     open('/releases?family=globex');
     const head = await screen.findByTestId('release-board-columns');
     expect(head).toHaveTextContent('maindevstageprod');
-    // A column the lane skips says so rather than vanishing.
-    expect(screen.getByTestId('release-board-slot-web-ui-dev')).toHaveTextContent('not used');
+    // A column the lane skips is left empty: the header row names the column.
+    expect(screen.getByTestId('release-board-slot-web-ui-dev').querySelector('.release-board__cell')).toBeNull();
+    expect(screen.queryByText('not used')).toBeNull();
     expect(screen.getByTestId('release-board-slot-web-ui-stage')).toHaveTextContent('pinned');
-    // Shift work sits with main; a stage in no column follows the grid.
+    // Shift work sits with main. A stage in no column would follow the grid;
+    // this one was never deployed to, so it is not drawn at all.
     const main = screen.getByTestId('release-board-slot-forge-server-main');
     expect(within(main).getByTestId('release-board-stage-forge-server-shift')).toBeInTheDocument();
     expect(within(main).getByTestId('release-board-stage-forge-server-main')).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Forge server by stage' })).not.toContainElement(
-      screen.getByTestId('release-board-stage-forge-server-canary-stable')
-    );
+    expect(screen.queryByTestId('release-board-stage-forge-server-canary-stable')).toBeNull();
     // Each tool is its own row under one Tools heading.
     const tools = screen.getByRole('group', { name: 'Tools' });
     for (const id of ['gate-runner', 'reviewer', 'scorer']) {
       expect(within(tools).getByTestId(`release-board-lane-${id}`)).toBeInTheDocument();
-      expect(screen.getByTestId(`release-board-slot-${id}-stage`)).toHaveTextContent('not used');
+      expect(screen.getByTestId(`release-board-slot-${id}-stage`).querySelector('.release-board__cell')).toBeNull();
     }
     expect(screen.getByTestId('release-board-slot-reviewer-prod')).toHaveTextContent('local fork');
   });

@@ -128,6 +128,15 @@ export function stageDelta(stage: BoardStage): StageDelta {
   return { text: `${missing.total} behind ${missing.from}`, state: 'warn' };
 }
 
+/**
+ * True when a stage says nothing about what it runs: no version, and a status
+ * that is the collector's word for "could not tell" ("not found"). The cell
+ * then says "unknown" once instead of "unknown" over "NOT FOUND".
+ */
+export function stageUnknown(stage: BoardStage): boolean {
+  return !stage.version && stageDelta(stage).state === 'none' && stage.status !== 'source';
+}
+
 const STATE_RANK: Record<BoardState, number> = { ok: 0, none: 1, warn: 2, bad: 3 };
 
 /** The worse of two states; `none` (unknown) ranks above `ok`. */
@@ -313,9 +322,6 @@ export function promoteWho(promote: NonNullable<BoardStage['promote']>): string 
 }
 
 // ── Columns and groups ───────────────────────────────────────────────────
-
-/** What an empty column cell says: the lane skips that stage. */
-export const NOT_USED_TEXT = 'not used';
 
 /** The board's fixed columns; empty when the board draws free tracks. */
 export function boardColumns(board: ReleaseBoard): BoardColumn[] {

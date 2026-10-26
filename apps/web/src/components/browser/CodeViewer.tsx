@@ -4,6 +4,8 @@
 // Source renders through SourceView: plain lines with a number gutter and
 // `#L<n>` anchors, nothing fetched from anywhere. For .md files a second tab
 // renders the markdown; "Rendered" is the default so a README reads like one.
+// The other tab is "Source": "Raw" is the file page's button that opens the
+// file itself, and one page saying Raw for two things was one too many.
 
 import { useState } from 'react';
 
@@ -82,7 +84,7 @@ export function CodeViewer({
               aria-selected={tab === 'raw'}
               onClick={() => setTab('raw')}
             >
-              Raw
+              Source
             </button>
           </div>
         </div>

@@ -123,9 +123,25 @@ export function MarkdownSource({
       if (mermaid !== null) {
         return <MermaidDiagram source={mermaid} />;
       }
-      return <pre {...rest}>{children}</pre>;
+      // A long line (an ASCII tree, a wide command) scrolls inside the block
+      // rather than widening the page; a block that scrolls takes focus so a
+      // keyboard can scroll it too.
+      return (
+        <pre {...rest} tabIndex={0}>
+          {children}
+        </pre>
+      );
     }
-    return { a: Anchor, img: Image, pre: Pre, ...extraComponents };
+    // A wide table scrolls inside its own box, as every other table does,
+    // rather than widening the page on a phone.
+    function Table({ children, ...rest }: HTMLAttributes<HTMLTableElement>): JSX.Element {
+      return (
+        <div className="table-scroll">
+          <table {...rest}>{children}</table>
+        </div>
+      );
+    }
+    return { a: Anchor, img: Image, pre: Pre, table: Table, ...extraComponents };
   }, [linkBase, docDir, navigate, extraComponents]);
 
   // HTML written in the Markdown (an <img>, a comment) is parsed and then

@@ -11,8 +11,6 @@ export {
   portalRank,
 } from './familyRollup';
 export type { FamilyRollup } from './familyRollup';
-export { RepoFamilyRail, FamilyRailControl, useFamilyRail } from './RepoFamilyRail';
-export type { FamilyRail } from './RepoFamilyRail';
 export {
   familyMemberHref,
   familyRailTier,

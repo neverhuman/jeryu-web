@@ -161,8 +161,8 @@ describe('RepoTable', () => {
       'Repository',
       'Description',
       'Status',
-      'Score (floor 85)',
-      'Open pull requests',
+      'Score',
+      'Open',
       'Updated',
     ]);
     const status = screen.getByTestId('repo-status-jeryu-core');
