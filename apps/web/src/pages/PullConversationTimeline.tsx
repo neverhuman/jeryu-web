@@ -34,6 +34,7 @@ import {
   type TimelineRun,
 } from './conversationTimelineModel';
 import type { PullCommit } from './pullCommitsModel';
+import { safeLogUrl } from './releasesModel';
 import { shortSha } from './shift/shiftModel';
 
 import './PullConversationTimeline.css';
@@ -69,10 +70,10 @@ export function PullConversationTimeline({
   findingHref,
 }: PullConversationTimelineProps): JSX.Element {
   const { user } = useAuth();
-  const pr = Number(prNumber);
+  const pr = /^[1-9]\d*$/.test(prNumber) ? Number(prNumber) : null;
   const feed = usePipelineEvents(
-    { repo: repoFullName, pr, limit: TIMELINE_EVENTS },
-    { enabled: user?.role === 'admin' && Number.isInteger(pr), refetchInterval: 15_000 }
+    { repo: repoFullName, pr: pr ?? undefined, limit: TIMELINE_EVENTS },
+    { enabled: user?.role === 'admin' && repoFullName !== '' && pr !== null, refetchInterval: 15_000 }
   );
   const events = feed.data?.events ?? NO_EVENTS;
   const [now, setNow] = useState(() => Date.now());
@@ -89,11 +90,19 @@ export function PullConversationTimeline({
   }, [timeline.running]);
 
   const { opened, target } = useReviewAnchors(reviews);
+  // The merge box's threads link lands on the oldest unresolved thread, or on
+  // the timeline itself when nothing is left open.
+  const threadAnchorOnCard = timeline.entries.some((entry) => entry.kind === 'thread' && entry.firstUnresolved);
 
   return (
     <FindingHrefContext.Provider value={findingHref}>
-      <section className="pr-timeline" aria-label="Timeline" data-testid="pr-timeline">
-        {feed.data?.has_more ? (
+      <section
+        className="pr-timeline"
+        aria-label="Timeline"
+        data-testid="pr-timeline"
+        id={threadAnchorOnCard ? undefined : 'pr-threads'}
+      >
+        {feed.data?.has_more && pr !== null ? (
           <p className="pr-timeline__more">
             Older pipeline events are on{' '}
             <Link to={activityHref({ repo: repoFullName, pr })}>Activity</Link>.
@@ -258,7 +267,7 @@ function RunLine({ run, part, now }: { run: TimelineRun; part: 'whole' | 'start'
         {start.actor ? <span className="pr-timeline__muted">{start.actor}</span> : null}
         {start.sha ? <code>{shortSha(start.sha)}</code> : null}
         {running ? (
-          <span className="pr-timeline__muted" role="status">
+          <span className="pr-timeline__muted">
             running {elapsedText(elapsedSeconds(start.ts, now))}
           </span>
         ) : run.state === 'lost' ? (
@@ -282,7 +291,7 @@ function FinishLine({ run }: { run: TimelineRun }): JSX.Element {
         <strong>{eventLabel(finish)}</strong>
         <span className="pr-timeline__summary">{summaryText(finish)}</span>
         {seconds ? <span className="pr-timeline__muted">{seconds}</span> : null}
-        {finish.log_url ? <a href={finish.log_url}>Log</a> : null}
+        <LogLink url={finish.log_url} />
         <Clock at={Date.parse(finish.ts)} />
       </p>
       <EventDetail event={finish} />
@@ -332,11 +341,26 @@ function EventLine({ event }: { event: PipelineEvent }): JSX.Element {
         <strong>{eventLabel(event)}</strong>
         <span className="pr-timeline__summary">{summaryText(event)}</span>
         {event.needs_human ? <span className="pr-timeline__pill pr-timeline__pill--human">needs you</span> : null}
-        {event.log_url ? <a href={event.log_url}>Log</a> : null}
+        <LogLink url={event.log_url} />
         <Clock at={Date.parse(event.ts)} />
       </p>
       <EventDetail event={event} />
     </div>
+  );
+}
+
+/**
+ * The run's log, when its address is http(s) or a path on this site. The
+ * address comes from whoever reported the event, so anything else (a
+ * `javascript:` or `data:` URL) is not a link.
+ */
+function LogLink({ url }: { url: string | null }): JSX.Element | null {
+  const href = safeLogUrl(url);
+  if (!href) return null;
+  return (
+    <a href={href} target="_blank" rel="noreferrer">
+      Log
+    </a>
   );
 }
 

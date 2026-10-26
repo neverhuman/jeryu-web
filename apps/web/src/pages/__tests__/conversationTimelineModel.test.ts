@@ -200,6 +200,62 @@ describe('buildTimeline', () => {
     expect(timeline.entries[0].kind).toBe('day');
   });
 
+  it('runs the days forward, each once, when the pull request was opened the day after its commit', () => {
+    // Pushed one evening, opened the next morning, gated that afternoon.
+    const timeline = buildTimeline({
+      author: 'dana',
+      description: null,
+      headSha: SHA,
+      commits: [
+        {
+          sha: SHA,
+          commit: { message: 'Add the thing', author: { name: 'dana', date: '2026-10-20T12:00:00Z' } },
+        },
+      ],
+      reviews: [],
+      threads: [],
+      events: [
+        event('pr.opened', '2026-10-22T12:00:00Z'),
+        ...gateRun('2026-10-22T14:00:00Z', '2026-10-22T14:06:00Z'),
+      ],
+      nowMs: NOW,
+      dayLabel: (at) => new Date(at).toISOString().slice(0, 10),
+    });
+    expect(kinds(timeline.entries)).toEqual(['opened', 'commit', 'run:whole']);
+    const days = timeline.entries.filter((entry) => entry.kind === 'day').map((entry) => entry.at);
+    const keys = days.map((at) => localDayKey(at));
+    expect(new Set(keys).size).toBe(keys.length);
+    expect([...days].sort((a, b) => a - b)).toEqual(days);
+    const placed = timeline.entries.filter((entry) => entry.kind !== 'day').map((entry) => entry.at);
+    expect([...placed].sort((a, b) => a - b)).toEqual(placed);
+  });
+
+  it('places a commit at its author date, as the Commits tab does, and an undated one at the opening', () => {
+    const timeline = buildTimeline({
+      author: 'dana',
+      description: null,
+      headSha: SHA,
+      commits: [
+        {
+          sha: 'aaa1111',
+          commit: {
+            message: 'Rebased',
+            author: { name: 'dana', date: '2026-10-21T09:00:00Z' },
+            committer: { name: 'dana', date: '2026-10-25T09:00:00Z' },
+          },
+        },
+        { sha: SHA, commit: { message: 'No date' } },
+      ],
+      reviews: [],
+      threads: [],
+      events: [],
+      nowMs: NOW,
+    });
+    const placed = timeline.entries.filter((entry) => entry.kind !== 'day');
+    expect(placed[0]).toMatchObject({ kind: 'opened', at: Date.parse('2026-10-21T09:00:00Z') });
+    expect(placed.map((entry) => entry.at).every((at) => at >= Date.parse('2026-10-21T09:00:00Z'))).toBe(true);
+  });
+
   it('anchors #pr-threads on the oldest unresolved thread', () => {
     const thread = (id: string, created: string, resolved: boolean): ReviewThread =>
       ({ id, resolved, created_at: created, updated_at: created, comments: [] }) as unknown as ReviewThread;

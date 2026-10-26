@@ -29,7 +29,7 @@ import type { PipelineEvent, PullRequestReview, ReviewThread } from '../api/type
 import { dateText, instantOf, isSameLocalDay } from '../format/when';
 import { eventTone, foldEchoes } from './activity/activityModel';
 import { RUNNING_STALE_MS, finishes } from './activity/runningModel';
-import type { PullCommit } from './pullCommitsModel';
+import { commitDate, type PullCommit } from './pullCommitsModel';
 
 /** The kinds of work the timeline draws as a span, and what closes each. */
 const RUN_FINISH_KINDS: Record<string, readonly string[]> = {
@@ -184,10 +184,6 @@ function at(value: string | null | undefined, fallback: number): number {
   return instantOf(value) ?? fallback;
 }
 
-function commitDate(commit: PullCommit): string | null {
-  return commit.commit.committer?.date ?? commit.commit.author?.date ?? null;
-}
-
 const ORDER: Record<TimelineEntry['kind'], number> = {
   opened: 0,
   day: 1,
@@ -215,12 +211,18 @@ export function buildTimeline(input: TimelineInput): Timeline {
 
   const drafts: Draft[] = [];
 
-  // The commits, oldest first; a run of them with nothing between is one divider.
-  const commits = [...input.commits]
-    .map((commit) => ({ commit, at: at(commitDate(commit), 0) }))
-    .sort((a, b) => a.at - b.at);
+  // The commits, oldest first, at the date the Commits tab groups them by; a run
+  // of them with nothing between is one divider.
+  const dated = input.commits.map((commit) => ({ commit, at: instantOf(commitDate(commit)) }));
+  const known = dated.flatMap((entry) => (entry.at === null ? [] : [entry.at]));
   const opened = events.find((event) => event.kind === 'pr.opened');
-  const openedAt = opened ? at(opened.ts, nowMs) : commits[0]?.at ?? nowMs;
+  // The story opens no later than its first commit: a pull request opened the
+  // morning after its commits were pushed still reads forward, day by day.
+  const openedAt = Math.min(opened ? at(opened.ts, nowMs) : nowMs, ...known);
+  // A commit with no readable date sits with the opening, never in 1970.
+  const commits = dated
+    .map((entry) => ({ commit: entry.commit, at: entry.at ?? openedAt }))
+    .sort((a, b) => a.at - b.at);
   drafts.push({
     kind: 'opened',
     key: 'opened',
@@ -354,15 +356,19 @@ function foldRuns(drafts: Draft[]): Draft[] {
   return out;
 }
 
-/** A day line wherever the local day changes, so a bare clock is never ambiguous. */
+/**
+ * A day line wherever a later local day begins, so a bare clock is never
+ * ambiguous. The days only move forward: an entry stamped earlier than the
+ * day already shown stays under it rather than naming an older day again.
+ */
 function insertDays(drafts: Draft[], label: (atMs: number) => string): Draft[] {
   const out: Draft[] = [];
   let day: number | null = null;
   for (const draft of drafts) {
-    if (day === null || !isSameLocalDay(day, draft.at)) {
+    if (day === null || (draft.at > day && !isSameLocalDay(day, draft.at))) {
       out.push({ kind: 'day', key: `day-${draft.at}`, at: draft.at, label: label(draft.at) });
+      day = draft.at;
     }
-    day = draft.at;
     out.push(draft);
   }
   return out;
