@@ -514,6 +514,12 @@
   background: var(--pull-stage-color);
 }
 
+/* Done and blocked are both filled; blocked is square, so the two differ by
+   shape and not only by green against red. */
+.pull-stage.is-blocked .pull-stage__dot {
+  border-radius: 0;
+}
+
 .pull-stage.is-active .pull-stage__dot {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-info) 30%, transparent);
 }

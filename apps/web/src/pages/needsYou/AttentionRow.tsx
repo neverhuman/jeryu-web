@@ -29,6 +29,7 @@ import { LIST_ACTION_PROP, LIST_OPEN_PROP, listRowProps } from '../../hooks/useL
 import { useRepositories } from '../../hooks/useRepositories';
 import { untilInputDefault, untilRfc3339 } from '../shift/shiftModel';
 import { When } from '../../format/When';
+import { SeverityMark } from './SeverityMark';
 import {
   acknowledgeTarget,
   alsoLine,
@@ -91,10 +92,14 @@ export function AttentionRow({
         <p className="needs-you__title-line">
           {to ? (
             <Link className="needs-you__title" to={to} {...LIST_OPEN_PROP}>
+              <SeverityMark severity={subject.severity} />
               {rowTitle(item)}
             </Link>
           ) : (
-            <span className="needs-you__title">{rowTitle(item)}</span>
+            <span className="needs-you__title">
+              <SeverityMark severity={subject.severity} />
+              {rowTitle(item)}
+            </span>
           )}
           <span className="needs-you__context">
             {attentionContext(item)}

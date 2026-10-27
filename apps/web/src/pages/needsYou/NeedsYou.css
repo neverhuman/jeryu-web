@@ -48,12 +48,33 @@
   color: var(--color-fg-primary);
 }
 
-.needs-you__row--human .needs-you__title {
+.needs-you__group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The severity's shape (SeverityMark), in front of the group's word and of
+   each row's title: red is shared by broken and blocked, the shape is not. */
+.needs-you__severity {
+  display: inline-flex;
+  flex: none;
+  align-self: center;
+  color: var(--color-fg-muted);
+}
+
+.needs-you__title .needs-you__severity {
+  margin-right: var(--space-2);
+  vertical-align: -0.125em;
+}
+
+.needs-you__severity--critical,
+.needs-you__severity--action {
   color: var(--color-accent-danger);
 }
 
-/* The reason is often the only explanation, so it gets two lines before it is
-   cut; the full text is the tooltip and lives where the link leads. */
+/* The message is one line; the full text is the tooltip and lives where the
+   link leads. */
 .needs-you__reason {
   margin: 0;
   max-width: 100%;
@@ -62,8 +83,8 @@
   line-height: var(--line-height-normal);
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
   overflow: hidden;
 }
 

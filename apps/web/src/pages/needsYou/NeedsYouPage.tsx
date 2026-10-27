@@ -43,6 +43,7 @@ import {
   systemPulse,
   type SubjectGroup,
 } from './needsYouModel';
+import { SeverityMark } from './SeverityMark';
 import { useListKeys } from '../../hooks/useListKeys';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useAuth } from '../../hooks/useAuth';
@@ -182,10 +183,11 @@ function AttentionSection({
       aria-label={group.label}
       data-testid={`needs-you-${group.severity}`}
     >
-      <h2 className="page__section-title">
+      <h2 className="page__section-title needs-you__group-title">
         <span className={pillClass(severityTone(group.severity))}>
           {group.subjects.length}
         </span>{' '}
+        <SeverityMark severity={group.severity} />
         {group.label}
       </h2>
       <AttentionList group={group} now={now} {...familyProps} />

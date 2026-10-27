@@ -90,6 +90,30 @@ describe('NeedsYouPage', () => {
     expect(screen.queryByTestId('needs-you-pulse')).toBeNull();
   });
 
+  it('gives each severity its own shape beside its word, on the heading and on every row', async () => {
+    mockPipelineApi();
+    renderPage();
+
+    const critical = await screen.findByTestId('needs-you-critical');
+    const action = screen.getByTestId('needs-you-action');
+    // Broken and blocked share the red; the octagon and the triangle do not.
+    const groups: Array<[HTMLElement, string, RegExp]> = [
+      [critical, 'critical', /Broken/],
+      [action, 'action', /Blocked/],
+    ];
+    for (const [group, severity, word] of groups) {
+      const heading = within(group).getByRole('heading', { name: word });
+      expect(within(heading).getByTestId(`needs-you-severity-${severity}`)).toBeInTheDocument();
+      // The mark is decoration: the heading's name is its count and its word.
+      expect(heading).not.toHaveAccessibleName(/Blocked Blocked|Broken.*Broken/);
+      const rows = within(group).getAllByRole('listitem').filter((row) => row.matches('.needs-you__row'));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(within(row).getByTestId(`needs-you-severity-${severity}`)).toBeInTheDocument();
+      }
+    }
+  });
+
   it('says where a command runs: the server\'s place, else the repository, else nothing', async () => {
     const command = 'systemctl --user start jeryu-auto-pin.service';
     const row = (id: string, extra: Partial<AttentionItem>): AttentionItem =>
