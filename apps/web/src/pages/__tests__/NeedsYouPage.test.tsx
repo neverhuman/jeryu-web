@@ -5,7 +5,8 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { AttentionItem } from '../../api/types';
+import type { AttentionItem, AttentionSeverity } from '../../api/types';
+import { SEVERITY_LABEL } from '../needsYou/needsYouModel';
 import { NeedsYouPage } from '../needsYou';
 import { htmlShell, mockPipelineApi } from './pipelinePageHelpers';
 import { ATTENTION, DEPLOY_COMMAND, DEPLOY_RUN_IN, attentionItem } from './pipelineTestData';
@@ -97,15 +98,16 @@ describe('NeedsYouPage', () => {
     const critical = await screen.findByTestId('needs-you-critical');
     const action = screen.getByTestId('needs-you-action');
     // Broken and blocked share the red; the octagon and the triangle do not.
-    const groups: Array<[HTMLElement, string, RegExp]> = [
+    const groups: Array<[HTMLElement, AttentionSeverity, RegExp]> = [
       [critical, 'critical', /Broken/],
       [action, 'action', /Blocked/],
     ];
     for (const [group, severity, word] of groups) {
       const heading = within(group).getByRole('heading', { name: word });
       expect(within(heading).getByTestId(`needs-you-severity-${severity}`)).toBeInTheDocument();
-      // The mark is decoration: the heading's name is its count and its word.
-      expect(heading).not.toHaveAccessibleName(/Blocked Blocked|Broken.*Broken/);
+      // The mark is decoration: the heading's name is exactly its count and its word.
+      const count = within(group).getAllByRole('listitem').filter((row) => row.matches('.needs-you__row')).length;
+      expect(heading).toHaveAccessibleName(`${count} ${SEVERITY_LABEL[severity]}`);
       const rows = within(group).getAllByRole('listitem').filter((row) => row.matches('.needs-you__row'));
       expect(rows.length).toBeGreaterThan(0);
       for (const row of rows) {

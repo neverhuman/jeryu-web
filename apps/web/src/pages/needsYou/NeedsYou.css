@@ -78,9 +78,16 @@
 .needs-you__reason {
   margin: 0;
   max-width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
   color: var(--color-fg-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
+}
+
+.needs-you__reason-text {
+  min-width: 0;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
@@ -88,8 +95,15 @@
   overflow: hidden;
 }
 
-/* The title is the row's link to its subject, whatever the row's act is. It
-   keeps the row's own colour (red where a person is the next step). */
+.needs-you__reason-open {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-2);
+}
+
+/* The title is the row's link to its subject, whatever the row's act is. Its
+   text stays the body colour; the row's edge, tint and severity mark carry
+   the tone. */
 .needs-you__row {
   position: relative;
 }

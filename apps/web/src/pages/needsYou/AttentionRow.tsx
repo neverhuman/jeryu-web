@@ -120,15 +120,18 @@ export function AttentionRow({
           </span>
         </p>
         {detail ? (
-          <p className="needs-you__reason" title={detail.title}>
-            {detail.text}
+          <p className="needs-you__reason">
+            {/* Only the message is cut to one line; its link stays in view. */}
+            <span className="needs-you__reason-text" title={detail.title}>
+              {detail.text}
+            </span>
             {detail.to ? (
-              <>
-                {' · '}
+              <span className="needs-you__reason-open">
+                <span aria-hidden="true">·</span>
                 <Link to={detail.to} aria-label={`Open: ${item.title}`}>
                   open
                 </Link>
-              </>
+              </span>
             ) : null}
           </p>
         ) : null}
