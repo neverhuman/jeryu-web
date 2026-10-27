@@ -75,7 +75,7 @@ describe('MermaidDiagram', () => {
           darkMode: false,
           background: '#ffffff',
           primaryTextColor: '#0b1220',
-          nodeBorder: '#0a7ea4',
+          nodeBorder: '#086f91',
         }),
       })
     );
@@ -107,7 +107,7 @@ describe('MermaidDiagram', () => {
     const vars = mermaidThemeVariables('dark');
     expect(vars.background).toBe('#123456');
     // A translucent token is not a colour mermaid can shade from: fall back.
-    expect(vars.nodeBorder).toBe('#22d3ee');
+    expect(vars.nodeBorder).toBe('#3cc8dc');
     document.documentElement.style.removeProperty('--color-bg-1');
     document.documentElement.style.removeProperty('--color-accent-primary');
   });

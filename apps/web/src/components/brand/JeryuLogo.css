@@ -13,15 +13,11 @@
 .jeryu-logo__glyph {
   flex: none;
   color: var(--color-accent-primary);
-  filter: drop-shadow(
-    0 0 6px color-mix(in srgb, var(--color-accent-primary) 55%, transparent)
-  );
 }
 
 .jeryu-logo__wordmark {
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.06em;
-  text-shadow: var(--glow-text);
 }
 
 .jeryu-logo__wordmark-accent {
@@ -76,25 +72,4 @@
 .jeryu-logo--hero .jeryu-logo__wordmark {
   font-size: 1em;
   letter-spacing: 0.08em;
-  /* A brighter hero glow that gently pulses on boot. */
-  text-shadow:
-    0 0 12px color-mix(in srgb, var(--color-accent-primary) 55%, transparent),
-    0 0 32px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
-  animation: jeryu-logo-pulse 3.2s var(--ease-standard) infinite;
-}
-
-@keyframes jeryu-logo-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.82;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .jeryu-logo--hero .jeryu-logo__wordmark {
-    animation: none;
-  }
 }

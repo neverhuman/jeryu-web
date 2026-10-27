@@ -545,7 +545,6 @@ a.global-header__live:hover {
   border-left-color: var(--color-accent-primary);
   color: var(--color-accent-primary);
   font-weight: var(--font-weight-semibold);
-  text-shadow: var(--glow-text);
 }
 
 .left-nav__disclosure {
@@ -742,7 +741,7 @@ a.global-header__live:hover {
   background-color: var(--color-bg-1);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-3), var(--glow-soft);
+  box-shadow: var(--shadow-3);
   overflow: hidden;
   display: flex;
   flex-direction: column;

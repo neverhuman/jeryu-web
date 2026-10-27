@@ -379,7 +379,7 @@
 .shift-chart__seg.is-working { fill: var(--color-accent-success); }
 .shift-chart__seg.is-idle { fill: var(--color-bg-3); }
 .shift-chart__seg.is-stopping { fill: var(--color-accent-warning); }
-.shift-chart__seg.is-paused { fill: var(--color-accent-secondary); }
+.shift-chart__seg.is-paused { fill: var(--color-chart-alt); }
 .shift-chart__seg.is-offline { fill: var(--color-accent-danger); }
 
 .shift-chart__busy {
@@ -421,7 +421,7 @@
 .shift-chart__swatch.is-working { background: var(--color-accent-success); }
 .shift-chart__swatch.is-idle { background: var(--color-bg-3); }
 .shift-chart__swatch.is-stopping { background: var(--color-accent-warning); }
-.shift-chart__swatch.is-paused { background: var(--color-accent-secondary); }
+.shift-chart__swatch.is-paused { background: var(--color-chart-alt); }
 .shift-chart__swatch.is-busy { background: var(--color-accent-info); }
 .shift-chart__swatch.is-planned { background: var(--color-fg-primary); height: 2px; }
 .shift-chart__swatch.is-queue { background: var(--color-accent-warning); height: 2px; }

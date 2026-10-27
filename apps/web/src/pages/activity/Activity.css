@@ -296,10 +296,9 @@
   color: var(--color-accent-info);
 }
 
-/* Which tool reported the row, in front of the label pill. The icon is
-   coloured by what the source does, not by which one it is: agent work, the
-   gates judging it, the steps that ship it. Three tints, so the eye sorts the
-   feed without reading it. */
+/* Which tool reported the row, in front of the label pill. The icon's shape
+   says which source it is; it takes no colour of its own, because status
+   colours are kept for state. */
 .activity-row__source-icon {
   display: inline-flex;
   align-items: center;
@@ -308,22 +307,6 @@
   /* The mark belongs to the pill behind it, so it sits closer to it than the
      line's own gap would put it. */
   margin-right: calc(var(--space-2) - var(--space-3));
-}
-
-.activity-row__source-icon[data-source-group='agent'] {
-  color: var(--color-accent-primary);
-}
-
-.activity-row__source-icon[data-source-group='gate'] {
-  color: var(--color-accent-warning);
-}
-
-.activity-row__source-icon[data-source-group='release'] {
-  color: var(--color-accent-secondary);
-}
-
-.activity-row__source-icon[data-source-group='forge'] {
-  color: var(--color-accent-info);
 }
 
 /* On the wall the row grows; the mark grows with it. */
@@ -820,14 +803,14 @@
 
 .activity-volume__seg.is-todos { fill: var(--color-accent-primary); }
 .activity-volume__seg.is-gates { fill: var(--color-accent-info); }
-.activity-volume__seg.is-reviews { fill: var(--color-accent-secondary); }
+.activity-volume__seg.is-reviews { fill: var(--color-chart-alt); }
 .activity-volume__seg.is-pulls { fill: var(--color-accent-success); }
 .activity-volume__seg.is-merges {
   fill: color-mix(in srgb, var(--color-accent-success) 50%, var(--color-accent-info));
 }
 .activity-volume__seg.is-releases { fill: var(--color-accent-warning); }
 .activity-volume__seg.is-deploys {
-  fill: color-mix(in srgb, var(--color-accent-secondary) 45%, var(--color-accent-primary));
+  fill: color-mix(in srgb, var(--color-chart-alt) 45%, var(--color-accent-primary));
 }
 .activity-volume__seg.is-other { fill: var(--color-fg-muted); cursor: default; }
 /* Code views. Deleted lines are a muted green, never red: red on this site is
@@ -925,7 +908,7 @@
 
 .activity-volume__swatch.is-todos { background: var(--color-accent-primary); }
 .activity-volume__swatch.is-gates { background: var(--color-accent-info); }
-.activity-volume__swatch.is-reviews { background: var(--color-accent-secondary); }
+.activity-volume__swatch.is-reviews { background: var(--color-chart-alt); }
 .activity-volume__swatch.is-pulls { background: var(--color-accent-success); }
 .activity-volume__swatch.is-merges {
   background: color-mix(in srgb, var(--color-accent-success) 50%, var(--color-accent-info));
@@ -938,7 +921,7 @@
   background: color-mix(in srgb, var(--color-accent-success) 35%, var(--color-fg-muted));
 }
 .activity-volume__swatch.is-deploys {
-  background: color-mix(in srgb, var(--color-accent-secondary) 45%, var(--color-accent-primary));
+  background: color-mix(in srgb, var(--color-chart-alt) 45%, var(--color-accent-primary));
 }
 
 /* Values just update: no grow-in, no tween, no pulse. */
@@ -1039,7 +1022,6 @@
   font: inherit;
   font-size: var(--font-size-sm);
   cursor: pointer;
-  box-shadow: var(--glow-soft);
 }
 
 .activity__held-pill:hover {

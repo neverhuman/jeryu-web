@@ -2,23 +2,29 @@
  * JeRyu design tokens (W-F-08) — TUI overhaul
  *
  * High-contrast terminal aesthetic shared with the JeRyu TUI:
- *   - a near-black, multi-neon DARK theme is the first-class default;
- *     light is a polished daylight surface; high-contrast is a pure-black
- *     WCAG AAA-leaning variant.
- *   - SQUARE edges (radii 0) and crisp 1px / glow "shadows" — panels read as
- *     boxed terminal frames, never soft cards.
- *   - cyan primary + green / amber / pink / sky / magenta neons.
+ *   - a near-black DARK theme is the first-class default; light is a
+ *     polished daylight surface; high-contrast is a pure-black WCAG
+ *     AAA-leaning variant.
+ *   - SQUARE edges (radii 0) and crisp 1px "shadows" — panels read as boxed
+ *     terminal frames, never soft cards. Nothing glows.
+ *   - ONE accent (cyan, `--color-accent-primary`) for interaction: links,
+ *     focus, selection, the active nav item, primary buttons. Four status
+ *     hues (success = ok, warning = warn, danger = bad, info) say state and
+ *     nothing else, and a status is always paired with a word or shape:
+ *     colour never carries meaning alone. Every text/status pair, on the page
+ *     and on its own tint, clears WCAG AA 4.5:1 in all three themes.
  *   - a readable sans for body text; JetBrains Mono for page titles and the
  *     things a reader copies or compares (SHAs, refs, paths, numbers, code).
  *
  * Token vocabulary
  *   --color-bg-{0,1,2,3}                 page, surface, raised, inset
  *   --color-fg-{primary,secondary,muted} body, secondary, tertiary text
- *   --color-accent-{primary,secondary,success,warning,danger,info}
+ *   --color-accent-primary               the one interaction accent
+ *   --color-accent-{success,warning,danger,info}  status: ok, warn, bad, info
  *   --color-accent-{*}-bg                tinted background for the accent
+ *   --color-chart-alt                    an extra chart series, never a status
  *   --color-border-{subtle,strong}
- *   --color-grid                         faint decorative background grid line
- *   --glow-{accent,soft}, --focus-ring   neon glow composites (theme-adaptive)
+ *   --focus-ring                         solid accent ring (theme-adaptive)
  *   --font-{sans,mono,display}
  *   --font-size-{xs,sm,base,md,lg,xl,2xl,3xl}
  *   --line-height-{tight,normal,relaxed}
@@ -38,7 +44,7 @@
  *   [data-theme="light"]           explicit light
  *   [data-theme="high-contrast"]   pure-black high-contrast
  *
- * Only color, shadow, border, and glow tokens vary per theme. Typography,
+ * Only color, shadow, and border tokens vary per theme. Typography,
  * spacing, radii, motion, and z-index are theme-invariant on :root.
  */
 
@@ -103,17 +109,10 @@
   --duration-std: 200ms;
   --duration-slow: 320ms;
 
-  /* Glow composites — theme-adaptive via color-mix on the live accent. --- */
-  --glow-accent:
-    0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 55%, transparent),
-    0 0 14px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
-  --glow-soft: 0 0 10px
-    color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
-  --glow-text: 0 0 8px
-    color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+  /* Focus: a solid 2px ring in the accent, offset by the page colour so it
+     reads on any surface. No glow. */
   --focus-ring:
-    0 0 0 2px var(--color-bg-0), 0 0 0 3px var(--color-accent-primary),
-    0 0 12px color-mix(in srgb, var(--color-accent-primary) 40%, transparent);
+    0 0 0 2px var(--color-bg-0), 0 0 0 4px var(--color-accent-primary);
 
   /* Z-index scale ------------------------------------------------------- */
   --z-base: 1;
@@ -125,7 +124,7 @@
 }
 
 /* -------------------------------------------------------------------------
- * Dark theme — first-class, multi-neon on near-black (the DEFAULT)
+ * Dark theme — first-class, one accent on near-black (the DEFAULT)
  *
  * Applied on :root so the terminal look is what ships out of the box,
  * regardless of OS preference. The light daylight surface is opt-in below.
@@ -141,39 +140,28 @@
   --color-fg-secondary: #9fb0c3;
   --color-fg-muted: #7c8ea3;
 
-  --color-accent-primary: #22d3ee; /* cyan  */
-  --color-accent-primary-bg: rgba(34, 211, 238, 0.16);
-  --color-accent-secondary: #c77dff; /* magenta */
-  --color-accent-secondary-bg: rgba(199, 125, 255, 0.16);
-  --color-accent-success: #37f08a; /* neon green */
-  --color-accent-success-bg: rgba(55, 240, 138, 0.16);
-  --color-accent-warning: #ffb020; /* amber */
-  --color-accent-warning-bg: rgba(255, 176, 32, 0.16);
-  --color-accent-danger: #ff5470; /* hot pink-red */
-  --color-accent-danger-bg: rgba(255, 84, 112, 0.16);
-  --color-accent-info: #38bdf8; /* sky */
-  --color-accent-info-bg: rgba(56, 189, 248, 0.16);
+  --color-accent-primary: #3cc8dc; /* cyan: the one accent */
+  --color-accent-primary-bg: rgba(60, 200, 220, 0.14);
+  --color-accent-success: #5ccf8f; /* ok */
+  --color-accent-success-bg: rgba(92, 207, 143, 0.14);
+  --color-accent-warning: #e8b452; /* warn */
+  --color-accent-warning-bg: rgba(232, 180, 82, 0.14);
+  --color-accent-danger: #ff6b78; /* bad */
+  --color-accent-danger-bg: rgba(255, 107, 120, 0.14);
+  --color-accent-info: #8fb3f5; /* info */
+  --color-accent-info-bg: rgba(143, 179, 245, 0.14);
+
+  /* One more series colour for charts that need it; never a status. */
+  --color-chart-alt: #a99be0;
 
   --color-border-subtle: #17202b;
   --color-border-strong: #2b3a4b;
 
-  --color-grid: rgba(34, 211, 238, 0.035);
-
-  /* Gold — reserved for the special "tool control plane" surface. */
-  --color-gold: #f5d76e;
-  --color-gold-strong: #ffe9a3;
-  --color-gold-bg: rgba(245, 215, 110, 0.14);
-  --color-gold-border: #d4af37;
-  --color-gold-grad-from: rgba(212, 175, 55, 0.22);
-  --color-gold-grad-to: rgba(212, 175, 55, 0.03);
-
-  /* "Shadows" are crisp frames + depth glow, never soft blur. */
+  /* "Shadows" are crisp frames; only a floating panel (shadow-3) drops one. */
   --shadow-1: 0 0 0 1px var(--color-border-subtle);
   --shadow-2: 0 0 0 1px var(--color-border-strong);
   --shadow-3:
     0 0 0 1px var(--color-border-strong), 0 8px 30px rgba(0, 0, 0, 0.7);
-  --shadow-gold: 0 0 0 1px var(--color-gold-border),
-    0 0 18px rgba(212, 175, 55, 0.3);
 
   color-scheme: dark;
 }
@@ -191,37 +179,27 @@
     --color-fg-secondary: #3f4a5c;
     --color-fg-muted: #5c6675;
 
-    --color-accent-primary: #0a7ea4;
-    --color-accent-primary-bg: rgba(10, 126, 164, 0.12);
-    --color-accent-secondary: #8b3ffb;
-    --color-accent-secondary-bg: rgba(139, 63, 251, 0.1);
-    --color-accent-success: #1f7a3a;
-    --color-accent-success-bg: rgba(31, 122, 58, 0.12);
-    --color-accent-warning: #a55c00;
-    --color-accent-warning-bg: rgba(165, 92, 0, 0.14);
+    --color-accent-primary: #086f91;
+    --color-accent-primary-bg: rgba(8, 111, 145, 0.1);
+    --color-accent-success: #1a6b34;
+    --color-accent-success-bg: rgba(26, 107, 52, 0.1);
+    --color-accent-warning: #8a4f00;
+    --color-accent-warning-bg: rgba(138, 79, 0, 0.1);
     --color-accent-danger: #b3261e;
-    --color-accent-danger-bg: rgba(179, 38, 30, 0.12);
-    --color-accent-info: #0a66c2;
-    --color-accent-info-bg: rgba(10, 102, 194, 0.12);
+    --color-accent-danger-bg: rgba(179, 38, 30, 0.1);
+    --color-accent-info: #2f5cb0;
+    --color-accent-info-bg: rgba(47, 92, 176, 0.1);
+
+    /* One more series colour for charts that need it; never a status. */
+    --color-chart-alt: #5b4a9e;
 
     --color-border-subtle: #d3d9e0;
     --color-border-strong: #aab3bf;
-
-    --color-grid: rgba(11, 18, 32, 0.04);
-
-    --color-gold: #8a6d00;
-    --color-gold-strong: #6f5600;
-    --color-gold-bg: rgba(193, 154, 0, 0.1);
-    --color-gold-border: #c9a227;
-    --color-gold-grad-from: rgba(201, 162, 39, 0.16);
-    --color-gold-grad-to: rgba(201, 162, 39, 0.02);
 
     --shadow-1: 0 0 0 1px var(--color-border-subtle);
     --shadow-2: 0 0 0 1px var(--color-border-strong);
     --shadow-3:
       0 0 0 1px var(--color-border-strong), 0 8px 24px rgba(11, 18, 32, 0.12);
-    --shadow-gold: 0 0 0 1px var(--color-gold-border),
-      0 2px 14px rgba(201, 162, 39, 0.22);
 
     color-scheme: light;
   }
@@ -238,37 +216,27 @@
   --color-fg-secondary: #9fb0c3;
   --color-fg-muted: #7c8ea3;
 
-  --color-accent-primary: #22d3ee;
-  --color-accent-primary-bg: rgba(34, 211, 238, 0.16);
-  --color-accent-secondary: #c77dff;
-  --color-accent-secondary-bg: rgba(199, 125, 255, 0.16);
-  --color-accent-success: #37f08a;
-  --color-accent-success-bg: rgba(55, 240, 138, 0.16);
-  --color-accent-warning: #ffb020;
-  --color-accent-warning-bg: rgba(255, 176, 32, 0.16);
-  --color-accent-danger: #ff5470;
-  --color-accent-danger-bg: rgba(255, 84, 112, 0.16);
-  --color-accent-info: #38bdf8;
-  --color-accent-info-bg: rgba(56, 189, 248, 0.16);
+  --color-accent-primary: #3cc8dc; /* cyan: the one accent */
+  --color-accent-primary-bg: rgba(60, 200, 220, 0.14);
+  --color-accent-success: #5ccf8f; /* ok */
+  --color-accent-success-bg: rgba(92, 207, 143, 0.14);
+  --color-accent-warning: #e8b452; /* warn */
+  --color-accent-warning-bg: rgba(232, 180, 82, 0.14);
+  --color-accent-danger: #ff6b78; /* bad */
+  --color-accent-danger-bg: rgba(255, 107, 120, 0.14);
+  --color-accent-info: #8fb3f5; /* info */
+  --color-accent-info-bg: rgba(143, 179, 245, 0.14);
+
+  /* One more series colour for charts that need it; never a status. */
+  --color-chart-alt: #a99be0;
 
   --color-border-subtle: #17202b;
   --color-border-strong: #2b3a4b;
-
-  --color-grid: rgba(34, 211, 238, 0.035);
-
-  --color-gold: #f5d76e;
-  --color-gold-strong: #ffe9a3;
-  --color-gold-bg: rgba(245, 215, 110, 0.14);
-  --color-gold-border: #d4af37;
-  --color-gold-grad-from: rgba(212, 175, 55, 0.22);
-  --color-gold-grad-to: rgba(212, 175, 55, 0.03);
 
   --shadow-1: 0 0 0 1px var(--color-border-subtle);
   --shadow-2: 0 0 0 1px var(--color-border-strong);
   --shadow-3:
     0 0 0 1px var(--color-border-strong), 0 8px 30px rgba(0, 0, 0, 0.7);
-  --shadow-gold: 0 0 0 1px var(--color-gold-border),
-    0 0 18px rgba(212, 175, 55, 0.3);
 
   color-scheme: dark;
 }
@@ -284,37 +252,27 @@
   --color-fg-secondary: #3f4a5c;
   --color-fg-muted: #5c6675;
 
-  --color-accent-primary: #0a7ea4;
-  --color-accent-primary-bg: rgba(10, 126, 164, 0.12);
-  --color-accent-secondary: #8b3ffb;
-  --color-accent-secondary-bg: rgba(139, 63, 251, 0.1);
-  --color-accent-success: #1f7a3a;
-  --color-accent-success-bg: rgba(31, 122, 58, 0.12);
-  --color-accent-warning: #a55c00;
-  --color-accent-warning-bg: rgba(165, 92, 0, 0.14);
+  --color-accent-primary: #086f91;
+  --color-accent-primary-bg: rgba(8, 111, 145, 0.1);
+  --color-accent-success: #1a6b34;
+  --color-accent-success-bg: rgba(26, 107, 52, 0.1);
+  --color-accent-warning: #8a4f00;
+  --color-accent-warning-bg: rgba(138, 79, 0, 0.1);
   --color-accent-danger: #b3261e;
-  --color-accent-danger-bg: rgba(179, 38, 30, 0.12);
-  --color-accent-info: #0a66c2;
-  --color-accent-info-bg: rgba(10, 102, 194, 0.12);
+  --color-accent-danger-bg: rgba(179, 38, 30, 0.1);
+  --color-accent-info: #2f5cb0;
+  --color-accent-info-bg: rgba(47, 92, 176, 0.1);
+
+  /* One more series colour for charts that need it; never a status. */
+  --color-chart-alt: #5b4a9e;
 
   --color-border-subtle: #d3d9e0;
   --color-border-strong: #aab3bf;
-
-  --color-grid: rgba(11, 18, 32, 0.04);
-
-  --color-gold: #8a6d00;
-  --color-gold-strong: #6f5600;
-  --color-gold-bg: rgba(193, 154, 0, 0.1);
-  --color-gold-border: #c9a227;
-  --color-gold-grad-from: rgba(201, 162, 39, 0.16);
-  --color-gold-grad-to: rgba(201, 162, 39, 0.02);
 
   --shadow-1: 0 0 0 1px var(--color-border-subtle);
   --shadow-2: 0 0 0 1px var(--color-border-strong);
   --shadow-3:
     0 0 0 1px var(--color-border-strong), 0 8px 24px rgba(11, 18, 32, 0.12);
-  --shadow-gold: 0 0 0 1px var(--color-gold-border),
-    0 2px 14px rgba(201, 162, 39, 0.22);
 
   color-scheme: light;
 }
@@ -335,33 +293,24 @@
 
   --color-accent-primary: #5ce1ff;
   --color-accent-primary-bg: rgba(92, 225, 255, 0.24);
-  --color-accent-secondary: #e0a3ff;
-  --color-accent-secondary-bg: rgba(224, 163, 255, 0.24);
   --color-accent-success: #5cff9d;
   --color-accent-success-bg: rgba(92, 255, 157, 0.24);
   --color-accent-warning: #ffd24a;
   --color-accent-warning-bg: rgba(255, 210, 74, 0.24);
   --color-accent-danger: #ff8199;
   --color-accent-danger-bg: rgba(255, 129, 153, 0.24);
-  --color-accent-info: #7dd3fc;
-  --color-accent-info-bg: rgba(125, 211, 252, 0.24);
+  --color-accent-info: #a8c8ff;
+  --color-accent-info-bg: rgba(168, 200, 255, 0.24);
+
+  /* One more series colour for charts that need it; never a status. */
+  --color-chart-alt: #d4c4ff;
 
   --color-border-subtle: #6a6a6a;
   --color-border-strong: #ffffff;
 
-  --color-grid: rgba(255, 255, 255, 0.05);
-
-  --color-gold: #ffe17a;
-  --color-gold-strong: #fff0b3;
-  --color-gold-bg: rgba(255, 225, 122, 0.2);
-  --color-gold-border: #ffd24a;
-  --color-gold-grad-from: rgba(255, 210, 74, 0.28);
-  --color-gold-grad-to: rgba(255, 210, 74, 0.05);
-
   --shadow-1: 0 0 0 1px #ffffff;
   --shadow-2: 0 0 0 1px #ffffff, 0 4px 8px rgba(0, 0, 0, 0.8);
   --shadow-3: 0 0 0 2px #ffffff, 0 12px 24px rgba(0, 0, 0, 0.9);
-  --shadow-gold: 0 0 0 1px var(--color-gold-border), 0 4px 16px rgba(0, 0, 0, 0.8);
 
   color-scheme: dark;
 }

@@ -135,7 +135,7 @@ const FALLBACK_TOKENS: Record<'light' | 'dark', Record<string, string>> = {
     'fg-secondary': '#9fb0c3',
     'border-subtle': '#17202b',
     'border-strong': '#2b3a4b',
-    'accent-primary': '#22d3ee',
+    'accent-primary': '#3cc8dc',
   },
   light: {
     'bg-0': '#f6f8fa',
@@ -146,7 +146,7 @@ const FALLBACK_TOKENS: Record<'light' | 'dark', Record<string, string>> = {
     'fg-secondary': '#3f4a5c',
     'border-subtle': '#d3d9e0',
     'border-strong': '#aab3bf',
-    'accent-primary': '#0a7ea4',
+    'accent-primary': '#086f91',
   },
 };
 

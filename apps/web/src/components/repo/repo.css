@@ -170,9 +170,8 @@
 }
 
 .repo-role-badge--tool_control_plane {
-  background-color: var(--color-gold-bg);
-  color: var(--color-gold);
-  border-color: var(--color-gold-border);
+  color: var(--color-fg-primary);
+  border-color: var(--color-border-strong);
 }
 
 .repo-table {
@@ -849,9 +848,9 @@
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
-  background-color: var(--color-gold-bg);
-  color: var(--color-gold);
-  border: 1px solid var(--color-gold-border);
+  background-color: var(--color-bg-2);
+  color: var(--color-fg-secondary);
+  border: 1px solid var(--color-border-strong);
 }
 
 .repo-table__score-link,

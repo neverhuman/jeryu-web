@@ -135,7 +135,7 @@
 .yield-funnel__seg.is-review,
 .yield-funnel__swatch.is-review { fill: var(--color-accent-warning); background: var(--color-accent-warning); }
 .yield-funnel__seg.is-triage,
-.yield-funnel__swatch.is-triage { fill: var(--color-accent-secondary); background: var(--color-accent-secondary); }
+.yield-funnel__swatch.is-triage { fill: var(--color-chart-alt); background: var(--color-chart-alt); }
 
 .yield-funnel__legend {
   display: flex;
@@ -300,7 +300,7 @@
 .yield-chart__series.is-series-2,
 .yield-chart__swatch.is-series-2 { color: var(--color-accent-success); background: var(--color-accent-success); }
 .yield-chart__series.is-series-3,
-.yield-chart__swatch.is-series-3 { color: var(--color-accent-secondary); background: var(--color-accent-secondary); }
+.yield-chart__swatch.is-series-3 { color: var(--color-chart-alt); background: var(--color-chart-alt); }
 
 .yield-chart__legend {
   display: flex;
@@ -411,5 +411,5 @@
 .yield-adhoc__bar {
   width: 100%;
   border-radius: 2px 2px 0 0;
-  background: var(--color-accent-secondary);
+  background: var(--color-chart-alt);
 }

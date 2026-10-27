@@ -3,11 +3,11 @@
 // One component, three lockups:
 //   * `header` — compact glyph + "JeRyu" wordmark for the global header.
 //   * `mark`   — the glyph alone (login panel, tight spots).
-//   * `hero`   — oversized, glowing wordmark inside a box-drawing frame for
-//                the splash / boot screen.
+//   * `hero`   — oversized wordmark inside a box-drawing frame for the
+//                splash / boot screen.
 //
-// Casing is canonical **JeRyu** everywhere. Colors come from tokens; the neon
-// glow is a CSS `filter`/`text-shadow` so it never lowers text contrast.
+// Casing is canonical **JeRyu** everywhere. Colors come from tokens; nothing
+// glows.
 
 import './JeryuLogo.css';
 

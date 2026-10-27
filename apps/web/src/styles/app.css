@@ -133,29 +133,6 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/*
- * Decorative background: a faint terminal grid + corner vignette pinned
- * behind all content. Static (no animation), pointer-transparent, and
- * cheap to paint. Sits under #root via a negative z-index.
- */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--color-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
-  background-size: 32px 32px;
-  -webkit-mask-image: radial-gradient(
-    ellipse at 50% 40%,
-    #000 0%,
-    transparent 85%
-  );
-  mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 85%);
-}
-
 /* Code, keys and machine output keep the mono face whatever surrounds them.
    Without this a browser picks its own generic monospace, not ours. */
 code,

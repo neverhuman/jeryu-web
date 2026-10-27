@@ -175,7 +175,7 @@ export function AgentTerminalImpl({
           theme: {
             background: '#05070a',
             foreground: '#e8f0f7',
-            cursor: '#22d3ee',
+            cursor: '#3cc8dc',
             cursorAccent: '#05070a',
             selectionBackground: 'rgba(34, 211, 238, 0.30)',
           },
