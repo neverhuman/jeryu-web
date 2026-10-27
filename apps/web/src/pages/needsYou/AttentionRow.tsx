@@ -231,7 +231,7 @@ function Decide({
         }}
       />
       <span className="needs-you__decide-note" aria-hidden="true">
-        {item.sha ? `on ${item.sha.slice(0, 12)}` : null}
+        {item.sha ? <>on <code>{item.sha.slice(0, 12)}</code></> : null}
       </span>
     </div>
   );

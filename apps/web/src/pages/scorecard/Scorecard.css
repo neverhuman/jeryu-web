@@ -105,6 +105,7 @@
 
 .scorecard-tile__value {
   margin: 0;
+  font-family: var(--font-mono);
   color: var(--color-fg-primary);
   font-size: 24px;
   font-weight: 650;

@@ -72,7 +72,7 @@ function LandingRow({ entry, refs, todo }: { entry: ShiftTodoLanding; refs: Repo
   const commitHref = (sha: string): string | null => ref ? repoUrl(ref, 'commit', encodeURIComponent(sha)) : null;
   const pull = landingPull(entry, refs, todo);
   if (entry.status === 'pending') return <li className="shift-landing__row shift__muted">{entry.repo}: not landed yet</li>;
-  if (entry.status === 'landed') return <li className="shift-landing__row"><Check aria-hidden="true" /> <strong>{entry.repo}</strong> {entry.sha && commitHref(entry.sha) ? <Link to={commitHref(entry.sha)!}>{shortSha(entry.sha)}</Link> : entry.sha ? shortSha(entry.sha) : null}{pull ? <> · <Link to={pull.href}>PR #{pull.number}</Link></> : null}</li>;
+  if (entry.status === 'landed') return <li className="shift-landing__row"><Check aria-hidden="true" /> <strong>{entry.repo}</strong> {entry.sha && commitHref(entry.sha) ? <Link to={commitHref(entry.sha)!}><code>{shortSha(entry.sha)}</code></Link> : entry.sha ? <code>{shortSha(entry.sha)}</code> : null}{pull ? <> · <Link to={pull.href}>PR #{pull.number}</Link></> : null}</li>;
   const event = entry.status === 'gate_failed' ? `gate failed after rebasing onto ${entry.target ?? 'the target'}` : entry.status === 'conflict' ? `could not land because of a conflict with ${entry.target ?? 'the target'}` : entry.status === 'push_race' ? 'push raced with another update' : 'work was kept for later';
   const tests = entry.tests ?? [];
   const rescueHref = ref && entry.rescue_branch ? repoUrl(ref, 'commits', encodeURIComponent(entry.rescue_branch)) : null;

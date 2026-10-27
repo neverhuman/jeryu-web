@@ -118,8 +118,11 @@ html {
 
 body {
   min-height: 100vh;
-  /* Monospace-first: the whole UI reads like a terminal. */
-  font-family: var(--font-mono);
+  /* Sans for reading; mono is opted into where the characters carry meaning
+     (titles, SHAs, refs, paths, numbers, code). Figures are tabular in either
+     face, so counts and durations line up in a column. */
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   font-weight: var(--font-weight-regular);
@@ -151,6 +154,15 @@ body::before {
     transparent 85%
   );
   mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 85%);
+}
+
+/* Code, keys and machine output keep the mono face whatever surrounds them.
+   Without this a browser picks its own generic monospace, not ours. */
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
 }
 
 ::selection {

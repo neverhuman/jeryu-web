@@ -68,6 +68,7 @@
 }
 
 .yield__tile-value {
+  font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 600;
   line-height: 1.2;

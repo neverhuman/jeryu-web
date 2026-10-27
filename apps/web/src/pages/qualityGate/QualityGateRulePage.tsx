@@ -95,7 +95,7 @@ export function QualityGateRulePage(): JSX.Element {
                   >
                     <td>
                       <Link to={qualityGateHeadPath(head.repo, head.sha)}>
-                        {head.repo}@{shortSha(head.sha)}
+                        <code>{head.repo}@{shortSha(head.sha)}</code>
                       </Link>
                     </td>
                     <td>{head.branch}</td>

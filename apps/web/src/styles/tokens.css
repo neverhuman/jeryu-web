@@ -7,7 +7,9 @@
  *     WCAG AAA-leaning variant.
  *   - SQUARE edges (radii 0) and crisp 1px / glow "shadows" — panels read as
  *     boxed terminal frames, never soft cards.
- *   - cyan primary + green / amber / pink / sky / magenta neons, monospace UI.
+ *   - cyan primary + green / amber / pink / sky / magenta neons.
+ *   - a readable sans for body text; JetBrains Mono for page titles and the
+ *     things a reader copies or compares (SHAs, refs, paths, numbers, code).
  *
  * Token vocabulary
  *   --color-bg-{0,1,2,3}                 page, surface, raised, inset
@@ -45,16 +47,18 @@
  * --------------------------------------------------------------------- */
 
 :root {
-  /* Typography — monospace-first for the terminal feel -------------------- */
+  /* Typography — sans body, mono where the characters carry meaning ------- */
   --font-mono:
     'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata',
     'Roboto Mono', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono',
     monospace;
+  /* Body text: the reader's own interface face, so no font bytes are added
+     and text renders as the rest of their system does. */
   --font-sans:
-    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  /* Display: the wordmark / section labels — mono, heavy, letter-spaced. */
+  /* Display: the wordmark and page titles — mono, so jeryu still reads as jeryu. */
   --font-display: var(--font-mono);
 
   --font-size-xs: 0.75rem; /* 12 */

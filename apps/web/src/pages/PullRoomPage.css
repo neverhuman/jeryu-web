@@ -912,6 +912,7 @@ button.pull-repo__count-link {
 
 .pull-graph__ref {
   margin: 0 0 var(--space-2);
+  font-family: var(--font-mono);
   padding: 0 var(--space-3);
   color: var(--color-fg-secondary);
   font-size: var(--font-size-sm);
