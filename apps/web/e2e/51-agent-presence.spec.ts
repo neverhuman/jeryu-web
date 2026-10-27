@@ -148,7 +148,8 @@ test('lists everyone at work, with family reach, collisions and links @action:ag
   await expect(page.getByTestId('agents-presence-live')).toHaveText('3 live');
 
   const ada = page.getByTestId('presence-row-external:cli:ada-1');
-  await expect(ada).toContainText('claude-code · model-x');
+  await expect(ada).toContainText('claude-code');
+  await expect(page.getByTestId('presence-model-external:cli:ada-1')).toHaveText('model-x');
   await expect(ada).toContainText('Wire presence into the repository tab');
   await expect(ada).toContainText('ada');
   await expect(ada).toContainText('checkout presence-tab');

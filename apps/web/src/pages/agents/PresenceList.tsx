@@ -37,6 +37,7 @@ import {
   stateTone,
   todoLabel,
 } from './presenceModel';
+import { ModelBadge } from './ModelBadge';
 import { TimelineStrip } from './PresenceTimeline';
 import type { TimelineWindow } from './presenceTimelineModel';
 
@@ -121,7 +122,8 @@ function PresenceRowView({
   const name = (
     <>
       <Bot size={13} aria-hidden="true" />
-      <span className="presence__agent">{agentLabel(item)}</span>
+      <span className="presence__agent">{item.agent}</span>
+      {item.model ? <ModelBadge model={item.model} testId={`presence-model-${item.id}`} /> : null}
       {headline ? <span className="presence__headline">{headline}</span> : null}
     </>
   );

@@ -427,6 +427,7 @@ describe('RepositoryAgentsPage — agent presence', () => {
             id: 'agent_run:run-1',
             source: 'agent_run',
             agent: 'editor',
+            model: null,
             branch: 'fix/parser',
             title: null,
             operator: null,
@@ -468,6 +469,9 @@ describe('RepositoryAgentsPage — agent presence', () => {
     );
     expect(screen.getByTestId('presence-source-external:cli:one')).toHaveTextContent('external');
     expect(screen.getByTestId('presence-cost-external:cli:one')).toHaveTextContent('$1.23 so far');
+    // The model is its own badge beside the agent; a session with no model gets none.
+    expect(screen.getByTestId('presence-model-external:cli:one')).toHaveTextContent('model-x');
+    expect(screen.queryByTestId('presence-model-agent_run:run-1')).not.toBeInTheDocument();
 
     // The live run opened itself, and its row still opens the terminal.
     const terminals = await screen.findAllByTestId('agent-terminal');

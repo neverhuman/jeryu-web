@@ -69,3 +69,8 @@
   font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* The model sits beside the name; the state keeps the far end. */
+.agent-card__title .model-badge {
+  margin-right: auto;
+}

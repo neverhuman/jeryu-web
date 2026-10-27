@@ -12,7 +12,8 @@ import { toneClass } from '../../components/tone/tone';
 import { relativeText } from '../../format/when';
 import { LIST_OPEN_PROP, listRowProps, useListKeys } from '../../hooks/useListKeys';
 
-import { agentLabel, presenceHeadline, presenceRepoHref, sourceLabel, stateTone } from './presenceModel';
+import { presenceHeadline, presenceRepoHref, sourceLabel, stateTone } from './presenceModel';
+import { ModelBadge } from './ModelBadge';
 import { TimelineStrip } from './PresenceTimeline';
 import { SPAN_AGO, type TimelineWindow } from './presenceTimelineModel';
 
@@ -40,7 +41,8 @@ export function AgentCards({ items, hostForRepo, now, timeline }: {
               <AgentBot agent={botOfPresence(item)} size={112} />
             </div>
             <div className="agent-card__title">
-              <span className="agent-card__name">{agentLabel(item)}</span>
+              <span className="agent-card__name">{item.agent}</span>
+              {item.model ? <ModelBadge model={item.model} testId={`agent-card-model-${item.id}`} /> : null}
               <span className={toneClass('presence__state', stateTone(item.state))}>{item.state}</span>
             </div>
             {headline ? <p className="agent-card__headline">{headline}</p> : null}
