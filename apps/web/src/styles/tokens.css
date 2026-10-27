@@ -151,8 +151,10 @@
   --color-accent-info: #8fb3f5; /* info */
   --color-accent-info-bg: rgba(143, 179, 245, 0.14);
 
-  /* One more series colour for charts that need it; never a status. */
-  --color-chart-alt: #a99be0;
+  /* One more series colour for charts that need it; never a status. Its
+     lightness sits apart from info, the accent and the status hues, so a
+     neighbouring series differs by more than hue. */
+  --color-chart-alt: #7d5fd3;
 
   --color-border-subtle: #17202b;
   --color-border-strong: #2b3a4b;
@@ -190,8 +192,10 @@
     --color-accent-info: #2f5cb0;
     --color-accent-info-bg: rgba(47, 92, 176, 0.1);
 
-    /* One more series colour for charts that need it; never a status. */
-    --color-chart-alt: #5b4a9e;
+    /* One more series colour for charts that need it; never a status. Its
+       lightness sits apart from info, the accent and the status hues, so a
+       neighbouring series differs by more than hue. */
+    --color-chart-alt: #9b7fd4;
 
     --color-border-subtle: #d3d9e0;
     --color-border-strong: #aab3bf;
@@ -227,8 +231,10 @@
   --color-accent-info: #8fb3f5; /* info */
   --color-accent-info-bg: rgba(143, 179, 245, 0.14);
 
-  /* One more series colour for charts that need it; never a status. */
-  --color-chart-alt: #a99be0;
+  /* One more series colour for charts that need it; never a status. Its
+     lightness sits apart from info, the accent and the status hues, so a
+     neighbouring series differs by more than hue. */
+  --color-chart-alt: #7d5fd3;
 
   --color-border-subtle: #17202b;
   --color-border-strong: #2b3a4b;
@@ -263,8 +269,10 @@
   --color-accent-info: #2f5cb0;
   --color-accent-info-bg: rgba(47, 92, 176, 0.1);
 
-  /* One more series colour for charts that need it; never a status. */
-  --color-chart-alt: #5b4a9e;
+  /* One more series colour for charts that need it; never a status. Its
+     lightness sits apart from info, the accent and the status hues, so a
+     neighbouring series differs by more than hue. */
+  --color-chart-alt: #9b7fd4;
 
   --color-border-subtle: #d3d9e0;
   --color-border-strong: #aab3bf;
@@ -302,8 +310,10 @@
   --color-accent-info: #a8c8ff;
   --color-accent-info-bg: rgba(168, 200, 255, 0.24);
 
-  /* One more series colour for charts that need it; never a status. */
-  --color-chart-alt: #d4c4ff;
+  /* One more series colour for charts that need it; never a status. Its
+     lightness sits apart from info, the accent and the status hues, so a
+     neighbouring series differs by more than hue. */
+  --color-chart-alt: #a77bff;
 
   --color-border-subtle: #6a6a6a;
   --color-border-strong: #ffffff;

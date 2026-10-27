@@ -60,7 +60,7 @@ function PromptGlyph(): JSX.Element {
   );
 }
 
-/** The styled wordmark. `Je` and `yu` are body ink; `R` glows cyan. */
+/** The styled wordmark. `Je` and `yu` are body ink; `R` is the accent cyan. */
 function Wordmark(): JSX.Element {
   return (
     <span className="jeryu-logo__wordmark" aria-hidden="true">

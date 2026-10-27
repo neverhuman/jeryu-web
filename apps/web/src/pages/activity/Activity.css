@@ -292,10 +292,6 @@
   color: var(--color-fg-muted);
 }
 
-.activity-row__source {
-  color: var(--color-accent-info);
-}
-
 /* Which tool reported the row, in front of the label pill. The icon's shape
    says which source it is; it takes no colour of its own, because status
    colours are kept for state. */

@@ -177,7 +177,7 @@ export function AgentTerminalImpl({
             foreground: '#e8f0f7',
             cursor: '#3cc8dc',
             cursorAccent: '#05070a',
-            selectionBackground: 'rgba(34, 211, 238, 0.30)',
+            selectionBackground: 'rgba(60, 200, 220, 0.30)',
           },
         });
         const fit = new FitAddon();
