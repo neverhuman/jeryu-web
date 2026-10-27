@@ -2,6 +2,9 @@ import { expect, test, type Page } from './fixtures/test';
 import { blockingViolations, persistAxeResult, persistRenderedEvidence, runAxe } from './fixtures/accessibility';
 import { mockBootstrap, mockCompanionShell, mockRepoList } from './fixtures/mocks';
 
+// One session names a model long enough to have to wrap inside a card.
+const LONG_MODEL = 'model-with-a-rather-long-release-name-2026-10-27-preview';
+
 async function seed(page: Page, login = 'ada', role: 'admin' | 'user' = 'user'): Promise<void> {
   await mockBootstrap(page, { login, auth: { role } });
   await mockRepoList(page, [{ id: { host: 'forge', owner: 'acme', name: 'widgets' }, default_branch: 'main', visibility: 'public', family: 'acme' }]);
@@ -13,6 +16,7 @@ async function seed(page: Page, login = 'ada', role: 'admin' | 'user' = 'user'):
     const agents = filtered ? ['agy'] : second ? ['cursor'] : ['claude-code', 'codex', 'cursor', 'grok', 'agy'];
     const items = agents.map((agent, index) => ({
       id: `external:${agent}`, session_id: agent, source: 'external', agent,
+      model: index === 0 ? LONG_MODEL : null,
       state: 'idle', reporter: 'ada', operator: 'ada', host: 'xbabe2',
       branch: 'ada/agents', started_at: Date.now() - (index + 2) * 3_600_000, last_active_at: Date.now(), links: {}, collides_with: [],
       repos: index === 4 ? [] : ['acme/widgets'], families: index === 4 ? [] : ['acme'],
@@ -102,6 +106,13 @@ test('agents show robot avatars and a timeline, as a list or as cards @a11y @act
   const cards = page.getByTestId('agent-cards');
   await expect(cards.getByRole('listitem')).toHaveCount(5);
   await expect(cards.locator('svg.agent-avatar:not(.agent-avatar--badge)')).toHaveCount(5);
+  // The model is its own badge, and a long one wraps inside the card instead of spilling out.
+  const badge = page.getByTestId('agent-card-model-external:claude-code');
+  await expect(badge).toHaveText(LONG_MODEL);
+  await expect(page.getByTestId('agent-card-model-external:codex')).toHaveCount(0);
+  const badgeBox = await badge.boundingBox();
+  const cardBox = await page.getByTestId('agent-card-external:claude-code').boundingBox();
+  expect((badgeBox?.x ?? 0) + (badgeBox?.width ?? 0)).toBeLessThanOrEqual((cardBox?.x ?? 0) + (cardBox?.width ?? 0));
   await expect(page.getByTestId('agents-presence-list')).toHaveCount(0);
   const result = await runAxe(page, { include: '[data-testid="active-agents-page"]' });
   await persistAxeResult('active-agents-cards', result);
