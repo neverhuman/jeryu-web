@@ -179,6 +179,37 @@ test('stage selection preserves scroll while updating the URL @action:releases.b
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
 });
 
+test('multiple expanded stages on /releases retain scroll and board nodes @action:releases.board.stage-detail', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await openBoard(page, '/releases/family/globex');
+  await page.goto('/releases?stage=forge-server%3Amain%2Cweb-ui%3Aproduction');
+  const main = page.getByTestId('release-board-stage-forge-server-main');
+  const production = page.getByTestId('release-board-stage-forge-server-production');
+  const web = page.getByTestId('release-board-stage-web-ui-production');
+  await expect(main).toHaveAttribute('aria-expanded', 'true');
+  await expect(web).toHaveAttribute('aria-expanded', 'true');
+  await main.scrollIntoViewIfNeeded();
+  const depth = await page.evaluate(() => window.scrollY);
+  expect(depth).toBeGreaterThan(0);
+  const lane = await page.getByTestId('release-board-lane-forge-server').elementHandle();
+  expect(lane).not.toBeNull();
+
+  await production.click();
+  await expect(production).toHaveAttribute('aria-expanded', 'true');
+  await expect(main).toHaveAttribute('aria-expanded', 'false');
+  await expect(web).toHaveAttribute('aria-expanded', 'true');
+  await expect(page).toHaveURL('/releases?stage=web-ui%3Aproduction%2Cforge-server%3Aproduction');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
+  expect(await lane!.evaluate((node) => node === document.querySelector('[data-testid="release-board-lane-forge-server"]'))).toBe(true);
+
+  await production.click();
+  await expect(production).toHaveAttribute('aria-expanded', 'false');
+  await expect(web).toHaveAttribute('aria-expanded', 'true');
+  await expect(page).toHaveURL('/releases?stage=web-ui%3Aproduction');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(depth);
+  await page.screenshot({ path: 'test-results/releases-stage-scroll.png' });
+});
+
 test('pinned vs released lists every repo with how far behind it is @action:releases.board.pins', async ({
   page,
 }) => {
