@@ -186,7 +186,7 @@ export function ResetPasswordPage(): JSX.Element {
       <AccountFrame
         label="Account recovery"
         title="Your password is set"
-        intro="The account was signed out everywhere: its sessions, personal access tokens and agent grants. Log in with the new password."
+        intro="Every session and every personal API token on this account was ended (personal access tokens, bot-account credentials and agent grants). Sign in again with the new password and re-issue any personal tokens you still need. Agents and automation should use team-bot tokens, which this reset does not affect."
       >
         <Link className="waitlist__submit" to="/login">
           Go to log in
