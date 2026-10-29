@@ -648,6 +648,12 @@
   color: var(--color-bg-0, #05070a);
 }
 
+.repo-status-chip--advisory {
+  background-color: transparent;
+  color: var(--color-fg-muted);
+  border-color: var(--color-border-subtle);
+}
+
 .repo-status-chip--warning {
   background-color: var(--color-accent-warning-bg);
   color: var(--color-accent-warning);

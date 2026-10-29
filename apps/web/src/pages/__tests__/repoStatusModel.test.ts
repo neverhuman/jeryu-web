@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ADVISORY_SENTENCE,
   MIRROR_OPERATOR_SENTENCE,
+  advisoryLabel,
+  advisoryTitle,
   attentionRank,
   failingChecks,
   failingLabel,
@@ -135,5 +138,19 @@ describe('newerCopies', () => {
     ]);
     expect(copies.get('a/x')).toEqual({ owner: 'b', name: 'x' });
     expect(copies.has('b/x')).toBe(false);
+  });
+  it('labels advisory failures, and says nothing when none fail', () => {
+    expect(advisoryLabel({ failing: 1, passing: 0 })).toBe('1 advisory check failing');
+    expect(advisoryLabel({ failing: 4, passing: 2 })).toBe('4 advisory checks failing');
+    expect(advisoryLabel({ failing: 0, passing: 7 })).toBeNull();
+    // An older server sends no advisory tally at all.
+    expect(advisoryLabel(null)).toBeNull();
+    expect(advisoryLabel(undefined)).toBeNull();
+  });
+
+  it('says the whole advisory tally, and that it is not required, on hover', () => {
+    expect(advisoryTitle({ failing: 2, passing: 3 })).toBe(
+      `2 failing, 3 passing. ${ADVISORY_SENTENCE}`
+    );
   });
 });

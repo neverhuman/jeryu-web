@@ -296,4 +296,48 @@ describe('RepoTable', () => {
       '/quality-gate/heads/neverhuman/a?branch=main&repo=repo-0'
     );
   });
+  it('reports advisory results apart from the failing chip', () => {
+    renderTable([
+      {
+        ...REPO,
+        health: 'warning',
+        failing_checks: 1,
+        advisory_checks: { failing: 2, passing: 3 },
+      },
+    ]);
+    const status = screen.getByTestId('repo-status-jeryu-core');
+    expect(status).toHaveTextContent('1 failing check');
+    const advisory = screen.getByTestId('repo-advisory-jeryu-core');
+    expect(advisory).toHaveTextContent('2 advisory checks failing');
+    expect(advisory).toHaveAttribute(
+      'title',
+      '2 failing, 3 passing. Advisory checks are not required to merge and do not count against health.'
+    );
+    // Advisory results are not the chip that opens the detail row.
+    expect(advisory.tagName).not.toBe('BUTTON');
+    expect(status).not.toHaveTextContent('advisory');
+  });
+
+  it('stays quiet about health when only advisory checks fail', () => {
+    renderTable([
+      { ...REPO, failing_checks: 0, advisory_checks: { failing: 1, passing: 0 } },
+    ]);
+    const status = screen.getByTestId('repo-status-jeryu-core');
+    expect(status).toHaveTextContent('healthy');
+    expect(screen.getByTestId('repo-advisory-jeryu-core')).toHaveTextContent(
+      '1 advisory check failing'
+    );
+  });
+
+  it('says nothing advisory when the server reports none, or none fail', () => {
+    renderTable([
+      { ...REPO, advisory_checks: { failing: 0, passing: 4 } },
+      {
+        ...REPO,
+        id: { ...REPO.id, id: 'repo-uuid-2', name: 'jeryu-web' },
+      },
+    ]);
+    expect(screen.queryByTestId('repo-advisory-jeryu-core')).toBeNull();
+    expect(screen.queryByTestId('repo-advisory-jeryu-web')).toBeNull();
+  });
 });

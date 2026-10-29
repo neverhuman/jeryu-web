@@ -1,12 +1,17 @@
 // repoStatusModel.ts — what a repository's status means, and what to do about it.
 //
-// The list API says only how many current checks fail (`failing_checks`) and
+// The list API says how many REQUIRED checks fail (`failing_checks`), what the
+// advisory (non-required) checks did (`advisory_checks`, absent on an older
+// server) and
 // whether the GitHub mirror works (`mirror`). The names and reasons come from
 // `GET /api/v3/repos/{owner}/{repo}/commits/{branch}/check-runs`, fetched when
 // somebody opens a repository's status. Every field is optional: the server may
 // send fewer, and nothing here may throw.
 
-import type { RepositoryMirrorStatus } from '../api/types';
+import type {
+  RepositoryAdvisoryChecks,
+  RepositoryMirrorStatus
+} from '../api/types';
 
 /** The check that records merge-to-GitHub mirror pushes. */
 export const MIRROR_CHECK = 'jeryu/github-mirror';
@@ -110,6 +115,29 @@ export function mirrorFailing(
 /** "1 failing check" / "3 failing checks". */
 export function failingLabel(count: number): string {
   return `${count} failing check${count === 1 ? '' : 's'}`;
+}
+
+/** What advisory (non-required) results are not: the reason they sit apart. */
+export const ADVISORY_SENTENCE =
+  'Advisory checks are not required to merge and do not count against health.';
+
+/**
+ * "1 advisory check failing" / "2 advisory checks failing", or `null` when the
+ * server reports no advisory results or none of them fail. A passing advisory
+ * check is said in `advisoryTitle`, not on the row: the chip is for what a
+ * person may want to look at.
+ */
+export function advisoryLabel(
+  advisory: RepositoryAdvisoryChecks | null | undefined
+): string | null {
+  const failing = advisory?.failing ?? 0;
+  if (failing < 1) return null;
+  return `${failing} advisory check${failing === 1 ? '' : 's'} failing`;
+}
+
+/** The whole advisory tally, for the chip's hover text. */
+export function advisoryTitle(advisory: RepositoryAdvisoryChecks): string {
+  return `${advisory.failing} failing, ${advisory.passing} passing. ${ADVISORY_SENTENCE}`;
 }
 
 /** Sort key for the Status column: failing checks first, then a failing mirror. */

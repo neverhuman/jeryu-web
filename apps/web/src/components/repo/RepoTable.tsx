@@ -2,7 +2,10 @@
 //
 // Renders one row per `RepositorySummary` with a click target that navigates
 // to the overview page. Status is the one column about trouble: a red chip
-// that opens, under the row, what is failing and what to do about it. The header carries `aria-sort` so screen readers can
+// that opens, under the row, what required checks are failing and what to do
+// about it. Advisory (non-required) results stand beside it, in their own
+// quiet chip, so a failing advisory check never reads as ill health.
+// The header carries `aria-sort` so screen readers can
 // announce the current sort direction; the sort itself runs against the
 // table's data so it stays in sync with column clicks.
 
@@ -32,6 +35,8 @@ import { RunningPassesContext } from '../ciProgress/runningPasses';
 import type { RepoSort } from '../../hooks/useRepositories';
 import { qualityGateRepoPath } from '../../pages/qualityGate/qualityGateModel';
 import {
+  advisoryLabel,
+  advisoryTitle,
   attentionRank,
   failingLabel,
   mirrorFailing,
@@ -101,6 +106,10 @@ function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
   const running = useContext(RunningPassesContext);
   const pass = running.passes.get(`${repo.id.owner}/${repo.id.name}`);
   const expanded = open.has(repo.id.id);
+  // Advisory results sit apart from the failing chip: they are not required
+  // to merge, so they never read as the repository being in trouble.
+  const advisory = repo.advisory_checks ?? null;
+  const advisoryText = advisoryLabel(advisory);
   return (
     <span className="repo-table__status">
       {repo.failing_checks > 0 ? (
@@ -130,6 +139,15 @@ function StatusCell({ repo }: { repo: RepositorySummary }): JSX.Element {
           healthy
         </span>
       )}
+      {advisory && advisoryText ? (
+        <span
+          className="repo-status-chip repo-status-chip--advisory"
+          title={advisoryTitle(advisory)}
+          data-testid={`repo-advisory-${repo.id.name}`}
+        >
+          {advisoryText}
+        </span>
+      ) : null}
       {mirrorFailing(repo.mirror) ? (
         <Link
           to={`${repoHref(repo)}/settings/mirror#mirror`}
