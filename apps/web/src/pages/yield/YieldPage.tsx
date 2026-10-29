@@ -1,8 +1,9 @@
 // YieldPage.tsx — spend against what reached main, at `/yield`.
 //
 // The agent factory records what every attempt, review and triage costs. This
-// page turns that into one headline, what a merged change cost, and explains
-// it underneath: how much of the spend reached main, what review added, what
+// page leads with how the factory is doing -- lead time, how often a person was
+// needed, how often a change went bad -- then what a merged change cost, and
+// explains it underneath: how much of the spend reached main, what review added, what
 // the routing experiment's arms do side by side, how the cost moves week by
 // week, and which todos cost the most. Beside it, never inside it: what agent
 // sessions people ran by hand cost (`adhoc` in the report). Family comes from
@@ -22,6 +23,7 @@ import type {
   YieldTodoRef,
 } from '../../api/types';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
+import { HeadlineTiles } from '../../components/headline/HeadlineTiles';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import {
@@ -238,6 +240,15 @@ function YieldBody({
   const kpis = yieldKpis(data.totals);
   return (
     <>
+      {data.headline ? (
+        <section className="page__section" aria-labelledby="yield-headline">
+          <h2 className="page__section-title" id="yield-headline">
+            How the factory is doing
+          </h2>
+          <HeadlineTiles headline={data.headline} testId="yield-headline-tiles" />
+        </section>
+      ) : null}
+
       <section className="page__section" aria-labelledby="yield-kpis">
         <h2 className="page__section-title" id="yield-kpis">
           Last {days} days

@@ -99,6 +99,55 @@ export interface YieldTodoRef {
   model: string | null;
 }
 
+/**
+ * One measured span of the headline block, in seconds. `p50`/`p90` are null
+ * when the window has too few samples to read a percentile from; `unknown`
+ * then says why.
+ */
+export interface YieldSpan {
+  /** Todos the span could be measured on. */
+  n: number;
+  p50: number | null;
+  p90: number | null;
+  unknown?: string;
+}
+
+/** The share of todos that needed a person, and what each reason accounts for. */
+export interface YieldExceptionRate {
+  todos: number;
+  needed_human: number;
+  /** `needed_human / todos`, null with no todos in the window. */
+  rate: number | null;
+  reasons: Record<string, number>;
+}
+
+/** The share of merged changes that turned main or the green ref red. */
+export interface YieldBadChangeRate {
+  changes: number;
+  bad: number;
+  rate: number | null;
+  unknown?: string;
+  /** Red stretches a rerun of the same commit cleared: not bad changes. */
+  flaky_reds: number;
+  by_repo: Record<string, number>;
+}
+
+/**
+ * The three numbers that say how the factory is doing, over the report's own
+ * window and todos. Absent on a server that predates the block, and dropped
+ * the same way when it arrives malformed.
+ */
+export interface YieldHeadline {
+  lead_time: {
+    /** Filed until production runs it. */
+    filed_to_prod_s: YieldSpan;
+    /** First claim until the work is on main. */
+    claim_to_main_s: YieldSpan;
+  };
+  exception_rate: YieldExceptionRate;
+  bad_change_rate: YieldBadChangeRate;
+}
+
 export interface YieldReport {
   schema_version: string;
   generated_at: string;
@@ -109,6 +158,11 @@ export interface YieldReport {
   /** Every price source a usage record named, sorted. */
   price_sources: string[];
   totals: YieldRow;
+  /**
+   * Lead time, exception rate and bad-change rate over the same window. Absent
+   * on a server that predates it; `useYield` drops a malformed one the same way.
+   */
+  headline?: YieldHeadline;
   /** Sorted by spend, largest first. */
   groups: YieldGroupRow[];
   weekly: YieldWeek[];

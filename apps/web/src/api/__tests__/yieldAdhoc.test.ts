@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ADHOC, REPORT } from '../../pages/__tests__/yieldTestData';
-import { withCheckedAdhoc } from '../../hooks/useYield';
+import { withChecked } from '../../hooks/useYield';
 import { parseYieldAdhoc } from '../yieldAdhoc';
 
 describe('parseYieldAdhoc', () => {
@@ -77,12 +77,12 @@ describe('parseYieldAdhoc', () => {
   });
 });
 
-describe('withCheckedAdhoc', () => {
+describe('withChecked', () => {
   it('leaves a report from an older server without the field', () => {
-    expect('adhoc' in withCheckedAdhoc(REPORT)).toBe(false);
+    expect('adhoc' in withChecked(REPORT)).toBe(false);
   });
 
   it('carries the checked part', () => {
-    expect(withCheckedAdhoc({ ...REPORT, adhoc: ADHOC }).adhoc).toEqual(ADHOC);
+    expect(withChecked({ ...REPORT, adhoc: ADHOC }).adhoc).toEqual(ADHOC);
   });
 });

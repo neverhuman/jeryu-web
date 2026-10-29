@@ -2,7 +2,7 @@
 // and globex, models model-a and model-b, harnesses claude and codex. REPORT
 // is what a server without ad-hoc spend sends; ADHOC is that part, on its own.
 
-import type { YieldAdhoc, YieldReport, YieldRow } from '../../api/types';
+import type { YieldAdhoc, YieldHeadline, YieldReport, YieldRow } from '../../api/types';
 
 export function row(overrides: Partial<YieldRow> = {}): YieldRow {
   return {
@@ -217,3 +217,27 @@ export const ADHOC: YieldAdhoc = {
 };
 
 export const REPORT_WITH_ADHOC: YieldReport = { ...REPORT, adhoc: ADHOC };
+
+/** The three factory numbers of the same window: two days to production, a
+ * fifth of the todos needed a person, one merged change in ten went bad. */
+export const HEADLINE: YieldHeadline = {
+  lead_time: {
+    filed_to_prod_s: { n: 30, p50: 2 * 86400 + 6 * 3600, p90: 9 * 86400 },
+    claim_to_main_s: { n: 30, p50: 22 * 3600 + 15 * 60, p90: 60 * 3600 },
+  },
+  exception_rate: {
+    todos: 40,
+    needed_human: 8,
+    rate: 0.2,
+    reasons: { blocked: 5, attempt_gave_up: 3, taken_on_by_a_person: 1 },
+  },
+  bad_change_rate: {
+    changes: 30,
+    bad: 3,
+    rate: 0.1,
+    flaky_reds: 2,
+    by_repo: { 'acme/widgets': 2, 'globex/gears': 1 },
+  },
+};
+
+export const REPORT_WITH_HEADLINE: YieldReport = { ...REPORT, headline: HEADLINE };

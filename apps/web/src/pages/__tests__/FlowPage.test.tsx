@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FlowLot, FlowReport } from '../../api/types';
 import { FlowPage } from '../flow';
 import { flowAnswer, FLOW_REPORT } from './flowTestData';
+import { HEADLINE, REPORT } from './yieldTestData';
 import {
   errorResponse,
   json,
@@ -84,6 +85,29 @@ const ids = (list: HTMLElement): string[] =>
   Array.from(list.querySelectorAll('.flow-items__id')).map((node) => node.textContent ?? '');
 
 describe('FlowPage', () => {
+  it('leads with the three factory numbers for a reader the yield report answers', async () => {
+    mockFlowApi(FLOW_REPORT, (req) =>
+      req.pathname === '/api/v1/yield' ? json({ ...REPORT, headline: HEADLINE }) : undefined
+    );
+    renderAt('/flow', '/flow', <FlowPage />);
+    const tiles = await screen.findByTestId('flow-headline-tiles');
+    expect(within(tiles).getByTestId('headline-lead-time')).toHaveTextContent(
+      'Lead time, filed to production2 d 6 h'
+    );
+    expect(within(tiles).getByTestId('headline-exception-rate')).toHaveTextContent('20%');
+    expect(within(tiles).getByTestId('headline-bad-change-rate')).toHaveTextContent('10%');
+  });
+
+  it('leaves the factory numbers off when the yield report is refused', async () => {
+    mockFlowApi(FLOW_REPORT, (req) =>
+      req.pathname === '/api/v1/yield' ? errorResponse(403, 'admins only') : undefined
+    );
+    renderAt('/flow', '/flow', <FlowPage />);
+    // The rest of the page is a reader's whatever the yield report says.
+    await screen.findByTestId('flow-strip');
+    expect(screen.queryByTestId('flow-headline-tiles')).not.toBeInTheDocument();
+  });
+
   it('shows one number per station, marks the bottleneck and opens it by default', async () => {
     mockFlowApi();
     renderAt('/flow', '/flow', <FlowPage />);

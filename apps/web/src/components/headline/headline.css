@@ -1,0 +1,39 @@
+/* headline.css — the three factory numbers, one tile each. The first tile is
+   the headline: lead time is what a person asking for work waits. */
+
+.headline__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.headline__tile {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--color-bg-1);
+  min-width: 0;
+}
+
+.headline__tile--lead {
+  border-color: var(--color-accent-primary);
+}
+
+.headline__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-secondary);
+}
+
+.headline__value {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  color: var(--color-fg-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.headline__detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}

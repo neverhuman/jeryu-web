@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { YieldPage } from '../yield/YieldPage';
 import { windowDates } from '../yield/yieldModel';
 import { errorResponse, json, recordHeaders, renderAt, type Override, type Recorded } from './shiftPageHelpers';
-import { ADHOC, REPORT, REPORT_WITH_ADHOC, row } from './yieldTestData';
+import { ADHOC, HEADLINE, REPORT, REPORT_WITH_ADHOC, row } from './yieldTestData';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -46,6 +46,34 @@ function yieldCalls(calls: Recorded[]): URLSearchParams[] {
 }
 
 describe('YieldPage', () => {
+  it('leads with the three factory numbers when the server carries them', async () => {
+    mockYieldApi((req) =>
+      req.pathname === '/api/v1/yield' ? json({ ...REPORT, headline: HEADLINE }) : undefined
+    );
+    renderAt('/yield', '/yield', <YieldPage />);
+
+    const tiles = await screen.findByTestId('yield-headline-tiles');
+    expect(within(tiles).getByTestId('headline-lead-time')).toHaveTextContent(
+      'Lead time, filed to production2 d 6 h'
+    );
+    expect(within(tiles).getByTestId('headline-lead-time')).toHaveTextContent(
+      'claim to main: 30 todos'
+    );
+    expect(within(tiles).getByTestId('headline-exception-rate')).toHaveTextContent(
+      'Needed a person20%'
+    );
+    expect(within(tiles).getByTestId('headline-bad-change-rate')).toHaveTextContent(
+      'Bad changes10%'
+    );
+  });
+
+  it('leaves the factory numbers off a server that does not send them', async () => {
+    mockYieldApi();
+    renderAt('/yield', '/yield', <YieldPage />);
+    await screen.findByTestId('yield-kpi-per-merged');
+    expect(screen.queryByTestId('yield-headline-tiles')).not.toBeInTheDocument();
+  });
+
   it('leads with cost per merged change and explains it underneath', async () => {
     mockYieldApi();
     renderAt('/yield', '/yield', <YieldPage />);

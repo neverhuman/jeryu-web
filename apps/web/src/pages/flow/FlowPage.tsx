@@ -1,10 +1,13 @@
 // FlowPage.tsx — where the work in progress is stuck right now.
 //
-// The strip names the nine stations with one number each and marks the
-// bottleneck; below it, the station picked in the address (the bottleneck by
-// default) lists its work in progress, newest first, a page at a time. The
-// family comes from the header's family scope. What is in progress does not
-// depend on a window, so the page reads the server's default one.
+// It leads with how the factory is doing over the yield report's own window --
+// lead time, how often a person was needed, how often a change went bad -- for
+// a reader the admin-only yield report answers; the strip below names the nine stations
+// with one number each and marks the bottleneck; under it, the station picked in
+// the address (the bottleneck by default) lists its work in progress, newest
+// first, a page at a time. The family comes from the header's family scope. What
+// is in progress does not depend on a window, so the page reads the server's
+// default one.
 
 import { Route as RouteIcon } from 'lucide-react';
 import { useMemo } from 'react';
@@ -13,10 +16,12 @@ import { useSearchParams } from 'react-router-dom';
 import type { FlowReport } from '../../api/types';
 import { useFamilyScope } from '../../components/family/FamilyScopeProvider';
 import { ScopedEmptyState } from '../../components/family/ScopedEmptyState';
+import { HeadlineTiles } from '../../components/headline/HeadlineTiles';
 import { PageHeader, queryFreshness } from '../../components/pageHeader';
 import { LoadingState } from '../../components/state';
 import { useFlow, useFlowStation } from '../../hooks/useFlow';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { useYield } from '../../hooks/useYield';
 import { FlowQueryState } from './FlowQueryState';
 import { StationWipList } from './StationWipList';
 import { WipStrip } from './WipStrip';
@@ -32,6 +37,11 @@ export function FlowPage(): JSX.Element {
   const [params] = useSearchParams();
   const scope = useFamilyScope();
   const report = useFlow(scope.family ? { family: scope.family } : {});
+  // The three factory numbers ride the yield report, which is admin-only and
+  // absent on a server that predates it: a read that is refused or answers
+  // without the block simply shows no block, and the rest of the page is a
+  // reader's whatever their role.
+  const headline = useYield(scope.family ? { family: scope.family } : {});
   const { data, isPending, isError, error } = report;
   // Every age is read against one instant, so the list agrees with itself.
   const now = useMemo(() => new Date(), [data]);
@@ -44,6 +54,15 @@ export function FlowPage(): JSX.Element {
         freshness={queryFreshness(report)}
         subtitle="Where the work in progress is stuck right now."
       />
+
+      {headline.data?.headline ? (
+        <section className="page__section" aria-labelledby="flow-headline">
+          <h2 className="page__section-title" id="flow-headline">
+            How the factory is doing
+          </h2>
+          <HeadlineTiles headline={headline.data.headline} testId="flow-headline-tiles" />
+        </section>
+      ) : null}
 
       {isPending ? (
         <LoadingState title="Loading the delivery line…" variant="message" />
