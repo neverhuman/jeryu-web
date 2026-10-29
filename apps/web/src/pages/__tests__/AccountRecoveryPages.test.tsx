@@ -89,7 +89,7 @@ describe('ResetPasswordPage', () => {
     expect(screen.getByRole('link', { name: 'Go to log in' })).toHaveAttribute('href', '/login');
     expect(screen.getByText(/Every session and every personal API token/)).toBeVisible();
     expect(screen.getByText(/re-issue any personal tokens/)).toBeVisible();
-    expect(screen.getByText(/use team-bot tokens/)).toBeVisible();
+    expect(screen.getByText(/use team agent tokens/)).toBeVisible();
     expect(calls).toEqual([
       {
         method: 'POST',
