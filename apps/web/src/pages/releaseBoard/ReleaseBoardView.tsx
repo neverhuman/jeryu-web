@@ -206,7 +206,7 @@ function FamilyBoard({ family }: { family: string }): JSX.Element {
     <>
       <BoardHeader board={board} fetchedAt={query.dataUpdatedAt} />
       {!isBuilds && <UnshippedBanner board={board} />}
-      {!isBuilds && <ProblemList problems={board.problems} />}
+      <ProblemList problems={isBuilds ? board.problems.filter(problem => /build|inventory|registry/i.test(problem.source)) : board.problems} />
       <BoardTabs board={board} environments={environments} />
     </>
   );
