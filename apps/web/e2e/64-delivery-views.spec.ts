@@ -1,0 +1,57 @@
+import { expect, test } from './fixtures/test';
+import { mockBootstrap, mockRepoList } from './fixtures/mocks';
+import { mockPipelineApi } from './fixtures/pipelineMocks';
+import { mockBoards, mockEnvironments } from './fixtures/releaseBoardMocks';
+import { blockingViolations, persistAxeResult, persistRenderedEvidence, runAxe } from './fixtures/accessibility';
+import { INVENTORY, LINEAGE } from '../src/test/fixtures/delivery';
+
+test('build candidates reach previous production and open exact image and source details @action:releases.builds @a11y', async ({ page }) => {
+  await mockBootstrap(page, { auth: { role: 'admin' } });
+  await mockPipelineApi(page); await mockBoards(page); await mockEnvironments(page);
+  await page.route('**/api/v1/build-inventory/**', route => route.fulfill({ json: { ...INVENTORY, placements_observed_at: new Date().toISOString() } }));
+  await page.goto('/releases/family/acme?tab=builds');
+  const panel = page.getByTestId('builds-panel');
+  await expect(panel.getByText('rc-21', { exact: true }).first()).toBeVisible();
+  await expect(panel.getByText('rc-16', { exact: true })).toHaveCount(0);
+  await expect(panel.getByText('failed', { exact: true })).toBeVisible();
+  const row = panel.locator('details').filter({ has: page.locator('strong', { hasText: 'rc-18' }) });
+  await row.locator('summary').focus(); await page.keyboard.press('Enter');
+  await expect(row.getByText('production · app-01')).toBeVisible();
+  await expect(row.getByText('staging · stage-01')).toBeVisible();
+  await expect(row.getByRole('link', { name: /acme\/widget-api/ })).toHaveAttribute('href', /\/lineage\?commit=b{40}/);
+  const result = await runAxe(page, { include: '[data-testid="builds-panel"]' });
+  await persistAxeResult('delivery-builds', result); expect(blockingViolations(result)).toEqual([]);
+  await persistRenderedEvidence(page, 'delivery-builds');
+  await panel.getByRole('checkbox', { name: 'Older history' }).check();
+  await expect(panel.locator('strong', { hasText: 'rc-16' })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(panel.getByRole('combobox', { name: 'Deliverable' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await persistRenderedEvidence(page, 'delivery-builds-mobile');
+});
+
+test('lineage shows true merge parents and follows a selected commit by keyboard @action:lineage.inspect @a11y', async ({ page }) => {
+  await mockBootstrap(page, { auth: { role: 'admin' } }); await mockPipelineApi(page);
+  await mockRepoList(page, [{ id: { host: 'jeryu', owner: 'acme', name: 'widget-api' }, family: 'acme', open_pull_requests: 1 }]);
+  await page.route('**/api/v1/repos/*/lineage', route => route.fulfill({ json: LINEAGE }));
+  await page.route('**/api/v1/repos/*/pulls**', route => route.fulfill({ json: { items: [], pulls: [], total: 0, page: { has_more: false } } }));
+  await page.goto('/lineage?family=acme');
+  const list = page.getByRole('list', { name: 'Commit ancestry' });
+  await expect(list).toBeVisible();
+  const commit = list.getByRole('button', { name: /Merge main into search/ });
+  await commit.focus(); await page.keyboard.press('Enter');
+  const selected = page.getByRole('complementary', { name: 'Selected commit' });
+  await expect(selected).toBeVisible();
+  await selected.getByText('Parent commits', { exact: true }).click();
+  await expect(selected.getByRole('link', { name: 'cccccccccccc' })).toBeVisible();
+  await expect(selected.getByRole('link', { name: 'bbbbbbbbbbbb' })).toBeVisible();
+  await expect(page).toHaveURL(/commit=d{40}/);
+  const result = await runAxe(page, { include: '[data-testid="lineage-page"]' });
+  await persistAxeResult('delivery-lineage', result); expect(blockingViolations(result)).toEqual([]);
+  await persistRenderedEvidence(page, 'delivery-lineage');
+  await page.getByRole('link', { name: 'acme/widget-api', exact: true }).click();
+  await expect(page.getByTestId('repository-lineage-page')).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await persistRenderedEvidence(page, 'delivery-lineage-mobile');
+});

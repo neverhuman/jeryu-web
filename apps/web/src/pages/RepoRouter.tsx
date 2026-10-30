@@ -23,6 +23,7 @@ import { Navigate, useLocation, useParams } from 'react-router-dom';
 
 import { RepoLayout } from '../components/repo/RepoLayout';
 
+import { RepositoryLineagePage } from './lineage/LineagePage';
 import { RepositoryAgentsPage } from './RepositoryAgentsPage';
 import { RepositoryBrowserPage } from './RepositoryBrowserPage';
 import { RepositoryCommitPage } from './RepositoryCommitPage';
@@ -122,6 +123,8 @@ export function RepoRouter(): JSX.Element {
 
   // Dispatch to the correct sub-page based on the sub-path.
   switch (subPath) {
+    case 'lineage':
+      return inShell(<RepositoryLineagePage provider={provider} fullName={fullName} />);
     case 'agents':
       return inShell(
         <RepositoryAgentsPage provider={provider} fullName={fullName} splatTail={subTail} />

@@ -12,6 +12,9 @@ import type { FlowQuery } from './types/flow';
 import type { YieldQuery } from './types/yield';
 
 export const endpoints = {
+  lineage: (id: string): string => `/api/v1/repos/${encodeURIComponent(id)}/lineage`,
+  buildInventory: (family: string, deliverable = "", offset = 0): string =>
+    `/api/v1/build-inventory/${encodeURIComponent(family)}?${new URLSearchParams({ ...(deliverable ? { deliverable } : {}), offset: String(offset) })}`,
   bootstrap: (): string => '/api/v1/bootstrap',
   authMe: (): string => '/api/v1/auth/me',
   authLogin: (): string => '/api/v1/auth/login',

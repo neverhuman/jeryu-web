@@ -10,6 +10,7 @@
 export const REPO_TAB_KEYS = [
   'code',
   'pulls',
+  'lineage',
   'automation',
   'agents',
   'activity',
@@ -30,6 +31,7 @@ export interface RepoTab {
 export const REPO_TABS: readonly RepoTab[] = [
   { key: 'code', label: 'Code', suffix: '' },
   { key: 'pulls', label: 'Pull requests', suffix: '/pulls' },
+  { key: 'lineage', label: 'Lineage', suffix: '/lineage' },
   { key: 'automation', label: 'Automation', suffix: '/automation' },
   { key: 'agents', label: 'Agents', suffix: '/agents' },
   { key: 'activity', label: 'Activity', suffix: '/activity' },
@@ -50,6 +52,8 @@ export function activeRepoTab(subPath: string | null): RepoTabKey {
   switch (subPath) {
     case 'pulls':
       return 'pulls';
+    case 'lineage':
+      return 'lineage';
     case 'automation':
       return 'automation';
     case 'agents':

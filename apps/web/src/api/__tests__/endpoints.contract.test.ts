@@ -20,6 +20,8 @@ const routeIndex = JSON.parse(
 ) as RouteIndexFixture;
 
 const endpointSamples = {
+  lineage: ["repo-1"],
+  buildInventory: ["acme", "app", 0],
   bootstrap: [],
   authMe: [],
   authLogin: [],

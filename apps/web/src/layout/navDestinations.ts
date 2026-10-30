@@ -188,6 +188,16 @@ export const NAV_DESTINATIONS: readonly NavDestination[] = [
     group: 'primary',
   },
   {
+    id: 'nav.lineage',
+    label: 'Lineage',
+    path: '/lineage',
+    icon: FolderGit2,
+    paletteIcon: 'folder-git-2',
+    shortcut: 'g b',
+    keywords: ['lineage', 'history', 'ancestry', 'commits', 'branches'],
+    group: 'primary',
+  },
+  {
     id: 'nav.releases',
     label: 'Releases',
     path: '/releases',

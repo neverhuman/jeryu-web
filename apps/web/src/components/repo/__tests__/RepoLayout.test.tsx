@@ -89,6 +89,7 @@ describe('RepoLayout (the repository shell)', () => {
     ).toEqual([
       BASE,
       `${BASE}/pulls`,
+      `${BASE}/lineage`,
       `${BASE}/automation`,
       `${BASE}/agents`,
       `${BASE}/activity`,

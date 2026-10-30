@@ -20,6 +20,7 @@ describe('useShellCommands', () => {
       'nav.flow',
       'nav.work',
       'nav.in-flight',
+      'nav.lineage',
       'nav.releases',
       'nav.repos',
       'nav.wiki',
@@ -56,6 +57,7 @@ describe('useShellCommands', () => {
     const ids = useCommandStore.getState().commands.map((c) => c.id);
     expect(ids).toEqual([
       'nav.in-flight',
+      'nav.lineage',
       'nav.releases',
       'nav.repos',
       'nav.wiki',
@@ -120,6 +122,7 @@ describe('useShellCommands', () => {
     expect(shortcuts).toEqual({
       'g n': '/needs-you',
       'g a': '/activity',
+      'g b': '/lineage',
       'g f': '/flow',
       'g w': '/work',
       'g p': '/in-flight',

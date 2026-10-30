@@ -35,6 +35,7 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { useViewState } from '../../hooks/useViewState';
 import { readBrowserText, writeBrowserText } from '../../storage/browserStorage';
 import { BoardLanes } from './BoardLanes';
+import { BuildsPanel } from '../builds/BuildsPanel';
 import { laneAnchorId, laneFromHash, releaseFamilyPath } from './links';
 import { NotesPanel, PinsTable, ProblemList, UnshippedBanner, WorkBar } from './BoardPanels';
 import {
@@ -171,6 +172,8 @@ function BoardForFamily({
 }
 
 function FamilyBoard({ family }: { family: string }): JSX.Element {
+  const view = useViewState();
+  const isBuilds = view.read('tab') === 'builds';
   const query = useReleaseBoard(family, true);
   const board = query.data;
   const environments = useBoardEnvironments(board ? forgeRepos(board) : []);
@@ -202,8 +205,8 @@ function FamilyBoard({ family }: { family: string }): JSX.Element {
   return (
     <>
       <BoardHeader board={board} fetchedAt={query.dataUpdatedAt} />
-      <UnshippedBanner board={board} />
-      <ProblemList problems={board.problems} />
+      {!isBuilds && <UnshippedBanner board={board} />}
+      {!isBuilds && <ProblemList problems={board.problems} />}
       <BoardTabs board={board} environments={environments} />
     </>
   );
@@ -269,10 +272,11 @@ function BoardHeader({ board, fetchedAt }: { board: ReleaseBoard; fetchedAt: num
   );
 }
 
-type TabKey = 'deliverables' | 'pins' | 'notes';
+type TabKey = 'deliverables' | 'builds' | 'pins' | 'notes';
 
 const TAB_LABEL: Record<TabKey, string> = {
   deliverables: 'Deliverables',
+  builds: 'Builds',
   pins: 'Pinned vs released',
   notes: 'Release notes',
 };
@@ -284,7 +288,7 @@ function BoardTabs({
   board: ReleaseBoard;
   environments: Parameters<typeof BoardLanes>[0]['environments'];
 }): JSX.Element {
-  const tabs: TabKey[] = board.pins ? ['deliverables', 'pins', 'notes'] : ['deliverables', 'notes'];
+  const tabs: TabKey[] = board.pins ? ['deliverables', 'builds', 'pins', 'notes'] : ['deliverables', 'builds', 'notes'];
   // `?tab=` says which view the board is on. A tab switch pushes, so Back
   // returns to the tab before it.
   const view = useViewState();
@@ -339,6 +343,7 @@ function BoardTabs({
             {board.work ? <WorkBar work={board.work} /> : null}
           </>
         ) : null}
+        {active === 'builds' ? <BuildsPanel key={board.family} family={board.family} /> : null}
         {active === 'pins' && board.pins ? <PinsTable pins={board.pins} /> : null}
         {active === 'notes' ? <NotesPanel notes={board.notes} /> : null}
       </div>

@@ -15,6 +15,7 @@ describe('repoShellModel', () => {
     expect(REPO_TABS.map((tab) => tab.key)).toEqual([
       'code',
       'pulls',
+      'lineage',
       'automation',
       'agents',
       'activity',
@@ -41,6 +42,7 @@ describe('repoShellModel', () => {
     expect(REPO_TABS.map((tab) => repoTabHref(base, tab))).toEqual([
       base,
       `${base}/pulls`,
+      `${base}/lineage`,
       `${base}/automation`,
       `${base}/agents`,
       `${base}/activity`,
@@ -60,6 +62,7 @@ describe('repoShellModel', () => {
     expect(visibleRepoTabs(false).map((tab) => tab.key)).toEqual([
       'code',
       'pulls',
+      'lineage',
       'automation',
       'agents',
       'activity',

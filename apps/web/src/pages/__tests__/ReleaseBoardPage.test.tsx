@@ -109,8 +109,8 @@ describe('ReleasesPage — family release board', () => {
       const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent);
       expect(tabs).toEqual(
         board.pins
-          ? ['Deliverables', 'Pinned vs released', 'Release notes']
-          : ['Deliverables', 'Release notes']
+          ? ['Deliverables', 'Builds', 'Pinned vs released', 'Release notes']
+          : ['Deliverables', 'Builds', 'Release notes']
       );
       expect(screen.getByTestId('release-board-observed')).toHaveTextContent(
         `on ${board.collector.host}`
