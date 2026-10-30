@@ -1,0 +1,21 @@
+.external-work {
+  min-width: 0;
+  margin-block: var(--space-5, 1.5rem);
+  padding: var(--space-4, 1rem);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--color-bg-1);
+}
+.external-work__header { display: flex; flex-wrap: wrap; gap: var(--space-3, 0.75rem); justify-content: space-between; align-items: baseline; }
+.external-work__header h2 { margin: 0; font-size: var(--font-size-lg, 1.125rem); }
+.external-work a { text-decoration: underline; text-underline-offset: 0.15em; }
+.external-work__header time, .external-work small { color: var(--color-fg-muted); }
+.external-work__filter { display: flex; gap: var(--space-2, 0.5rem); align-items: center; margin-block: var(--space-3, 0.75rem); }
+.external-work__phase { border-top: 1px solid var(--color-border-subtle); padding-block: var(--space-3, 0.75rem); }
+.external-work__phase summary { display: flex; gap: var(--space-4, 1rem); justify-content: space-between; cursor: pointer; }
+.external-work__table { width: 100%; border-collapse: collapse; }
+.external-work__table th, .external-work__table td { padding: var(--space-3, 0.75rem); text-align: left; vertical-align: top; border-bottom: 1px solid var(--color-border-subtle); overflow-wrap: anywhere; }
+.external-work__table td div { margin-top: var(--space-1, 0.25rem); }
+.external-work__table .external-work__followup { padding-inline-start: var(--space-6, 2rem); }
+.external-work__held td:nth-child(2) { color: var(--color-accent-warning); }
+.external-work__milestones { margin-top: var(--space-4, 1rem); }

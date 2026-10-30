@@ -10,6 +10,8 @@ import { useRepoChannels, EMPTY_CHANNELS } from '../hooks/useRepoChannels';
 import { useRepoPullLists } from '../hooks/useRepoPullLists';
 import { useAuth } from '../hooks/useAuth';
 import { useFlow } from '../hooks/useFlow';
+import { ExternalBranches } from './flow/ExternalBranches';
+import { scopedExternalWork } from './flow/externalWorkModel';
 import { useAttention } from '../hooks/usePipeline';
 import { useForgeHost } from '../hooks/useForgeHost';
 import { useRepositories } from '../hooks/useRepositories';
@@ -271,7 +273,7 @@ export function PullRoomPage(): JSX.Element {
   // Needs you, which the nav badge counts.
   const { user } = useAuth();
   // Estimates on the rows; refused for a non-admin, which shows none.
-  const flow = useFlow({});
+  const flow = useFlow(family ? { family } : {});
   const attention = useAttention(user?.role === 'admin');
   const repoFamilies = useRepoFamilies();
   const waiting = useMemo(
@@ -334,6 +336,11 @@ export function PullRoomPage(): JSX.Element {
           </div>
         }
       />
+
+      {scopedExternalWork(flow.data?.external_work?.snapshots ?? [], family, filters.repo).map((external) => (
+        <ExternalBranches key={external.source_repo} snapshot={external} />
+      ))}
+      {(flow.data?.external_work?.problems ?? []).map((problem) => <p role="status" key={problem}>{problem}</p>)}
 
       <details
         className="pull-room__filter-fold"

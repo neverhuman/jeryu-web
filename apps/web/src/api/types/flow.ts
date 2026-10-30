@@ -210,6 +210,8 @@ export interface FlowLotsPage {
 }
 
 export interface FlowReport {
+  /** Dated external-origin and execution-plan observations, independent of native events. */
+  external_work?: import('./externalWork').ExternalWorkReport;
   /** The configured family/product/repository delivery topology. Absent on a
    * server that predates it, which leaves the map on recorded visits only. */
   topology?: FlowTopology;

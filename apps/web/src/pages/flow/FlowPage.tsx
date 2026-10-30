@@ -20,6 +20,8 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 import { FlowQueryState } from './FlowQueryState';
 import { StationWipList } from './StationWipList';
 import { WipStrip } from './WipStrip';
+import { ExternalTaskPlan } from './ExternalTaskPlan';
+import { scopedExternalWork } from './externalWorkModel';
 import { lineSummary, selectedStation, stationSearch, stationSummaries, stationWip } from './flowModel';
 
 import '../page.css';
@@ -69,6 +71,13 @@ function FlowBody({
   const station = selectedStation(params, report);
   const label = stations.find((candidate) => candidate.id === station)?.label ?? station ?? '';
   const empty = stations.every((candidate) => !candidate.total);
+  const external = scopedExternalWork(report.external_work?.snapshots ?? [], family ?? '');
+  if (empty && external.length > 0) {
+    return <div className="flow__body" data-testid="flow-body">
+      {external.map((snapshot) => <ExternalTaskPlan key={snapshot.source_repo} snapshot={snapshot} />)}
+      {(report.external_work?.problems ?? []).map((problem) => <p role="status" key={problem}>{problem}</p>)}
+    </div>;
+  }
   return (
     <div className="flow__body" data-testid="flow-body">
       <WipStrip
@@ -80,6 +89,8 @@ function FlowBody({
       <p className="flow__coverage" data-testid="flow-coverage">
         {lineSummary(report)}
       </p>
+      {external.map((snapshot) => <ExternalTaskPlan key={snapshot.source_repo} snapshot={snapshot} />)}
+      {(report.external_work?.problems ?? []).map((problem) => <p role="status" key={problem}>{problem}</p>)}
 
       {empty ? (
         <ScopedEmptyState

@@ -194,6 +194,11 @@
       "command": "just check",
       "lane": "check",
       "purpose": "verify root navigation remains current"
+    },
+    "apps/web/src/pages/flow/": {
+      "command": "npm --workspace @jeryu/web run typecheck && npm --workspace @jeryu/web run test -- src/pages/__tests__/externalWork.test.tsx src/pages/__tests__/FlowPage.test.tsx && JERYU_PLAYWRIGHT_E2E_MODE=ui-mocked npm --workspace @jeryu/web exec -- playwright test e2e/59-external-work.spec.ts --project=chromium",
+      "lane": "web-ui",
+      "purpose": "prove external origin branches, phase/follow-up hierarchy, human blockers, independent milestones, safe state rendering, keyboard access and screenshot/axe evidence"
     }
   },
   "workspace": "jeryu-web"
