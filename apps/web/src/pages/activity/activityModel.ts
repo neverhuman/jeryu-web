@@ -447,7 +447,7 @@ export function formatDay(iso: string, now: Date): string {
     (Date.parse(`${localDayKey(now)}T00:00:00Z`) - Date.parse(`${localDayKey(iso)}T00:00:00Z`)) / DAY_MS
   );
   const named = days === 0 ? `Today · ${date}` : days === 1 ? `Yesterday · ${date}` : date;
-  return `${named} · ${zoneLabel()}`;
+  return `${named} · ${zoneLabel(at)}`;
 }
 
 /**

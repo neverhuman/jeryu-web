@@ -297,6 +297,9 @@ describe('activityModel', () => {
     expect(formatDay('2026-09-18T23:59:00Z', now)).toBe('Yesterday · 18 Sep 2026 · EDT');
     expect(formatDay('2026-09-16T08:00:00Z', now)).toBe('16 Sep 2026 · EDT');
     expect(formatDay('nonsense', now)).toBe('nonsense');
+    // A heading names the zone at its event date, even across a clock change.
+    expect(formatDay('2026-09-19T13:03:26Z', new Date('2026-11-01T14:00:00Z'))).toBe('19 Sep 2026 · EDT');
+    expect(formatDay('2026-01-19T13:03:26Z', now)).toBe('19 Jan 2026 · EST');
 
     const older = pipelineEvent({ seq: 2, ts: '2026-09-18T23:00:00Z', kind: 'todo.claimed' });
     const oldest = pipelineEvent({ seq: 1, ts: '2026-09-18T09:00:00Z', kind: 'todo.filed' });

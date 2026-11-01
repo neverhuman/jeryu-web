@@ -93,8 +93,9 @@ describe('absolute wordings', () => {
     const absolute = absoluteText('2026-09-19T13:03:26Z');
     expect(absolute).toContain('Sep 19, 2026');
     expect(absolute).toContain('9:03:26');
-    expect(absolute).toContain(zoneLabel());
-    expect(zoneLabel()).toBe('EDT');
+    expect(absolute).toContain(zoneLabel(NOW));
+    expect(zoneLabel(NOW)).toBe('EDT');
+    expect(zoneLabel('2026-01-19T14:00:00Z')).toBe('EST');
   });
 
   it("shows the clock, the date and a chart tick in the reader's zone", () => {

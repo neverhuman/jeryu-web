@@ -95,7 +95,7 @@ describe('RepoTable', () => {
       `Last updated: ${absoluteText('2026-05-26T12:00:00Z')}`
     );
     // The zone is named in the title, never left to the reader to guess.
-    expect(first?.getAttribute('title')).toContain(zoneLabel());
+    expect(first?.getAttribute('title')).toContain(zoneLabel('2026-09-18T09:00:00Z'));
   });
 
   it('sorts Updated on the push time when there is one', async () => {
