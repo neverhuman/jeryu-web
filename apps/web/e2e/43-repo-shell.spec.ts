@@ -1,7 +1,7 @@
 // 43-repo-shell.spec.ts — one repository shell on every repository page: one
 // header naming the repository, one tab bar across the top.
 //
-// Code, Pull requests, Automation, Agents, Activity and Settings are one click
+// Code, Pull requests, Lineage, Automation, Agents, Activity and Settings are one click
 // apart from wherever the reader is; the counts are on the tabs; Settings is
 // only there for someone who may open it. The repository, its family, its
 // identities and its mirror below are invented.
@@ -20,6 +20,7 @@ import {
   mockTree,
 } from './fixtures/mocks';
 import { mockPipelineApi, pipelineEvent } from './fixtures/pipelineMocks';
+import { LINEAGE } from '../src/test/fixtures/delivery';
 
 test.describe.configure({ retries: 1 });
 
@@ -74,6 +75,7 @@ async function seed(page: Page, viewer: Parameters<typeof mockBootstrap>[1] = {}
   ]);
   await mockTree(page, [{ path: 'README.md', kind: 'file' }]);
   await mockRefs(page);
+  await page.route('**/api/v1/repos/*/lineage', route => route.fulfill({ json: LINEAGE }));
   await mockReadme(page, { html: '<h1>widget-api</h1>' });
   await mockBlob(page, { path: 'README.md', text: '# widget-api' });
   await mockRepoAutomation(page, AUTOMATION);
@@ -117,6 +119,7 @@ test('every repository page carries the same header and tab bar @action:repo.she
   const pages = [
     { tail: '', tab: 'code', testId: 'repo-overview-page' },
     { tail: '/pulls', tab: 'pulls', testId: 'repo-pulls-page' },
+    { tail: '/lineage', tab: 'lineage', testId: 'repository-lineage-page' },
     { tail: '/automation', tab: 'automation', testId: 'repo-automation-page' },
     { tail: '/agents', tab: 'agents', testId: 'repo-agents-page' },
     { tail: '/activity', tab: 'activity', testId: 'activity-page' },
@@ -127,7 +130,7 @@ test('every repository page carries the same header and tab bar @action:repo.she
     await shell.goto(`${BASE}${sub.tail}`);
     await expect(page.getByTestId(sub.testId)).toBeVisible({ timeout: 15_000 });
 
-    // The same header, on all six: the repository, its health and its score.
+    // The same header, on all seven: the repository, its health and its score.
     await expect(page.getByTestId('repo-shell-title')).toHaveText('widget-api');
     const mirror = page.getByTestId('repo-shell-header').getByRole('link', {
       name: '(GitHub mirror: acme-oss/widget-api) (opens in a new window)', exact: true,
@@ -149,7 +152,7 @@ test('every repository page carries the same header and tab bar @action:repo.she
     await expect(trail).toContainText('Repositories');
     await expect(trail).toContainText('acme');
     const bar = page.getByRole('navigation', { name: 'Repository', exact: true });
-    await expect(bar.getByRole('link')).toHaveCount(6);
+    await expect(bar.getByRole('link')).toHaveCount(7);
     await expect(page.getByTestId(`repo-tab-${sub.tab}`)).toHaveAttribute(
       'aria-current',
       'page'
@@ -241,7 +244,7 @@ test('a viewer who may not change the repository has no Settings tab @action:rep
   await shell.goto(BASE);
   await expect(page.getByTestId('repo-overview-page')).toBeVisible({ timeout: 15_000 });
   const bar = page.getByRole('navigation', { name: 'Repository', exact: true });
-  await expect(bar.getByRole('link')).toHaveCount(5);
+  await expect(bar.getByRole('link')).toHaveCount(6);
   await expect(page.getByTestId('repo-tab-settings')).toHaveCount(0);
 
   // Typed in anyway, the page itself says no.
