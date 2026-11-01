@@ -26,6 +26,7 @@ import { AgentsTabs } from '../agents/AgentsTabs';
 import { AgentTokens } from './AgentTokens';
 import { TeamBots } from './TeamBots';
 import { BotKindBadge } from './BotKindBadge';
+import { BotRefReach } from './BotRefReach';
 import { ConnectAgentDoc } from './ConnectAgentDoc';
 import {
   GENERAL_REACH_NOTE,
@@ -243,6 +244,7 @@ export function BotsPage(): JSX.Element {
                             </li>
                           ))}
                         </ul>
+                        <BotRefReach reach={enrollment.reach} />
                       </td>
                       <td>{statusLabel(enrollment.status)}</td>
                       <td>

@@ -141,6 +141,16 @@ export function accountReachRows(reach: BotReach | unknown): string[] {
   return typeof mode === 'string' && mode !== '' ? [`${UNKNOWN_REACH}: ${mode}`] : [UNKNOWN_REACH];
 }
 
+/** Ref restrictions are additional to repository reach, never a replacement. */
+export function refReachRows(reach: BotReach | unknown): string[] {
+  const refs = record(reach)?.refs;
+  if (refs === undefined || refs === null) return [];
+  if (!Array.isArray(refs) || refs.some((ref) => typeof ref !== 'string' || ref.trim() === '')) {
+    return ['Unknown ref reach'];
+  }
+  return refs.length === 0 ? ['No refs allowed'] : [...new Set(refs)];
+}
+
 export function addBotHref(owner: string, name: string): string {
   const params = new URLSearchParams({ repo: `${owner}/${name}` });
   return `/bots?${params.toString()}`;

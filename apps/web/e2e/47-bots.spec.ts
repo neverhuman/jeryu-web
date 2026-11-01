@@ -366,8 +366,9 @@ test('the account page and repository roster stay inside a phone viewport @actio
   await page.setViewportSize(PHONE);
   await seedRoster(page);
   const longName = 'Northwind ' + 'display '.repeat(12);
+  const reach = { mode: 'general', refs: ['refs/tags/*-split.*', 'refs/heads/preserve/hosted-cargo/very-long-repository-name/*'] };
   await mockAccountBots(page, [
-    summary({ display_name: longName, slug: 'north-wind-account-slug' }),
+    summary({ display_name: longName, slug: 'north-wind-account-slug', reach }),
   ]);
   await page.route(/\/api\/v1\/repos\/[^/]+\/bots(?:\?.*)?$/, async (route, request) => {
     if (request.method() !== 'GET') {
@@ -375,7 +376,7 @@ test('the account page and repository roster stay inside a phone viewport @actio
       return;
     }
     await fulfillJson(route, 200, {
-      bots: [summary({ display_name: longName, slug: 'north-wind-repo-slug' })],
+      bots: [summary({ display_name: longName, slug: 'north-wind-repo-slug', reach })],
     });
   });
 
@@ -383,6 +384,8 @@ test('the account page and repository roster stay inside a phone viewport @actio
   await shell.goto('/bots');
   await shell.assertShellLoaded(15_000);
   await expect(page.getByTestId('bot-list')).toContainText('Northwind');
+  await expect(page.getByRole('list', { name: 'Allowed refs' }).getByRole('listitem')).toContainText(reach.refs);
+  await persistRenderedEvidence(page, 'bot-ref-reach-account-phone');
   await expect
     .poll(() => sidewaysOverflow(page), {
       message: `account page scrolls sideways at ${PHONE.width}px`,
@@ -392,6 +395,8 @@ test('the account page and repository roster stay inside a phone viewport @actio
   await shell.goto(`${REPO_PATH}/agents`);
   await shell.assertShellLoaded(15_000);
   await expect(page.getByTestId('bot-roster')).toContainText('Northwind');
+  await expect(page.getByRole('list', { name: 'Allowed refs' }).getByRole('listitem')).toContainText(reach.refs);
+  await persistRenderedEvidence(page, 'bot-ref-reach-repository-phone');
   await expect
     .poll(() => sidewaysOverflow(page), {
       message: `repository roster scrolls sideways at ${PHONE.width}px`,

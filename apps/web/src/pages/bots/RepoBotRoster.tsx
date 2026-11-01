@@ -16,6 +16,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/state';
 import { When } from '../../format/When';
 import { BotActivityList } from './BotActivityList';
 import { BotKindBadge } from './BotKindBadge';
+import { BotRefReach } from './BotRefReach';
 import { addBotHref, repoRosterReachLabel, textOrDash } from './botModel';
 
 export function RepoBotRoster({
@@ -69,7 +70,10 @@ export function RepoBotRoster({
             <li key={bot.id} className="agents__bot-row" data-testid="bot-row">
               <BotKindBadge kind={bot.kind} />
               <span className="agents__bot-name">{bot.display_name}</span>
-              <span className="agents__bot-reach">{repoRosterReachLabel(bot.reach)}</span>
+              <div className="agents__bot-reach">
+                {repoRosterReachLabel(bot.reach)}
+                <BotRefReach reach={bot.reach} />
+              </div>
               <span className="agents__bot-access">
                 <span className="agents__bot-k">Last successful access</span>{' '}
                 <When at={bot.last_successful_access} label="Last successful access" />

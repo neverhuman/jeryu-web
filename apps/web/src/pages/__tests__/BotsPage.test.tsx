@@ -16,6 +16,7 @@ import {
   parseRepoLines,
   reachFromLines,
   repoRosterReachLabel,
+  refReachRows,
 } from '../bots/botModel';
 
 const NOW = '2026-09-21T00:21:16Z';
@@ -49,6 +50,16 @@ describe('bot reach labels', () => {
     expect(accountReachRows(taskReach('branch', 'feature/login'))).toEqual([
       'ada/widgets · feature/login',
     ]);
+  });
+
+  it('preserves absent ref reach and distinguishes deny-all from a matching allowlist', () => {
+    expect(refReachRows({ mode: 'general' })).toEqual([]);
+    expect(refReachRows({ mode: 'general', refs: null })).toEqual([]);
+    expect(refReachRows({ mode: 'general', refs: [] })).toEqual(['No refs allowed']);
+    expect(refReachRows({ mode: 'owners', owners: ['acme'], refs: ['refs/tags/*-split.*', 'refs/heads/releasebot/*'] }))
+      .toEqual(['refs/tags/*-split.*', 'refs/heads/releasebot/*']);
+    expect(refReachRows({ refs: 'unreadable' })).toEqual(['Unknown ref reach']);
+    expect(refReachRows({ refs: [null] })).toEqual(['Unknown ref reach']);
   });
 
   it('renders a reach mode or a kind it does not know without throwing', () => {

@@ -22,7 +22,7 @@ export type BotStatus = 'active' | 'suspended' | 'revoked';
 
 export type BotTaskKind = 'issue' | 'pull' | 'branch';
 
-export type BotReach =
+export type BotReach = (
   | { mode: 'general' }
   | { mode: 'repositories'; repos: BotRepoRef[] }
   /** Every repository under these owners the account can reach, later ones too. 1 to 20 owners. */
@@ -32,7 +32,11 @@ export type BotReach =
       repo: BotRepoRef;
       task_kind: BotTaskKind;
       task_id: string;
-    };
+    }
+) & {
+  /** Absent/null keeps repository reach; an empty list denies every ref write. */
+  refs?: string[] | null;
+};
 
 /** A person's own bot, or an organization's team bot (ADR 0008). */
 export type BotOwnerKind = 'user' | 'organization';
