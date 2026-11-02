@@ -2,7 +2,7 @@
 // and where the account controls are.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -44,13 +44,16 @@ describe('HelpPage', () => {
   it('says when to open each System page, in the registry\u2019s own words', () => {
     renderHelp();
     expect(screen.getByRole('heading', { level: 1, name: 'Help' })).toBeInTheDocument();
+    const section = screen.getByRole('region', { name: 'System pages: which one to open' });
+    const links = within(section).getAllByRole('link');
     for (const destination of navGroup('system', false)) {
-      const link = screen.getByRole('link', { name: destination.label });
+      const matching = links.filter((link) => link.textContent === destination.label);
+      expect(matching).toHaveLength(1);
+      const link = matching[0];
+      expect(link).toHaveAccessibleName(destination.label);
       expect(link).toHaveAttribute('href', destination.path);
       expect(destination.useWhen).toBeTruthy();
-      expect(
-        screen.getByText(destination.useWhen as string, { exact: false })
-      ).toBeInTheDocument();
+      expect(link.closest('li')).toHaveTextContent(destination.useWhen as string);
     }
   });
 
