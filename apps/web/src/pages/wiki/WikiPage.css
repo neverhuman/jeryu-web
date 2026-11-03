@@ -5,7 +5,7 @@
   grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
   gap: var(--space-7);
   padding: var(--space-6) var(--space-7);
-  max-width: 1440px;
+  max-width: 1760px;
 }
 
 .wiki__nav {
@@ -95,9 +95,9 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* The document: a readable text column, with a margin for change notes. */
+/* The document fills the main column (tables, code and diagrams need the room),
+ * with a margin for change notes when they are on. */
 .wiki-doc {
-  --wiki-text: 72ch;
   --wiki-margin: 220px;
   display: flex;
   flex-direction: column;
@@ -107,7 +107,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-width: var(--wiki-text);
   margin-bottom: var(--space-5);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border-subtle);
@@ -164,13 +163,13 @@
 
 .wiki-doc__section {
   display: grid;
-  grid-template-columns: minmax(0, var(--wiki-text));
+  grid-template-columns: minmax(0, 1fr);
   column-gap: var(--space-6);
   padding: var(--space-2) 0;
 }
 
 .wiki-doc--notes .wiki-doc__section {
-  grid-template-columns: minmax(0, var(--wiki-text)) var(--wiki-margin);
+  grid-template-columns: minmax(0, 1fr) var(--wiki-margin);
 }
 
 .wiki-doc__body {
@@ -230,7 +229,7 @@
 /* Narrower: notes move under their section as one quiet line. */
 @media (max-width: 1180px) {
   .wiki-doc--notes .wiki-doc__section {
-    grid-template-columns: minmax(0, var(--wiki-text));
+    grid-template-columns: minmax(0, 1fr);
     row-gap: var(--space-1);
   }
 
@@ -359,7 +358,6 @@
 
 /* Sources come last, under the page's own Related line. */
 .wiki-doc__sources {
-  max-width: var(--wiki-text);
   margin-top: var(--space-5);
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border-subtle);
